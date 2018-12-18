@@ -1,9 +1,9 @@
 <?
 namespace Bitrix\Sale\Location;
 
-use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Loader;
 use Bitrix\Sale\Location\Comparator\Replacement;
+use Bitrix\Main\ArgumentOutOfRangeException;
 
 Loader::registerAutoLoadClasses(
 	'sale',
@@ -20,6 +20,7 @@ class Comparator
 	const COUNTRY = 3;
 
 	public static $variants = null;
+	public static $replacement = null;
 
 	public static function isLocationsEqual($location1, $location2)
 	{
@@ -41,9 +42,25 @@ class Comparator
 		return true;
 	}
 
+	public static function getReplacement()
+	{
+		if(self::$replacement === null)
+			self::setReplacement();
+
+		return self::$replacement;
+	}
+
+	public static function setReplacement(Replacement $replacement = null)
+	{
+		if($replacement === null)
+			self::$replacement = new Replacement;
+		else
+			self::$replacement = $replacement;
+	}
+
 	public static function isCountryRussia($countryName)
 	{
-		return Replacement::isCountryRussia($countryName);
+		return self::getReplacement()->isCountryRussia($countryName);
 	}
 
 	/**
@@ -144,8 +161,8 @@ class Comparator
 		$result = preg_replace('/\s*(\(.*\))/i'.BX_UTF_PCRE_MODIFIER, ' ', $value);
 		$result = preg_replace('/[~\'\"\`\!\@\#\$\%\^\&\*\+\=\\\.\,\?\:\;\{\}\[\]\-]/i'.BX_UTF_PCRE_MODIFIER, ' ', $result);
 		$result = preg_replace('/\s{2,}/i'.BX_UTF_PCRE_MODIFIER, ' ', $result);
-		$result = str_replace('Ё', 'Е', $result);
 		$result = ToUpper($result);
+		$result = self::getReplacement()->changeYoE($result);
 		$result = trim($result);
 
 		return $result;
@@ -228,7 +245,7 @@ class Comparator
 			return array();
 
 		$result = array();
-		$types = Replacement::getLocalityTypes();
+		$types = self::getReplacement()->getLocalityTypes();
 
 		if(strlen($type) > 0)
 		{
@@ -272,7 +289,7 @@ class ComparatorLocality extends Comparator
 
 	protected static function getTypes()
 	{
-		return Replacement::getLocalityTypes();
+		return self::getReplacement()->getLocalityTypes();
 	}
 }
 
@@ -282,7 +299,7 @@ class ComparatorDistrict extends Comparator
 
 	protected static function getTypes()
 	{
-		return Replacement::getDistrictTypes();
+		return self::getReplacement()->getDistrictTypes();
 	}
 }
 
@@ -292,14 +309,14 @@ class ComparatorRegion extends Comparator
 
 	protected static function getTypes()
 	{
-		return Replacement::getRegionTypes();
+		return self::getReplacement()->getRegionTypes();
 	}
 
 	public static function setVariantsValues(array $variants = array())
 	{
 		static::$variants = static::normalizeVariants(
 			array_merge(
-				Replacement::getRegionVariants(),
+				self::getReplacement()->getRegionVariants(),
 				$variants
 			)
 		);
@@ -314,7 +331,7 @@ class ComparatorCountry extends Comparator
 	{
 		static::$variants = static::normalizeVariants(
 			array_merge(
-				Replacement::getCountryVariants(),
+				self::getReplacement()->getCountryVariants(),
 				$variants
 			)
 		);

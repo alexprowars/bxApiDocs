@@ -28,7 +28,7 @@ class Manager
 	 *
 	 * @return int
 	 * @throws \Exception
-	 * @see AppTable::getMap to get a bit more  information about possible keys in $data
+	 * @see AppTable::getMap to get a bit more information about possible keys in $data
 	 */
 	public static function createApp($appCode = "", $data = array(), $initConfig = array())
 	{

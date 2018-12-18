@@ -57,20 +57,14 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает путь к файлу, содержащему определение класса. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/getfilepath.php
-	* @author Bitrix
-	*/
 	public static function getFilePath()
 	{
 		return __FILE__;
+	}
+
+	public static function getUfId()
+	{
+		return 'SHIPMENT';
 	}
 
 	/**
@@ -102,17 +96,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы документов отгрузок в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_sale_order_delivery';
@@ -123,17 +106,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы документов отгрузок. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		global $DB;
@@ -281,7 +253,6 @@ class ShipmentTable extends Main\Entity\DataManager
 			new Main\Entity\IntegerField(
 				'DELIVERY_ID',
                  array(
-                     'required' => true,
 	                 'title' => Loc::getMessage('ORDER_SHIPMENT_ENTITY_DELIVERY_ID_FIELD'),
                  )
 			),
@@ -481,17 +452,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>ALLOW_DELIVERY</code> (флаг разрешения доставки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validateallowdelivery.php
-	* @author Bitrix
-	*/
 	public static function validateAllowDelivery()
 	{
 		return array(
@@ -503,17 +463,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>DEDUCTED</code> (флаг отгрузки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatededucted.php
-	* @author Bitrix
-	*/
 	public static function validateDeducted()
 	{
 		return array(
@@ -525,17 +474,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>REASON_UNDO_DEDUCTED</code> (причина снятия флага отгрузки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatereasonundodeducted.php
-	* @author Bitrix
-	*/
 	public static function validateReasonUndoDeducted()
 	{
 		return array(
@@ -547,17 +485,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>RESERVED</code> (товары зарезервированы). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatereserved.php
-	* @author Bitrix
-	*/
 	public static function validateReserved()
 	{
 		return array(
@@ -569,17 +496,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>DELIVERY_DOC_NUM</code> (номер документа отгрузки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatedeliverydocnum.php
-	* @author Bitrix
-	*/
 	public static function validateDeliveryDocNum()
 	{
 		return array(
@@ -591,17 +507,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TRACKING_NUMBER</code> (номер для отслеживания). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatetrackingnumber.php
-	* @author Bitrix
-	*/
 	public static function validateTrackingNumber()
 	{
 		return array(
@@ -613,17 +518,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>XML_ID</code> (внешний код). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatexmlid.php
-	* @author Bitrix
-	*/
 	public static function validateXmlId()
 	{
 		return array(
@@ -635,17 +529,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>DELIVERY_NAME</code> (название службы доставки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatedeliveryname.php
-	* @author Bitrix
-	*/
 	public static function validateDeliveryName()
 	{
 		return array(
@@ -657,17 +540,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CANCELED</code> (флаг отмены). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatecanceled.php
-	* @author Bitrix
-	*/
 	public static function validateCanceled()
 	{
 		return array(
@@ -679,17 +551,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>REASON_CANCELED</code> (причина отмены отгрузки). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatereasoncanceled.php
-	* @author Bitrix
-	*/
 	public static function validateReasonCanceled()
 	{
 		return array(
@@ -701,17 +562,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>MARKED</code> (флаг проблемы с отгрузкой). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatemarked.php
-	* @author Bitrix
-	*/
 	public static function validateMarked()
 	{
 		return array(
@@ -723,17 +573,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>REASON_MARKED</code> (причина проблемы с отгрузкой). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatereasonmarked.php
-	* @author Bitrix
-	*/
 	public static function validateReasonMarked()
 	{
 		return array(
@@ -745,17 +584,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>SYSTEM</code> (флаг, определяющий отгрузка системная (т.е. внутренняя) или обычная). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatesystem.php
-	* @author Bitrix
-	*/
 	public static function validateSystem()
 	{
 		return array(
@@ -767,17 +595,6 @@ class ShipmentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TRACKING_DESCRIPTION</code> (описание отслеживания). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/shipmenttable/validatetrackingdescription.php
-	* @author Bitrix
-	*/
 	public static function validateTrackingDescription()
 	{
 		return array(

@@ -117,6 +117,9 @@ class ContactTable extends Main\Entity\DataManager
 		}
 	}
 
+	/**
+	 * @deprecated
+	 */
 	public static function onUserLoginSocserv($params)
 	{
 		global $USER;
@@ -385,7 +388,8 @@ class ContactTable extends Main\Entity\DataManager
 
 	protected static function notifyJoin($contactId, array $contactInfo = null)
 	{
-		if(Main\Loader::includeModule('im'))
+		$network = new Network();
+		if($network->isOptionEnabled() && Main\Loader::includeModule('im'))
 		{
 			if($contactInfo === null)
 			{
@@ -467,8 +471,10 @@ class ContactTable extends Main\Entity\DataManager
 
 	protected static function notifyJoinFinish($userId)
 	{
+		$network = new Network();
 		if(
-			count(static::$notifyStack) > 0
+			$network->isOptionEnabled()
+			&& count(static::$notifyStack) > 0
 			&& Main\Loader::includeModule('im')
 		)
 		{
@@ -517,9 +523,13 @@ class ContactTable extends Main\Entity\DataManager
 		}
 	}
 
+	/**
+	 * @deprecated
+	 */
 	protected static function notifyPossible($userId)
 	{
-		if(Main\Loader::includeModule('im'))
+		$network = new Network();
+		if($network->isOptionEnabled() && Main\Loader::includeModule('im'))
 		{
 			$ts = time();
 			$alreadyShown = \CUserOptions::GetOption("socialservices", "possible_contacts", null, $userId);

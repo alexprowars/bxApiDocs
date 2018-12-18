@@ -13,7 +13,7 @@ class HttpExceptionHandlerOutput implements IExceptionHandlerOutput
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentTypeException
 	 */
-	static public function renderExceptionMessage($exception, $debug = false)
+	public function renderExceptionMessage($exception, $debug = false)
 	{
 		if ($debug)
 		{

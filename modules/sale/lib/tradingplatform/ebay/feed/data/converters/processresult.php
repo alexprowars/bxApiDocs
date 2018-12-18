@@ -6,7 +6,7 @@ use Bitrix\Main\ArgumentNullException;
 
 class ProcessResult extends DataConverter
 {
-	static public function convert($data)
+	public function convert($data)
 	{
 		if(!isset($data["RESULT_ID"]))
 			throw new ArgumentNullException("data[\"RESULT_ID\"]");

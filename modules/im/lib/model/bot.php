@@ -46,14 +46,15 @@ class BotTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('BOT_ENTITY_BOT_ID_FIELD'),
 			),
 			'MODULE_ID' => array(
-				'data_type' => 'integer',
+				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateModuleId'),
 				'required' => true,
 				'title' => Loc::getMessage('BOT_ENTITY_MODULE_ID_FIELD'),
 			),
 			'CODE' => array(
 				'data_type' => 'string',
 				'required' => true,
-				'validation' => array(__CLASS__, 'validateBotName'),
+				'validation' => array(__CLASS__, 'validateBotCode'),
 				'title' => Loc::getMessage('BOT_ENTITY_BOT_NAME_FIELD'),
 			),
 			'TYPE' => array(
@@ -82,6 +83,16 @@ class BotTable extends Main\Entity\DataManager
 				'data_type' => 'string',
 				'validation' => array(__CLASS__, 'validateToMethod'),
 				'title' => Loc::getMessage('BOT_ENTITY_METHOD_MESSAGE_ADD_FIELD'),
+			),
+			'METHOD_MESSAGE_UPDATE' => array(
+				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateToMethod'),
+				'title' => Loc::getMessage('BOT_ENTITY_METHOD_MESSAGE_UPDATE_FIELD'),
+			),
+			'METHOD_MESSAGE_DELETE' => array(
+				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateToMethod'),
+				'title' => Loc::getMessage('BOT_ENTITY_METHOD_MESSAGE_DELETE_FIELD'),
 			),
 			'METHOD_WELCOME_MESSAGE' => array(
 				'data_type' => 'string',
@@ -133,14 +144,14 @@ class BotTable extends Main\Entity\DataManager
 		);
 	}
 	/**
-	 * Returns validators for NAME field.
+	 * Returns validators for CODE field.
 	 *
 	 * @return array
 	 */
-	public static function validateBotName()
+	public static function validateBotCode()
 	{
 		return array(
-			new Main\Entity\Validator\Length(null, 50),
+			new Main\Entity\Validator\Length(1, 50),
 		);
 	}
 	/**
@@ -149,6 +160,17 @@ class BotTable extends Main\Entity\DataManager
 	 * @return array
 	 */
 	public static function validateToClass()
+	{
+		return array(
+			new Main\Entity\Validator\Length(null, 255),
+		);
+	}
+	/**
+	 * Returns validators for MODULE_ID field.
+	 *
+	 * @return array
+	 */
+	public static function validateModuleId()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 255),
@@ -201,5 +223,3 @@ class BotTable extends Main\Entity\DataManager
 		);
 	}
 }
-
-class_alias("Bitrix\\Im\\Model\\BotTable", "Bitrix\\Im\\BotTable", false);

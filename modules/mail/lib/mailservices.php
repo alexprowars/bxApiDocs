@@ -107,21 +107,22 @@ class MailServicesTable extends Entity\DataManager
 			{
 				$emptyService = static::getList(array(
 					'filter' => array(
-						'=SITE_ID'    => $serviceForUpdate['SITE_ID'],
-						'ACTIVE'      => 'Y',
-						'=SERVER'     => '',
-						'=PORT'       => '',
+						'=SITE_ID' => $serviceForUpdate['SITE_ID'],
+						'ACTIVE' => 'Y',
+						'=SERVICE_TYPE' => 'imap',
+						'=SERVER' => '',
+						'=PORT' => '',
 						'=ENCRYPTION' => '',
-						'=LINK'       => ''
+						'=LINK' => '',
 					),
-					'limit' => 1
+					'limit' => 1,
 				))->fetch();
 			}
 
 			if ($isSiteChanged || $isDeactivated && $emptyService)
 			{
 				$mbData = $emptyService
-					? array('SERVICE_ID' => $emptyService['ID'], 'NAME' => $emptyService['NAME'])
+					? array('SERVICE_ID' => $emptyService['ID'])
 					: array('ACTIVE' => 'N', 'SERVICE_ID' => 0);
 			}
 			else
@@ -186,6 +187,20 @@ class MailServicesTable extends Entity\DataManager
 		}
 	}
 
+	public static function getOAuthHelper($data)
+	{
+		switch ($data['SERVER'])
+		{
+			case 'imap.gmail.com':
+				return Helper\OAuth\Google::getInstance();
+			case 'imap-mail.outlook.com':
+				return Helper\OAuth\LiveId::getInstance();
+			case 'imap.yandex.com':
+			case 'imap.yandex.ru':
+				return Helper\OAuth\Yandex::getInstance();
+		}
+	}
+
 	public static function delete($primary)
 	{
 		$serviceForDelete = static::getByPrimary($primary)->fetch();
@@ -203,7 +218,7 @@ class MailServicesTable extends Entity\DataManager
 		{
 			$serviceId = is_array($primary) ? $primary['ID'] : $primary;
 
-			if (in_array($serviceForDelete['SERVICE_TYPE'], array('controller', 'domain')))
+			if (in_array($serviceForDelete['SERVICE_TYPE'], array('controller', 'domain', 'crdomain')))
 			{
 				$mbData = array('ACTIVE' => 'N', 'SERVICE_ID' => 0);
 			}
@@ -271,6 +286,24 @@ class MailServicesTable extends Entity\DataManager
 			'SERVER' => array(
 				'data_type' => 'string',
 				'title'     => Localization\Loc::getMessage('mail_mailservice_entity_server_field'),
+				'save_data_modification' => function()
+				{
+					return array(
+						function ($value)
+						{
+							return strtolower($value);
+						}
+					);
+				},
+				'fetch_data_modification' => function()
+				{
+					return array(
+						function ($value)
+						{
+							return strtolower($value);
+						}
+					);
+				},
 			),
 			'PORT' => array(
 				'data_type' => 'integer',
@@ -301,6 +334,16 @@ class MailServicesTable extends Entity\DataManager
 				'data_type' => 'Bitrix\Main\Site',
 				'reference' => array('=this.SITE_ID' => 'ref.LID'),
 			),
+			new Entity\StringField('SMTP_SERVER'),
+			new Entity\IntegerField('SMTP_PORT'),
+			new Entity\BooleanField('SMTP_LOGIN_AS_IMAP', [
+				'values' => array('Y', 'N'),
+				'default_value' => 'N',
+			]),
+			new Entity\BooleanField('SMTP_PASSWORD_AS_IMAP', [
+				'values' => array('Y', 'N'),
+				'default_value' => 'N',
+			]),
 		);
 	}
 

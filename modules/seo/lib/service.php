@@ -19,12 +19,12 @@ Loc::loadMessages(__FILE__);
 
 if(!defined("BITRIX_CLOUD_ADV_URL"))
 {
-	// define("BITRIX_CLOUD_ADV_URL", 'https://cloud-adv.bitrix.info');
+	define("BITRIX_CLOUD_ADV_URL", 'https://cloud-adv.bitrix.info');
 }
 
 if(!defined("SEO_SERVICE_URL"))
 {
-	// define('SEO_SERVICE_URL', BITRIX_CLOUD_ADV_URL);
+	define('SEO_SERVICE_URL', BITRIX_CLOUD_ADV_URL);
 }
 
 class Service
@@ -39,7 +39,7 @@ class Service
 
 	public static function isRegistered()
 	{
-		return static::getEngine()->isRegistered();
+		return static::getEngine() ? static::getEngine()->isRegistered() : false;
 	}
 
 	public static function getAuth($engineCode)

@@ -416,7 +416,13 @@ class Finder
 			if($field != 'NAME.NAME' && $field != 'NAME.LANGUAGE_ID')
 				$field = 'L.'.$dbHelper->forSql($field);
 
-			$query['WHERE'][] = $field.' '.$params['OP']." '".$dbHelper->forSql($params['VALUE'])."'";
+			$values = $params['VALUE'];
+
+			if(!is_array($values))
+				$values = array($values);
+
+			foreach($values as $value)
+				$query['WHERE'][] = $field.' '.$params['OP']." '".$dbHelper->forSql($value)."'";
 		}
 
 		if($filterByPhrase)

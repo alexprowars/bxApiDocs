@@ -7,7 +7,7 @@ Loc::loadMessages(__FILE__);
 
 /**
  * Class MessageTable
- * 
+ *
  * Fields:
  * <ul>
  * <li> ID int mandatory
@@ -132,12 +132,17 @@ class MessageTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('MESSAGE_ENTITY_IMPORT_ID_FIELD'),
 			),
 			'CHAT' => array(
-				'data_type' => 'Bitrix\Im\ImRelation',
-				'reference' => array('=this.CHAT_ID' => 'ref.CHAT_ID'),
+				'data_type' => 'Bitrix\Im\Model\ChatTable',
+				'reference' => array('=this.CHAT_ID' => 'ref.ID'),
 			),
 			'AUTHOR' => array(
 				'data_type' => 'Bitrix\Main\User',
 				'reference' => array('=this.AUTHOR_ID' => 'ref.ID'),
+			),
+			'RELATION' => array(
+				'data_type' => 'Bitrix\Im\Model\RelationTable',
+				'reference' => array('=this.CHAT_ID' => 'ref.CHAT_ID'),
+				'join_type' => 'INNER',
 			),
 		);
 	}
@@ -211,7 +216,7 @@ class MessageTable extends Main\Entity\DataManager
 	/**
 	 * Return current date for DATE_CREATE field.
 	 *
-	 * @return array
+	 * @return \Bitrix\Main\Type\DateTime
 	 */
 	public static function getCurrentDate()
 	{

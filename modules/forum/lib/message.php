@@ -55,6 +55,11 @@ class MessageTable extends Main\Entity\DataManager
 		return 'b_forum_message';
 	}
 
+	public static function getUfId()
+	{
+		return 'FORUM_MESSAGE';
+	}
+
 	/**
 	 * Returns entity map definition.
 	 *
@@ -169,6 +174,14 @@ class MessageTable extends Main\Entity\DataManager
 			'MAIL_HEADER' => array(
 				'data_type' => 'text',
 			),
+			'TOPIC' => array(
+				'data_type' => '\Bitrix\Forum\TopicTable',
+				'reference' => array(
+					'=this.TOPIC_ID' => 'ref.ID',
+				),
+				'join_type' => 'RIGHT',
+			),
+
 		);
 	}
 

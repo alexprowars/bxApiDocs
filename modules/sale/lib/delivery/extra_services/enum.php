@@ -18,7 +18,7 @@ class Enum extends Base
 		$this->params["OPTIONS"] = array();
 	}
 
-	static public function getClassTitle()
+	public function getClassTitle()
 	{
 		return Loc::getMessage("DELIVERY_EXTRA_SERVICE_ENUM_TITLE");
 	}
@@ -91,7 +91,7 @@ class Enum extends Base
 		return Loc::getMessage("DELIVERY_EXTRA_SERVICE_ENUM_NAME").
 			':&nbsp;<input name="'.$name.'[PARAMS][PRICES]['.$id.'][TITLE]" value="'.htmlspecialcharsbx($title).'">&nbsp;&nbsp;'.
 			Loc::getMessage("DELIVERY_EXTRA_SERVICE_ENUM_PRICE").
-			':&nbsp;<input name="'.$name.'[PARAMS][PRICES]['.$id.'][PRICE]" value="'.$price.'">'.(strlen($currency) > 0 ? " (".htmlspecialcharsbx($currency).")" : "");
+			':&nbsp;<input name="'.$name.'[PARAMS][PRICES]['.$id.'][PRICE]" value="'.$price.'">'.(strlen($currency) > 0 ? " (".$currency.")" : "");
 	}
 
 	protected static function getJSPrice(array $prices)
@@ -137,10 +137,12 @@ class Enum extends Base
 			$this->params["OPTIONS"][$key] =
 				$price["TITLE"].
 				" (".
-				SaleFormatCurrency(
-					$this->convertToOperatingCurrency($priceVal),
-					$this->operatingCurrency,
-					false
+				strip_tags(
+					SaleFormatCurrency(
+						$this->convertToOperatingCurrency($priceVal),
+						$this->operatingCurrency,
+						false
+					)
 				).
 				")";
 		}

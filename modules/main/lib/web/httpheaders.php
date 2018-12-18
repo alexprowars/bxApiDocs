@@ -11,7 +11,7 @@ class HttpHeaders
 {
 	protected $headers = array();
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
@@ -20,21 +20,6 @@ class HttpHeaders
 	 * @param string $name
 	 * @param string $value
 	 */
-	
-	/**
-	* <p>Нестатический метод добавляет заголовок.</p>
-	*
-	*
-	* @param string $name  
-	*
-	* @param string $value  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/add.php
-	* @author Bitrix
-	*/
 	public function add($name, $value)
 	{
 		$name = str_replace(array("\r", "\n"), "", $name);
@@ -54,27 +39,15 @@ class HttpHeaders
 	/**
 	 * Sets a header value.
 	 * @param string $name
-	 * @param string $value
+	 * @param string|null $value
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает значение заголовка.</p>
-	*
-	*
-	* @param string $name  
-	*
-	* @param string $value  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/set.php
-	* @author Bitrix
-	*/
 	public function set($name, $value)
 	{
 		$name = str_replace(array("\r", "\n"), "", $name);
-		$value = str_replace(array("\r", "\n"), "", $value);
+		if($value !== null)
+		{
+			$value = str_replace(array("\r", "\n"), "", $value);
+		}
 		$nameLower = strtolower($name);
 
 		$this->headers[$nameLower] = array(
@@ -89,21 +62,6 @@ class HttpHeaders
 	 * @param bool $returnArray
 	 * @return null|string|array
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает заголовок по его имени.</p>
-	*
-	*
-	* @param string $name  Имя заголовка.
-	*
-	* @param boolean $returnArray = false Если <i>true</i>, то возвращает массив с несколькими значениями.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/get.php
-	* @author Bitrix
-	*/
 	public function get($name, $returnArray = false)
 	{
 		$nameLower = strtolower($name);
@@ -122,19 +80,9 @@ class HttpHeaders
 	/**
 	 * Clears all headers.
 	 */
-	
-	/**
-	* <p>Нестатический метод очищает все заголовки.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/clear.php
-	* @author Bitrix
-	*/
 	public function clear()
 	{
+		unset($this->headers);
 		$this->headers = array();
 	}
 
@@ -142,17 +90,6 @@ class HttpHeaders
 	 * Returns the string representation for a HTTP request.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает строковое представление запроса HTTP.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/tostring.php
-	* @author Bitrix
-	*/
 	public function toString()
 	{
 		$str = "";
@@ -170,17 +107,6 @@ class HttpHeaders
 	 * Returns headers as a raw array.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает заголовки в виде исходного массива.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/toarray.php
-	* @author Bitrix
-	*/
 	public function toArray()
 	{
 		return $this->headers;
@@ -190,17 +116,6 @@ class HttpHeaders
 	 * Returns the content type part of the Content-Type header.
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает тип контента из <b>Content-Type</b> заголовка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/getcontenttype.php
-	* @author Bitrix
-	*/
 	public function getContentType()
 	{
 		$contentType = $this->get("Content-Type");
@@ -216,17 +131,6 @@ class HttpHeaders
 	 * Returns the charset part of the Content-Type header.
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает кодировку из <b>Content-Type</b> заголовка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/getcharset.php
-	* @author Bitrix
-	*/
 	public function getCharset()
 	{
 		$contentType = $this->get("Content-Type");
@@ -249,17 +153,6 @@ class HttpHeaders
 	 * Returns disposition-type part of the Content-Disposition header
 	 * @return null|string Disposition-type part of the Content-Disposition header if found or null otherwise.
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает <b>disposition-type</b> из <b>Content-Disposition</b> заголовка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/getcontentdisposition.php
-	* @author Bitrix
-	*/
 	public function getContentDisposition()
 	{
 		$contentDisposition = $this->get("Content-Disposition");
@@ -276,17 +169,6 @@ class HttpHeaders
 	 *
 	 * @return string|null Filename if it was found in the Content-disposition header or null otherwise.
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает имя файла из <b>Content-disposition</b> заголовка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpheaders/getfilename.php
-	* @author Bitrix
-	*/
 	public function getFilename()
 	{
 		$contentDisposition = $this->get('Content-disposition');
@@ -307,7 +189,11 @@ class HttpHeaders
 				}
 				elseif(preg_match('/^filename="(.+)"$/', $contentElement, $matches))
 				{
-					$filename = $matches[3];
+					$filename = $matches[1];
+				}
+				elseif(preg_match('/^filename=(.+)$/', $contentElement, $matches))
+				{
+					$filename = $matches[1];
 				}
 			}
 

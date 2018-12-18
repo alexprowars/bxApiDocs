@@ -210,7 +210,7 @@ abstract class Base
 	 * @deprecated
 	 * use \Bitrix\Sale\Delivery\ExtraServices\Base::getCostShipment()
 	 */
-	static public function getCost()
+	public function getCost()
 	{
 		return 0;
 	}

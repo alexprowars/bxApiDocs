@@ -139,19 +139,6 @@ class FieldType
 	 * @return $this
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Менеджер установки типа класса.</p>
-	*
-	*
-	* @param string $typeClass  Имя типа класса.
-	*
-	* @return \Bitrix\Bizproc\FieldType 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/fieldtype/settypeclass.php
-	* @author Bitrix
-	*/
 	public function setTypeClass($typeClass)
 	{
 		if (is_subclass_of($typeClass, '\Bitrix\Bizproc\BaseType\Base'))
@@ -241,6 +228,29 @@ class FieldType
 	public function setOptions($options)
 	{
 		$this->property['Options'] = $options;
+		return $this;
+	}
+
+	/**
+	 * Get field settings.
+	 * Settings contain additional information that may be required for rendering of field.
+	 * @return array
+	 */
+	public function getSettings()
+	{
+		return isset($this->property['Settings']) && is_array($this->property['Settings'])
+			? $this->property['Settings'] : array();
+	}
+
+	/**
+	 * set field settings.
+	 * Settings contain additional information that may be required for rendering of field.
+	 * @param array $settings Settings array.
+	 * @return $this
+	 */
+	public function setSettings(array $settings)
+	{
+		$this->property['Settings'] = $settings;
 		return $this;
 	}
 
@@ -369,17 +379,6 @@ class FieldType
 	 * Get list of supported base types.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает список поддерживаемых базовых типов.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/fieldtype/getbasetypesmap.php
-	* @author Bitrix
-	*/
 	public static function getBaseTypesMap()
 	{
 		return array(
@@ -402,21 +401,6 @@ class FieldType
 	 * @param string|array $property Document property.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод нормализует структуру свойства.</p>
-	*
-	*
-	* @param mixed $string  Свойство документа.
-	*
-	* @param array $property  
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/fieldtype/normalizeproperty.php
-	* @author Bitrix
-	*/
 	public static function normalizeProperty($property)
 	{
 		$normalized = array('Type' => null, 'Multiple' => false, 'Required' => false, 'Options' => null);
@@ -441,6 +425,14 @@ class FieldType
 					case 'OPTIONS':
 					case '3':
 						$normalized['Options'] = is_array($val) ? $val : (string)$val;
+						break;
+					case 'SETTINGS':
+						{
+							if(is_array($val))
+							{
+								$normalized['Settings'] = $val;
+							}
+						}
 						break;
 				}
 			}

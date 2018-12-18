@@ -46,8 +46,6 @@ class Catalog
 			return;
 		}
 
-		global $APPLICATION;
-
 		// alter b_sale_basket - add recommendation, update it here
 		if (!static::isOn())
 		{
@@ -91,7 +89,7 @@ class Catalog
 		$recommendationId = '';
 
 		// first, try to find in cookies
-		$recommendationCookie = $APPLICATION->get_cookie(static::getCookieLogName());
+		$recommendationCookie = Context::getCurrent()->getRequest()->getCookie(static::getCookieLogName());
 
 		if (!empty($recommendationCookie))
 		{
@@ -317,7 +315,11 @@ class Catalog
 		$siteUserId = $order['USER_ID'];
 
 		$phone = '';
+		$phone256 = '';
+		$phone256_e164 = '';
+
 		$email = '';
+		$email256 = '';
 
 		$result = \CSaleOrderPropsValue::GetList(array(), array("ORDER_ID" => $orderId));
 		while ($row = $result->fetch())
@@ -329,6 +331,8 @@ class Catalog
 				if (!empty($stPhone))
 				{
 					$phone = sha1($stPhone);
+					$phone256 = hash('sha256', $stPhone);
+					$phone256_e164 = hash('sha256', '+'.$stPhone);
 				}
 			}
 
@@ -337,6 +341,7 @@ class Catalog
 				if (!empty($row['VALUE']))
 				{
 					$email = sha1($row['VALUE']);
+					$email256 = hash('sha256', strtolower(trim($row['VALUE'])));
 				}
 			}
 		}
@@ -396,7 +401,10 @@ class Catalog
 			'order_id' => $orderId,
 			'user_id' => $siteUserId,
 			'phone' => $phone,
+			'phone256' => $phone256,
+			'phone256_e164' => $phone256_e164,
 			'email' => $email,
+			'email256' => $email256,
 			'products' => $products,
 			'price' => $order['PRICE'],
 			'currency' => $order['CURRENCY']
@@ -426,7 +434,7 @@ class Catalog
 
 	public static function isOn()
 	{
-		return SiteSpeed::isLicenseAccepted()
+		return SiteSpeed::isRussianSiteManager()
 			&& Option::get("main", "gather_catalog_stat", "Y") === "Y"
 			&& defined("LICENSE_KEY") && LICENSE_KEY !== "DEMO"
 		;

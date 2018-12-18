@@ -22,31 +22,26 @@ class File extends Base
 	}
 
 	/**
+	 * Get formats list.
+	 * @return array
+	 */
+	public static function getFormats()
+	{
+		$formats = parent::getFormats();
+		$formats['src'] = array(
+			'callable' =>'formatValueSrc',
+			'separator' => ', ',
+		);
+		return $formats;
+	}
+
+	/**
 	 * Normalize single value.
 	 *
 	 * @param FieldType $fieldType Document field type.
 	 * @param mixed $value Field value.
 	 * @return mixed Normalized value
 	 */
-	
-	/**
-	* <p>Статический метод нормализует одиночное значение.</p>
-	*
-	*
-	* @param mixed $Bitrix  Тип поля документа.
-	*
-	* @param Bitri $Bizproc  Значение поля.
-	*
-	* @param FieldType $fieldType  
-	*
-	* @param mixed $value  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/file/tosinglevalue.php
-	* @author Bitrix
-	*/
 	public static function toSingleValue(FieldType $fieldType, $value)
 	{
 		if (is_array($value))
@@ -78,6 +73,21 @@ class File extends Base
 	}
 
 	/**
+	 * @param FieldType $fieldType
+	 * @param $value
+	 * @return string
+	 */
+	protected static function formatValueSrc(FieldType $fieldType, $value)
+	{
+		$value = (int) $value;
+		$file = \CFile::getFileArray($value);
+		if ($file && $file['SRC'])
+		{
+			return $file['SRC'];
+		}
+	}
+
+	/**
 	 * @param FieldType $fieldType Document field type.
 	 * @param mixed $value Field value.
 	 * @param string $toTypeClass Type class name.
@@ -103,17 +113,6 @@ class File extends Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает таблицу преобразования для текущего типа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/file/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -150,7 +149,10 @@ class File extends Base
 	{
 		if ($renderMode & FieldType::RENDER_MODE_DESIGNER)
 			return '';
-		return '<input type="file" id="'
+
+		$className = static::generateControlClassName($fieldType, $field);
+
+		return '<input type="file" class="'.htmlspecialcharsbx($className).'" id="'
 			.htmlspecialcharsbx(static::generateControlId($field))
 			.'" name="'.htmlspecialcharsbx(static::generateControlName($field)).'">';
 	}

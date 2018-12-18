@@ -33,7 +33,7 @@ class Manager
 
 	/**
 	 * Manager constructor.
-	 * @param array $initParam
+	 * @param array|int $initParam
 	 * @param string $currency
 	 * @param array $values
 	 * @param array $additionalParams

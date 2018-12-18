@@ -30,17 +30,6 @@ class Storage
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод возвращает идентификатор инфоблока. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/getiblockid.php
-	* @author Bitrix
-	*/
 	public function getIblockId()
 	{
 		return $this->iblockId;
@@ -51,17 +40,6 @@ class Storage
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы базы данных для хранения индекса свойств. Нестатический внутренний метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/gettablename.php
-	* @author Bitrix
-	*/
 	public function getTableName()
 	{
 		return "b_iblock_".$this->iblockId."_index";
@@ -73,17 +51,6 @@ class Storage
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод проверяет существование в базе данных индекса для свойства. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/isexists.php
-	* @author Bitrix
-	*/
 	public function isExists()
 	{
 		if (!array_key_exists($this->iblockId, self::$exists))
@@ -101,17 +68,6 @@ class Storage
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод создает новый индекс значений свойства информационного блока. Перед вызовом метода необходимо убедиться, что такой индекс еще не существует. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/create.php
-	* @author Bitrix
-	*/
 	public function create()
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
@@ -150,17 +106,6 @@ class Storage
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод удаляет существующий индекс из базы данных. Перед вызовом метода необходимо убедиться в том, что индекс существует. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/drop.php
-	* @author Bitrix
-	*/
 	public function drop()
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
@@ -175,17 +120,6 @@ class Storage
 	 *
 	 * @return int
 	 */
-	
-	/**
-	* <p>Метод возвращает максимальный идентификатор хранящегося элемента. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/getlaststoredelementid.php
-	* @author Bitrix
-	*/
 	public function getLastStoredElementId()
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
@@ -207,30 +141,6 @@ class Storage
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод добавляет новую запись индекса. Нестатический метод.</p>
-	*
-	*
-	* @param integer $sectionId  Идентификатор секции элемента.
-	*
-	* @param integer $elementId  Идентификатор элемента.
-	*
-	* @param integer $facetId  Идентификатор свойства/цены.
-	*
-	* @param integer $value  Значение словаря или 0.
-	*
-	* @param float $valueNum  Значение числового свойства или цены.
-	*
-	* @param boolean $includeSubsections  Параметр принимает <i>true</i>, если секция имеет родителя, в
-	* противном случае указывается <i>false</i>.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/addindexentry.php
-	* @author Bitrix
-	*/
 	public function addIndexEntry($sectionId, $elementId, $facetId, $value, $valueNum, $includeSubsections)
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
@@ -270,19 +180,6 @@ class Storage
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод удаляет все записи для элемента из индекса. Нестатический метод.</p>
-	*
-	*
-	* @param integer $elementId  Идентификатор элемента, записи которого необходимо удалить.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/deleteindexelement.php
-	* @author Bitrix
-	*/
 	public function deleteIndexElement($elementId)
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
@@ -298,19 +195,6 @@ class Storage
 	 * @param integer $propertyId Property identifier.
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод преобразует идентификатор свойства инфоблока во внутренний идентификатор фасеты. Метод статический.</p>
-	*
-	*
-	* @param integer $propertyId  Идентификатор свойства инфоблока.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/propertyidtofacetid.php
-	* @author Bitrix
-	*/
 	public static function propertyIdToFacetId($propertyId)
 	{
 		return intval($propertyId * 2);
@@ -322,19 +206,6 @@ class Storage
 	 * @param integer $priceId Price identifier.
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод преобразует идентификатор цены во внутренний идентификатор фасеты. Метод статический.</p>
-	*
-	*
-	* @param integer $priceId  Идентификатор цены.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/priceidtofacetid.php
-	* @author Bitrix
-	*/
 	public static function priceIdToFacetId($priceId)
 	{
 		return intval($priceId * 2 + 1);
@@ -347,19 +218,6 @@ class Storage
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод возвращает <i>true</i>, если заданный идентификатор является идентификатором цены каталога. Метод статический.</p>
-	*
-	*
-	* @param integer $facetId  Внутренний идентификатор фасеты.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/ispriceid.php
-	* @author Bitrix
-	*/
 	public static function isPriceId($facetId)
 	{
 		return ($facetId % 2) != 0;
@@ -372,19 +230,6 @@ class Storage
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод возвращает <i>true</i>, если заданный идентификатор является идентификатором свойства инфоблока. Метод статический.</p>
-	*
-	*
-	* @param integer $facetId  Внутренний идентификатор фасеты.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/ispropertyid.php
-	* @author Bitrix
-	*/
 	public static function isPropertyId($facetId)
 	{
 		return ($facetId % 2) == 0;
@@ -397,19 +242,6 @@ class Storage
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод преобразует внутренний идентификатор фасеты в идентификатор свойства инфоблока. Метод статический.</p>
-	*
-	*
-	* @param integer $facetId  Внутренний идентификатор фасеты.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/facetidtopropertyid.php
-	* @author Bitrix
-	*/
 	public static function facetIdToPropertyId($facetId)
 	{
 		return intval($facetId / 2);
@@ -422,19 +254,6 @@ class Storage
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод преобразует внутренний идентификатор фасеты в идентификатор цены каталога. Метод статический.</p>
-	*
-	*
-	* @param integer $facetId  Внутренний идентификатор фасеты.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertyindex/storage/facetidtopriceid.php
-	* @author Bitrix
-	*/
 	public static function facetIdToPriceId($facetId)
 	{
 		return intval(($facetId - 1) / 2);

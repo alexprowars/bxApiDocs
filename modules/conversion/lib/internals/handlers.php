@@ -38,7 +38,8 @@ final class Handlers
 		$browser = null; // TODO hack
 
 		$browserValues = array(
-			'ie'        => array('NAME' => 'Internet Explorer', 'REGEX' => '/msie/i'     ),
+			'edge'      => array('NAME' => 'Edge', 'REGEX' => '/edge\//i'),
+			'ie'        => array('NAME' => 'Internet Explorer', 'REGEX' => '/msie|trident/i'),
 			'firefox'   => array('NAME' => 'Firefox',           'REGEX' => '/firefox/i'  ),
 			'chrome'    => array('NAME' => 'Chrome',            'REGEX' => '/chrome/i'   ),
 			'opera'     => array('NAME' => 'Opera',             'REGEX' => '/opera/i'    ),
@@ -292,6 +293,7 @@ final class Handlers
 		{
 			$done = true;
 
+			\CJSCore::init();
 			DayContext::getInstance();
 
 			// For composite site this script must not be changing often!!!
@@ -310,17 +312,17 @@ final class Handlers
 								}
 							})("'.DayContext::getVarName().'");
 
-							if (! cookie || cookie.EXPIRE < BX.message("SERVER_TIME"))
-							{
-								var request = new XMLHttpRequest();
-								request.open("POST", "/bitrix/tools/conversion/ajax_counter.php", true);
-								request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-								request.send(
-									"SITE_ID="      + encodeURIComponent(BX.message("SITE_ID")) + "&" +
-									"sessid="       + encodeURIComponent(BX.bitrix_sessid())    + "&" +
-									"HTTP_REFERER=" + encodeURIComponent(document.referrer)
-								);
-							}
+							if (cookie && cookie.EXPIRE >= BX.message("SERVER_TIME"))
+								return;
+
+							var request = new XMLHttpRequest();
+							request.open("POST", "/bitrix/tools/conversion/ajax_counter.php", true);
+							request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+							request.send(
+								"SITE_ID="+encodeURIComponent("'.DayContext::getSiteId().'")+
+								"&sessid="+encodeURIComponent(BX.bitrix_sessid())+
+								"&HTTP_REFERER="+encodeURIComponent(document.referrer)
+							);
 						};
 
 						if (window.frameRequestStart === true)

@@ -36,17 +36,6 @@ class ExceptionHandler
 	/**
 	 * ExceptionHandler constructor.
 	 */
-	
-	/**
-	* <p>Нестатический метод вызывается при создании экземпляра класса и позволяет в нем произвести какие-то действия, при создании объекта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct()
 	{
 		$this->handledErrorsTypes = E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR;
@@ -61,20 +50,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает режим отладки.</p> <p>Следует использовать при разработке.</p>
-	*
-	*
-	* @param boolean $debug  Если <i>true</i>, то ошибка будет отображена пользователю. Если <i>false</i>
-	* большинство ошибок не будет выводиться.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setdebugmode.php
-	* @author Bitrix
-	*/
 	public function setDebugMode($debug)
 	{
 		$this->debug = $debug;
@@ -87,19 +62,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает будут ли выводиться ошибки переполнения памяти.</p>
-	*
-	*
-	* @param boolean $catchOverflowMemory  Если <i>true</i>, то будут выводиться ошибки переполнения памяти.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setoverflowmemorycatching.php
-	* @author Bitrix
-	*/
 	public function setOverflowMemoryCatching($catchOverflowMemory)
 	{
 		$this->catchOverflowMemory = $catchOverflowMemory;
@@ -113,24 +75,6 @@ class ExceptionHandler
 	 * @return void
 	 * @see http://php.net/manual/en/errorfunc.constants.php
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает типы ошибок которые будут обработаны.</p>
-	*
-	*
-	* @param integer $handledErrorsTypes  Битовая маска типов ошибок.
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://php.net/manual/en/errorfunc.constants.php" >errorfunc.constants</a></li> </ul><a
-	* name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/sethandlederrorstypes.php
-	* @author Bitrix
-	*/
 	public function setHandledErrorsTypes($handledErrorsTypes)
 	{
 		$this->handledErrorsTypes = $handledErrorsTypes;
@@ -144,24 +88,6 @@ class ExceptionHandler
 	 * @return void
 	 * @see http://php.net/manual/en/errorfunc.constants.php
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает разрешённые типы ошибок для обработки.</p>
-	*
-	*
-	* @param integer $assertionErrorType  Битовые маски разрешаемых типов.
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://php.net/manual/en/errorfunc.constants.php%22" >errorfunc.constants</a></li> </ul><a
-	* name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setassertionerrortype.php
-	* @author Bitrix
-	*/
 	public function setAssertionErrorType($assertionErrorType)
 	{
 		$this->assertionErrorType = $assertionErrorType;
@@ -174,19 +100,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает будет ли выбрасываться исключение утверждением или нет.</p>
-	*
-	*
-	* @param boolean $assertionThrowsException  Если <i>true</i> утверждение будет выбрасывать исключение.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setassertionthrowsexception.php
-	* @author Bitrix
-	*/
 	public function setAssertionThrowsException($assertionThrowsException)
 	{
 		$this->assertionThrowsException = $assertionThrowsException;
@@ -200,23 +113,6 @@ class ExceptionHandler
 	 * @return void
 	 * @see http://php.net/manual/en/errorfunc.constants.php
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает какие ошибки будут выброшены исключением.</p>
-	*
-	*
-	* @param integer $errorTypesException  Битовая маска типов ошибок.
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="" >errorfunc.constants</a></li> </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setexceptionerrorstypes.php
-	* @author Bitrix
-	*/
 	public function setExceptionErrorsTypes($errorTypesException)
 	{
 		$this->exceptionErrorsTypes = $errorTypesException;
@@ -229,19 +125,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает игнорировать ли ошибку когда <code>error_reporting() == 0</code>.</p>
-	*
-	*
-	* @param boolean $ignoreSilence  Если <i>true</i>, то error_reporting()==0 будет проигнорирован.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setignoresilence.php
-	* @author Bitrix
-	*/
 	public function setIgnoreSilence($ignoreSilence)
 	{
 		$this->ignoreSilence = $ignoreSilence;
@@ -254,25 +137,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает какой  объект регистратора использовать для записи.</p>
-	*
-	*
-	* @param mixed $Bitrix  Объект регистратора
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Diag  
-	*
-	* @param ExceptionHandlerLog $handlerLog = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/sethandlerlog.php
-	* @author Bitrix
-	*/
 	public function setHandlerLog(\Bitrix\Main\Diag\ExceptionHandlerLog $handlerLog = null)
 	{
 		$this->handlerLog = $handlerLog;
@@ -285,25 +149,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает объект используемый для показа сообщения об ошибке для пользователя.</p>
-	*
-	*
-	* @param mixed $Bitrix  Объект, который будет выводить ошибки пользователю.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Diag  
-	*
-	* @param IExceptionHandlerOutput $handlerOutput  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/sethandleroutput.php
-	* @author Bitrix
-	*/
 	public function setHandlerOutput(\Bitrix\Main\Diag\IExceptionHandlerOutput $handlerOutput)
 	{
 		$this->handlerOutput = $handlerOutput;
@@ -372,24 +217,6 @@ class ExceptionHandler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод инициализирует обработку ошибок.</p> <p>Должен быть вызван после создания объекта.</p>
-	*
-	*
-	* @param callable $exceptionHandlerOutputCreator  Функция для возврата объекта для форматирования сообщения об
-	* ошибке.
-	*
-	* @param callable $callable  Функция для возврата объекта для записи в лог.
-	*
-	* @param null $exceptionHandlerLogCreator = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/initialize.php
-	* @author Bitrix
-	*/
 	public function initialize($exceptionHandlerOutputCreator, $exceptionHandlerLogCreator = null)
 	{
 		if ($this->isInitialized)
@@ -434,29 +261,6 @@ class ExceptionHandler
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::writeToLog
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::initialize
 	 */
-	
-	/**
-	* <p>Нестатический метод записывает информацию об исключении в лог, отображает её пользователю и удаляет посредством <code>die()</code>.</p>
-	*
-	*
-	* @param mixed $Exception  Объект исключения.
-	*
-	* @param Error $exception  
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/writetolog.php">\Bitrix\Main\Diag\ExceptionHandler::writeToLog</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/initialize.php">\Bitrix\Main\Diag\ExceptionHandler::initialize</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/handleexception.php
-	* @author Bitrix
-	*/
 	public function handleException($exception)
 	{
 		$this->writeToLog($exception, ExceptionHandlerLog::UNCAUGHT_EXCEPTION);
@@ -478,31 +282,6 @@ class ExceptionHandler
 	 * @throws \ErrorException
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::setExceptionErrorsTypes
 	 */
-	
-	/**
-	* <p>Нестатический метод создаёт и исключает объект по его аргументам.</p> <p>Исключение выбрасывается если <code>$code</code> совпадает с маской исключения, или же записывается в лог.</p>
-	*
-	*
-	* @param integer $code  Код ошибки
-	*
-	* @param string $message  Сообщение об ошибке
-	*
-	* @param string $file  Файл где обнаружилась ошибка.
-	*
-	* @param integer $line  НОмер строки в файле, где расположена ошибка.
-	*
-	* @return true 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setexceptionerrorstypes.php">\Bitrix\Main\Diag\ExceptionHandler::setExceptionErrorsTypes</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/handleerror.php
-	* @author Bitrix
-	*/
 	public function handleError($code, $message, $file, $line)
 	{
 		$exception = new \ErrorException($message, 0, $code, $file, $line);
@@ -535,29 +314,6 @@ class ExceptionHandler
 	 * @throws \ErrorException
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::setAssertionThrowsException
 	 */
-	
-	/**
-	* <p>Нестатический метод создаёт и исключает объект по его аргументам.</p> <p>Выбрасывает исключение если утверждение установлено по умолчанию, или же производит запись в лог.</p>
-	*
-	*
-	* @param string $file  Файл, где обнаружена ошибка.
-	*
-	* @param integer $line  Номер строки файла, где обнаружена ошибка.
-	*
-	* @param string $message  Сообщение об ошибке.
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/setassertionthrowsexception.php">\Bitrix\Main\Diag\ExceptionHandler::setAssertionThrowsException</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/handleassertion.php
-	* @author Bitrix
-	*/
 	public function handleAssertion($file, $line, $message)
 	{
 		$exception = new \ErrorException($message, 0, $this->assertionErrorType, $file, $line);
@@ -581,23 +337,6 @@ class ExceptionHandler
 	 * @see error_get_last
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::setHandledErrorsTypes
 	 */
-	
-	/**
-	* <p>Нестатический метод выводит информацию об ошибке из функции <code>error_get_last()</code>.</p> <p>Проверяет и заносит в лог тип ошибок.</p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><code>\Bitrix\Main\Diag\error_get_last</code></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/sethandlederrorstypes.php">\Bitrix\Main\Diag\ExceptionHandler::setHandledErrorsTypes</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/handlefatalerror.php
-	* @author Bitrix
-	*/
 	public function handleFatalError()
 	{
 		unset($this->memoryReserve);
@@ -623,29 +362,6 @@ class ExceptionHandler
 	 * @return void
 	 * @see \Bitrix\Main\Diag\ExceptionHandler::initialize
 	 */
-	
-	/**
-	* <p>Нестатический метод записывает информацию об исключении в лог файл.</p>
-	*
-	*
-	* @param Exception $exception  Объект исключения.
-	*
-	* @param Exception $integer  Просмотреть константы классы ExceptionHandlerLog.
-	*
-	* @param null $logType = null 
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/initialize.php">\Bitrix\Main\Diag\ExceptionHandler::initialize</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/diag/exceptionhandler/writetolog.php
-	* @author Bitrix
-	*/
 	public function writeToLog($exception, $logType = null)
 	{
 		$log = $this->getHandlerLog();

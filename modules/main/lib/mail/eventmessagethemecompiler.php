@@ -44,25 +44,6 @@ class EventMessageThemeCompiler
 	 * @param bool $isHtml
 	 * @return EventMessageThemeCompiler
 	 */
-	
-	/**
-	* <p>Нестатический метод - конструктор.</p>
-	*
-	*
-	* @param mixed $string  
-	*
-	* @param null $siteTemplateId = null 
-	*
-	* @param string $body  
-	*
-	* @param boolean $isHtml = true 
-	*
-	* @return \Bitrix\Main\Mail\EventMessageThemeCompiler 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct($siteTemplateId = null, $body, $isHtml = true)
 	{
 		$this->contentTypeHtml = $isHtml;
@@ -79,25 +60,6 @@ class EventMessageThemeCompiler
 	 * @param bool $isHtml
 	 * @return EventMessageThemeCompiler
 	 */
-	
-	/**
-	* <p>Статический метод создаёт экземпляр класса.</p>
-	*
-	*
-	* @param mixed $string  Идентификатор шаблона сайта
-	*
-	* @param null $siteTemplateId = null Тело
-	*
-	* @param string $body  В виде HTML. По умолчанию true.
-	*
-	* @param boolean $isHtml = true 
-	*
-	* @return \Bitrix\Main\Mail\EventMessageThemeCompiler 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/createinstance.php
-	* @author Bitrix
-	*/
 	public static function createInstance($siteTemplateId = null, $body, $isHtml = true)
 	{
 		static::$instance = new static($siteTemplateId, $body, $isHtml);
@@ -111,17 +73,6 @@ class EventMessageThemeCompiler
 	 * @return EventMessageThemeCompiler
 	 * @throws \Bitrix\Main\ObjectNotFoundException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает текущий экземпляр класса.</p> <p>Без параметров</p>
-	*
-	*
-	* @return \Bitrix\Main\Mail\EventMessageThemeCompiler 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getinstance.php
-	* @author Bitrix
-	*/
 	public static function getInstance()
 	{
 		if (!isset(static::$instance))
@@ -135,17 +86,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Статический метод сбрасывает текущий экземпляр класса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/unsetinstance.php
-	* @author Bitrix
-	*/
 	public static function unsetInstance()
 	{
 		if (isset(static::$instance))
@@ -157,19 +97,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param mixed $siteTemplateId
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает ID шаблона сайта.</p>
-	*
-	*
-	* @param mixed $siteTemplateId  Идентификатор шаблона сайта
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setsitetemplateid.php
-	* @author Bitrix
-	*/
 	public function setSiteTemplateId($siteTemplateId)
 	{
 		$this->siteTemplateId = $siteTemplateId;
@@ -180,17 +107,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return mixed
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает идентификатор шаблона сайта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getsitetemplateid.php
-	* @author Bitrix
-	*/
 	public function getSiteTemplateId()
 	{
 		return $this->siteTemplateId;
@@ -201,19 +117,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param mixed $languageId
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает идентификатор языка сайта.</p>
-	*
-	*
-	* @param mixed $languageId  Идентификатор языка
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setlanguageid.php
-	* @author Bitrix
-	*/
 	public function setLanguageId($languageId)
 	{
 		$this->languageId = $languageId;
@@ -223,17 +126,6 @@ class EventMessageThemeCompiler
 	 * Get language id.
 	 * @return mixed
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает идентификатор языка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getlanguageid.php
-	* @author Bitrix
-	*/
 	public function getLanguageId()
 	{
 		return $this->languageId;
@@ -245,19 +137,6 @@ class EventMessageThemeCompiler
 	 * @param mixed $siteId
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает ID сайта.</p>
-	*
-	*
-	* @param mixed $siteId  Идентификатор сайта
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setsiteid.php
-	* @author Bitrix
-	*/
 	public function setSiteId($siteId)
 	{
 		$this->siteId = $siteId;
@@ -268,17 +147,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает идентификатор сайта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getsiteid.php
-	* @author Bitrix
-	*/
 	public function getSiteId()
 	{
 		return $this->siteId;
@@ -289,17 +157,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает результат типа строка, в которой результат замены шаблона значениями. Шаблон - это почтовый шаблон и тема оформления.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getresult.php
-	* @author Bitrix
-	*/
 	public function getResult()
 	{
 		return $this->resultString;
@@ -310,19 +167,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param array $params
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает параметры, которые будут использоваться для замены плейсхолдеров.</p>
-	*
-	*
-	* @param array $params  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setparams.php
-	* @author Bitrix
-	*/
 	public function setParams(array $params)
 	{
 		$this->params = $params;
@@ -333,19 +177,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param mixed $themeProlog
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает пролог темы.</p>
-	*
-	*
-	* @param mixed $themeProlog  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setthemeprolog.php
-	* @author Bitrix
-	*/
 	public function setThemeProlog($themeProlog)
 	{
 		$this->themeProlog = $themeProlog;
@@ -356,17 +187,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return mixed
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает пролог темы.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getthemeprolog.php
-	* @author Bitrix
-	*/
 	public function getThemeProlog()
 	{
 		return $this->themeProlog;
@@ -377,19 +197,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param mixed $themeEpilog
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает эпилог темы.</p>
-	*
-	*
-	* @param mixed $themeEpilog  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setthemeepilog.php
-	* @author Bitrix
-	*/
 	public function setThemeEpilog($themeEpilog)
 	{
 		$this->themeEpilog = $themeEpilog;
@@ -400,17 +207,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return mixed
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает эпилог темы.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getthemeepilog.php
-	* @author Bitrix
-	*/
 	public function getThemeEpilog()
 	{
 		return $this->themeEpilog;
@@ -423,21 +219,6 @@ class EventMessageThemeCompiler
 	 * @param bool $sort
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает стиль.</p>
-	*
-	*
-	* @param array $arPaths  Массив путей
-	*
-	* @param boolean $sort = false Сортировка
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setstyle.php
-	* @author Bitrix
-	*/
 	public function setStyle($path, $sort = false)
 	{
 		$sort = ($sort === false ? $this->currentResourceOrder : $sort);
@@ -451,21 +232,6 @@ class EventMessageThemeCompiler
 	 * @param bool $sort
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает список стилей.</p>
-	*
-	*
-	* @param array $arPaths  Массив путей к файлам стилей
-	*
-	* @param boolean $sort = false Сортировка
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/setstylearray.php
-	* @author Bitrix
-	*/
 	public function setStyleArray(array $arPaths, $sort = false)
 	{
 		foreach($arPaths as $path)
@@ -477,17 +243,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список стилей для добавления в шаблон.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getstyles.php
-	* @author Bitrix
-	*/
 	public function getStyles()
 	{
 		return $this->arStyle;
@@ -498,17 +253,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает стили в виде строки для добавления в шаблон.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/getstylesstring.php
-	* @author Bitrix
-	*/
 	public function getStylesString()
 	{
 		$returnStylesString = $this->themeStylesString;
@@ -537,17 +281,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод отображает стили которые будут использованы в почтовом шаблоне.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/showstyles.php
-	* @author Bitrix
-	*/
 	public function showStyles()
 	{
 		if($this->contentTypeHtml)
@@ -599,19 +332,6 @@ class EventMessageThemeCompiler
 	 * @return void
 	 *
 	 */
-	
-	/**
-	* <p>Нестатический метод подключает языковые файлы из каталога темы.</p> <p>Например: <code>$this-&gt;includeThemeLang("header.php")</code> подключит файл <code>lang/en/header.php</code>. </p> <p class="note">Примечание: тема должна быть инициирована методом <code>\Bitrix\Main\Mail\EventMessageThemeCompiler::setTheme</code>.</p>
-	*
-	*
-	* @param string $relativePath = "" Относительный путь к файлу
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/includethemelang.php
-	* @author Bitrix
-	*/
 	final public function includeThemeLang($relativePath = "")
 	{
 		if ($relativePath == "")
@@ -628,17 +348,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @param
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет пролог, тело и эпилог.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/execute.php
-	* @author Bitrix
-	*/
 	public function execute()
 	{
 		$resultThemeProlog = '';
@@ -710,27 +419,6 @@ class EventMessageThemeCompiler
 	 *
 	 * @return mixed
 	 */
-	
-	/**
-	* <p>Статический метод подключает почтовый компонент.</p>
-	*
-	*
-	* @param mixed $componentName  Название компонента.
-	*
-	* @param $componentNam $componentTemplate  Шаблон компонента.
-	*
-	* @param $componentTemplat $arParams = array() Массив параметров.
-	*
-	* @param mixed $parentComponent = null Родительский компонент.
-	*
-	* @param array $arFunctionParams = array() .
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/eventmessagethemecompiler/includecomponent.php
-	* @author Bitrix
-	*/
 	public static function includeComponent($componentName, $componentTemplate, $arParams = array(), $parentComponent = null, $arFunctionParams = array())
 	{
 		$componentRelativePath = \CComponentEngine::MakeComponentPath($componentName);

@@ -2,22 +2,25 @@
 
 namespace Bitrix\Sale\PaySystem;
 
+use Bitrix\Main\Request;
+
 interface IRequested
 {
 	/**
-	 * @return bool
+	 * @param Request $request
+	 * @return ServiceResult
 	 */
-	static public function createMovementListRequest();
+	public function createMovementListRequest(Request $request);
 
 	/**
 	 * @param $requestId
-	 * @return array
+	 * @return ServiceResult
 	 */
-	static public function getMovementListStatus($requestId = null);
+	public function getMovementListStatus($requestId = null);
 
 	/**
 	 * @param $requestId
-	 * @return mixed
+	 * @return ServiceResult
 	 */
-	static public function getMovementList($requestId = null);
+	public function getMovementList($requestId = null);
 }

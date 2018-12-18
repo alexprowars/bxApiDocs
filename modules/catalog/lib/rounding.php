@@ -92,13 +92,13 @@ class RoundingTable extends Main\Entity\DataManager
 			)),
 			'CREATED_BY_USER' => new Main\Entity\ReferenceField(
 				'CREATED_BY_USER',
-				'Bitrix\Main\User',
+				'\Bitrix\Main\User',
 				array('=this.CREATED_BY' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),
 			'MODIFIED_BY_USER' => new Main\Entity\ReferenceField(
 				'MODIFIED_BY_USER',
-				'Bitrix\Main\User',
+				'\Bitrix\Main\User',
 				array('=this.MODIFIED_BY' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			)
@@ -301,7 +301,7 @@ class RoundingTable extends Main\Entity\DataManager
 	}
 
 	/**
-	 * Delete rules by currency.
+	 * Delete rules by price type.
 	 *
 	 * @param string|int $priceType		Price type id.
 	 * @return void
@@ -314,7 +314,7 @@ class RoundingTable extends Main\Entity\DataManager
 		$conn = Main\Application::getConnection();
 		$helper = $conn->getSqlHelper();
 		$conn->queryExecute(
-			'delete from '.$helper->quote(self::getTableName()).' where '.$helper->quote('CATALOG_CGROU_ID').' = '.$priceType
+			'delete from '.$helper->quote(self::getTableName()).' where '.$helper->quote('CATALOG_GROUP_ID').' = '.$priceType
 		);
 		unset($helper, $conn);
 		Product\Price::clearRoundRulesCache($priceType);

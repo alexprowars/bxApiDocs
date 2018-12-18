@@ -46,6 +46,7 @@ class Product2ProductTable extends Main\Entity\DataManager
 	 */
 	public static function deleteOldProducts($liveTime = 10)
 	{
+		$liveTime = (int)$liveTime;
 		$connection = Main\Application::getConnection();
 		$type = $connection->getType();
 		$helper = $connection->getSqlHelper();
@@ -53,40 +54,45 @@ class Product2ProductTable extends Main\Entity\DataManager
 		$now = $helper->getCurrentDateTimeFunction();
 
 		// Update existing
-		if ($type == "mysql")
+		switch ($type)
 		{
-			$sqlUpdate = "UPDATE b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1, b_sale_order o, b_sale_order_processing op
-				SET  p2p.CNT = p2p.CNT - 1
-				WHERE b.ORDER_ID = b1.ORDER_ID AND
-					b.ID <> b1.ID AND
-					$now > $liveTo AND
-					o.ID = b.ORDER_ID AND
-					o.ID = op.ORDER_ID AND
-					op.PRODUCTS_REMOVED = 'N' AND
-					p2p.PRODUCT_ID = b.PRODUCT_ID AND
-					p2p.PARENT_PRODUCT_ID = b1.PRODUCT_ID";
-		}
-		elseif ($type == "mssql")
-		{
-			$sqlUpdate = "UPDATE b_sale_product2product
-				SET  CNT = CNT - 1
-				FROM b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1, b_sale_order o, b_sale_order_processing op
-				WHERE b.ORDER_ID = b1.ORDER_ID AND
-					b.ID <> b1.ID AND
-					$now > $liveTo AND
-					o.ID = b.ORDER_ID AND
-					o.ID = op.ORDER_ID AND
-					op.PRODUCTS_REMOVED = 'N' AND
-					p2p.PRODUCT_ID = b.PRODUCT_ID AND
-					p2p.PARENT_PRODUCT_ID = b1.PRODUCT_ID";
-		}
-		else // Oracle
-		{
-			$sqlUpdate = "UPDATE b_sale_product2product
-				SET CNT = CNT - 1
-				WHERE ID IN (
-					SELECT p2p.ID FROM b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1, b_sale_order o, b_sale_order_processing op
+			case 'mysql':
+				if ($connection->isTableExists('b_sale_order_product_stat'))
+				{
+					$liveTo = $helper->addSecondsToDateTime($liveTime * 24 * 3600, "ORDER_DATE");
+					$sqlDelete = "DELETE FROM b_sale_order_product_stat WHERE $now > $liveTo";
+					$connection->query($sqlDelete);
+					$connection->query("TRUNCATE TABLE b_sale_product2product");
+					$sqlUpdate = "INSERT INTO b_sale_product2product(PRODUCT_ID, PARENT_PRODUCT_ID, CNT) 
+						SELECT ops.PRODUCT_ID, ops.RELATED_PRODUCT_ID, SUM(ops.CNT)
+						FROM b_sale_order_product_stat ops
+						GROUP BY PRODUCT_ID, RELATED_PRODUCT_ID
+						ORDER BY NULL";
+					$connection->query($sqlUpdate);
+					unset($sqlUpdate);
+				}
+				break;
+			case 'mssql':
+				$sqlUpdate = "UPDATE b_sale_product2product
+					SET  CNT = CNT - 1
+					FROM b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1, b_sale_order o, b_sale_order_processing op
 					WHERE b.ORDER_ID = b1.ORDER_ID AND
+					b.ID <> b1.ID AND
+					$now > $liveTo AND
+					o.ID = b.ORDER_ID AND
+					o.ID = op.ORDER_ID AND
+					op.PRODUCTS_REMOVED = 'N' AND
+					p2p.PRODUCT_ID = b.PRODUCT_ID AND
+					p2p.PARENT_PRODUCT_ID = b1.PRODUCT_ID";
+				$connection->query($sqlUpdate);
+				unset($sqlUpdate);
+				break;
+			case 'oracle':
+				$sqlUpdate = "UPDATE b_sale_product2product
+					SET CNT = CNT - 1
+					WHERE ID IN (
+						SELECT p2p.ID FROM b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1, b_sale_order o, b_sale_order_processing op
+						WHERE b.ORDER_ID = b1.ORDER_ID AND
 						b.ID <> b1.ID AND
 						$now > $liveTo AND
 						o.ID = b.ORDER_ID AND
@@ -95,19 +101,73 @@ class Product2ProductTable extends Main\Entity\DataManager
 						p2p.PRODUCT_ID = b.PRODUCT_ID AND
 						p2p.PARENT_PRODUCT_ID = b1.PRODUCT_ID
 					)";
+				$connection->query($sqlUpdate);
+				unset($sqlUpdate);
+				break;
+			default:
+				break;
 		}
 
-		$connection->query($sqlUpdate);
-
-		// Update Status
+		// @deprecated update status, stayed for compatibility
 		$updateRemStatusSql = "UPDATE b_sale_order_processing SET PRODUCTS_REMOVED = 'Y'";
 		$connection->query($updateRemStatusSql);
 
-		// Delete
-		$deleteSql = "DELETE FROM b_sale_product2product WHERE CNT <= 0";
-		$connection->query($deleteSql);
+		if ($type !== "mysql")
+		{
+			// Delete
+			$deleteSql = "DELETE FROM b_sale_product2product WHERE CNT <= 0";
+			$connection->query($deleteSql);
+		}
 
-		return "\\Bitrix\\Sale\\Product2ProductTable::deleteOldProducts(".intval($liveTime).");";
+		return "\\Bitrix\\Sale\\Product2ProductTable::deleteOldProducts(".$liveTime.");";
+	}
+
+	/**
+	 * Refresh order statistic
+	 *
+	 * @param $liveTime.			Counting statistic period in days
+	 *
+	 * @return Main\DB\Result
+	 */
+	public static function refreshProductStatistic($liveTime = 10)
+	{
+		$liveTime = (int)$liveTime;
+		$connection = Main\Application::getConnection();
+
+		if (!$connection->isTableExists('b_sale_order_product_stat'))
+			return;
+
+		$sqlDelete = "TRUNCATE TABLE b_sale_order_product_stat";
+		$connection->query($sqlDelete);
+		$dateLimit = "";
+		if ($liveTime > 0)
+		{
+			$helper = $connection->getSqlHelper();
+			$liveTo = $helper->addSecondsToDateTime($liveTime * 24 * 3600, "b.DATE_INSERT");
+			$dateLimit = " AND NOW() < $liveTo";
+		}
+		$sqlUpdate = "
+			INSERT INTO b_sale_order_product_stat (PRODUCT_ID, RELATED_PRODUCT_ID, ORDER_DATE, CNT) 
+				SELECT b.PRODUCT_ID as PRODUCT_ID, b1.PRODUCT_ID as RELATED_PRODUCT_ID, DATE(b.DATE_INSERT) as ORDER_DATE, COUNT(b.PRODUCT_ID)
+				FROM b_sale_basket b, b_sale_basket b1
+				WHERE b.ORDER_ID = b1.ORDER_ID 
+					AND	b.ID <> b1.ID
+					$dateLimit 
+  				GROUP BY b.PRODUCT_ID, b1.PRODUCT_ID, ORDER_DATE
+  				ORDER BY NULL";
+		$connection->query($sqlUpdate);
+
+		$sqlDelete = "TRUNCATE TABLE b_sale_product2product";
+		$connection->query($sqlDelete);
+		$sqlUpdate = "
+				INSERT INTO b_sale_product2product (PRODUCT_ID, PARENT_PRODUCT_ID, CNT) 
+					SELECT ops.PRODUCT_ID, ops.RELATED_PRODUCT_ID, SUM(ops.CNT)
+					FROM b_sale_order_product_stat ops
+					GROUP BY PRODUCT_ID, RELATED_PRODUCT_ID
+					ORDER BY NULL
+			";
+
+		return $connection->query($sqlUpdate);
 	}
 
 	/**
@@ -128,8 +188,19 @@ class Product2ProductTable extends Main\Entity\DataManager
 		$type = $connection->getType();
 
 		// Update existing
-		if ($type == "mysql")
+		if ($type == "mysql" && $connection->isTableExists('b_sale_order_product_stat'))
 		{
+			$sqlUpdate = "
+				INSERT INTO b_sale_order_product_stat (PRODUCT_ID, RELATED_PRODUCT_ID, ORDER_DATE) 
+				SELECT b.PRODUCT_ID, b1.PRODUCT_ID, DATE(b.DATE_INSERT)
+				FROM b_sale_basket b, b_sale_basket b1
+				WHERE b.ORDER_ID = b1.ORDER_ID AND
+					b.ORDER_ID = $orderId AND
+					b.ID <> b1.ID 
+  				ON DUPLICATE KEY UPDATE  CNT = CNT + 1;
+			";
+			$connection->query($sqlUpdate);
+
 			$sqlUpdate = "UPDATE b_sale_product2product p2p, b_sale_basket b, b_sale_basket b1
 				SET  p2p.CNT = p2p.CNT + 1
 				WHERE b.ORDER_ID = b1.ORDER_ID AND
@@ -183,6 +254,127 @@ class Product2ProductTable extends Main\Entity\DataManager
 			$app = Main\Application::getInstance();
 			$app->getTaggedCache()->clearByTag('sale_product_buy');
 		}
+	}
+
+	/**
+	 * Add products from order by an agent
+	 *
+	 * @param int $limit			Count of orders is added per hit.
+	 * @return string
+	 */
+	public static function addProductsByAgent($limit = 100)
+	{
+		$limit = (int)$limit;
+		$connection = Main\Application::getConnection();
+		$type = $connection->getType();
+		$isTableExists = $connection->isTableExists('b_sale_order_product_stat');
+		if ($type == "mysql" && $isTableExists)
+		{
+			$params = array(
+				"filter" => array("PRODUCTS_ADDED" => 'N'),
+				"select" => array("ORDER_ID")
+			);
+
+			if ($limit > 0)
+			{
+				$params['limit'] = $limit;
+			}
+
+			$orderIds = array();
+			$processingData = Sale\OrderProcessingTable::getList($params);
+			while ($processingOrder = $processingData->fetch())
+			{
+				$orderIds[] = (int)$processingOrder['ORDER_ID'];
+			}
+
+			if (!empty($orderIds))
+			{
+				$sqlOrderIds = implode(',', $orderIds);
+				Sale\OrderProcessingTable::markProductsAddedByList($orderIds);
+
+				$sqlInsert = "
+				INSERT INTO b_sale_order_product_stat (CNT, PRODUCT_ID, RELATED_PRODUCT_ID, ORDER_DATE) 
+					SELECT SUMM, PRODUCT_ID, PARENT_PRODUCT_ID, TODAY 
+					FROM (
+						SELECT COUNT(1) as SUMM,
+							b.PRODUCT_ID  as PRODUCT_ID, 
+							b1.PRODUCT_ID as PARENT_PRODUCT_ID,
+							CURDATE() as TODAY
+						FROM b_sale_basket b, b_sale_basket b1
+						WHERE 
+							b1.ORDER_ID = b.ORDER_ID
+							AND b1.ID <> b.ID
+							AND b.ORDER_ID IN ($sqlOrderIds)
+						GROUP BY b.PRODUCT_ID, b1.PRODUCT_ID
+						ORDER BY NULL
+					) cacl
+				ON DUPLICATE KEY UPDATE CNT = CNT + cacl.SUMM;";
+				$connection->query($sqlInsert);
+
+				$sqlUpdate = "
+				UPDATE b_sale_product2product p2p, 
+					( 
+						SELECT COUNT(1) as CNT,
+							b.PRODUCT_ID  as PRODUCT_ID, 
+							b1.PRODUCT_ID as PARENT_PRODUCT_ID
+						FROM b_sale_basket b, b_sale_basket b1
+						WHERE 
+							b1.ORDER_ID = b.ORDER_ID
+							AND b1.ID <> b.ID
+							AND b.ORDER_ID IN ($sqlOrderIds)
+						GROUP BY b.PRODUCT_ID, b1.PRODUCT_ID
+						ORDER BY NULL
+					) calc
+				SET  p2p.CNT = p2p.CNT + calc.CNT
+				WHERE p2p.PRODUCT_ID = calc.PRODUCT_ID AND	p2p.PARENT_PRODUCT_ID = calc.PARENT_PRODUCT_ID";
+
+				$connection->query($sqlUpdate);
+
+				$sqlInsert = "
+				INSERT INTO b_sale_product2product (PRODUCT_ID, PARENT_PRODUCT_ID, CNT)
+				SELECT b.PRODUCT_ID, b1.PRODUCT_ID, 1
+				FROM b_sale_basket b, b_sale_basket b1
+				WHERE b.ORDER_ID = b1.ORDER_ID AND
+					b.ORDER_ID IN ($sqlOrderIds) AND
+					b.ID <> b1.ID AND
+					NOT EXISTS (SELECT 1 FROM b_sale_product2product d WHERE d.PRODUCT_ID = b.PRODUCT_ID AND d.PARENT_PRODUCT_ID = b1.PRODUCT_ID)";
+				$connection->query($sqlInsert);
+
+				if (defined("BX_COMP_MANAGED_CACHE"))
+				{
+					$app = Main\Application::getInstance();
+					$app->getTaggedCache()->clearByTag('sale_product_buy');
+				}
+			}
+		}
+
+		$agentName = "\\Bitrix\\Sale\\Product2ProductTable::addProductsByAgent($limit);";
+		$agentData = \CAgent::GetList(array(), array("NAME" => $agentName, "MODULE_ID" => "sale"));
+		$agent = $agentData->Fetch();
+
+		$processingData = Sale\OrderProcessingTable::getList(
+			array(
+				"filter" => array("PRODUCTS_ADDED" => 'N')
+			)
+		);
+
+		if ($processingData->fetch())
+		{
+			if ($isTableExists && $agent['ID'] && $agent['ID'] > 60)
+			{
+				\CAgent::Delete($agent["ID"]);
+				\CAgent::AddAgent("Bitrix\\Sale\\Product2ProductTable::addProductsByAgent($limit);", "sale", "N", 60, "", "Y");
+			}
+		}
+		else
+		{
+			if ($agent['ID'])
+			{
+				\CAgent::Update($agent["ID"], array("AGENT_INTERVAL" => 60*60*24));
+			}
+		}
+
+		return $agentName;
 	}
 
 	/**
@@ -373,16 +565,8 @@ class Product2ProductTable extends Main\Entity\DataManager
 	 */
 	public static function onSaleOrderAdd($orderId)
 	{
-		$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-		if ($allowIds != '')
-			$allowIds = unserialize($allowIds);
-		else
-			$allowIds = array();
-
-		if (!empty($allowIds) && is_array($allowIds) && in_array("N", $allowIds))
-		{
-			static::addProductsFromOrder($orderId);
-		}
+		$statusName = "N";
+		static::addOrderProcessing($orderId, $statusName);
 	}
 
 	/**
@@ -394,16 +578,7 @@ class Product2ProductTable extends Main\Entity\DataManager
 	 */
 	public static function onSaleStatusOrderHandler($orderId, $status)
 	{
-		$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-		if ($allowIds != '')
-			$allowIds = unserialize($allowIds);
-		else
-			$allowIds = array();
-
-		if (!empty($allowIds) && is_array($allowIds) && in_array($status, $allowIds))
-		{
-			static::addProductsFromOrder($orderId);
-		}
+		static::addOrderProcessing($orderId, $status);
 	}
 
 	/**
@@ -417,16 +592,8 @@ class Product2ProductTable extends Main\Entity\DataManager
 	{
 		if ($status == 'Y')
 		{
-			$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-			if ($allowIds != '')
-				$allowIds = unserialize($allowIds);
-			else
-				$allowIds = array();
-
-			if (!empty($allowIds) && is_array($allowIds) && in_array("F_DELIVERY", $allowIds))
-			{
-				static::addProductsFromOrder($orderId);
-			}
+			$statusName = "F_DELIVERY";
+			static::addOrderProcessing($orderId, $statusName);
 		}
 	}
 
@@ -441,16 +608,8 @@ class Product2ProductTable extends Main\Entity\DataManager
 	{
 		if ($status == 'Y')
 		{
-			$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-			if ($allowIds != '')
-				$allowIds = unserialize($allowIds);
-			else
-				$allowIds = array();
-
-			if (!empty($allowIds) && is_array($allowIds) && in_array("F_OUT", $allowIds))
-			{
-				static::addProductsFromOrder($orderId);
-			}
+			$statusName = "F_OUT";
+			static::addOrderProcessing($orderId, $statusName);
 		}
 	}
 
@@ -465,14 +624,8 @@ class Product2ProductTable extends Main\Entity\DataManager
 	{
 		if ($status == 'Y')
 		{
-			$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-			if ($allowIds != '')
-				$allowIds = unserialize($allowIds);
-			else
-				$allowIds = array();
-
-			if (!empty($allowIds) && is_array($allowIds) && in_array("F_CANCELED", $allowIds))
-				static::addProductsFromOrder($orderId);
+			$statusName = "F_CANCELED";
+			static::addOrderProcessing($orderId, $statusName);
 		}
 	}
 
@@ -487,14 +640,38 @@ class Product2ProductTable extends Main\Entity\DataManager
 	{
 		if ($status == 'Y')
 		{
-			$allowIds = Config\Option::get("sale", "p2p_status_list", "");
-			if ($allowIds != '')
-				$allowIds = unserialize($allowIds);
-			else
-				$allowIds = array();
+			$statusName = "F_PAY";
+			static::addOrderProcessing($orderId, $statusName);
+		}
+	}
 
-			if (!empty($allowIds) && is_array($allowIds) && in_array("F_PAY", $allowIds))
-				static::addProductsFromOrder($orderId);
+	/**
+	 * Add order id in order processing table.
+	 *
+	 * @param $orderId
+	 * @param $statusName.		Handler status name.
+	 * @return void
+	 */
+	protected static function addOrderProcessing($orderId, $statusName)
+	{
+		$allowStatuses = Config\Option::get("sale", "p2p_status_list", "");
+		$allowCollecting = Config\Option::get("sale", "p2p_allow_collect_data");
+		if ($allowStatuses != '')
+			$allowStatuses = unserialize($allowStatuses);
+		else
+			$allowStatuses = array();
+
+		if ($allowCollecting == "Y" && !empty($allowStatuses) && is_array($allowStatuses) && in_array($statusName, $allowStatuses))
+		{
+			$orderInformation = Sale\OrderProcessingTable::getList(
+				array(
+					"filter" => array("ORDER_ID" => (int)$orderId),
+					"limit" => 1
+				)
+			);
+			$result = $orderInformation->fetch();
+			if (!$result)
+				Sale\OrderProcessingTable::add(array("ORDER_ID" => (int)$orderId));
 		}
 	}
 }

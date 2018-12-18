@@ -31,17 +31,6 @@ class SessionTable
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает имя таблицы в базе данных, соответствующей сущности.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_sec_session';
@@ -54,17 +43,6 @@ class SessionTable
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает имя соединения, соответствующего данной сущности.</p> <p></p> <div class="note"> <b>Примечание</b>: копирует текущее соединение с базой данных, если соединение <b>{@link SessionTable::CONNECTION_NAME}</b> не существует.</div> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/getconnectionname.php
-	* @author Bitrix
-	*/
 	public static function getConnectionName()
 	{
 		$pool = \Bitrix\Main\Application::getInstance()->getConnectionPool();
@@ -84,17 +62,6 @@ class SessionTable
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает список полей с типами.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -133,24 +100,13 @@ class SessionTable
 	 * @param int $timeout Lock timeout.
 	 * @return bool Returns true if lock occurred.
 	 */
-	
-	/**
-	* <p>Статический метод блокирует определенный идентификатор сессии. Пока поддерживаются <i>Mysql</i>, <i>MSSQL</i> and <i>Oracle</i>.</p>
-	*
-	*
-	* @param string $id  Идентификатор сессии.
-	*
-	* @param integer $timeout = 60 Время блокировки.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/lock.php
-	* @author Bitrix
-	*/
 	public static function lock($id, $timeout = 60)
 	{
 		$result = true;
+
+		$pool = \Bitrix\Main\Application::getInstance()->getConnectionPool();
+		$pool->useMasterOnly(true);
+
 		$connection = static::getEntity()->getConnection();
 		if ($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection)
 		{
@@ -233,6 +189,8 @@ class SessionTable
 			trigger_error(sprintf('SessionTable::lock not supported for connection of type "%s"', get_class($connection)), E_USER_WARNING);
 		}
 
+		$pool->useMasterOnly(false);
+
 		return $result;
 	}
 
@@ -243,21 +201,11 @@ class SessionTable
 	 * @param string $id Session id.
 	 * @return bool Returns true if lock released.
 	 */
-	
-	/**
-	* <p>Статический метод разблокирует определенный идентификатор сессии. Пока что поддерживается <i>Mysql</i>, <i>MSSQL</i> and <i>Oracle</i>.</p>
-	*
-	*
-	* @param string $id  Идентификатор сессии.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/unlock.php
-	* @author Bitrix
-	*/
 	public static function unlock($id)
 	{
+		$pool = \Bitrix\Main\Application::getInstance()->getConnectionPool();
+		$pool->useMasterOnly(true);
+
 		$connection = static::getEntity()->getConnection();
 		if ($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection)
 		{
@@ -279,6 +227,8 @@ class SessionTable
 			trigger_error(sprintf('SessionTable::unlock not supported for connection of type "%s"', get_class($connection)), E_USER_WARNING);
 		}
 
+		$pool->useMasterOnly(false);
+
 		return true;
 	}
 
@@ -288,25 +238,15 @@ class SessionTable
 	 * @param int $sec Seconds.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Статический метод удаляет старые сессии.</p>
-	*
-	*
-	* @param integer $sec  Секунды.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/sessiontable/deleteolderthan.php
-	* @author Bitrix
-	*/
 	public static function deleteOlderThan($sec)
 	{
+		$pool = \Bitrix\Main\Application::getInstance()->getConnectionPool();
+		$pool->useMasterOnly(true);
 		$connection = static::getEntity()->getConnection();
 		$connection->queryExecute(
 			sprintf('delete from b_sec_session where TIMESTAMP_X < %s',
 				$connection->getSqlHelper()->addSecondsToDateTime('-'.$sec))
 		);
+		$pool->useMasterOnly(false);
 	}
 }

@@ -168,17 +168,6 @@ class MysqliConnection extends MysqlCommonConnection
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает количество поражённых строк из последнего невыполненного запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqliconnection/getaffectedrowscount.php
-	* @author Bitrix
-	*/
 	public function getAffectedRowsCount()
 	{
 		/** @var $con \mysqli */
@@ -200,24 +189,7 @@ class MysqliConnection extends MysqlCommonConnection
 	 * @return string
 	 * @see \Bitrix\Main\DB\Connection::getType
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает тип БД:</p> <p></p> <ul><li> mysql </li></ul> <p>Без параметров</p>
-	*
-	*
-	* @return string 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/gettype.php">\Bitrix\Main\DB\Connection::getType</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqliconnection/gettype.php
-	* @author Bitrix
-	*/
-	static public function getType()
+	public function getType()
 	{
 		return "mysql";
 	}
@@ -231,17 +203,6 @@ class MysqliConnection extends MysqlCommonConnection
 	 * @return array
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает версию подключённой БД.</p> <p>Версия представляется в виде массива из двух элементов:</p> - Первый (с индексом 0) - версия БД.<br> - Второй (с индексом 1) выводится, если используется light или express версия БД.<br><p>Без параметров</p>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqliconnection/getversion.php
-	* @author Bitrix
-	*/
 	public function getVersion()
 	{
 		if ($this->version == null)
@@ -276,19 +237,6 @@ class MysqliConnection extends MysqlCommonConnection
 	 * @param string $database Database name.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает БД по умолчанию для запросов.</p>
-	*
-	*
-	* @param string $database  Имя БД.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqliconnection/selectdatabase.php
-	* @author Bitrix
-	*/
 	public function selectDatabase($database)
 	{
 		/** @var $con \mysqli */

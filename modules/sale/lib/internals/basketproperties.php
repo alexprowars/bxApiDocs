@@ -29,17 +29,6 @@ class BasketPropertyTable
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы свойств корзины в базе данных. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/basketpropertytable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_sale_basket_props';
@@ -50,17 +39,6 @@ class BasketPropertyTable
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы свойств корзины. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/basketpropertytable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -116,17 +94,6 @@ class BasketPropertyTable
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>NAME</code> (название свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/basketpropertytable/validatename.php
-	* @author Bitrix
-	*/
 	public static function validateName()
 	{
 		return array(
@@ -138,17 +105,6 @@ class BasketPropertyTable
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>VALUE</code> (значение свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/basketpropertytable/validatevalue.php
-	* @author Bitrix
-	*/
 	public static function validateValue()
 	{
 		return array(
@@ -160,17 +116,6 @@ class BasketPropertyTable
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CODE</code> (код свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/basketpropertytable/validatecode.php
-	* @author Bitrix
-	*/
 	public static function validateCode()
 	{
 		return array(

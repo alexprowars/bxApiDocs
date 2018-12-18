@@ -3,6 +3,7 @@
 namespace Bitrix\Sale\TradingPlatform\Ebay\Feed\Data\Sources;
 
 use \Bitrix\Main\ArgumentNullException;
+use Bitrix\Main\SystemException;
 use \Bitrix\Sale\TradingPlatform\Logger;
 use \Bitrix\Sale\TradingPlatform\Ebay\Ebay;
 use \Bitrix\Sale\TradingPlatform\Ebay\Feed\ResultsTable;
@@ -97,9 +98,21 @@ class Results extends DataSource implements \Iterator
 		CheckDirPath($tmpDir);
 
 		$sftp = \Bitrix\Sale\TradingPlatform\Ebay\Helper::getSftp($this->siteId);
+
+		if(!$sftp)
+			return "";
+
 		$sftp->connect();
 		$remotePath = $this->createRemotePath($feedData);
-		$files = $sftp->getFilesList($remotePath);
+
+		try
+		{
+			$files = $sftp->getFilesList($remotePath);
+		}
+		catch(SystemException $e)
+		{
+			$files = array();
+		}
 
 		foreach($files as $file)
 		{

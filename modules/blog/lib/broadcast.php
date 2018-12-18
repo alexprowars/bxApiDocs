@@ -354,30 +354,28 @@ class Broadcast
 			if (!empty($userIdList))
 			{
 				$userIdListPush = $userIdList;
-				foreach ($userIdListPush as $key=> $userId)
+				if (Loader::includeModule('im'))
 				{
-					if (!\CIMSettings::getNotifyAccess($userId, 'blog', 'broadcast_post', \CIMSettings::CLIENT_PUSH))
+					foreach ($userIdListPush as $key=> $userId)
 					{
-						unset($userIdListPush[$key]);
+						if (!\CIMSettings::getNotifyAccess($userId, 'blog', 'broadcast_post', \CIMSettings::CLIENT_PUSH))
+						{
+							unset($userIdListPush[$key]);
+						}
 					}
 				}
 
-				$CPushManager = new \CPushManager();
-
-				$CPushManager->addQueue(Array(
-					'USER_ID' => $userIdListPush,
-					'MESSAGE' => str_replace("\n", " ", $message),
-					'PARAMS' => array(
-						'ACTION' => 'post',
-						'TAG' => 'BLOG|POST|'.$params["ENTITY_ID"]
-					),
-					'TAG' => 'BLOG|POST|'.$params["ENTITY_ID"],
-					'SEND_IMMEDIATELY' => 'Y',
-				));
-
-				$CPushManager->addQueue(Array(
-					'USER_ID' => $userIdListPush,
-					'SEND_DEFERRED' => 'Y',
+				\Bitrix\Pull\Push::add($userIdListPush, Array(
+					'module_id' => 'blog',
+					'push' => Array(
+						'message' => $message,
+						'params' => array(
+							'ACTION' => 'post',
+							'TAG' => 'BLOG|POST|'.$params["ENTITY_ID"]
+						),
+						'tag' => 'BLOG|POST|'.$params["ENTITY_ID"],
+						'send_immediately' => 'Y',
+					)
 				));
 
 				$offlineUserIdList = array();
@@ -481,7 +479,7 @@ class Broadcast
 		return false;
 	}
 
-	public static function onBeforeConfirmNotify($module, $tag, $value, $params)
+	function onBeforeConfirmNotify($module, $tag, $value, $params)
 	{
 		if ($module == "blog")
 		{

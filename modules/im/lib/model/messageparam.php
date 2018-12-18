@@ -65,6 +65,11 @@ class MessageParamTable extends Entity\DataManager
 				'data_type' => 'text',
 				'title' => Loc::getMessage('MESSAGE_PARAM_ENTITY_PARAM_JSON_FIELD'),
 			),
+			'MESSAGE' => array(
+				'data_type' => 'Bitrix\Im\Model\MessageTable',
+				'reference' => array('=this.MESSAGE_ID' => 'ref.ID'),
+				'join_type' => 'INNER',
+			),
 		);
 	}
 	/**

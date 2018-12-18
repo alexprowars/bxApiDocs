@@ -33,7 +33,7 @@ class SitemapIndex
 				$str .= sprintf(
 					self::ENTRY_TPL,
 					Converter::getXmlConverter()->encode($this->settings['PROTOCOL'].'://'.\CBXPunycode::toASCII($this->settings['DOMAIN'], $e = null).$this->getFileUrl($file)),
-					date(c, $file->getModificationTime())
+					date('c', $file->getModificationTime())
 				);
 			}
 		}
@@ -56,7 +56,7 @@ class SitemapIndex
 			$newEntry = sprintf(
 				self::ENTRY_TPL,
 				$fileUrlEnc,
-				date(c, $file->getModificationTime($file))
+				date('c', $file->getModificationTime($file))
 			);
 
 			$count = 0;

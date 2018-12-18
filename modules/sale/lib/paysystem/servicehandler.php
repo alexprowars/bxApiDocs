@@ -3,9 +3,7 @@
 namespace Bitrix\Sale\PaySystem;
 
 use Bitrix\Main\Request;
-use Bitrix\Sale\BusinessValue;
 use Bitrix\Sale\Payment;
-use Bitrix\Sale\Result;
 
 abstract class ServiceHandler extends BaseServiceHandler
 {
@@ -56,7 +54,7 @@ abstract class ServiceHandler extends BaseServiceHandler
 	/**
 	 * @param Payment $payment
 	 * @param Request $request
-	 * @return mixed
+	 * @return ServiceResult
 	 */
 	public abstract function processRequest(Payment $payment, Request $request);
 
@@ -65,7 +63,7 @@ abstract class ServiceHandler extends BaseServiceHandler
 	 * @param Request $request
 	 * @return mixed
 	 */
-	static public function sendResponse(ServiceResult $result, Request $request)
+	public function sendResponse(ServiceResult $result, Request $request)
 	{
 		return '';
 	}
@@ -75,4 +73,13 @@ abstract class ServiceHandler extends BaseServiceHandler
 	 * @return mixed
 	 */
 	public abstract function getPaymentIdFromRequest(Request $request);
+
+	/**
+	 * @param array $paySystemList
+	 * @return array
+	 */
+	public static function findMyDataRefundablePage(array $paySystemList)
+	{
+		return array();
+	}
 }

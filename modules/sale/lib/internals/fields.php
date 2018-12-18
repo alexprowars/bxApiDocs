@@ -24,6 +24,15 @@ class Fields
 	}
 
 	/**
+	 * @param $name
+	 * @return bool
+	 */
+	public function isChanged($name)
+	{
+		return isset($this->changedValues[$name]);
+	}
+
+	/**
 	 * Returns any variable by its name. Null if variable is not set.
 	 *
 	 * @param string $name
@@ -31,10 +40,10 @@ class Fields
 	 */
 	public function get($name)
 	{
-		// this condition a bit faster
-		// it is possible to omit array_key_exists here, but for uniformity...
-		if (isset($this->values[$name]) || array_key_exists($name, $this->values))
+		if (isset($this->values[$name]))
+		{
 			return $this->values[$name];
+		}
 
 		return null;
 	}
@@ -124,11 +133,28 @@ class Fields
 	 */
 	protected function markChanged($name, $value)
 	{
+		$originalValuesIndex = array();
+		if (!empty($this->originalValues))
+		{
+			foreach(array_keys($this->originalValues) as $originalKey)
+			{
+				$originalValuesIndex[$originalKey] = true;
+			}
+		}
+
 		$oldValue = $this->get($name);
 		if ($oldValue != $value || ($oldValue === null && $value !== null))
 		{
-			if (!array_key_exists($name, $this->originalValues))
+			if (!isset($originalValuesIndex[$name]))
+			{
 				$this->originalValues[$name] = $this->get($name);
+			}
+			elseif ($this->originalValues[$name] == $value)
+			{
+				unset($this->changedValues[$name]);
+				unset($this->originalValues[$name]);
+				return true;
+			}
 
 			$this->changedValues[$name] = true;
 			return true;

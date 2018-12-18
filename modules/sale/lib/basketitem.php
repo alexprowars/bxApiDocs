@@ -7,568 +7,319 @@
  */
 namespace Bitrix\Sale;
 
+use Bitrix\Currency\CurrencyManager;
+use Bitrix\Main;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ArgumentNullException;
+use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Config;
-use Bitrix\Main\Entity;
-use Bitrix\Main\Event;
-use Bitrix\Main\EventResult;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectNotFoundException;
-use Bitrix\Main\Type\DateTime;
 use Bitrix\Sale\Internals;
 
 Loc::loadMessages(__FILE__);
 
-class BasketItem
-	extends BasketItemBase
+/**
+ * Class BasketItem
+ * @package Bitrix\Sale
+ */
+class BasketItem extends BasketItemBase
 {
-	/** @var null|BasketBundleCollection */
-	protected $bundleCollection = null;
+	const TYPE_SET = 1;
 
-	/** @var null|BasketItem */
-	protected $parentBasketItem = null;
-
-	/** @var null|int */
-	protected $parentId = null;
-
-	/** @var bool|null */
-	private $isNew = null;
-
-	/** @var array */
-	protected static $mapFields = array();
-
+	/** @var BundleCollection */
+	private $bundleCollection = null;
 
 	/**
-	 * @param Basket $basket
-	 * @param string $moduleId
-	 * @param int $productId
-	 * @param null|string $basketCode
-	 * @return BasketItem
+	 * @param BasketItemCollection $basketItemCollection
+	 * @param $moduleId
+	 * @param $productId
+	 * @param null $basketCode
+	 * @return BasketItemBase
+	 * @throws ArgumentException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws \Exception
 	 */
-	public static function create(Basket $basket, $moduleId, $productId, $basketCode = null)
+	public static function create(BasketItemCollection $basketItemCollection, $moduleId, $productId, $basketCode = null)
 	{
-		$fields = array(
-			"MODULE" => $moduleId,
-			"PRODUCT_ID" => $productId,
-		);
+		$basketItem = parent::create($basketItemCollection, $moduleId, $productId, $basketCode);
 
-		$basketItem = new static($fields);
-
-		if ($basketCode !== null)
+		$basket = $basketItemCollection->getBasket();
+		if ($basket instanceof Basket)
 		{
-			$basketItem->internalId = $basketCode;
-			if (strpos($basketCode, 'n') === 0)
-			{
-				$internalId = intval(substr($basketCode, 1));
-				if ($internalId > static::$idBasket)
-				{
-					static::$idBasket = $internalId;
-				}
-			}
+			$basketItem->setField('LID', $basket->getSiteId());
 		}
-
-		$basketItem->setCollection($basket);
 
 		return $basketItem;
 	}
 
 	/**
-	 * @param $name
-	 * @param $value
-	 * @return Result|bool|void
+	 * @return string
 	 */
-	public function setField($name, $value)
+	public static function getRegistryType()
 	{
-		if ($this->parentId == null
-			&& ($name == "TYPE" && $value == static::TYPE_SET))
-		{
-			$this->parentId = $this->getBasketCode();
-		}
-
-		return parent::setField($name, $value);
+		return Registry::REGISTRY_TYPE_ORDER;
 	}
 
 	/**
-	 *
-	 * @internal
-	 *
-	 * @param $name
-	 * @param $value
-	 * @throws ObjectNotFoundException
-	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
-	 */
-	public function initField($name, $value)
-	{
-		if ($this->parentId == null
-			&& ($name == "TYPE" && $value == static::TYPE_SET)
-		)
-		{
-			$this->parentId = $this->getBasketCode();
-		}
-
-		parent::initField($name, $value);
-
-		if ($this->parentId == null && $name == "SET_PARENT_ID"
-			&& intval($value) > 0 && $value != $this->getId())
-		{
-			/** @var BasketItem $parentBasketItem */
-			if ($parentBasketItem = $this->getParentBasketItem())
-			{
-				$this->parentId = $parentBasketItem->getBasketCode();
-			}
-		}
-
-	}
-
-	static public function initFields(array $values)
-	{
-		if (!isset($values['BASE_PRICE']) || doubleval($values['BASE_PRICE']) == 0)
-			$values['BASE_PRICE'] = $values['PRICE'] + $values['DISCOUNT_PRICE'];
-
-		parent::initFields($values);
-	}
-
-	/**
-	 * @return Entity\AddResult|Entity\UpdateResult
+	 * @return Result
 	 * @throws ArgumentException
 	 * @throws ArgumentNullException
 	 * @throws \Exception
 	 */
 	public function save()
 	{
-		$result = new Result();
-		$id = $this->getId();
-		$changedFields = $this->fields->getChangedValues();
-		$this->isNew = ($id == 0);
-
-
-		if (!empty($changedFields))
+		$result = parent::save();
+		if (!$result->isSuccess())
 		{
-			/** @var array $oldEntityValues */
-			$oldEntityValues = $this->fields->getOriginalValues();
-
-			/** @var Event $event */
-			$event = new Event('sale', EventActions::EVENT_ON_BASKET_ITEM_BEFORE_SAVED, array(
-				'ENTITY' => $this,
-				'IS_NEW' => $this->isNew(),
-				'VALUES' => $oldEntityValues,
-			));
-			$event->send();
-
-			if ($event->getResults())
-			{
-				/** @var EventResult $eventResult */
-				foreach($event->getResults() as $eventResult)
-				{
-					if($eventResult->getType() == EventResult::ERROR)
-					{
-						$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_BEFORE_BASKET_ITEM_SAVED'), 'SALE_EVENT_ON_BEFORE_BASKET_ITEM_SAVED');
-						if ($eventResultData = $eventResult->getParameters())
-						{
-							if (isset($eventResultData) && $eventResultData instanceof ResultError)
-							{
-								/** @var ResultError $errorMsg */
-								$errorMsg = $eventResultData;
-							}
-						}
-
-						$result->addError($errorMsg);
-					}
-				}
-			}
+			return $result;
 		}
-
-
-		$fields = $this->fields->getValues();
 
 		if ($this->isBundleParent())
 		{
-			$bundleBasketCollection = $this->getBundleCollection();
-		}
+			$bundleCollection = $this->getBundleCollection();
+			$itemsFromDb = array();
 
-		/** @var Basket $basket */
-		if (!$basket = $this->getCollection())
-		{
-			throw new ObjectNotFoundException('Entity "Basket" not found');
-		}
-
-		if ($id > 0)
-		{
-			$fields = $changedFields;
-			$includedOrderId = false;
-
-			if (!isset($fields["ORDER_ID"]) || intval($fields["ORDER_ID"]) == 0)
+			$id = $this->getId();
+			if ($id != 0)
 			{
-				$orderId = null;
-				if ($this->getParentOrderId() > 0)
-				{
-					$orderId = $this->getParentOrderId();
-				}
+				$register = Registry::getInstance(static::getRegistryType());
+				/** @var BasketBase $basketClassName */
+				$basketClassName = $register->getBasketClassName();
 
-				if ($this->isBundleChild() && $orderId === null)
-				{
-					/** @var BasketItem $parentBasket */
-					if (!$parentBasket = $this->getParentBasketItem())
-					{
-						throw new ObjectNotFoundException('Entity parent "BasketItem" not found');
-					}
-					$orderId = $parentBasket->getParentOrderId();
-				}
-
-				if (intval($orderId) > 0 && $this->getField('ORDER_ID') != $orderId)
-				{
-					$fields['ORDER_ID'] = $orderId;
-					$includedOrderId = true;
-
-					$this->setFieldNoDemand('ORDER_ID', $orderId);
-				}
-			}
-
-			if (!empty($fields) && is_array($fields))
-			{
-				if (isset($fields["QUANTITY"]) && (floatval($fields["QUANTITY"]) == 0))
-					return $result;
-
-				$fields['DATE_UPDATE'] = new DateTime();
-				$this->setFieldNoDemand('DATE_UPDATE', $fields['DATE_UPDATE']);
-
-				$r = Internals\BasketTable::update($id, $fields);
-				if (!$r->isSuccess())
-				{
-					if (($order = $basket->getOrder()) && $basket->getOrderId() > 0)
-					{
-						OrderHistory::addAction(
-							'BASKET',
-							$order->getId(),
-							'BASKET_ITEM_UPDATE_ERROR',
-							null,
-							$this,
-							array("ERROR" => $r->getErrorMessages())
-						);
-					}
-
-					$result->addErrors($r->getErrors());
-					return $result;
-				}
-				else
-				{
-					if ($includedOrderId && $r->getAffectedRowsCount() == 0)
-					{
-						$this->delete();
-
-						if ($order = $basket->getOrder())
-						{
-							$oldErrorText = $order->getField('REASON_MARKED');
-							$oldErrorText .= (strval($oldErrorText) != '' ? "\n" : "").Loc::getMessage("SALE_BASKET_ITEM_NOT_UPDATED_BECAUSE_NOT_EXISTS", array('#PRODUCT_NAME#' => $this->getField("NAME")));
-
-							Internals\OrderTable::update($order->getId(), array(
-								"MARKED" => "Y",
-								"REASON_MARKED" => $oldErrorText
-							));
-						}
-					}
-				}
-
-				if ($resultData = $r->getData())
-					$result->setData($resultData);
-			}
-		}
-		else
-		{
-
-			$fields['ORDER_ID'] = $this->getParentOrderId();
-			$this->setFieldNoDemand('ORDER_ID', $fields['ORDER_ID']);
-
-			$fields['DATE_INSERT'] = new DateTime();
-			$this->setFieldNoDemand('DATE_INSERT', $fields['DATE_INSERT']);
-
-			$fields['DATE_UPDATE'] = new DateTime();
-			$this->setFieldNoDemand('DATE_UPDATE', $fields['DATE_UPDATE']);
-
-			if (!$this->isBundleChild() && (!isset($fields["FUSER_ID"]) || intval($fields["FUSER_ID"]) <= 0))
-			{
-				$fUserId = intval($basket->getFUserId(true));
-				/** @var Order $order */
-				if (($order = $basket->getOrder()) || $fUserId > 0)
-				{
-					$fields["FUSER_ID"] = $fUserId;
-				}
-				else
-				{
-					throw new ArgumentNullException('FUSER_ID');
-				}
-
-			}
-
-			/** @var Order $order */
-			if ($order = $basket->getOrder())
-			{
-				if (!isset($fields["LID"]) || strval($fields["LID"]) == '')
-				{
-					$fields['LID'] = $order->getField('LID');
-				}
-			}
-			else
-			{
-				if ($siteId = $basket->getSiteId())
-				{
-					$fields['LID'] = $siteId;
-				}
-			}
-
-			if ($this->isBundleChild())
-			{
-				if (!$parentBasketItem = $this->getParentBasketItem())
-				{
-					throw new ObjectNotFoundException('Entity parent "BasketItem" not found');
-				}
-
-				$fields['LID'] = $parentBasketItem->getField('LID');
-
-				if (!isset($fields["FUSER_ID"]) || intval($fields["FUSER_ID"]) <= 0)
-				{
-					$fields['FUSER_ID'] = intval($parentBasketItem->getField('FUSER_ID'));
-				}
-
-			}
-
-			if (!isset($fields["LID"]) || strval(trim($fields["LID"])) == '')
-				throw new ArgumentNullException('LID');
-
-			if ($this->isBundleChild()
-				&& (!isset($fields["SET_PARENT_ID"]) || (intval($fields["QUANTITY"]) <= 0))
-			)
-			{
-				$fields["SET_PARENT_ID"] = $this->getParentBasketItemId();
-				$this->setFieldNoDemand('SET_PARENT_ID', $fields['SET_PARENT_ID']);
-			}
-
-			if (!isset($fields["QUANTITY"]) || (floatval($fields["QUANTITY"]) == 0))
-				return $result;
-
-			if (!isset($fields["CURRENCY"]) || strval(trim($fields["CURRENCY"])) == '')
-				throw new ArgumentNullException('CURRENCY');
-
-			$r = Internals\BasketTable::add($fields);
-			if (!$r->isSuccess())
-			{
-				if (($order = $basket->getOrder()) && $basket->getOrderId() > 0)
-				{
-					OrderHistory::addAction(
-						'BASKET',
-						$order->getId(),
-						'BASKET_ITEM_ADD_ERROR',
-						null,
-						$this,
-						array("ERROR" => $r->getErrorMessages())
-					);
-				}
-
-				$result->addErrors($r->getErrors());
-				return $result;
-			}
-
-			if ($resultData = $r->getData())
-				$result->setData($resultData);
-
-			$id = $r->getId();
-			$this->setFieldNoDemand('ID', $id);
-			$this->setFieldNoDemand('LID', $fields['LID']);
-			$this->setFieldNoDemand('FUSER_ID', $fields['FUSER_ID']);
-
-			if ($basket->getOrder() && $basket->getOrderId() > 0)
-			{
-				OrderHistory::addAction(
-					'BASKET',
-					$order->getId(),
-					'BASKET_ADDED',
-					$id,
-					$this
+				$itemsFromDbList = $basketClassName::getList(
+					array(
+						'select' => array('ID'),
+						'filter' => array('SET_PARENT_ID' => $id),
+					)
 				);
+				while ($itemsFromDbItem = $itemsFromDbList->fetch())
+				{
+					if ($itemsFromDbItem['ID'] == $id)
+						continue;
+
+					$itemsFromDb[$itemsFromDbItem['ID']] = true;
+				}
 			}
 
-		}
-
-		if ($id > 0)
-		{
-			$result->setId($id);
-		}
-
-		if ($this->isNew() || !empty($changedFields))
-		{
-			/** @var array $oldEntityValues */
-			$oldEntityValues = $this->fields->getOriginalValues();
-
-			/** @var Event $event */
-			$event = new Event('sale', EventActions::EVENT_ON_BASKET_ITEM_SAVED, array(
-				'ENTITY' => $this,
-				'IS_NEW' => $this->isNew(),
-				'VALUES' => $oldEntityValues,
-			));
-			$event->send();
-
-			if ($event->getResults())
+			/** @var BasketItem $bundleItem */
+			foreach ($bundleCollection as $bundleItem)
 			{
-				/** @var EventResult $eventResult */
-				foreach($event->getResults() as $eventResult)
-				{
-					if($eventResult->getType() == EventResult::ERROR)
-					{
-						$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_BASKET_ITEM_SAVED_ERROR'), 'SALE_EVENT_ON_BASKET_ITEM_SAVED_ERROR');
-						if ($eventResultData = $eventResult->getParameters())
-						{
-							if (isset($eventResultData) && $eventResultData instanceof ResultError)
-							{
-								/** @var ResultError $errorMsg */
-								$errorMsg = $eventResultData;
-							}
-						}
+				$parentId = (int)$bundleItem->getField('SET_PARENT_ID');
+				if ($parentId <= 0)
+					$bundleItem->setFieldNoDemand('SET_PARENT_ID', $id);
 
-						$result->addError($errorMsg);
-					}
-				}
+				$saveResult = $bundleItem->save();
+				if (!$saveResult->isSuccess())
+					$result->addErrors($saveResult->getErrors());
 
-				if (!$result->isSuccess())
-				{
-					return $result;
-				}
+				if (isset($itemsFromDb[$bundleItem->getId()]))
+					unset($itemsFromDb[$bundleItem->getId()]);
 			}
-		}
 
-		// bundle
-
-		if ($this->isBundleParent())
-		{
-
-			if (!empty($bundleBasketCollection))
+			foreach ($itemsFromDb as $id => $value)
 			{
-				if (!$order = $bundleBasketCollection->getOrder())
-				{
-					/** @var Basket $basketCollection */
-					$basketCollection = $this->getCollection();
-					if ($order = $basketCollection->getOrder())
-					{
-						$bundleBasketCollection->setOrder($order);
-					}
-				}
-
-				$itemsFromDb = array();
-
-				if (!$this->isNew())
-				{
-					$itemsFromDbList = Internals\BasketTable::getList(
-						array(
-							"filter" => array(
-								"SET_PARENT_ID" => $id,
-							),
-							"select" => array("ID")
-						)
-					);
-					while ($itemsFromDbItem = $itemsFromDbList->fetch())
-					{
-						if ($itemsFromDbItem["ID"] == $id)
-							continue;
-
-						$itemsFromDb[$itemsFromDbItem["ID"]] = true;
-					}
-				}
-
-
-				/** @var BasketItem $bundleBasketItem */
-				foreach ($bundleBasketCollection as $bundleBasketItem)
-				{
-					$r = $bundleBasketItem->save();
-					if (!$r->isSuccess())
-						$result->addErrors($r->getErrors());
-
-					if (isset($itemsFromDb[$bundleBasketItem->getId()]))
-						unset($itemsFromDb[$bundleBasketItem->getId()]);
-				}
-
-				foreach ($itemsFromDb as $k => $v)
-					Internals\BasketTable::delete($k);
-
-			}
-
-		}
-
-		/** @var BasketPropertiesCollection $basketPropertyCollection */
-		$basketPropertyCollection = $this->getPropertyCollection();
-		$r = $basketPropertyCollection->save();
-		if (!$r->isSuccess())
-			$result->addErrors($r->getErrors());
-
-		if ($eventName = static::getEntityEventName())
-		{
-			/** @var array $oldEntityValues */
-			$oldEntityValues = $this->fields->getOriginalValues();
-
-			if (!empty($oldEntityValues))
-			{
-				/** @var Event $event */
-				$event = new Event('sale', 'On'.$eventName.'EntitySaved', array(
-					'ENTITY' => $this,
-					'VALUES' => $oldEntityValues,
-				));
-				$event->send();
+				$this->deleteInternal($id);
 			}
 		}
-
-		$this->fields->clearChanged();
 
 		return $result;
 	}
 
 	/**
-	 *
+	 * @return Result
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\NotImplementedException
+	 * @throws ObjectNotFoundException
 	 */
-	public function delete()
+	protected function add()
 	{
-		$result = new Result();
-		/** @var Basket $basket */
-		if (!$basket = $this->getCollection())
+		$logFields = $this->getLoggedFields();
+
+		$result = parent::add();
+
+		/** @var BasketItemCollection $collection */
+		$collection = $this->getCollection();
+
+		/** @var BasketBase $basket */
+		if (!$basket = $collection->getBasket())
 		{
-			throw new ObjectNotFoundException('Entity "Basket" not found');
+			throw new Main\ObjectNotFoundException('Entity "Basket" not found');
 		}
 
-		$eventName = static::getEntityEventName();
-
-		/** @var array $oldEntityValues */
-		$oldEntityValues = $this->fields->getOriginalValues();
-
-		/** @var Event $event */
-		$event = new Event('sale', "OnBefore".$eventName."EntityDeleted", array(
-				'ENTITY' => $this,
-				'VALUES' => $oldEntityValues,
-		));
-		$event->send();
-
-		if ($event->getResults())
+		if ($basket->getOrderId() > 0)
 		{
-			/** @var EventResult $eventResult */
-			foreach($event->getResults() as $eventResult)
-			{
-				if($eventResult->getType() == EventResult::ERROR)
-				{
-					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_BEFORE_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_BEFORE_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR');
-					if ($eventResultData = $eventResult->getParameters())
-					{
-						if (isset($eventResultData) && $eventResultData instanceof ResultError)
-						{
-							/** @var ResultError $errorMsg */
-							$errorMsg = $eventResultData;
-						}
-					}
-
-					$result->addError($errorMsg);
-				}
-			}
+			$registry = Registry::getInstance(static::getRegistryType());
+			/** @var OrderHistory $orderHistory */
+			$orderHistory = $registry->getOrderHistoryClassName();
 
 			if (!$result->isSuccess())
 			{
-				return $result;
+				$orderHistory::addAction(
+					'BASKET',
+					$basket->getOrderId(),
+					'BASKET_ITEM_ADD_ERROR',
+					null,
+					$this,
+					array("ERROR" => $result->getErrorMessages())
+				);
 			}
+			else
+			{
+				$orderHistory::addLog(
+					'BASKET',
+					$basket->getOrderId(),
+					"BASKET_ITEM_ADD",
+					$this->getId(),
+					$this,
+					$logFields,
+					$orderHistory::SALE_ORDER_HISTORY_LOG_LEVEL_1
+				);
+
+				$orderHistory::addAction(
+					'BASKET',
+					$basket->getOrderId(),
+					"BASKET_SAVED",
+					$this->getId(),
+					$this,
+					array(),
+					$orderHistory::SALE_ORDER_HISTORY_ACTION_LOG_LEVEL_1
+				);
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @return Result
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 */
+	protected function update()
+	{
+		$registry = Registry::getInstance(static::getRegistryType());
+		/** @var OrderHistory $orderHistory */
+		$orderHistory = $registry->getOrderHistoryClassName();
+
+		/** @var BasketItemCollection $collection */
+		$collection = $this->getCollection();
+
+		/** @var BasketBase $basket */
+		if (!$basket = $collection->getBasket())
+		{
+			throw new Main\ObjectNotFoundException('Entity "Basket" not found');
+		}
+
+		$logFields = $this->getLoggedFields();
+
+		$result = parent::update();
+
+		if (!$result->isSuccess())
+		{
+			if ($basket->getOrderId() > 0)
+			{
+				$orderHistory::addAction(
+					'BASKET',
+					$basket->getOrderId(),
+					'BASKET_ITEM_UPDATE_ERROR',
+					null,
+					$this,
+					array("ERROR" => $result->getErrorMessages())
+				);
+			}
+		}
+		else
+		{
+			$orderHistory::addLog(
+				'BASKET',
+				$basket->getOrderId(),
+				"BASKET_ITEM_UPDATE",
+				$this->getId(),
+				$this,
+				$logFields,
+				$orderHistory::SALE_ORDER_HISTORY_LOG_LEVEL_1
+			);
+
+			$orderHistory::addAction(
+				'BASKET',
+				$basket->getOrderId(),
+				"BASKET_SAVED",
+				$this->getId(),
+				$this,
+				array(),
+				$orderHistory::SALE_ORDER_HISTORY_ACTION_LOG_LEVEL_1
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @return array
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws Main\NotImplementedException
+	 */
+	private function getLoggedFields()
+	{
+		/** @var Basket $basket */
+		$basket = $this->getCollection();
+
+		$orderId = $basket->getOrderId();
+
+		$changeMeaningfulFields = array(
+			"PRODUCT_ID",
+			"QUANTITY",
+			"PRICE",
+			"DISCOUNT_VALUE",
+			"VAT_RATE",
+			"NAME",
+		);
+
+		$logFields = array();
+		if ($orderId > 0 && $this->isChanged())
+		{
+			$itemValues = $this->getFields();
+			$originalValues = $itemValues->getOriginalValues();
+
+			foreach($originalValues as $originalFieldName => $originalFieldValue)
+			{
+				if (in_array($originalFieldName, $changeMeaningfulFields) && $this->getField($originalFieldName) != $originalFieldValue)
+				{
+					$logFields[$originalFieldName] = $this->getField($originalFieldName);
+					$logFields['OLD_'.$originalFieldName] = $originalFieldValue;
+				}
+			}
+		}
+
+		return $logFields;
+	}
+
+	/**
+	 * @return Result
+	 * @throws ArgumentNullException
+	 * @throws ObjectNotFoundException
+	 */
+	protected function checkBeforeDelete()
+	{
+		$result = new Result();
+
+		/** @var BasketItemCollection $collection */
+		$collection = $this->getCollection();
+
+		/** @var Basket $basket */
+		if (!$basket = $collection->getBasket())
+		{
+			throw new ObjectNotFoundException('Entity "Basket" not found');
 		}
 
 		/** @var Order $order */
@@ -590,9 +341,16 @@ class BasketItem
 					{
 						if ($shipmentItemCollection->getItemByBasketCode($this->getBasketCode()) && $shipment->isShipped())
 						{
-							$result->addError( new ResultError(Loc::getMessage('SALE_BASKET_ITEM_REMOVE_IMPOSSIBLE_BECAUSE_SHIPPED', array(
-																		'#PRODUCT_NAME#' => $this->getField('NAME')
-																)), 'SALE_BASKET_ITEM_REMOVE_IMPOSSIBLE_BECAUSE_SHIPPED') );
+							$result->addError(
+								new ResultError(
+									Loc::getMessage(
+										'SALE_BASKET_ITEM_REMOVE_IMPOSSIBLE_BECAUSE_SHIPPED',
+										array('#PRODUCT_NAME#' => $this->getField('NAME'))
+									),
+									'SALE_BASKET_ITEM_REMOVE_IMPOSSIBLE_BECAUSE_SHIPPED'
+								)
+							);
+
 							return $result;
 						}
 					}
@@ -600,75 +358,39 @@ class BasketItem
 			}
 		}
 
-		$r = $this->setField("QUANTITY", 0);
-		if (!$r->isSuccess())
+		return $result;
+	}
+
+	/**
+	 * @return Result
+	 * @throws ArgumentOutOfRangeException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
+	 */
+	public function delete()
+	{
+		$result = new Result();
+
+		$deleteResult = parent::delete();
+		if (!$deleteResult->isSuccess())
 		{
-			$result->addErrors($r->getErrors());
+			$result->addErrors($deleteResult->getErrors());
 			return $result;
 		}
 
-		$bundleCollection = null;
 		if ($this->isBundleParent())
 		{
-			/** @var Basket $bundleCollection */
 			$bundleCollection = $this->getBundleCollection();
-		}
-
-		/** @var Result $r */
-		$r = parent::delete();
-		if (!$r->isSuccess())
-		{
-			$result->addErrors($r->getErrors());
-			return $result;
-		}
-
-		/** @var array $oldEntityValues */
-		$oldEntityValues = $this->fields->getOriginalValues();
-
-		/** @var Event $event */
-		$event = new Event('sale', "On".$eventName."EntityDeleted", array(
-				'ENTITY' => $this,
-				'VALUES' => $oldEntityValues,
-		));
-		$event->send();
-
-		if ($event->getResults())
-		{
-			/** @var EventResult $eventResult */
-			foreach($event->getResults() as $eventResult)
+			if ($bundleCollection)
 			{
-				if($eventResult->getType() == EventResult::ERROR)
+				/** @var BasketItem $bundleItem */
+				foreach ($bundleCollection as $bundleItem)
 				{
-					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR');
-					if ($eventResultData = $eventResult->getParameters())
+					$deleteResult = $bundleItem->delete();
+					if (!$deleteResult->isSuccess())
 					{
-						if (isset($eventResultData) && $eventResultData instanceof ResultError)
-						{
-							/** @var ResultError $errorMsg */
-							$errorMsg = $eventResultData;
-						}
+						$result->addErrors($deleteResult->getErrors());
 					}
-
-					$result->addError($errorMsg);
-				}
-			}
-
-			if (!$result->isSuccess())
-			{
-				return $result;
-			}
-		}
-
-		if ($bundleCollection !== null)
-		{
-			/** @var BasketItem $bundleBasketItem */
-			foreach ($bundleCollection as $bundleBasketItem)
-			{
-				/** @var Result $r */
-				$r = $bundleBasketItem->delete();
-				if (!$r->isSuccess())
-				{
-					$result->addErrors($r->getErrors());
 				}
 			}
 		}
@@ -676,84 +398,27 @@ class BasketItem
 		return $result;
 	}
 
-
 	/**
 	 * @param array $fields
 	 * @return array
+	 * @throws Main\NotImplementedException
 	 */
-	static public function clearBundleItemFields(array $fields)
+	private function clearBundleItemFields(array $fields)
 	{
-		$removeFields = array(
-			'ID',
-			'ITEM_ID',
-			'SORT',
-			'MEASURE',
-			'PROPS',
-			'DISCOUNT_PERCENT',
-			'SET_DISCOUNT_PERCENT',
-			'IBLOCK_ID',
-			'IBLOCK_SECTION_ID',
-			'PREVIEW_PICTURE',
-			'DETAIL_PICTURE',
-			'PROPS',
-		);
-
-		foreach ($removeFields as $field)
+		if (!empty($fields))
 		{
-			if (array_key_exists($field, $fields))
-				unset($fields[$field]);
-		}
+			$settableFields = static::getAllFields();
 
-		return $fields;
-	}
-
-
-	/**
-	 * @return int|null
-	 */
-	private function getParentOrderId()
-	{
-		/** @var PaymentCollection $collection */
-		if ($collection = $this->getCollection())
-		{
-			if ($order = $collection->getOrder())
+			foreach ($fields as $name => $value)
 			{
-				return $order->getId();
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getParentId()
-	{
-		if ($this->parentId === null)
-		{
-			$parentBasketId = $this->getField('SET_PARENT_ID');
-			/** @var BasketItem $parentBasketItem */
-			$parentBasketItem = $this->getParentBasketItem();
-
-			if($parentBasketId > 0 && $parentBasketId != $this->getId() && $parentBasketItem)
-			{
-				$this->parentId = $parentBasketItem->getBasketCode();
-			}
-			elseif($this->getField('TYPE') > 0)
-			{
-				$this->parentId = $this->getBasketCode();
-			}
-			else
-			{
-				/** @var BasketItem $parentBasketItem */
-				if ($parentBasketItem = $this->getParentBasketItem())
+				if (!isset($settableFields[$name]))
 				{
-					$this->parentId = $parentBasketItem->getBasketCode();
+					unset($fields[$name]);
 				}
 			}
 		}
-		return $this->parentId;
+
+		return $fields;
 	}
 
 	/**
@@ -761,35 +426,19 @@ class BasketItem
 	 */
 	public function getParentBasketItem()
 	{
-		if ($this->parentBasketItem === null)
+		$collection = $this->getCollection();
+
+		if ($collection instanceof BundleCollection)
 		{
-
-			$parentId = $this->getField('SET_PARENT_ID');
-
-			/** @var Basket $collection */
-			$collection = $this->getCollection();
-
-			if ($parentId > 0 && $parentId != $this->getId())
-			{
-				/** @var BasketItem parentBasketItem */
-				$this->parentBasketItem = $collection->getItemById($parentId);
-			}
-			elseif($this->parentId > 0)
-			{
-				$this->parentBasketItem = $collection->getItemByBasketCode($this->parentId);
-			}
-
-			if ($collection instanceof BasketBundleCollection &&  !$this->parentBasketItem)
-			{
-				$this->parentBasketItem = $collection->getParentBasketItem();
-			}
+			return $collection->getParentBasketItem();
 		}
 
-		return $this->parentBasketItem;
+		return null;
 	}
 
 	/**
-	 * @return bool|int
+	 * @return int|null|string
+	 * @throws ArgumentNullException
 	 */
 	public function getParentBasketItemId()
 	{
@@ -801,28 +450,12 @@ class BasketItem
 	}
 
 	/**
-	 * @return BasketPropertiesCollection
-	 */
-	public function getPropertyCollection()
-	{
-		if (empty($this->propertyCollection))
-		{
-			$this->propertyCollection = BasketPropertiesCollection::load($this);
-		}
-		return $this->propertyCollection;
-	}
-
-	/**
 	 * @return bool
+	 * @throws ArgumentNullException
 	 */
 	public function isBundleParent()
 	{
-		if ($this->getParentId() == $this->getBasketCode())
-		{
-			return true;
-		}
-
-		return false;
+		return (int)$this->getField('TYPE') === static::TYPE_SET;
 	}
 
 	/**
@@ -830,26 +463,25 @@ class BasketItem
 	 */
 	public function isBundleChild()
 	{
-		$parentId = $this->getParentId();
-		if ((strval($parentId) != '' && $parentId != $this->getBasketCode())
-			|| (intval($this->getField('SET_PARENT_ID')) > 0 && intval($this->getField('SET_PARENT_ID')) != $this->getId()) )
-		{
-			return true;
-		}
-
-		return false;
+		return $this->collection instanceof BundleCollection;
 	}
 
 	/**
 	 * @return array|bool
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
 	 * @throws ObjectNotFoundException
-	 * @throws \Bitrix\Main\NotSupportedException
+	 * @throws \Exception
 	 */
 	public function getBundleBaseQuantity()
 	{
 		if ($this->isBundleParent())
 		{
-			/** @var BasketBundleCollection $bundleCollection */
+			/** @var BundleCollection $bundleCollection */
 			if (!($bundleCollection = $this->getBundleCollection()))
 			{
 				throw new ObjectNotFoundException('Entity "BasketBundleCollection" not found');
@@ -874,9 +506,18 @@ class BasketItem
 					$originalBundleQuantity = $originalBundleValues['QUANTITY'];
 				}
 
+				if ($originalQuantity > 0)
+				{
+					$bundleQuantity = $originalBundleQuantity / $originalQuantity;
+				}
+				else
+				{
+					$bundleQuantity = 0;
+				}
+
 				$bundleChildList[]["ITEMS"][] = array(
 						"PRODUCT_ID" => $bundleBasketItem->getProductId(),
-						"QUANTITY" => $originalBundleQuantity / $originalQuantity
+						"QUANTITY" => $bundleQuantity
 				);
 
 			}
@@ -899,21 +540,15 @@ class BasketItem
 	}
 
 	/**
-	 * @return Basket
-	 * @throws \Bitrix\Main\NotSupportedException
-	 */
-	public function getBundleChildElements()
-	{
-		if ($this->bundleCollection !== null)
-		{
-			$this->bundleCollection = $this->loadBundleChildElements();
-		}
-
-		return $this->bundleCollection;
-	}
-
-	/**
-	 * @return BasketBundleCollection
+	 * @return BundleCollection|null
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
 	 */
 	public function getBundleCollection()
 	{
@@ -921,128 +556,245 @@ class BasketItem
 		{
 			if ($this->getId() > 0)
 			{
-				$this->bundleCollection = $this->loadBundleCollection();
+				$this->bundleCollection = $this->loadBundleCollectionFromDb();
 			}
 			else
 			{
-				$this->bundleCollection = $this->loadBundleChildElements();
+				$this->bundleCollection = $this->loadBundleCollectionFromProvider();
 			}
 		}
+
 		return $this->bundleCollection;
 	}
 
+	/**
+	 * @return BundleCollection
+	 * @throws ArgumentOutOfRangeException
+	 * @throws \Exception
+	 */
 	public function createBundleCollection()
 	{
 		if ($this->bundleCollection === null)
 		{
-			/** @var Basket $basket */
-			$basket = $this->getCollection();
+			$registry = Registry::getInstance(static::getRegistryType());
+			/** @var BundleCollection $bundleClassName */
+			$bundleClassName = $registry->getBundleCollectionClassName();
 
-			$this->bundleCollection = BasketBundleCollection::create($basket->getSiteId());
+			$this->bundleCollection = $bundleClassName::createBundleCollectionObject();
+			$this->bundleCollection->setParentBasketItem($this);
+
+			$this->setField('TYPE', static::TYPE_SET);
 		}
+
 		return $this->bundleCollection;
 	}
 
 	/**
-	 * @return bool
+	 * @return BundleCollection
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws \Exception
 	 */
-	protected function loadBundleCollection()
+	protected function loadBundleCollectionFromDb()
 	{
-		return Basket::loadBundleChild($this);
+		$collection = $this->createBundleCollection();
+
+		if ($this->getId() > 0)
+		{
+			return $collection->loadFromDb(array("SET_PARENT_ID" => $this->getId(), "TYPE" => false));
+		}
+
+		return $collection;
 	}
 
 	/**
-	 * @return bool
+	 * @return BundleCollection|null
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
 	 */
-	protected function loadBundleChildElements()
+	protected function loadBundleCollectionFromProvider()
 	{
-		$bundleChildList = Provider::getSetItems($this);
+		global $USER;
+
+		$bundleChildList = array();
+
+		/** @var BasketItemCollection $basket */
+		if (!$basket = $this->getCollection())
+		{
+			throw new Main\ObjectNotFoundException('Entity "Basket" not found');
+		}
+
+		/** @var Order $order */
+		$order = $basket->getOrder();
+		if ($order)
+		{
+			$context = array(
+				'SITE_ID' => $order->getSiteId(),
+				'USER_ID' => $order->getUserId(),
+				'CURRENCY' => $order->getCurrency(),
+			);
+		}
+		else
+		{
+			$context = array(
+				'SITE_ID' => SITE_ID,
+				'USER_ID' => $USER && $USER->GetID() > 0 ? $USER->GetID() : 0,
+				'CURRENCY' => CurrencyManager::getBaseCurrency(),
+			);
+		}
+
+		$creator = Internals\ProviderCreator::create($context);
+		$creator->addBasketItem($this);
+		$r = $creator->getBundleItems();
+		if ($r->isSuccess())
+		{
+			$resultProductListData = $r->getData();
+			if (!empty($resultProductListData['BUNDLE_LIST']))
+			{
+				$bundleChildList = $resultProductListData['BUNDLE_LIST'];
+			}
+		}
 
 		if (empty($bundleChildList))
 		{
 			return null;
 		}
 
-		/** @var Basket $baseBasketCollection */
-		$baseBasketCollection = $this->getCollection();
+		$this->bundleCollection = $this->setItemsAfterGetBundle($bundleChildList);
+		return $this->bundleCollection;
+	}
 
-		/** @var Order $order */
-		$order = $baseBasketCollection->getOrder();
-
-		/** @var Basket $bundleCollection */
-		$bundleCollection = BasketBundleCollection::create($baseBasketCollection->getSiteId());
-
-		if ($order !== null)
+	/**
+	 * @param array $items
+	 * @return BundleCollection
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws \Exception
+	 */
+	private function setItemsAfterGetBundle(array $items)
+	{
+		/** @var BundleCollection $bundleCollection */
+		$bundleCollection = $this->createBundleCollection();
+		foreach ($items as $providerClassName => $products)
 		{
-			$bundleCollection->setOrder($order);
-		}
-
-		foreach ($bundleChildList as $bundleBasketListDat)
-		{
-			foreach ($bundleBasketListDat["ITEMS"] as $bundleDat)
+			foreach ($products as $productId => $bundleBasketListDat)
 			{
-				$bundleFields = static::clearBundleItemFields($bundleDat);
-				$bundleFields['CURRENCY'] = $this->getCurrency();
-
-				if ($this->getId() > 0)
+				foreach ($bundleBasketListDat["ITEMS"] as $bundleDat)
 				{
-					$bundleFields['SET_PARENT_ID'] = $this->getId();
-				}
+					$bundleFields = $this->clearBundleItemFields($bundleDat);
+					unset($bundleFields['ID']);
 
-				/** @var BasketItem $basketItem */
-				$bundleBasketItem = BasketItem::create($bundleCollection, $bundleFields['MODULE'], $bundleFields['PRODUCT_ID']);
+					$bundleFields['CURRENCY'] = $this->getCurrency();
 
-				if (!empty($bundleDat["PROPS"]) && is_array($bundleDat["PROPS"]))
-				{
-					/** @var BasketPropertiesCollection $property */
-					$property = $bundleBasketItem->getPropertyCollection();
-					$property->setProperty($bundleDat["PROPS"]);
-				}
+					if ($this->getId() > 0)
+					{
+						$bundleFields['SET_PARENT_ID'] = $this->getId();
+					}
 
-				$bundleCollection->isItemExists($bundleBasketItem);
+					/** @var BasketItem $basketItem */
+					$bundleBasketItem = static::create($bundleCollection, $bundleFields['MODULE'], $bundleFields['PRODUCT_ID']);
 
-				$bundleQuantity = $bundleFields['QUANTITY'] * $this->getQuantity();
-				unset($bundleFields['QUANTITY']);
+					if (!empty($bundleDat["PROPS"]) && is_array($bundleDat["PROPS"]))
+					{
+						/** @var BasketPropertiesCollection $property */
+						$property = $bundleBasketItem->getPropertyCollection();
+						$property->setProperty($bundleDat["PROPS"]);
+					}
 
-				$bundleBasketItem->parentBasketItem = $this;
-				$bundleBasketItem->parentId = $this->getBasketCode();
+					$bundleQuantity = $bundleFields['QUANTITY'] * $this->getQuantity();
+					unset($bundleFields['QUANTITY']);
 
-				$bundleBasketItem->setFieldsNoDemand($bundleFields);
-				$bundleBasketItem->setField('QUANTITY', $bundleQuantity);
-
-
-				$bundleCollection->addItem($bundleBasketItem);
-			}
-		}
-
-		if ($productList = Provider::getProductData($bundleCollection, array('QUANTITY', 'PRICE')))
-		{
-			foreach ($productList as $productBasketCode => $productDat)
-			{
-				if ($bundleBasketItem = $bundleCollection->getItemByBasketCode($productBasketCode))
-				{
-					unset($productDat['DISCOUNT_LIST']);
-					$bundleBasketItem->setFieldsNoDemand($productDat);
+					$bundleBasketItem->setFieldsNoDemand($bundleFields);
+					$bundleBasketItem->setField('QUANTITY', $bundleQuantity);
+					$bundleCollection->addItem($bundleBasketItem);
 				}
 			}
 		}
 
-		$this->bundleCollection = $bundleCollection;
 		return $bundleCollection;
 	}
 
 	/**
-	 * @return bool
+	 * @param $basketCode
+	 * @return BasketItemBase|null
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
 	 */
-	public function isEmptyItem()
+	public function findItemByBasketCode($basketCode)
 	{
-		return (strval($this->getField('MODULE')) == '');
+		$item = parent::findItemByBasketCode($basketCode);
+		if ($item !== null)
+			return $item;
+
+		if ($this->isBundleParent())
+		{
+			$collection = $this->getBundleCollection();
+			/** @var BasketItemBase $basketItem */
+			foreach ($collection as $basketItem)
+			{
+				$item = $basketItem->findItemByBasketCode($basketCode);
+				if ($item !== null)
+					return $item;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param $id
+	 * @return BasketItemBase|null
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
+	 */
+	public function findItemById($id)
+	{
+		$item = parent::findItemById($id);
+		if ($item !== null)
+			return $item;
+
+		if ($this->isBundleParent())
+		{
+			$collection = $this->getBundleCollection();
+			/** @var BasketItemBase $basketItem */
+			foreach ($collection as $basketItem)
+			{
+				$item = $basketItem->findItemById($id);
+				if ($item !== null)
+					return $item;
+			}
+		}
+
+		return null;
 	}
 
 	/**
 	 * @param string $name
 	 * @param null $oldValue
 	 * @param null $value
+	 * @throws ArgumentNullException
 	 * @throws ObjectNotFoundException
 	 */
 	protected function addChangesToHistory($name, $oldValue = null, $value = null)
@@ -1071,7 +823,11 @@ class BasketItem
 					);
 				}
 
-				OrderHistory::addField(
+				$registry = Registry::getInstance(static::getRegistryType());
+
+				/** @var OrderHistory $orderHistory */
+				$orderHistory = $registry->getOrderHistoryClassName();
+				$orderHistory::addField(
 					'BASKET',
 					$basket->getOrderId(),
 					$name,
@@ -1086,9 +842,9 @@ class BasketItem
 
 	/**
 	 * @param $quantity
-	 *
-	 * @return float
+	 * @return float|string
 	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
 	 */
 	public static function formatQuantity($quantity)
 	{
@@ -1108,20 +864,24 @@ class BasketItem
 	/**
 	 * @return array
 	 */
-	public static function getAllFields()
+	protected static function getFieldsMap()
 	{
-		if (empty(static::$mapFields))
-		{
-			static::$mapFields = parent::getAllFieldsByMap(Internals\BasketTable::getMap());
-		}
-		return static::$mapFields;
+		return Internals\BasketTable::getMap();
 	}
 
 	/**
 	 * @internal
-	 * @param \SplObjectStorage $cloneEntity
 	 *
-	 * @return BasketItem
+	 * @param \SplObjectStorage $cloneEntity
+	 * @return BasketItem|Internals\CollectableEntity|object
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
 	 */
 	public function createClone(\SplObjectStorage $cloneEntity)
 	{
@@ -1130,13 +890,11 @@ class BasketItem
 			return $cloneEntity[$this];
 		}
 
-		$basketItemClone = clone $this;
-		$basketItemClone->isClone = true;
-
-		/** @var Internals\Fields $fields */
-		if ($fields = $this->fields)
+		/** @var BasketItem $basketItemClone */
+		$basketItemClone = parent::createClone($cloneEntity);
+		if ($this->isClone() && $cloneEntity->contains($this))
 		{
-			$basketItemClone->fields = $fields->createClone($cloneEntity);
+			return $cloneEntity[$this];
 		}
 
 		/** @var Internals\Fields $calculatedFields */
@@ -1148,20 +906,6 @@ class BasketItem
 		if (!$cloneEntity->contains($this))
 		{
 			$cloneEntity[$this] = $basketItemClone;
-		}
-
-		/** @var BasketItem $parentbasketItem */
-		if ($parentbasketItem = $this->parentBasketItem)
-		{
-			if (!$cloneEntity->contains($parentbasketItem))
-			{
-				$cloneEntity[$parentbasketItem] = $parentbasketItem->createClone($cloneEntity);
-			}
-
-			if ($cloneEntity->contains($parentbasketItem))
-			{
-				$basketItemClone->parentBasketItem = $cloneEntity[$parentbasketItem];
-			}
 		}
 
 		/** @var BasketPropertiesCollection $propertyCollection */
@@ -1178,72 +922,206 @@ class BasketItem
 			}
 		}
 
-		if ($collection = $this->getCollection())
+		if ($this->isBundleParent())
 		{
-			if (!$cloneEntity->contains($collection))
+			/** @var BundleCollection $bundleCollection */
+			if ($bundleCollection = $this->getBundleCollection())
 			{
-				$cloneEntity[$collection] = $collection->createClone($cloneEntity);
-			}
+				if (!$cloneEntity->contains($bundleCollection))
+				{
+					$cloneEntity[$bundleCollection] = $bundleCollection->createClone($cloneEntity);
+				}
 
-			if ($cloneEntity->contains($collection))
-			{
-				$basketItemClone->collection = $cloneEntity[$collection];
+				if ($cloneEntity->contains($bundleCollection))
+				{
+					$basketItemClone->bundleCollection = $cloneEntity[$bundleCollection];
+				}
 			}
 		}
-
-		/** @var BasketBundleCollection $bundleCollection */
-		if ($bundleCollection = $this->getBundleCollection())
-		{
-			if (!$cloneEntity->contains($bundleCollection))
-			{
-				$cloneEntity[$bundleCollection] = $bundleCollection->createClone($cloneEntity);
-			}
-
-			if ($cloneEntity->contains($bundleCollection))
-			{
-				$basketItemClone->bundleCollection = $cloneEntity[$bundleCollection];
-			}
-		}
-		
-		
 
 		return $basketItemClone;
 	}
 
-
 	/**
-	 * @internal
-	 * @return null|bool
-	 */
-	public function isNew()
-	{
-		return $this->isNew;
-	}
-
-	/**
+	 * @param string $name
+	 * @param mixed $oldValue
+	 * @param mixed $value
 	 * @return Result
+	 * @throws ArgumentException
+	 * @throws ArgumentNullException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\LoaderException
+	 * @throws Main\SystemException
+	 * @throws ObjectNotFoundException
+	 * @throws \Exception
 	 */
-	public function verify()
+	protected function onFieldModify($name, $oldValue, $value)
 	{
 		$result = new Result();
 
-		if ($basketPropertyCollection = $this->getPropertyCollection())
+		$r = parent::onFieldModify($name, $oldValue, $value);
+		if (!$r->isSuccess())
 		{
-			$r = $basketPropertyCollection->verify();
-			if (!$r->isSuccess())
+			$result->addErrors($r->getErrors());
+			return $result;
+		}
+
+		if (!$this->isBundleParent())
+			return $result;
+
+		if ($name === 'QUANTITY')
+		{
+			$deltaQuantity = $value - $oldValue;
+			if ($deltaQuantity != 0)
 			{
-				if ($r instanceof ResultWarning)
+				if ($bundleCollection = $this->getBundleCollection())
 				{
-					$result->addWarnings($r->getErrors());
-				}
-				else
-				{
-					$result->addErrors($r->getErrors());
+					$bundleBaseQuantity = $this->getBundleBaseQuantity();
+
+					/** @var BasketItemBase $bundleItem */
+					foreach ($bundleCollection as $bundleItem)
+					{
+						$bundleProductId = $bundleItem->getProductId();
+
+						if (!isset($bundleBaseQuantity[$bundleProductId]))
+							throw new ArgumentOutOfRangeException('bundle product id');
+
+						$quantity = $bundleBaseQuantity[$bundleProductId] * $value;
+
+						$r = $bundleItem->setField('QUANTITY', $quantity);
+						if (!$r->isSuccess())
+						{
+							$result->addErrors($r->getErrors());
+						}
+					}
 				}
 			}
 		}
-		
+		elseif ($name == "DELAY")
+		{
+			/** @var BundleCollection $bundleCollection */
+			if ($bundleCollection = $this->getBundleCollection())
+			{
+				/** @var BasketItemBase $bundleItem */
+				foreach ($bundleCollection as $bundleItem)
+				{
+					$r = $bundleItem->setField('DELAY', $value);
+					if (!$r->isSuccess())
+					{
+						$result->addErrors($r->getErrors());
+					}
+				}
+			}
+		}
+		elseif ($name == "CAN_BUY")
+		{
+			/** @var BundleCollection $bundleCollection */
+			if ($bundleCollection = $this->getBundleCollection())
+			{
+				/** @var BasketItemBase $bundleItem */
+				foreach ($bundleCollection as $bundleItem)
+				{
+					$r = $bundleItem->setField('CAN_BUY', $value);
+					if (!$r->isSuccess())
+					{
+						$result->addErrors($r->getErrors());
+					}
+				}
+			}
+		}
+
 		return $result;
+	}
+
+	/**
+	 * @param BasketItemCollection $basket
+	 * @param $data
+	 * @return BasketItem|mixed
+	 * @throws ArgumentException
+	 * @throws ArgumentOutOfRangeException
+	 * @throws Main\ArgumentTypeException
+	 * @throws Main\NotImplementedException
+	 * @throws \Exception
+	 */
+	public static function load(BasketItemCollection $basket, $data)
+	{
+		$bundleItems = array();
+		if (isset($data['ITEMS']))
+		{
+			$bundleItems = $data['ITEMS'];
+			unset($data['ITEMS']);
+		}
+
+		/** @var BasketItem $basketItem */
+		$basketItem = parent::load($basket, $data);
+
+		if ($bundleItems)
+		{
+			$bundleCollection = $basketItem->createBundleCollection();
+			$bundleCollection->loadFromArray($bundleItems);
+		}
+
+		return $basketItem;
+	}
+
+	/**
+	 * @param array $fields
+	 * @return Main\Entity\AddResult
+	 * @throws \Exception
+	 */
+	protected function addInternal(array $fields)
+	{
+		return Internals\BasketTable::add($fields);
+	}
+
+	/**
+	 * @param $primary
+	 * @param array $fields
+	 * @return Main\Entity\UpdateResult
+	 * @throws \Exception
+	 */
+	protected function updateInternal($primary, array $fields)
+	{
+		return Internals\BasketTable::update($primary, $fields);
+	}
+
+	/**
+	 * @param $primary
+	 * @return Main\Entity\DeleteResult
+	 * @throws \Exception
+	 */
+	protected function deleteInternal($primary)
+	{
+		return Internals\BasketTable::delete($primary);
+	}
+
+	/**
+	 * @return float|int
+	 * @throws ArgumentNullException
+	 */
+	public function getReservedQuantity()
+	{
+		$reservedQuantity = 0;
+
+		/** @var BasketItemCollection $basketItemCollection */
+		$basketItemCollection = $this->getCollection();
+
+		/** @var Order $order */
+		$order = $basketItemCollection->getOrder();
+		if ($order)
+		{
+			$shipmentCollection = $order->getShipmentCollection();
+			/** @var Shipment $shipment */
+			foreach ($shipmentCollection as $shipment)
+			{
+				$shipmentItemCollection = $shipment->getShipmentItemCollection();
+				$shipmentItem = $shipmentItemCollection->getItemByBasketCode($this->getBasketCode());
+				if ($shipmentItem)
+					$reservedQuantity += $shipmentItem->getReservedQuantity();
+			}
+		}
+
+		return $reservedQuantity;
 	}
 
 }

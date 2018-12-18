@@ -43,6 +43,11 @@ class HttpRequest extends Request
 	protected $cookiesRaw;
 
 	/**
+	 * @var Type\ParameterDictionary
+	 */
+	protected $headers;
+
+	/**
 	 * Creates new HttpRequest object
 	 *
 	 * @param Server $server
@@ -51,31 +56,6 @@ class HttpRequest extends Request
 	 * @param array $files _FILES
 	 * @param array $cookies _COOKIE
 	 */
-	
-	/**
-	* <p>Нестатический метод вызывается при создании экземпляра класса и позволяет в нем произвести  при создании объекта какие-то действия.</p>
-	*
-	*
-	* @param mixed $Bitrix  
-	*
-	* @param Bitri $Main  массив _GET
-	*
-	* @param Server $server  массив _POST
-	*
-	* @param array $queryString  массив _FILES
-	*
-	* @param array $postData  массив _COOKIE
-	*
-	* @param array $files  
-	*
-	* @param array $cookies  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct(Server $server, array $queryString, array $postData, array $files, array $cookies)
 	{
 		$request = array_merge($queryString, $postData);
@@ -86,6 +66,7 @@ class HttpRequest extends Request
 		$this->files = new Type\ParameterDictionary($files);
 		$this->cookiesRaw = new Type\ParameterDictionary($cookies);
 		$this->cookies = new Type\ParameterDictionary($this->prepareCookie($cookies));
+		$this->headers = new Type\ParameterDictionary($this->fetchHeaders($server));
 	}
 
 	/**
@@ -93,33 +74,15 @@ class HttpRequest extends Request
 	 *
 	 * @param Type\IRequestFilter $filter Filter object
 	 */
-	
-	/**
-	* <p>Нестатический метод применяет фильтр к данным запроса с сохранением оригинальных значений.</p>
-	*
-	*
-	* @param mixed $Bitrix  Объект фильтра
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Type  
-	*
-	* @param IRequestFilter $filter  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/addfilter.php
-	* @author Bitrix
-	*/
 	public function addFilter(Type\IRequestFilter $filter)
 	{
 		$filteredValues = $filter->filter(array(
 			"get" => $this->queryString->values,
 			"post" => $this->postData->values,
 			"files" => $this->files->values,
+			"headers" => $this->headers->values,
 			"cookie" => $this->cookiesRaw->values
-			));
+		));
 
 		if (isset($filteredValues['get']))
 			$this->queryString->setValuesNoDemand($filteredValues['get']);
@@ -127,6 +90,8 @@ class HttpRequest extends Request
 			$this->postData->setValuesNoDemand($filteredValues['post']);
 		if (isset($filteredValues['files']))
 			$this->files->setValuesNoDemand($filteredValues['files']);
+		if (isset($filteredValues['headers']))
+			$this->headers->setValuesNoDemand($this->normalizeHeaders($filteredValues['headers']));
 		if (isset($filteredValues['cookie']))
 		{
 			$this->cookiesRaw->setValuesNoDemand($filteredValues['cookie']);
@@ -143,19 +108,6 @@ class HttpRequest extends Request
 	 * @param string $name Parameter name
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает GET параметр текущего запроса.</p>
-	*
-	*
-	* @param string $name  Название параметра
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getquery.php
-	* @author Bitrix
-	*/
 	public function getQuery($name)
 	{
 		return $this->queryString->get($name);
@@ -166,17 +118,6 @@ class HttpRequest extends Request
 	 *
 	 * @return Type\ParameterDictionary
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список GET параметров текущего запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Type\ParameterDictionary 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getquerylist.php
-	* @author Bitrix
-	*/
 	public function getQueryList()
 	{
 		return $this->queryString;
@@ -188,19 +129,6 @@ class HttpRequest extends Request
 	 * @param $name
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает POST параметры текущего запроса.</p>
-	*
-	*
-	* @param mixed $name  Запрос
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getpost.php
-	* @author Bitrix
-	*/
 	public function getPost($name)
 	{
 		return $this->postData->get($name);
@@ -211,17 +139,6 @@ class HttpRequest extends Request
 	 *
 	 * @return Type\ParameterDictionary
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список POST параметров текущего запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Type\ParameterDictionary 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getpostlist.php
-	* @author Bitrix
-	*/
 	public function getPostList()
 	{
 		return $this->postData;
@@ -233,19 +150,6 @@ class HttpRequest extends Request
 	 * @param $name
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает параметры FILES текущего запроса.</p>
-	*
-	*
-	* @param mixed $name  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getfile.php
-	* @author Bitrix
-	*/
 	public function getFile($name)
 	{
 		return $this->files->get($name);
@@ -256,20 +160,31 @@ class HttpRequest extends Request
 	 *
 	 * @return Type\ParameterDictionary
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список параметров FILES текущего запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Type\ParameterDictionary 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getfilelist.php
-	* @author Bitrix
-	*/
 	public function getFileList()
 	{
 		return $this->files;
+	}
+
+	/**
+	 * Returns the header of the current request.
+	 *
+	 * @param string $name Name of header.
+	 *
+	 * @return null|string
+	 */
+	public function getHeader($name)
+	{
+		return $this->headers->get(strtolower($name));
+	}
+
+	/**
+	 * Returns the list of headers of the current request.
+	 *
+	 * @return Type\ParameterDictionary
+	 */
+	public function getHeaders()
+	{
+		return $this->headers;
 	}
 
 	/**
@@ -278,19 +193,6 @@ class HttpRequest extends Request
 	 * @param $name
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает параметры COOKIES из текущего запроса.</p> <p>Анаолг метода <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/get_cookie.php" >CMain::get_cookie</a> в старом ядре.</p>
-	*
-	*
-	* @param mixed $name  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getcookie.php
-	* @author Bitrix
-	*/
 	public function getCookie($name)
 	{
 		return $this->cookies->get($name);
@@ -301,17 +203,6 @@ class HttpRequest extends Request
 	 *
 	 * @return Type\ParameterDictionary
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список параметров COOKIES текущего запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Type\ParameterDictionary 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getcookielist.php
-	* @author Bitrix
-	*/
 	public function getCookieList()
 	{
 		return $this->cookies;
@@ -351,17 +242,6 @@ class HttpRequest extends Request
 	 * Returns the User-Agent HTTP request header.
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает запрошенный заголовок юзер-агента HTTP.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getuseragent.php
-	* @author Bitrix
-	*/
 	public function getUserAgent()
 	{
 		return $this->server->get("HTTP_USER_AGENT");
@@ -390,17 +270,6 @@ class HttpRequest extends Request
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает текущую страницу, полученную из запрошенного URI.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getrequestedpage.php
-	* @author Bitrix
-	*/
 	public function getRequestedPage()
 	{
 		if ($this->requestedPage === null)
@@ -423,17 +292,6 @@ class HttpRequest extends Request
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает расшифрованный URL, конвертированный в текущий кодированный URI запроса. (За исключением строки запроса.)</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getdecodeduri.php
-	* @author Bitrix
-	*/
 	public function getDecodedUri()
 	{
 		$parsedUri = new Web\Uri("http://".$this->server->getHttpHost().$this->getRequestUri());
@@ -450,24 +308,13 @@ class HttpRequest extends Request
 
 	protected static function decode($url)
 	{
-		return Text\Encoding::convertEncodingToCurrent(urldecode($url));
+		return Text\Encoding::convertEncodingToCurrent(rawurldecode($url));
 	}
 
 	/**
 	 * Returns the host from the server variable without a port number.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает узел переменной сервера без номера порта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/gethttphost.php
-	* @author Bitrix
-	*/
 	public function getHttpHost()
 	{
 		static $host = null;
@@ -491,8 +338,10 @@ class HttpRequest extends Request
 		}
 
 		$https = $this->server->get("HTTPS");
-		if($https !== null && strtolower($https) == "on")
+		if($https <> '' && strtolower($https) <> "off")
 		{
+			//From the PHP manual: Set to a non-empty value if the script was queried through the HTTPS protocol.
+			//Note that when using ISAPI with IIS, the value will be off if the request was not made through the HTTPS protocol.
 			return true;
 		}
 
@@ -533,6 +382,33 @@ class HttpRequest extends Request
 		return $cookiesNew;
 	}
 
+	private function fetchHeaders(Server $server)
+	{
+		$headers = [];
+		foreach ($server as $name => $value)
+		{
+			if (substr($name, 0, 5) === 'HTTP_')
+			{
+				$headerName = substr($name, 5);
+				$headers[$headerName] = $value;
+			}
+		}
+
+		return $this->normalizeHeaders($headers);
+	}
+
+	private function normalizeHeaders(array $headers)
+	{
+		$normalizedHeaders = [];
+		foreach ($headers as $name => $value)
+		{
+			$headerName = strtolower(str_replace('_', '-', $name));
+			$normalizedHeaders[$headerName] = $value;
+		}
+
+		return $normalizedHeaders;
+	}
+
 	protected static function normalize($path)
 	{
 		if (substr($path, -1, 1) === "/")
@@ -550,17 +426,6 @@ class HttpRequest extends Request
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает файл скрипта при необходимости откорректированный посредством <b>urlrewrite.php</b> или файл <b>virtual_file_system.php</b>.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getscriptfile.php
-	* @author Bitrix
-	*/
 	public function getScriptFile()
 	{
 		$scriptName = $this->getScriptName();
@@ -578,21 +443,11 @@ class HttpRequest extends Request
 	 * Returns the array with predefined query parameters.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает массив с предопределёнными параметрами запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httprequest/getsystemparameters.php
-	* @author Bitrix
-	*/
 	public static function getSystemParameters()
 	{
 		static $params = array(
 			"login",
+			"login_form",
 			"logout",
 			"register",
 			"forgot_password",
@@ -607,7 +462,26 @@ class HttpRequest extends Request
 			"show_sql_stat",
 			"show_cache_stat",
 			"show_link_stat",
+			"sessid",
 		);
 		return $params;
+	}
+
+	/**
+	 * Returns raw request data from php://input.
+	 * @return bool|string
+	 */
+	public static function getInput()
+	{
+		return file_get_contents("php://input");
+	}
+
+	/**
+	 * Returns Y if persistant cookies are enabled, N if disabled, or empty if unknown.
+	 * @return null|string
+	 */
+	public function getCookiesMode()
+	{
+		return $this->getCookie(HttpResponse::STORE_COOKIE_NAME);
 	}
 }

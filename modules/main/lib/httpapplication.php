@@ -7,8 +7,12 @@
  */
 namespace Bitrix\Main;
 
-use Bitrix\Main\IO;
-use Bitrix\Main\Security;
+use Bitrix\Main\Config\Configuration;
+use Bitrix\Main\Engine\Binder;
+use Bitrix\Main\Engine\Controller;
+use Bitrix\Main\Engine\Response\AjaxJson;
+use Bitrix\Main\Engine\Router;
+use Bitrix\Main\UI\PageNavigation;
 
 /**
  * Http application extends application. Contains http specific methods.
@@ -49,7 +53,7 @@ class HttpApplication extends Application
 		$this->setContext($context);
 	}
 
-	static public function createExceptionHandlerOutput()
+	public function createExceptionHandlerOutput()
 	{
 		return new Diag\HttpExceptionHandlerOutput();
 	}
@@ -57,18 +61,7 @@ class HttpApplication extends Application
 	/**
 	 * Starts request execution. Should be called after initialize.
 	 */
-	
-	/**
-	* <p>Нестатический метод запускает выполнение запроса. Вызывается после инициализации.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httpapplication/start.php
-	* @author Bitrix
-	*/
-	static public function start()
+	public function start()
 	{
 		//register_shutdown_function(array($this, "finish"));
 	}
@@ -77,19 +70,132 @@ class HttpApplication extends Application
 	 * Finishes request execution.
 	 * It is registered in start() and called automatically on script shutdown.
 	 */
-	
-	/**
-	* <p>Нестатический метод завершает выполнение запроса.</p> <p>Метод регистрируется в <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/httpapplication/start.php">start</a> и вызывается автоматически при выполнении скрипта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/httpapplication/finish.php
-	* @author Bitrix
-	*/
 	public function finish()
 	{
 		//$this->managedCache->finalize();
+	}
+
+	private function getSourceParametersList()
+	{
+		if (!$this->context->getServer()->get('HTTP_BX_AJAX_QB'))
+		{
+			return array(
+				$this->context->getRequest()->getPostList(),
+				$this->context->getRequest()->getQueryList(),
+			);
+		}
+
+		return array(
+			Web\Json::decode($this->context->getRequest()->getPost('bx_data'))
+		);
+	}
+
+	/**
+	 * Runs controller and its action and sends response to the output.
+	 *
+	 * @return void
+	 */
+	public function run()
+	{
+		try
+		{
+			$e = null;
+			$result = null;
+			$errorCollection = new ErrorCollection();
+
+			$router = new Router($this->context->getRequest());
+
+			/** @var Controller $controller */
+			/** @var string $actionName */
+			list($controller, $actionName) = $router->getControllerAndAction();
+			if (!$controller)
+			{
+				throw new SystemException('Could not find controller for the request');
+			}
+
+			$this->registerAutoWirings();
+
+			$result = $controller->run($actionName, $this->getSourceParametersList());
+			$errorCollection->add($controller->getErrors());
+		}
+		catch (\Exception $e)
+		{
+			$errorCollection[] = new Error($e->getMessage(), $e->getCode());
+		}
+		catch (\Error $e)
+		{
+			//todo add work with debug mode to show extend errors and exceptions
+			$errorCollection[] = new Error($e->getMessage(), $e->getCode());
+		}
+		finally
+		{
+			$exceptionHandling = Configuration::getValue('exception_handling');
+			if ($e && !empty($exceptionHandling['debug']))
+			{
+				$errorCollection[] = new Error(Diag\ExceptionHandlerFormatter::format($e));
+				if ($e->getPrevious())
+				{
+					$errorCollection[] = new Error(Diag\ExceptionHandlerFormatter::format($e->getPrevious()));
+				}
+			}
+
+			$response = $this->buildResponse($result, $errorCollection);
+			$this->context->setResponse($response);
+
+			global $APPLICATION;
+			$APPLICATION->restartBuffer();
+
+			$response->send();
+
+			//todo exit code in Response?
+			$this->terminate(0);
+		}
+	}
+
+	private function registerAutoWirings()
+	{
+		/** @see \Bitrix\Main\UI\PageNavigation */
+		Binder::registerParameter(
+			'\\Bitrix\\Main\\UI\\PageNavigation',
+			function() {
+				$pageNavigation = new PageNavigation('nav');
+				$pageNavigation
+					->setPageSizes(range(1, 50))
+					->initFromUri()
+				;
+
+				return $pageNavigation;
+			}
+		);
+	}
+
+	/**
+	 * Builds a response by result's action.
+	 * If an action returns non subclass of HttpResponse then the method tries to create Response\StandardJson.
+	 *
+	 * @param mixed $actionResult
+	 * @param ErrorCollection $errorCollection
+	 *
+	 * @return HttpResponse
+	 */
+	private function buildResponse($actionResult, ErrorCollection $errorCollection)
+	{
+		if ($actionResult instanceof HttpResponse)
+		{
+			return $actionResult;
+		}
+
+		if (!$errorCollection->isEmpty())
+		{
+			//todo There is opportunity to create DenyError() and recognize AjaxJson::STATUS_DENIED by this error.
+
+			return new AjaxJson(
+				$actionResult,
+				AjaxJson::STATUS_ERROR,
+				$errorCollection
+			);
+		}
+
+		return new AjaxJson($actionResult);
 	}
 }

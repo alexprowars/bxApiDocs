@@ -19,17 +19,6 @@ class OrderTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы заказов в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/ordertable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_sale_order';
@@ -40,17 +29,6 @@ class OrderTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы заказов. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/ordertable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		global $DB, $USER;
@@ -307,6 +285,8 @@ class OrderTable extends Main\Entity\DataManager
 
 			new Main\Entity\StringField('COMMENTS'),
 
+			new Main\Entity\IntegerField('COMPANY_ID'),
+
 			new Main\Entity\IntegerField('CREATED_BY'),
 
 			new Main\Entity\ReferenceField(
@@ -332,6 +312,14 @@ class OrderTable extends Main\Entity\DataManager
 			new Main\Entity\DateField('DATE_PAY_BEFORE'),
 
 			new Main\Entity\DateField('DATE_BILL'),
+
+			new Main\Entity\BooleanField(
+				'IS_RECURRING',
+				array(
+					'values' => array('N', 'Y'),
+					'default_value' => 'N'
+				)
+			),
 
 			new Main\Entity\IntegerField('RECURRING_ID'),
 
@@ -492,6 +480,14 @@ class OrderTable extends Main\Entity\DataManager
 
 
 			new Main\Entity\StringField('BX_USER_ID'),
+
+			new Main\Entity\BooleanField(
+				'RUNNING',
+				array(
+					'values' => array('N', 'Y'),
+					'default_value' => 'N'
+				)
+			),
 
 			new Main\Entity\ReferenceField(
 				'ORDER_COUPONS',

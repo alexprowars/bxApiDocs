@@ -16,17 +16,6 @@ class RouteTable extends Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает имя таблицы БД для сущности.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/routetable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_urlpreview_route';
@@ -37,17 +26,6 @@ class RouteTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает описание карты сущностей.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/routetable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -78,19 +56,6 @@ class RouteTable extends Entity\DataManager
 	 * @return array|false
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает первую запись, отфильтрованную по значению переменной <code>$route</code>.</p>
-	*
-	*
-	* @param string $route  Шаблон маршрута.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/routetable/getbyroute.php
-	* @author Bitrix
-	*/
 	public static function getByRoute($route)
 	{
 		$parameters = array(
@@ -109,19 +74,6 @@ class RouteTable extends Entity\DataManager
 	 * @param array $data Record to be merged to the table.
 	 * @return AddResult
 	 */
-	
-	/**
-	* <p>Статический метод добавляет маршрут в таблицу маршрутов. Если запись маршрута уже существует, то обновляет её.</p>
-	*
-	*
-	* @param array $data  Запись для добавления в таблицу.
-	*
-	* @return \Bitrix\Main\Entity\AddResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/routetable/merge.php
-	* @author Bitrix
-	*/
 	public static function merge(array $data)
 	{
 		$result = new AddResult();

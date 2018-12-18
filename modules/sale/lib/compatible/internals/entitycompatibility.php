@@ -8,6 +8,8 @@ use Bitrix\Main\ArgumentNullException;
 use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\NotImplementedException;
+use Bitrix\Main\ObjectNotFoundException;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Type\Date;
 use Bitrix\Main\Type\DateTime;
@@ -52,6 +54,16 @@ abstract class EntityCompatibility
 	protected function __construct(array $fields = array())
 	{
 		throw new SystemException('not set construct');
+	}
+
+	protected static function getRegistryType()
+	{
+		throw new NotImplementedException();
+	}
+
+	protected static function getEntity()
+	{
+		throw new NotImplementedException();
 	}
 
 	/**
@@ -259,7 +271,7 @@ abstract class EntityCompatibility
 	 *
 	 * @return null|string
 	 */
-	static public function parseField($key)
+	public function parseField($key)
 	{
 		return null;
 	}

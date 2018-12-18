@@ -78,14 +78,14 @@ class YandexRegionTable extends AdvEntity
 		return self::$engine;
 	}
 
-	public static function getList($params)
+	public static function getList(array $parameters = array())
 	{
 		if(static::needDatabaseUpdate())
 		{
 			static::updateDatabase();
 		}
 
-		return parent::getList($params);
+		return parent::getList($parameters);
 	}
 
 	public static function updateDatabase()

@@ -6,11 +6,6 @@ use Bitrix\Main\Entity;
 
 class OperationTable extends Entity\DataManager
 {
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_operation';

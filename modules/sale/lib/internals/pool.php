@@ -11,7 +11,7 @@ class Pool
 	/** @var array */
 	protected $items = array();
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
@@ -37,6 +37,13 @@ class Pool
 	{
 		$this->quantities[$code] = $quantity;
 
+	}
+	/**
+	 * @param $code
+	 */
+	public function delete($code)
+	{
+		unset($this->quantities[$code]);
 	}
 
 	/**

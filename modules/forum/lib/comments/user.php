@@ -37,16 +37,16 @@ class User
 		return $this->groups;
 	}
 
-	static public function isAuthorized()
+	public function isAuthorized()
 	{
 		return true;
 	}
 
-	static public function getParam()
+	public function getParam()
 	{
 		return '';
 	}
-	static public function isAdmin()
+	public function isAdmin()
 	{
 		return false;
 	}
@@ -54,23 +54,23 @@ class User
 	{
 		return $this->groups;
 	}
-	static public function getFirstName()
+	public function getFirstName()
 	{
 		return '';
 	}
-	static public function getLastName()
+	public function getLastName()
 	{
 		return '';
 	}
-	static public function getSecondName()
+	public function getSecondName()
 	{
 		return '';
 	}
-	static public function getLogin()
+	public function getLogin()
 	{
 		return '';
 	}
-	static public function getFullName()
+	public function getFullName()
 	{
 		return '';
 	}

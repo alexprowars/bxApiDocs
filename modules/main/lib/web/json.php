@@ -19,27 +19,6 @@ class Json
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @see json_encode
 	 */
-	
-	/**
-	* <p>Статический метод возвращает строку, содержащую JSON представление переменной <code>$data</code>.</p>
-	*
-	*
-	* @param mixed $data  Данные для кодирования.
-	*
-	* @param null $options = null Параметры битовой маски.  По умолчанию:
-	* JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT.
-	*
-	* @return mixed 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/json/encode.php">\Bitrix\Main\Web\Json::encode</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/json/encode.php
-	* @author Bitrix
-	*/
 	public static function encode($data, $options = null)
 	{
 		if (!Application::getInstance()->isUtfMode())
@@ -68,24 +47,6 @@ class Json
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @see json_decode
 	 */
-	
-	/**
-	* <p>Статический метод выполняет декодирование строки JSON и конвертирует данные в переменные PHP.</p>
-	*
-	*
-	* @param string $data  Json строка для декодирования.
-	*
-	* @return mixed 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/json/encode.php">\Bitrix\Main\Web\Json::encode</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/json/decode.php
-	* @author Bitrix
-	*/
 	public static function decode($data)
 	{
 		$res = json_decode($data, true);

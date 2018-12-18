@@ -18,19 +18,21 @@ class Manager extends \Bitrix\Sale\Services\Base\RestrictionManager
 	/**
 	 * @return array
 	 */
-	public static function getBuildInRestrictions()
+	protected static function getBuildInRestrictions()
 	{
-		return  array(
+		return array(
 			'\Bitrix\Sale\Delivery\Restrictions\BySite' => 'lib/delivery/restrictions/bysite.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByPrice' => 'lib/delivery/restrictions/byprice.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByWeight' => 'lib/delivery/restrictions/byweight.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByMaxSize' => 'lib/delivery/restrictions/bymaxsize.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByLocation' => 'lib/delivery/restrictions/bylocation.php',
-			'\Bitrix\Sale\Delivery\Restrictions\PersonType' => 'lib/delivery/restrictions/bypersontype.php', //will be moved
+//			'\Bitrix\Sale\Delivery\Restrictions\PersonType' => 'lib/delivery/restrictions/bypersontype.php', //will be moved
 			'\Bitrix\Sale\Delivery\Restrictions\ByPaySystem' => 'lib/delivery/restrictions/bypaysystem.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByPersonType' => 'lib/delivery/restrictions/bypersontype.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByDimensions' => 'lib/delivery/restrictions/bydimensions.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByPublicMode' => 'lib/delivery/restrictions/bypublicmode.php',
+			'\Bitrix\Sale\Delivery\Restrictions\ByTradeBinding' => 'lib/delivery/restrictions/bytradebinding.php',
+			'\Bitrix\Sale\Delivery\Restrictions\ExcludeLocation' => 'lib/delivery/restrictions/excludelocation.php',
 			'\Bitrix\Sale\Delivery\Restrictions\ByProductCategory' => 'lib/delivery/restrictions/byproductcategory.php'
 		);
 	}
@@ -40,6 +42,7 @@ class Manager extends \Bitrix\Sale\Services\Base\RestrictionManager
 	 */
 	public static function getEventName()
 	{
+		class_alias('Bitrix\Sale\Delivery\Restrictions\ByPersonType', 'Bitrix\Sale\Delivery\Restrictions\PersonType');
 		return 'onSaleDeliveryRestrictionsClassNamesBuildList';
 	}
 
@@ -78,6 +81,9 @@ class Manager extends \Bitrix\Sale\Services\Base\RestrictionManager
 		if($dataPrepared === false)
 		{
 			self::init();
+			$filter = array(
+				'DELIVERY_SERVICE.ACTIVE' => 'Y'
+			);
 
 			$dbRes = ServiceRestrictionTable::getList(array(
 				'runtime' => array(
@@ -91,9 +97,7 @@ class Manager extends \Bitrix\Sale\Services\Base\RestrictionManager
 						array('join_type' => 'inner')
 					)
 				),
-				'filter' => array(
-					'DELIVERY_SERVICE.ACTIVE' => 'Y'
-				),
+				'filter' => $filter,
 				'order' => array('SORT' =>'ASC')
 			));
 

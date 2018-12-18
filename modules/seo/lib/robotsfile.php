@@ -62,12 +62,12 @@ class RobotsFile
 		$this->save();
 	}
 
-	static public function getRuleText($rule)
+	public function getRuleText($rule)
 	{
 		return implode(': ', $rule);
 	}
 
-	static public function parseRule($strRule)
+	public function parseRule($strRule)
 	{
 		if(substr($strRule, 0, 1) == '#')
 		{

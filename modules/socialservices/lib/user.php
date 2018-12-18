@@ -118,6 +118,11 @@ class UserTable extends Entity\DataManager
 			}
 		}
 
+		if(array_key_exists('PERSONAL_PHOTO', $fields) && is_array($fields['PERSONAL_PHOTO']))
+		{
+			$fields['PERSONAL_PHOTO'] = \CFile::SaveFile($fields['PERSONAL_PHOTO'], 'socialservices');
+		}
+
 		return $fields;
 	}
 

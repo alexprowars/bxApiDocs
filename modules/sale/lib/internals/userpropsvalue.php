@@ -54,6 +54,11 @@ class UserPropsValueTable extends DataManager
 				'reference' => array('=this.ORDER_PROPS_ID' => 'ref.ID'),
 				'join_type' => 'LEFT',
 			),
+			'USER_PROPERTY' => array(
+				'data_type' => 'Bitrix\Sale\Internals\UserPropsTable',
+				'reference' => array('=this.USER_PROPS_ID' => 'ref.ID'),
+				'join_type' => 'LEFT',
+			),
 		);
 	}
 

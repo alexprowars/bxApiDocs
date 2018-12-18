@@ -29,7 +29,8 @@ class Text extends StringType
 	{
 		$name = static::generateControlName($field);
 		$controlId = static::generateControlId($field);
-		$renderResult =  '<textarea rows="5" cols="40" id="'.htmlspecialcharsbx($controlId).'" name="'
+		$renderResult =  '<textarea class="'.htmlspecialcharsbx(static::generateControlClassName($fieldType, $field))
+			.'"rows="5" cols="40" id="'.htmlspecialcharsbx($controlId).'" name="'
 			.htmlspecialcharsbx($name).'">'.htmlspecialcharsbx((string) $value).'</textarea>';
 
 		if ($allowSelection)

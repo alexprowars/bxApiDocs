@@ -24,7 +24,7 @@ class CacheEngineMemcache
 	 * Engine constructor.
 	 *
 	 */
-	public function __construct()
+	function __construct()
 	{
 		$cacheConfig = Config\Configuration::getValue("cache");
 
@@ -79,7 +79,7 @@ class CacheEngineMemcache
 	 *
 	 * @return void
 	 */
-	public static function close()
+	function close()
 	{
 		if (self::$obMemcache != null)
 		{
@@ -116,7 +116,7 @@ class CacheEngineMemcache
 	 *
 	 * @return string
 	 */
-	static public function getCachePath()
+	public function getCachePath()
 	{
 		return "";
 	}
@@ -126,7 +126,7 @@ class CacheEngineMemcache
 	 *
 	 * @return bool
 	 */
-	public static function isAvailable()
+	function isAvailable()
 	{
 		return self::$isConnected;
 	}
@@ -218,7 +218,7 @@ class CacheEngineMemcache
 	 *
 	 * @return void
 	 */
-	public function clean($baseDir, $initDir = false, $filename = false)
+	function clean($baseDir, $initDir = false, $filename = false)
 	{
 		$key = false;
 		if (is_object(self::$obMemcache))
@@ -280,7 +280,7 @@ class CacheEngineMemcache
 	 *
 	 * @return boolean
 	 */
-	public function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
+	function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		if (!isset(self::$baseDirVersion[$baseDir]))
 			self::$baseDirVersion[$baseDir] = self::$obMemcache->get($this->sid.$baseDir);
@@ -343,7 +343,7 @@ class CacheEngineMemcache
 	 *
 	 * @return void
 	 */
-	public function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
+	function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		if (!isset(self::$baseDirVersion[$baseDir]))
 			self::$baseDirVersion[$baseDir] = self::$obMemcache->get($this->sid.$baseDir);
@@ -391,7 +391,7 @@ class CacheEngineMemcache
 	 *
 	 * @return boolean
 	 */
-	public static function isCacheExpired($path)
+	function isCacheExpired($path)
 	{
 		return false;
 	}

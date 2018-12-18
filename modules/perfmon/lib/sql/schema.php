@@ -40,7 +40,7 @@ class Schema
 	/** @var Collection */
 	public $sequences = null;
 
-	public function __construct()
+	function __construct()
 	{
 		$this->tables = new Collection;
 		$this->procedures = new Collection;
@@ -56,21 +56,6 @@ class Schema
 	 * @return void
 	 * @throws NotSupportedException
 	 */
-	
-	/**
-	* <p>Нестатический метод заполняет схему базы данных на основании DDL-текста.</p>
-	*
-	*
-	* @param string $str  DDL-текст.
-	*
-	* @param string $delimiter  Как разделять DDL на операторы.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/schema/createfromstring.php
-	* @author Bitrix
-	*/
 	public function createFromString($str, $delimiter)
 	{
 		$tokenizer = Tokenizer::createFromString($str);

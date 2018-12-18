@@ -42,6 +42,9 @@ class Results extends DataProcessor
 
 		if(strlen($message) > 0)
 		{
+			if(strtolower(SITE_CHARSET) != 'utf-8')
+				$message = \Bitrix\Main\Text\Encoding::convertEncoding($message, 'UTF-8', SITE_CHARSET);
+
 			$message = "RequestId: ".$data["ARRAY"]["RequestDetails"]["RequestID"]."\n".
 			"StartTime: ".$data["ARRAY"]["RequestDetails"]["StartTime"]."\n".
 			"EndTime: ".$data["ARRAY"]["RequestDetails"]["EndTime"]."\n\n".

@@ -3,10 +3,9 @@ namespace Bitrix\Main\DB;
 
 use Bitrix\Main;
 use Bitrix\Main\ArgumentNullException;
-use Bitrix\Main\Config;
 use Bitrix\Main\Data;
 use Bitrix\Main\Diag;
-use Bitrix\Main\Entity;
+use Bitrix\Main\ORM\Fields\ScalarField;
 
 /**
  * Class Connection
@@ -33,6 +32,7 @@ abstract class Connection extends Data\Connection
 	protected $initCommand = 0;
 	protected $options = 0;
 	protected $nodeId = 0;
+	protected $utf8mb4 = array();
 
 	protected $tableColumnsCache = array();
 	protected $lastQueryResult;
@@ -62,21 +62,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @param array $configuration Array of Name => Value pairs.
 	 */
-	
-	/**
-	* <p>Конструктор класса. Нестатический метод вызывается при создании экземпляра класса и позволяет в нем произвести  при создании объекта какие-то действия.</p>
-	*
-	*
-	* @param array $configuration  Массив ключей: <ul> <li> <b>host</b> - имя хоста;</li> <li> <b>database</b> - БД;</li>  <li>
-	* <b>login</b> - логин;</li>  <li> <b>password</b>- пароль;</li> <li> <b>initCommand</b> - команда
-	* инициализации;</li>  <li> <b>options</b> - опции.</li>   </ul>
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct(array $configuration)
 	{
 		parent::__construct($configuration);
@@ -87,24 +72,13 @@ abstract class Connection extends Data\Connection
 		$this->password = $configuration['password'];
 		$this->initCommand = isset($configuration['initCommand']) ? $configuration['initCommand'] : "";
 		$this->options = intval($configuration['options']);
+		$this->utf8mb4 = (isset($configuration['utf8mb4']) && is_array($configuration['utf8mb4'])? $configuration['utf8mb4'] : array());
 	}
 
 	/**
 	 * @return string
 	 * @deprecated Use getHost()
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает хост базы данных.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdbhost.php
-	* @author Bitrix
-	* @deprecated Use getHost()
-	*/
 	public function getDbHost()
 	{
 		return $this->getHost();
@@ -114,18 +88,6 @@ abstract class Connection extends Data\Connection
 	 * @return string
 	 * @deprecated Use getLogin()
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает логин базы данных.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdblogin.php
-	* @author Bitrix
-	* @deprecated Use getLogin()
-	*/
 	public function getDbLogin()
 	{
 		return $this->getLogin();
@@ -135,18 +97,6 @@ abstract class Connection extends Data\Connection
 	 * @return string
 	 * @deprecated Use getDatabase()
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает имя базы данных.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdbname.php
-	* @author Bitrix
-	* @deprecated Use getDatabase()
-	*/
 	public function getDbName()
 	{
 		return $this->getDatabase();
@@ -189,19 +139,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает прямое соединение с БД.</p>
-	*
-	*
-	* @param mixed $resource  База данных для соединения.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/setconnectionresourcenodemand.php
-	* @author Bitrix
-	*/
 	public function setConnectionResourceNoDemand(&$connection)
 	{
 		$this->resource = &$connection;
@@ -217,25 +154,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод временно останавливает выполнение запросов. Все остановленные запросы собираются в <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdisabledqueryexecutingdump.php">disabledQueryExecutingDump</a></p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/enablequeryexecuting.php">\Bitrix\Main\DB\Connection::enableQueryExecuting</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdisabledqueryexecutingdump.php">\Bitrix\Main\DB\Connection::getDisabledQueryExecutingDump</a></li>
-	* </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/disablequeryexecuting.php
-	* @author Bitrix
-	*/
 	public function disableQueryExecuting()
 	{
 		$this->queryExecutingEnabled = false;
@@ -249,21 +167,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод разрешает выполнение запроса, после того, как он был временно остановлен.</p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>\Bitrix\Main\DB\disableQueryExecuting</li> </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/enablequeryexecuting.php
-	* @author Bitrix
-	*/
 	public function enableQueryExecuting()
 	{
 		$this->queryExecutingEnabled = true;
@@ -288,21 +191,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return null|\string[]
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает запросы которые были собраны во то время когда выполнение запросов было невозможно и, также, очищает дамп.</p> <p>Без параметров</p>
-	*
-	*
-	* @return mixed 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>\Bitrix\Main\DB\disableQueryExecuting</li> </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getdisabledqueryexecutingdump.php
-	* @author Bitrix
-	*/
 	public function getDisabledQueryExecutingDump()
 	{
 		$dump = $this->disabledQueryExecutingDump;
@@ -326,17 +214,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return \Bitrix\Main\Db\SqlHelper
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает объект БД относящийся к <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/sqlhelper/index.php">SqlHelper</a>.</p> <p>Создаёт новый объект при первом вызове экземпляра <code>\Connection</code>.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Db\SqlHelper 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getsqlhelper.php
-	* @author Bitrix
-	*/
 	public function getSqlHelper()
 	{
 		if ($this->sqlHelper == null)
@@ -354,17 +231,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод производит соединение с БД.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/connect.php
-	* @author Bitrix
-	*/
 	public function connect()
 	{
 		$this->isConnected = false;
@@ -380,17 +246,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод отключает подключение к БД.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/disconnect.php
-	* @author Bitrix
-	*/
 	public function disconnect()
 	{
 		if (($this->options & self::PERSISTENT) != 0)
@@ -447,25 +302,6 @@ abstract class Connection extends Data\Connection
 	 * @return Result
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет запросы:</p> <ul> <li>query($sql)</li> <li>query($sql, $limit)</li>  <li>query($sql, $offset, $limit)</li>  <li>query($sql, $binds)</li> <li>query($sql, $binds, $limit)</li>  <li>query($sql, $binds, $offset, $limit)</li>   </ul> <p>Аналог в старом ядре: <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdatabase/query.php" >CDatabase::Query</a>.</p>
-	*
-	*
-	* @param string $sql  Sql запрос.
-	*
-	* @param array $binds  Связанный массив.
-	*
-	* @param integer $offset  Смещение первой строки для возврата, начиная с 0.
-	*
-	* @param integer $limit  Ограничение на количество строк.
-	*
-	* @return \Bitrix\Main\DB\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/query.php
-	* @author Bitrix
-	*/
 	public function query($sql)
 	{
 		list($sql, $binds, $offset, $limit) = self::parseQueryFunctionArgs(func_get_args());
@@ -517,21 +353,6 @@ abstract class Connection extends Data\Connection
 	 * @return string|null
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет запрос, выбирает строку и возвращает одно значение поля из первого столбца результата.</p>
-	*
-	*
-	* @param string $sql  Sql запрос.
-	*
-	* @param array $binds = null Связанный массив.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/queryscalar.php
-	* @author Bitrix
-	*/
 	public function queryScalar($sql, array $binds = null)
 	{
 		$result = $this->query($sql, $binds, 0, 1);
@@ -553,31 +374,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет запрос без возврата результата, такие как: INSERT, UPDATE, DELETE</p>
-	*
-	*
-	* @param string $sql  Sql запрос.
-	*
-	* @param string $Bitrix  Связанный массив.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $MaiDB  
-	*
-	* @param D $array  
-	*
-	* @param arra $string  
-	*
-	* @param mixed $binds = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/queryexecute.php
-	* @author Bitrix
-	*/
 	public function queryExecute($sql, array $binds = null)
 	{
 		$this->query($sql, $binds);
@@ -647,29 +443,12 @@ abstract class Connection extends Data\Connection
 	 * @return integer
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод добавляет строку таблицы и возвращает ID добавленной строки.</p> <p>Параметр <code>$identity</code> должен быть равен нулю, если таблица не имеет автоинкрементированных колонок.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы, куда добавляется новая строка.
-	*
-	* @param array $data  Массив имя колонки =&gt; значение.
-	*
-	* @param string $identity = "ID" Только для Oracle.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/add.php
-	* @author Bitrix
-	*/
 	public function add($tableName, array $data, $identity = "ID")
 	{
 		$insert = $this->getSqlHelper()->prepareInsert($tableName, $data);
 
 		$sql =
-			"INSERT INTO ".$tableName."(".$insert[0].") ".
+			"INSERT INTO ".$this->getSqlHelper()->quote($tableName)."(".$insert[0].") ".
 			"VALUES (".$insert[1].")";
 
 		$this->queryExecute($sql);
@@ -692,26 +471,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return array Array of errors or empty array on success.
 	 */
-	
-	/**
-	* <p>Нестатический метод парсит строку, содержащую несколько запросов и запускает поочерёдное выполнение запросов.</p> <p>Разделители запросов зависят от типа БД.</p>
-	*
-	*
-	* @param string $sqlBatch  Строка с запросами разделёнными соответствующими для данной БД
-	* разделителями.
-	*
-	* @param boolean $stopOnError = false Возвращать ли после первой ошибки.
-	*
-	* @return array 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>\Bitrix\Main\Db\SqlHelper-&gt;getQueryDelimiter</li> </ul><a name="example"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/executesqlbatch.php
-	* @author Bitrix
-	*/
 	public function executeSqlBatch($sqlBatch, $stopOnError = false)
 	{
 		$delimiter = $this->getSqlHelper()->getQueryDelimiter();
@@ -822,17 +581,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод возвращает количество поражённых строк из последнего невыполненного запроса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getaffectedrowscount.php
-	* @author Bitrix
-	*/
 	abstract public function getAffectedRowsCount();
 
 	/*********************************************************
@@ -846,19 +594,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод проверяет существование таблицы.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/istableexists.php
-	* @author Bitrix
-	*/
 	abstract public function isTableExists($tableName);
 
 	/**
@@ -872,21 +607,6 @@ abstract class Connection extends Data\Connection
 	 * @return boolean
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод проверяет существование индекса.</p> <p>Актуально содержание колонок в индексе может отличаться от запрошенных. В <code>$columns</code> можно использовать префикс столбцов актуального индекса.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы.
-	*
-	* @param array $columns  Массив столбцов в индексе.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/isindexexists.php
-	* @author Bitrix
-	*/
 	abstract public function isIndexExists($tableName, array $columns);
 
 	/**
@@ -899,24 +619,6 @@ abstract class Connection extends Data\Connection
 	 * @return string|null Name of the index or null if the index doesn't exist.
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод возвращает имя индекса.</p>
-	*
-	*
-	* @param string $tableName  Название таблицы.
-	*
-	* @param array $columns  Массив колонок индекса.
-	*
-	* @param boolean $strict = false Флаг, устанавливающий, что колонки в индексе должны точно
-	* соответствовать колонкам в параметре $Columns.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getindexname.php
-	* @author Bitrix
-	*/
 	abstract public function getIndexName($tableName, array $columns, $strict = false);
 
 	/**
@@ -925,29 +627,16 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @param string $tableName The table name.
 	 *
-	 * @return Entity\ScalarField[] An array of objects with columns information.
+	 * @return ScalarField[] An array of objects with columns information.
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод возвращает объекты полей соответствующие колонкам таблицы. Таблица должна существовать.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/gettablefields.php
-	* @author Bitrix
-	*/
 	abstract public function getTableFields($tableName);
 
 	/**
-	 * @param string $tableName Name of the new table.
-	 * @param \Bitrix\Main\Entity\ScalarField[] $fields Array with columns descriptions.
-	 * @param string[] $primary Array with primary key column names.
-	 * @param string[] $autoincrement Which columns will be auto incremented ones.
+	 * @param string        $tableName     Name of the new table.
+	 * @param ScalarField[] $fields        Array with columns descriptions.
+	 * @param string[]      $primary       Array with primary key column names.
+	 * @param string[]      $autoincrement Which columns will be auto incremented ones.
 	 *
 	 * @return void
 	 * @throws \Bitrix\Main\ArgumentException
@@ -965,24 +654,6 @@ abstract class Connection extends Data\Connection
 	 * @return Result
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод создаёт первичный индекс колонки (колонок).</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы
-	*
-	* @param string $string  Имя колонки или массив имён колонок, для которых нужно создать
-	* индекс.
-	*
-	* @param strin $arraycolumnNames  
-	*
-	* @return \Bitrix\Main\DB\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/createprimaryindex.php
-	* @author Bitrix
-	*/
 	public function createPrimaryIndex($tableName, $columnNames)
 	{
 		if (!is_array($columnNames))
@@ -1011,25 +682,6 @@ abstract class Connection extends Data\Connection
 	 * @return Result
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод создаёт индекс колонок.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы.
-	*
-	* @param string $indexName  Имя нового индекса.
-	*
-	* @param string $string  Имя колонки ли массив имён колонок, для которых создаётся индекс.
-	*
-	* @param strin $arraycolumnNames  
-	*
-	* @return \Bitrix\Main\DB\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/createindex.php
-	* @author Bitrix
-	*/
 	public function createIndex($tableName, $indexName, $columnNames)
 	{
 		if (!is_array($columnNames))
@@ -1056,24 +708,9 @@ abstract class Connection extends Data\Connection
 	 * @param string $tableName Name of the table.
 	 * @param string $columnName Name of the column.
 	 *
-	 * @return Entity\ScalarField | null
+	 * @return ScalarField | null
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает объект для одного столбца в соответствии с типом колонки.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы.
-	*
-	* @param string $columnName  Имя колонки.
-	*
-	* @return \Bitrix\Main\Entity\ScalarField 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/gettablefield.php
-	* @author Bitrix
-	*/
 	public function getTableField($tableName, $columnName)
 	{
 		$tableFields = $this->getTableFields($tableName);
@@ -1087,19 +724,6 @@ abstract class Connection extends Data\Connection
 	 * @param string $tableName Name of the table.
 	 * @return Result
 	 */
-	
-	/**
-	* <p>Нестатический метод обрезает все данные в таблице.</p>
-	*
-	*
-	* @param string $tableName  Название таблицы.
-	*
-	* @return \Bitrix\Main\DB\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/truncatetable.php
-	* @author Bitrix
-	*/
 	public function truncateTable($tableName)
 	{
 		return $this->query('TRUNCATE TABLE '.$this->getSqlHelper()->quote($tableName));
@@ -1114,21 +738,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод переименовывает таблицу. Таблица обязательно должна существовать и новое имя не должно встречаться в БД.</p>
-	*
-	*
-	* @param string $currentName  Старое имя таблицы
-	*
-	* @param string $newName  Новое имя таблицы
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/renametable.php
-	* @author Bitrix
-	*/
 	abstract public function renameTable($currentName, $newName);
 
 	/**
@@ -1141,21 +750,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический метод удаляет столбец. Столбец должен существовать, не должен попадать под начальные ограничения и не должен быть последним в таблице.</p>
-	*
-	*
-	* @param string $tableName  Имя таблицы, столбец которой удаляется.
-	*
-	* @param string $columnName  Имя удаляемого столбца.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/dropcolumn.php
-	* @author Bitrix
-	*/
 	public function dropColumn($tableName, $columnName)
 	{
 		$this->query('ALTER TABLE '.$this->getSqlHelper()->quote($tableName).' DROP COLUMN '.$this->getSqlHelper()->quote($columnName));
@@ -1169,19 +763,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод удаляет таблицу.</p>
-	*
-	*
-	* @param string $tableName  Имя удаляемой таблицы
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/droptable.php
-	* @author Bitrix
-	*/
 	abstract public function dropTable($tableName);
 
 	/*********************************************************
@@ -1194,17 +775,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод производит запуск новой транзакции базы данных.</p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/starttransaction.php
-	* @author Bitrix
-	*/
 	abstract public function startTransaction();
 
 	/**
@@ -1213,17 +783,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод останавливает начатую транзакцию Базы данных.</p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/committransaction.php
-	* @author Bitrix
-	*/
 	abstract public function commitTransaction();
 
 	/**
@@ -1232,17 +791,6 @@ abstract class Connection extends Data\Connection
 	 * @return void
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод откатывает начатую транзакцию.</p> <p>Без параметров</p>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/rollbacktransaction.php
-	* @author Bitrix
-	*/
 	abstract public function rollbackTransaction();
 
 
@@ -1257,20 +805,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return \Bitrix\Main\Diag\SqlTracker
 	 */
-	
-	/**
-	* <p>Нестатический метод запускает сбор информации обо всех выполненных запросах.</p>
-	*
-	*
-	* @param boolean $reset = false По умолчанию - <i>false</i>. Если <i>true</i>, то очищает всю ранее собранную
-	* информацию.
-	*
-	* @return \Bitrix\Main\Diag\SqlTracker 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/starttracker.php
-	* @author Bitrix
-	*/
 	public function startTracker($reset = false)
 	{
 		if ($this->sqlTracker == null)
@@ -1287,17 +821,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод останавливает сбор информации обо всех выполненных запросах.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/stoptracker.php
-	* @author Bitrix
-	*/
 	public function stopTracker()
 	{
 		$this->trackSql = false;
@@ -1309,17 +832,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return null|\Bitrix\Main\Diag\SqlTracker
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает объект с информацией об выполненных запросах. Или возвращает null если трекинг не был запущен.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return null|\Bitrix\Main\Diag\SqlTracker 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/gettracker.php
-	* @author Bitrix
-	*/
 	public function getTracker()
 	{
 		return $this->sqlTracker;
@@ -1332,27 +844,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает новый sql трекер.</p>
-	*
-	*
-	* @param mixed $null  Новый трекер.
-	*
-	* @param nul $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Diag  
-	*
-	* @param SqlTracker $sqlTracker = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/settracker.php
-	* @author Bitrix
-	*/
 	public function setTracker(\Bitrix\Main\Diag\SqlTracker $sqlTracker = null)
 	{
 		$this->sqlTracker = $sqlTracker;
@@ -1372,17 +863,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод возвращает тип БД.</p> <p></p> <ul> <li> mysql </li> <li> oracle </li> <li> mssql </li> </ul> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/gettype.php
-	* @author Bitrix
-	*/
 	abstract public function getType();
 
 	/**
@@ -1394,17 +874,6 @@ abstract class Connection extends Data\Connection
 	 * @return array
 	 * @throws \Bitrix\Main\Db\SqlQueryException
 	 */
-	
-	/**
-	* <p>Нестатический абстрактный метод возвращает версию подключённой БД.</p> <p>Версия представляется в виде массива из двух элементов:</p> - Первый (с индексом 0) - версия БД.<br> - Второй (с индексом 1) выводится, если используется light или express версия БД.<br><p>Без параметров</p>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getversion.php
-	* @author Bitrix
-	*/
 	abstract public function getVersion();
 
 	/**
@@ -1419,17 +888,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод очищает все внутренние кеши, которые могут быть использованы некоторыми словарными функциями.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/clearcaches.php
-	* @author Bitrix
-	*/
 	public function clearCaches()
 	{
 		$this->tableColumnsCache = array();
@@ -1441,19 +899,6 @@ abstract class Connection extends Data\Connection
 	 * @param string $nodeId Node identifier.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает идентификатор узла подключения.</p>
-	*
-	*
-	* @param string $nodeId  Идентификатор ноды
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/setnodeid.php
-	* @author Bitrix
-	*/
 	public function setNodeId($nodeId)
 	{
 		$this->nodeId = $nodeId;
@@ -1464,17 +909,6 @@ abstract class Connection extends Data\Connection
 	 *
 	 * @return string|null
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает идентификатор узла соединения.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/connection/getnodeid.php
-	* @author Bitrix
-	*/
 	public function getNodeId()
 	{
 		return $this->nodeId;
@@ -1486,5 +920,32 @@ abstract class Connection extends Data\Connection
 		{
 			include($this->configuration["include_after_connected"]);
 		}
+	}
+
+	/**
+	 * Returns utfmb4 flag for the specific table/column.
+	 *
+	 * @param string|null $table
+	 * @param string|null $column
+	 * @return bool
+	 */
+	public function isUtf8mb4($table = null, $column = null)
+	{
+		if(isset($this->utf8mb4["global"]) && $this->utf8mb4["global"] === true)
+		{
+			return true;
+		}
+
+		if($table !== null && isset($this->utf8mb4["tables"][$table]) && $this->utf8mb4["tables"][$table] === true)
+		{
+			return true;
+		}
+
+		if($table !== null && $column !== null && isset($this->utf8mb4["tables"][$table][$column]) && $this->utf8mb4["tables"][$table][$column] === true)
+		{
+			return true;
+		}
+
+		return false;
 	}
 }

@@ -13,6 +13,8 @@ class ActionsChain
 	protected $actionParams = array();
 	protected $resultData = array();
 
+	protected $serverHostname = "";
+
 	public $results = "";
 
 	/**

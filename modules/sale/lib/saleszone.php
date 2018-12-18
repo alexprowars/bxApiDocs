@@ -57,28 +57,13 @@ class SalesZone
 	 * @param string $siteId
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод проверяет, входит ли идентификатор страны <i>countryId</i> в перечень идентификаторов стран из зоны обслуживания магазина. Метод статический.</p>
-	*
-	*
-	* @param integer $countryId  Идентификатор страны.
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/checkcountryid.php
-	* @author Bitrix
-	*/
 	public static function checkCountryId($countryId, $siteId)
 	{
 		if(!strlen($siteId))
 			return false;
 
 		$cIds = static::getCountriesIds($siteId);
-		return in_array($countryId, $cIds) || in_array("", $cIds);
+		return !$cIds || in_array($countryId, $cIds) || in_array("", $cIds);
 	}
 
 	/**
@@ -87,28 +72,13 @@ class SalesZone
 	 * @param string $siteId
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод проверяет, входит ли идентификатор региона <i>regionId</i> в перечень идентификаторов регионов из зоны обслуживания магазина. Метод статический.</p>
-	*
-	*
-	* @param integer $regionId  Идентификатор региона.
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/checkregionid.php
-	* @author Bitrix
-	*/
 	public static function checkRegionId($regionId, $siteId)
 	{
 		if(!strlen($siteId))
 			return false;
 
 		$rIds = static::getRegionsIds($siteId);
-		return in_array($regionId, $rIds) || in_array("", $rIds);
+		return !$rIds || in_array($regionId, $rIds) || in_array("", $rIds);
 	}
 
 	/**
@@ -117,28 +87,13 @@ class SalesZone
 	 * @param string $siteId
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод проверяет, входит ли идентификатор города <i>cityId</i> в перечень идентификаторов городов из зоны обслуживания магазина. Метод статический.</p>
-	*
-	*
-	* @param integer $cityId  Идентификатор города.
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/checkcityid.php
-	* @author Bitrix
-	*/
 	public static function checkCityId($cityId, $siteId)
 	{
 		if(!strlen($siteId))
 			return false;
 
 		$cIds = static::getCitiesIds($siteId);
-		return in_array($cityId, $cIds) || in_array("", $cIds);
+		return !$cIds || in_array($cityId, $cIds) || in_array("", $cIds);
 	}
 
 	/**
@@ -147,21 +102,6 @@ class SalesZone
 	 * @param string $siteId
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод проверяет, входит ли идентификатор местоположения <i>locationId</i> в зону обслуживания магазина. Метод статический.</p>
-	*
-	*
-	* @param integer $locationId  Идентификатор местоположения.
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/checklocationid.php
-	* @author Bitrix
-	*/
 	public static function checkLocationId($locationId, $siteId)
 	{
 		if(\CSaleLocation::isLocationProMigrated())
@@ -381,17 +321,6 @@ class SalesZone
 	 * 
 	 * Also this function is used in data migrator.
 	 */
-	
-	/**
-	* <p>Метод используется для миграции от старых местоположений к новым. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/saveselectedtypes.php
-	* @author Bitrix
-	*/
 	public static function saveSelectedTypes($typeList, $siteId)
 	{
 		$types = \CSaleLocation::getTypes();
@@ -511,21 +440,6 @@ class SalesZone
 	 * @param string $siteId
 	 * @return array
 	 */
-	
-	/**
-	* <p>Возвращает фильтр для использования в запросах, подобных <a href="http://dev.1c-bitrix.ru/user_help/store/sale/components_2/order/sale_ajax_locations.php">AJAX-местоположениям</a>. Метод статический.</p>
-	*
-	*
-	* @param string $object  Объект (город/регион/страна).
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/saleszone/makesearchfilter.php
-	* @author Bitrix
-	*/
 	public static function makeSearchFilter($object, $siteId)
 	{
 		$result = array();

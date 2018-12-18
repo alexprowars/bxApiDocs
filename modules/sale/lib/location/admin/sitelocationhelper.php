@@ -27,7 +27,7 @@ class SiteLocationHelper extends Helper
 	* Function returns class name for an attached entity
 	* @return string Entity class name
 	*/
-	static public function getEntityRoadMap()
+	public function getEntityRoadMap()
 	{
 		return array(
 			'main' => array(
@@ -147,7 +147,7 @@ class SiteLocationHelper extends Helper
 	}
 
 	// avoid paging here, kz its based on ID which is absent for this table
-	public static function getList($parameters = array(), $tableId = false, $navigation = 20)
+	public static function getList($parameters = array(), $tableId = false, $navigation = 20, $params = array())
 	{
 		$entityClass = static::getEntityClass();
 

@@ -40,17 +40,50 @@ class Network
 
 	protected static $lastUserStatus = null;
 
-	public function __construct()
+	function __construct()
 	{
 		$this->errorCollection = new ErrorCollection();
 	}
 
 	/**
-	 * @return boolean
+	 * Returns if option is turned on
+	 *
+	 * @return bool
 	 */
-	static public function isEnabled()
+	public function isOptionEnabled()
 	{
 		return Option::get('socialservices', 'network_enable', 'N') == 'Y';
+	}
+
+	/**
+	 * Returns if network communication is avalable for current user
+	 *
+	 * @return boolean
+	 */
+	public function isEnabled()
+	{
+		if(Loader::includeModule('bitrix24'))
+		{
+			if(method_exists('CBitrix24', 'isEmailConfirmed') && !\CBitrix24::isEmailConfirmed())
+			{
+				return false;
+			}
+		}
+
+		global $USER;
+		if(Loader::includeModule('replica'))
+		{
+			if(is_object($USER) && $USER->GetID() > 0 && \Bitrix\Replica\Client\User::getGuid($USER->GetID()) === false)
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return false;
+		}
+
+		return $this->isOptionEnabled();
 	}
 
 	/**
@@ -62,10 +95,10 @@ class Network
 	 */
 	public function setEnable($enable = true)
 	{
-		if ($this->isEnabled() && $enable)
+		if ($this->isOptionEnabled() && $enable)
 			return true;
 
-		if (!$this->isEnabled() && !$enable)
+		if (!$this->isOptionEnabled() && !$enable)
 			return true;
 
 		$query = \CBitrix24NetPortalTransport::init();
@@ -80,7 +113,7 @@ class Network
 			'STATUS' => (bool)$enable,
 		));
 
-		Option::set('socialservices', 'network_enable', $enable? 'Y': 'N');
+		Option::set('socialservices', 'network_enable', $enable ? 'Y': 'N');
 
 		return true;
 	}
@@ -176,7 +209,7 @@ class Network
 			'ID' => array_values($networkIds),
 			'QUERY' => trim($lastSearch)
 		));
-		
+
 		$result = null;
 		foreach ($queryResult['result'] as $user)
 		{
@@ -269,12 +302,6 @@ class Network
 	 */
 	public function addUser($params)
 	{
-		if (!$this->isEnabled())
-		{
-			$this->errorCollection[] = new Error(Loc::getMessage('B24NET_NETWORK_IN_NOT_ENABLED'), self::ERROR_NETWORK_IN_NOT_ENABLED);
-			return false;
-		}
-
 		$password = md5($params['XML_ID'].'|'.$params['CLIENT_DOMAIN'].'|'.rand(1000,9999).'|'.time().'|'.uniqid());
 		$photo = \CFile::MakeFileArray($params['PERSONAL_PHOTO_ORIGINAL']);
 		$groups = Array();
@@ -567,7 +594,7 @@ class Network
 	{
 		return array(
 			"REGISTER" => Option::get("socialservices", "new_user_registration_network", "N"),
-			"REGISTER_CONFIRM" => Option::get("socialservices", "new_user_registration_confirm", "N"),
+			"REGISTER_CONFIRM" => Option::get("socialservices", "new_user_registration_confirm", "Y"),
 			"REGISTER_WHITELIST" => implode(';', unserialize(Option::get("socialservices", "new_user_registration_whitelist", serialize(array())))),
 			"REGISTER_TEXT" => Option::get("socialservices", "new_user_registration_text", ""),
 			"REGISTER_SECRET" => Option::get("socialservices", "new_user_registration_secret", ""),

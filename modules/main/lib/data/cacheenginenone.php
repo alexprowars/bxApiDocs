@@ -4,41 +4,41 @@ namespace Bitrix\Main\Data;
 class CacheEngineNone
 	implements ICacheEngine, ICacheEngineStat
 {
-	static public function getReadBytes()
+	public function getReadBytes()
 	{
 		return 0;
 	}
 
-	static public function getWrittenBytes()
+	public function getWrittenBytes()
 	{
 		return 0;
 	}
 
-	static public function getCachePath()
+	public function getCachePath()
 	{
 		return "";
 	}
 
-	static public function isAvailable()
+	public function isAvailable()
 	{
 		return true;
 	}
 
-	static public function clean($baseDir, $initDir = false, $filename = false)
+	public function clean($baseDir, $initDir = false, $filename = false)
 	{
 		return true;
 	}
 
-	static public function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
+	public function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		return false;
 	}
 
-	static public function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
+	public function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 	}
 
-	static public function isCacheExpired($path)
+	public function isCacheExpired($path)
 	{
 		return true;
 	}

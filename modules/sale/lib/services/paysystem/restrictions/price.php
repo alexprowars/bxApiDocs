@@ -4,7 +4,9 @@ namespace Bitrix\Sale\Services\PaySystem\Restrictions;
 
 use Bitrix\Main\ArgumentTypeException;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale\Internals\CollectableEntity;
+use Bitrix\Sale\Internals\Entity;
+use Bitrix\Sale\Order;
+use Bitrix\Sale\PaymentCollection;
 use Bitrix\Sale\Services\Base;
 use Bitrix\Sale\Payment;
 
@@ -18,7 +20,7 @@ class Price extends Base\Restriction
 	 * @param int $serviceId
 	 * @return bool
 	 */
-	protected static function check($params, array $restrictionParams, $serviceId = 0)
+	public static function check($params, array $restrictionParams, $serviceId = 0)
 	{
 		if ($params['PRICE_PAYMENT'] === null)
 			return true;
@@ -40,15 +42,29 @@ class Price extends Base\Restriction
 	}
 
 	/**
-	 * @param CollectableEntity $entity
+	 * @param Entity $entity
 	 * @return array
 	 */
-	protected static function extractParams(CollectableEntity $entity)
+	protected static function extractParams(Entity $entity)
 	{
+		$orderPrice = null;
+		$paymentPrice = null;
+
 		if ($entity instanceof Payment)
-			return array('PRICE_PAYMENT' => $entity->getField('SUM'));
-		else
-			return array('PRICE_PAYMENT' => null);
+		{
+			/** @var PaymentCollection $collection */
+			$collection = $entity->getCollection();
+			/** @var Order $order */
+			$order = $collection->getOrder();
+
+			$orderPrice = $order->getPrice();
+			$paymentPrice = $entity->getField('SUM');
+		}
+
+		return array(
+			'PRICE_PAYMENT' => $paymentPrice,
+			'PRICE_ORDER' => $orderPrice,
+		);
 	}
 
 	/**

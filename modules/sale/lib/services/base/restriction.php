@@ -3,6 +3,7 @@ namespace Bitrix\Sale\Services\Base;
 
 use Bitrix\Main\NotImplementedException;
 use Bitrix\Sale\Internals\CollectableEntity;
+use Bitrix\Sale\Internals\Entity;
 use Bitrix\Sale\Internals\ServiceRestrictionTable;
 
 /**
@@ -44,20 +45,20 @@ abstract class Restriction {
 	 * @return bool
 	 * @throws NotImplementedException
 	 */
-	protected static function check($params, array $restrictionParams, $serviceId = 0)
+	public static function check($params, array $restrictionParams, $serviceId = 0)
 	{
 		throw new NotImplementedException;
 	}
 
 	/**
-	 * @param CollectableEntity $entity
+	 * @param Entity $entity
 	 * @param array $restrictionParams
 	 * @param int $mode
 	 * @param int $serviceId
 	 * @return int
 	 * @throws NotImplementedException
 	 */
-	public static function checkByEntity(CollectableEntity $entity, array $restrictionParams, $mode, $serviceId = 0)
+	public static function checkByEntity(Entity $entity, array $restrictionParams, $mode, $serviceId = 0)
 	{
 		$severity = static::getSeverity($mode);
 
@@ -70,11 +71,11 @@ abstract class Restriction {
 	}
 
 	/**
-	 * @param CollectableEntity $entity
+	 * @param Entity $entity
 	 * @return mixed
 	 * @throws NotImplementedException
 	 */
-	protected static function extractParams(CollectableEntity $entity)
+	protected static function extractParams(Entity $entity)
 	{
 		throw new NotImplementedException;
 	}
@@ -83,17 +84,6 @@ abstract class Restriction {
 	 * Returns params structure to show it to user
 	 * @return array
 	 */
-	
-	/**
-	* <p>Возвращает структуру параметров для отображения пользователю. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/services/base/restriction/getparamsstructure.php
-	* @author Bitrix
-	*/
 	public static function getParamsStructure($entityId = 0)
 	{
 		return array();
@@ -104,17 +94,6 @@ abstract class Restriction {
 	 * @param int $entityId
 	 * @return array
 	 */
-	
-	/**
-	* <p>Подготавливает параметры ограничения для отображения данных , например, в административной части для редактирования или просмотра. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/services/base/restriction/prepareparamsvalues.php
-	* @author Bitrix
-	*/
 	public static function prepareParamsValues(array $paramsValues, $entityId = 0)
 	{
 		return $paramsValues;
@@ -168,6 +147,14 @@ abstract class Restriction {
 	 * @return bool
 	 */
 	public static function prepareData(array $servicesIds)
+	{
+		return true;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function isAvailable()
 	{
 		return true;
 	}

@@ -40,21 +40,6 @@ final class LocationTable extends Tree
 	*
 	* @return Bitrix\Main\DB\Result location
 	*/
-	
-	/**
-	* <p>Метод возвращает параметры местоположения с кодом <code>$code</code>. Метод статический.</p>
-	*
-	*
-	* @param string $code = '' Код местоположения.
-	*
-	* @param array $parameters = array() Массив дополнительных параметров выборки.
-	*
-	* @return \Bitrix\Main\DB\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/location/locationtable/getbycode.php
-	* @author Bitrix
-	*/
 	public static function getByCode($code = '', $parameters = array())
 	{
 		$code = Assert::expectStringNotNull($code, '$code');
@@ -105,23 +90,6 @@ final class LocationTable extends Tree
 		}
 	}
 
-	
-	/**
-	* <p>Метод добавляет новое местоположение. Метод статический.</p>
-	*
-	*
-	* @param array $arraydata = array() Массив параметров местоположения с ключами:<br><ul> <li> <b>NAME</b> -
-	* название нового местоположения;</li> <li> <b>EXTERNAL</b> - внешние
-	* сервисы.</li> </ul>
-	*
-	* @param array $arraybehaviour = array('REBALANCE' => true, 'RESET_LEGACY' => true) Массив дополнительных флагов поведения.
-	*
-	* @return \Bitrix\Main\Entity\AddResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/location/locationtable/add.php
-	* @author Bitrix
-	*/
 	public static function add(array $data)
 	{
 		return self::addExtended($data);
@@ -207,27 +175,6 @@ final class LocationTable extends Tree
 			static::resetLegacyPath();
 	}
 
-	
-	/**
-	* <p>Метод обновляет параметры существующего местоположения. Метод статический.</p>
-	*
-	*
-	* @param integer $primary  Идентификатор местоположения.
-	*
-	* @param integer $arraydata = array() Массив параметров местоположения с ключами:<br><ul> <li> <b>NAME</b> -
-	* название нового местоположения;</li> <li> <b>EXTERNAL</b> - внешние
-	* сервисы.</li> </ul>
-	*
-	* @param array $arraybehaviour = array('REBALANCE' Массив дополнительных флагов поведения. Системный параметр.
-	*
-	* @param true, $RESET_LEGACY  
-	*
-	* @return \Bitrix\Main\Entity\UpdateResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/location/locationtable/update.php
-	* @author Bitrix
-	*/
 	public static function update($primary, array $data)
 	{
 		return self::updateExtended($primary, $data);
@@ -308,25 +255,6 @@ final class LocationTable extends Tree
 		return $updResult;
 	}
 
-	
-	/**
-	* <p>Метод удаляет местоположение из дерева местоположений. Метод статический.</p>
-	*
-	*
-	* @param integer $primary  Идентификатор местоположения.
-	*
-	* @param array $behaviour = array('REBALANCE' Массив дополнительных флагов поведения.
-	*
-	* @param true, $DELETE_SUBTREE  
-	*
-	* @param true, $RESET_LEGACY  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/location/locationtable/delete.php
-	* @author Bitrix
-	*/
 	public static function delete($primary)
 	{
 		return self::deleteExtended($primary);
@@ -405,23 +333,6 @@ final class LocationTable extends Tree
 	 * Available keys in $behaviour
 	 * SHOW_LEAF : if set to true, return node itself in the result
 	 */
-	
-	/**
-	* <p>Метод выдает родительскую цепь указанного местоположения по его коду. Метод статический.</p>
-	*
-	*
-	* @param string $code  Код местоположения.
-	*
-	* @param array $parameters  Массив дополнительных параметров выборки.
-	*
-	* @param array $behaviour = array('SHOW_LEAF' Массив дополнительных флагов поведения. Системный параметр.
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/location/locationtable/getpathtonodebycode.php
-	* @author Bitrix
-	*/
 	public static function getPathToNodeByCode($code, $parameters, $behaviour = array('SHOW_LEAF' => true))
 	{
 		$code = Assert::expectStringNotNull($code, '$code');
@@ -537,12 +448,12 @@ final class LocationTable extends Tree
 			),
 			'SORT' => array(
 				'data_type' => 'integer',
-				'default' => 100,
+				'default_value' => 100,
 				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_SORT_FIELD')
 			),
 			'PARENT_ID' => array(
 				'data_type' => 'integer',
-				'default' => 0,
+				'default_value' => 0,
 				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_PARENT_ID_FIELD')
 			),
 			'TYPE_ID' => array(

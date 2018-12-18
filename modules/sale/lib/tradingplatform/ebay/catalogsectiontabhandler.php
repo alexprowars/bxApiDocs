@@ -23,7 +23,7 @@ class CatalogSectionTabHandler extends TabHandler
 	protected static $ebayCategoriesVariations = array();
 	protected static $ebayRequiredVariations = array();
 
-	static public function Action($arArgs)
+	public function Action($arArgs)
 	{
 		if(!isset($_POST["SALE"]["EBAY"]))
 			return true;
@@ -125,7 +125,7 @@ class CatalogSectionTabHandler extends TabHandler
 		return $result;
 	}
 
-	static public function Check($arArgs)
+	public function Check($arArgs)
 	{
 		if(!isset($_POST["SALE"]["EBAY"]["EBAY_CATEGORY_VARIATIONS"]) || !is_array($_POST["SALE"]["EBAY"]["EBAY_CATEGORY_VARIATIONS"]))
 			return true;
@@ -165,7 +165,7 @@ class CatalogSectionTabHandler extends TabHandler
 		return $result;
 	}
 
-	static public function ShowTabSection($divName, $arArgs, $bVarsFromForm)
+	public function ShowTabSection($divName, $arArgs, $bVarsFromForm)
 	{
 		$ebay = \Bitrix\Sale\TradingPlatform\Ebay\Ebay::getInstance();
 		$settings = $ebay->getSettings();
@@ -180,8 +180,8 @@ class CatalogSectionTabHandler extends TabHandler
 		//categories
 		$resultHtml =
 			'<tr>'.
-				'<td width="20%" valign="top">'.Loc::getMessage("SALE_EBAY_CSTH_CATEGORY").':</td>'.
-				'<td width="80%">';
+				'<td width="40%" valign="top">'.Loc::getMessage("SALE_EBAY_CSTH_CATEGORY").':</td>'.
+				'<td width="60%">';
 
 		$catMapRes = \Bitrix\Sale\TradingPlatform\MapTable::getList(array(
 			"filter" => array(

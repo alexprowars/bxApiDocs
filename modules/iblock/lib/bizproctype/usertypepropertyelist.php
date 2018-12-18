@@ -2,10 +2,11 @@
 
 namespace Bitrix\Iblock\BizprocType;
 
-use Bitrix\Bizproc\BaseType;
-use Bitrix\Bizproc\FieldType;
-use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Page\Asset;
+use Bitrix\Main,
+	Bitrix\Bizproc\BaseType,
+	Bitrix\Bizproc\FieldType,
+	Bitrix\Main\Localization\Loc,
+	Bitrix\Main\Page\Asset;
 
 Loc::loadMessages(__FILE__);
 
@@ -43,17 +44,17 @@ class UserTypePropertyElist extends UserTypeProperty
 
 		$defaultIBlockId = 0;
 
-		$result = '<select id="WFSFormOptionsX" onchange="'.htmlspecialcharsbx($callbackFunctionName).'(this.options[this.selectedIndex].value)">';
+		$result = '<select id="WFSFormOptionsX" onchange="'.Main\Text\HtmlFilter::encode($callbackFunctionName).'(this.options[this.selectedIndex].value)">';
 		$iblockTypeIterator = \CIBlockParameters::getIBlockTypes();
 		foreach ($iblockTypeIterator as $iblockTypeId => $iblockTypeName)
 		{
-			$result .= '<optgroup label="'.htmlspecialcharsbx($iblockTypeName).'">';
+			$result .= '<optgroup label="'.Main\Text\HtmlFilter::encode($iblockTypeName).'">';
 
 			$iblockIterator = \CIBlock::getList(array('SORT' => 'ASC'), array('TYPE' => $iblockTypeId, 'ACTIVE' => 'Y'));
 			while ($iblock = $iblockIterator->fetch())
 			{
 				$result .= '<option value="'.$iblock['ID'].'"'.(($iblock['ID'] == $iblockId) ? ' selected' : '').'>'
-					.htmlspecialcharsbx($iblock['NAME']).'</option>';
+					.Main\Text\HtmlFilter::encode($iblock['NAME']).'</option>';
 				if (($defaultIBlockId <= 0) || ($iblock['ID'] == $iblockId))
 					$defaultIBlockId = $iblock['ID'];
 			}

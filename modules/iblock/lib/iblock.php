@@ -79,17 +79,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы информационных блоков в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_iblock';
@@ -100,17 +89,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы информационных блоков. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -282,17 +260,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>IBLOCK_TYPE_ID</code> (код типа информационных блоков). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validateiblocktypeid.php
-	* @author Bitrix
-	*/
 	public static function validateIblockTypeId()
 	{
 		return array(
@@ -305,17 +272,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CODE</code> (символьный идентификатор инфоблока). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatecode.php
-	* @author Bitrix
-	*/
 	public static function validateCode()
 	{
 		return array(
@@ -328,17 +284,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>NAME</code> (название инфоблока). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatename.php
-	* @author Bitrix
-	*/
 	public static function validateName()
 	{
 		return array(
@@ -351,17 +296,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>LIST_PAGE_URL</code> (шаблон URL-а к странице для публичного просмотра списка элементов информационного блока). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatelistpageurl.php
-	* @author Bitrix
-	*/
 	public static function validateListPageUrl()
 	{
 		return array(
@@ -374,17 +308,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>DETAIL_PAGE_URL</code> (шаблон URL-а странице для детального просмотра элемента). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatedetailpageurl.php
-	* @author Bitrix
-	*/
 	public static function validateDetailPageUrl()
 	{
 		return array(
@@ -397,17 +320,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>SECTION_PAGE_URL</code> (шаблон URL-а к странице для просмотра раздела). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatesectionpageurl.php
-	* @author Bitrix
-	*/
 	public static function validateSectionPageUrl()
 	{
 		return array(
@@ -420,17 +332,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CANONICAL_PAGE_URL</code> (канонический URL элемента). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatecanonicalpageurl.php
-	* @author Bitrix
-	*/
 	public static function validateCanonicalPageUrl()
 	{
 		return array(
@@ -443,17 +344,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>XML_ID</code> (внешний код инфоблока). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatexmlid.php
-	* @author Bitrix
-	*/
 	public static function validateXmlId()
 	{
 		return array(
@@ -466,17 +356,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TMP_ID</code> (временный символьный идентификатор, используемый для служебных целей).</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validatetmpid.php
-	* @author Bitrix
-	*/
 	public static function validateTmpId()
 	{
 		return array(
@@ -489,17 +368,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>EDIT_FILE_BEFORE</code> (полный путь к файлу-обработчику массива полей элемента перед сохранением на странице редактирования элемента). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validateeditfilebefore.php
-	* @author Bitrix
-	*/
 	public static function validateEditFileBefore()
 	{
 		return array(
@@ -512,17 +380,6 @@ class IblockTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>EDIT_FILE_AFTER</code> (полный путь к файлу-обработчику вывода интерфейса редактирования элемента). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/iblocktable/validateeditfileafter.php
-	* @author Bitrix
-	*/
 	public static function validateEditFileAfter()
 	{
 		return array(

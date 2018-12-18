@@ -7,6 +7,8 @@ use Bitrix\Main\UserTable;
 use Bitrix\Sale\Helpers\Admin\OrderEdit;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Internals\OrderPropsTable;
+use \Bitrix\Sale\Internals\Input;
+use Bitrix\Sale\OrderUserProperties;
 use Bitrix\Sale\Order;
 use Bitrix\Sale\OrderTable;
 
@@ -97,7 +99,7 @@ class OrderBuyer
 							<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage("SALE_ORDER_BUYER_ORDERCOMMENT").':</td>
 							<td class="adm-detail-content-cell-r">
 								<textarea style="width:400px;min-height:100px;" name="USER_DESCRIPTION" id="USER_DESCRIPTION">'.
-									$data["USER_DESCRIPTION"].
+									htmlspecialcharsbx($data["USER_DESCRIPTION"]).
 								'</textarea>
 							</td>
 						</tr>
@@ -152,7 +154,7 @@ class OrderBuyer
 					<tbody>
 						<tr>
 							<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage("SALE_ORDER_BUYER_ORDERCOMMENT").':</td>
-							<td class="adm-detail-content-cell-r">'.(strlen($data["USER_DESCRIPTION"]) > 0 ? htmlspecialcharsbx($data["USER_DESCRIPTION"]) : Loc::getMessage("SALE_ORDER_BUYER_NO")).'</td>
+							<td class="adm-detail-content-cell-r"><p id="sale-adm-user-description-view" style="color:gray; max-width:800px; overflow:auto;">'.(strlen($data["USER_DESCRIPTION"]) > 0 ? nl2br(htmlspecialcharsbx($data["USER_DESCRIPTION"])) : Loc::getMessage("SALE_ORDER_BUYER_NO")).'</p></td>
 						</tr>
 					</tbody>
 				</table>
@@ -233,30 +235,7 @@ class OrderBuyer
 
 	public static function getProfileParams($userId, $profileId)
 	{
-		$profiles = \CSaleOrderUserProps::DoLoadProfiles($userId);
-
-		if(!is_array($profiles))
-			return array();
-
-		foreach($profiles as $types)
-		{
-			foreach($types as $key => $value)
-			{
-				if(isset($value["VALUES_ORIG"]) && !empty($value["VALUES_ORIG"]))
-				{
-					$value["VALUES"] = $value["VALUES_ORIG"];
-					unset($value["VALUES_ORIG"]);
-				}
-
-				if(isset($value["VALUES"]))
-				{
-					if($key == $profileId ||  $profileId == 0)
-						return $value["VALUES"];
-				}
-			}
-		}
-
-		return array();
+		return OrderUserProperties::getProfileValues($profileId);
 	}
 
 	public static function getUserProfiles($userId, $personTypeId = null)
@@ -265,10 +244,8 @@ class OrderBuyer
 			return array();
 
 		$result = array();
-		$profiles = \CSaleOrderUserProps::DoLoadProfiles($userId, $personTypeId);
-
-		if($personTypeId)
-			$profiles = array($personTypeId => $profiles);
+		$profilesResult = OrderUserProperties::loadProfiles($userId, $personTypeId);
+		$profiles = $profilesResult->getData();
 
 		if(is_array($profiles))
 		{
@@ -279,17 +256,7 @@ class OrderBuyer
 
 				foreach($types as $key => $value)
 				{
-					if(!isset($result[$typeId][$key]))
-						$result[$typeId][$key] = array();
-
-					if(isset($value["VALUES_ORIG"]) && !empty($value["VALUES_ORIG"]))
-					{
-						$value["VALUES"] = $value["VALUES_ORIG"];
-						unset($value["VALUES_ORIG"]);
-					}
-
-					if(isset($value["VALUES"]))
-						$result[$typeId][$key] = htmlspecialcharsback($value["VALUES"]);
+					$result[$typeId][$key] = $value["VALUES"];
 				}
 			}
 		}
@@ -458,10 +425,8 @@ class OrderBuyer
 
 		if(intval($userId) > 0)
 		{
-			$profiles = \CSaleOrderUserProps::DoLoadProfiles($userId, $personTypeId);
-
-			if($personTypeId)
-				$profiles = array($personTypeId => $profiles);
+			$profilesResult = OrderUserProperties::loadProfiles($userId, $personTypeId);
+			$profiles = $profilesResult->getData();
 
 			if(is_array($profiles))
 				foreach($profiles as $types)
@@ -480,22 +445,59 @@ class OrderBuyer
 		foreach ($propertyCollection->getGroups() as $group)
 		{
 			$resultBody = "";
+
+			$groupProperties = $propertyCollection->getPropertiesByGroupId($group['ID']);
+
+			if(!is_array($groupProperties))
+				continue;
+
 			/** @var \Bitrix\Sale\PropertyValue $property */
-			foreach ($propertyCollection->getGroupProperties($group['ID']) as $property)
+			foreach ($propertyCollection->getPropertiesByGroupId($group['ID']) as $property)
 			{
 				$propertyValue = $property->getValue();
 
-				if ($readonly && empty($propertyValue))
+				if ($readonly
+					&& (
+						!isset($propertyValue)
+						|| (is_array($propertyValue) && empty($propertyValue))
+						|| $propertyValue === ""
+					)
+				)
 					continue;
 
-				$showHtml = (($readonly) ? $property->getViewHtml() : $property->getEditHtml());
 				$p = $property->getProperty();
 
 				if($p['IS_PHONE'] == 'Y' && $readonly)
 				{
-					$showHtml = '<a href="javascript:void(0)" onclick="BX.Sale.Admin.OrderEditPage.desktopMakeCall(\''.$showHtml.'\');">'.
-						htmlspecialcharsbx($showHtml).
-					'</a>';
+					$phoneVal = $property->getValue();
+
+					if($phoneVal != '')
+					{
+						if(!is_array($phoneVal))
+							$phoneVal = array($phoneVal);
+
+						$showHtml = '';
+
+						foreach($phoneVal as $number)
+						{
+							$number = str_replace("'", "", htmlspecialcharsbx($number));
+
+							if(strlen($showHtml) > 0)
+								$showHtml .= ', ';
+
+							$showHtml .= '<a href="javascript:void(0)" onclick="BX.Sale.Admin.OrderEditPage.desktopMakeCall(\''.$number.'\');">'.
+								$number.
+								'</a>';
+						}
+					}
+					else
+					{
+						$showHtml = '';
+					}
+				}
+				else
+				{
+					$showHtml = (($readonly) ? $property->getViewHtml() : $property->getEditHtml());
 				}
 
 				$resultBody .= '
@@ -544,6 +546,10 @@ class OrderBuyer
 								in_array($relation['ENTITY_ID'], $order->getDeliverySystemId())
 							)
 							{
+								if ($property['TYPE'] === 'ENUM' && is_array($property['OPTIONS']))
+								{
+									$property['OPTIONS_SORT'] = array_keys($property['OPTIONS']);
+								}
 								$result[$key][] = $property;
 								$groups[$property['PROPS_GROUP_ID']] = true;
 								break;
@@ -608,6 +614,42 @@ class OrderBuyer
 			$result = $order->getPropertyCollection()->getArray();
 		else
 			$result = self::getNotRelPropData($order);
+
+		if (!empty($result['properties']))
+		{
+			$propertyTypes = Input\Manager::getTypes();
+			$baseTypes = array();
+			foreach ($propertyTypes as $typeName => $typeData)
+			{
+				if (strpos($typeData['CLASS'], 'Bitrix\\Sale\\Internals\\Input') !== false)
+					$baseTypes[] = $typeName;
+			}
+
+			foreach ($result['properties'] as &$property)
+			{
+				$propertyClassName = $propertyTypes[$property['TYPE']]['CLASS'];
+
+				if (
+					!in_array($property['TYPE'], $baseTypes)
+					&& class_exists($propertyClassName)
+					&& new $propertyClassName instanceof Input\Base
+				)
+				{
+					ob_start();
+					$propertyCustomName = "PROPERTIES[".$property['ID']."]";
+					/** @var Input\Base $propertyClassName */
+					echo $propertyClassName::getEditHtml($propertyCustomName, $property, $property['VALUE']);
+					$property['EDIT_HTML'] = ob_get_contents();
+					ob_end_clean();
+					$property['TYPE'] = 'UF';
+				}
+
+				if ($property['TYPE'] === 'ENUM' && is_array($property['OPTIONS']))
+				{
+					$property['OPTIONS_SORT'] = array_keys($property['OPTIONS']);
+				}
+			}
+		}
 
 		if (!empty($result['groups']) && !empty($result['properties']))
 		{

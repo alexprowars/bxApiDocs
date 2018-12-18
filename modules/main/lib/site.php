@@ -41,12 +41,6 @@ class SiteTable extends Entity\DataManager
 		return self::$documentRootCache[$siteId];
 	}
 
-
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_lang';

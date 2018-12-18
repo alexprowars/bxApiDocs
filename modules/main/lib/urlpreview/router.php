@@ -41,36 +41,6 @@ class Router
 	 * @return void
 	 * @throws ArgumentException
 	 */
-	
-	/**
-	* <p>Статический метод добавляет или, если маршрут существует, изменяет метод обработки маршрута.</p>
-	*
-	*
-	* @param string $route  Шаблон URL маршрута. Параметры маршрута следует заключать в хеш
-	* символы, пример: <code>/user/#userId#/</code>.
-	*
-	* @param string $handlerModule  Модуль обработчика маршрута.
-	*
-	* @param string $handlerClass  Класс обработчика маршрута должен применять методы:<br><ul> <li>
-	* <code>buildPreview($params): string</code> Метод должен принимать массив параметров
-	* и возвращать готовую "богатую ссылку". </li> <li> <code>checkUserReadAccess($params):
-	* boolean</code>. Метод должен принимать массив параметров и возвращать
-	* <i>true</i>, если зарегистрированный пользователь успешно прочитал
-	* сущность и <i>false</i> в противном случае. </li> <li> <code>getCacheTag(): string</code>.
-	* Метод должен возвращать тег кеша для сущности. </li> </ul>
-	*
-	* @param array $handlerParameters  Массив параметров отправляемых методом в обработчик. Массив
-	* должен быть передан как аргумент когда вызывается метод
-	* обработчика для создания "богатой ссылки" или проверки доступа.
-	* Массив значений должен содержать переменные, ссылающиеся на
-	* параметры маршрута, например: <code>['userId' =&gt; '$userId']</code>.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/router/setroutehandler.php
-	* @author Bitrix
-	*/
 	public static function setRouteHandler($route, $handlerModule, $handlerClass, array $handlerParameters)
 	{
 		static::init();
@@ -110,25 +80,6 @@ class Router
 	 * @param Uri $uri Absolute or relative URL.
 	 * @return array|false Handler for this URL if found, false otherwise.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает обработчик для URL.</p>
-	*
-	*
-	* @param mixed $Bitrix  Абсолютный или относительный URL.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Web  
-	*
-	* @param Uri $uri  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/router/dispatch.php
-	* @author Bitrix
-	*/
 	public static function dispatch(Uri $uri)
 	{
 		static::init();
@@ -263,17 +214,6 @@ class Router
 	 * Resets router cache
 	 * @return void
 	 */
-	
-	/**
-	* <p>Статический метод сбрасывает кеш маршрутизатора.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/router/invalidateroutecache.php
-	* @author Bitrix
-	*/
 	public static function invalidateRouteCache()
 	{
 		Application::getInstance()->getManagedCache()->clean(static::CACHE_ID);

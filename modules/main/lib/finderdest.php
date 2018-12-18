@@ -13,6 +13,11 @@ use Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
 
+/**
+ * Class FinderDestTable
+ * Is used to store and retrieve last used destinations in the destinations selector dialog
+ * @package Bitrix\Main
+ */
 class FinderDestTable extends Entity\DataManager
 {
 	public static function getTableName()
@@ -70,7 +75,8 @@ class FinderDestTable extends Entity\DataManager
 	/**
 	 * Adds or updates data about using destinations by a user
 	 *
-	 * @param $data
+	 * @param array $data data to store, keys: USER_ID - user who selected a destination, CODE - code or array of codes of destinations, CONTEXT - the place where a destination is selected
+	 * @return void
      */
 	public static function merge($data)
 	{
@@ -86,7 +92,10 @@ class FinderDestTable extends Entity\DataManager
 				: (is_object($GLOBALS['USER']) ? $USER->getId() : 0)
 		);
 
-		if ($userId <= 0)
+		if (
+			$userId <= 0
+			|| empty($data['CODE'])
+		)
 		{
 			return;
 		}
@@ -162,6 +171,13 @@ class FinderDestTable extends Entity\DataManager
 		}
 	}
 
+	/**
+	 * Converts access rights into destination codes
+	 *
+	 * @param array $rights access right codes to convert
+	 * @param array $excludeCodes access right codes to not process
+	 * @return array destination codes
+	 */
 	public static function convertRights($rights, $excludeCodes = array())
 	{
 		$result = array();
@@ -193,6 +209,13 @@ class FinderDestTable extends Entity\DataManager
 		return $result;
 	}
 
+	/**
+	 * Handler for onAfterAjaxActionCreateFolderWithSharing, onAfterAjaxActionAppendSharing and onAfterAjaxActionChangeSharingAndRights events of disk module
+	 * Converts sharings into destination codes and stores them
+	 *
+	 * @param array $sharings
+	 * @return void
+	 */
 	public static function onAfterDiskAjaxAction($sharings)
 	{
 		if (is_array($sharings))
@@ -214,6 +237,11 @@ class FinderDestTable extends Entity\DataManager
 		}
 	}
 
+	/**
+	 * Used once to fill b_finder_dest table
+	 *
+	 * @return void
+	 */
 	public static function migrateData()
 	{
 		$res = \CUserOptions::getList(
@@ -284,6 +312,12 @@ class FinderDestTable extends Entity\DataManager
 		}
 	}
 
+	/**
+	 * Returns array of email user IDs fetched from users (email and not email) destination codes
+	 *
+	 * @param mixed $code user destination code or array of them
+	 * @return array
+	 */
 	public static function getMailUserId($code)
 	{
 		$userId = array();

@@ -92,6 +92,7 @@ class GroupTable extends Entity\DataManager
 		if($delResult->isSuccess())
 		{
 			Name\GroupTable::deleteMultipleForOwner($primary);
+			GroupLocationTable::deleteByGroupId($primary);
 
 			// set flag that indicates whether project still uses groups or not
 			self::checkGroupUsage();
@@ -147,7 +148,7 @@ class GroupTable extends Entity\DataManager
 			'SORT' => array(
 				'data_type' => 'integer',
 				'title' => Loc::getMessage('SALE_LOCATION_GROUP_ENTITY_SORT_FIELD'),
-				'default' => '100'
+				'default_value' => '100'
 			),
 
 			// virtual

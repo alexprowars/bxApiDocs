@@ -9,7 +9,7 @@ class CodeTree
 	/**
 	 * @param array $statements Sequence of updater statements.
 	 */
-	public function __construct(array $statements)
+	function __construct(array $statements)
 	{
 		$this->statements = $statements;
 		$this->tree = array();
@@ -22,19 +22,6 @@ class CodeTree
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает php-код.</p>
-	*
-	*
-	* @param integer $level  Уровень выравнивания.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/php/codetree/getcode.php
-	* @author Bitrix
-	*/
 	public function getCode($level)
 	{
 		$tree = $this->getCodeTree();
@@ -106,8 +93,8 @@ class CodeTree
 			foreach ($updaterSteps as $i => $statement)
 			{
 				/**
-				 * @var Condition $condition
-				 */
+				* @var Condition $condition
+				*/
 				foreach ($statement->conditions as $condition)
 				{
 					$predicate = $condition->getPredicate();
@@ -115,6 +102,7 @@ class CodeTree
 					{
 						$byPredicates[$predicate] = array(
 							"predicate" => $predicate,
+							"dep" => $statement->dependOn,
 							"sort" => $this->getPredicateSort($predicate),
 							"count" => 1,
 						);
@@ -129,6 +117,7 @@ class CodeTree
 			if ($byPredicates)
 			{
 				sortByColumn($byPredicates, array(
+					"dep" => SORT_ASC,
 					"count" => SORT_DESC,
 					"sort" => SORT_ASC,
 				));

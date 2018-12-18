@@ -3,13 +3,14 @@
  * Bitrix Framework
  * @package bitrix
  * @subpackage main
- * @copyright 2001-2012 Bitrix
+ * @copyright 2001-2018 Bitrix
  */
 namespace Bitrix\Main;
 
 use Bitrix\Main\DB\SqlExpression;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Search\MapBuilder;
 
 Loc::loadMessages(__FILE__);
 
@@ -70,6 +71,9 @@ class UserTable extends Entity\DataManager
 			'LAST_ACTIVITY_DATE' => array(
 				'data_type' => 'datetime'
 			),
+			'TIMESTAMP_X' => array(
+				'data_type' => 'datetime'
+			),
 			'NAME' => array(
 				'data_type' => 'string'
 			),
@@ -95,6 +99,9 @@ class UserTable extends Entity\DataManager
 				'data_type' => 'string'
 			),
 			'LID' => array(
+				'data_type' => 'string'
+			),
+			'LANGUAGE_ID' => array(
 				'data_type' => 'string'
 			),
 			'TIME_ZONE_OFFSET' => array(
@@ -199,6 +206,9 @@ class UserTable extends Entity\DataManager
 			'WORK_NOTES' => array(
 				'data_type' => 'text'
 			),
+			'ADMIN_NOTES' => array(
+				'data_type' => 'text'
+			),
 			'SHORT_NAME' => array(
 				'data_type' => 'string',
 				'expression' => array(
@@ -210,11 +220,45 @@ class UserTable extends Entity\DataManager
 				'data_type' => 'boolean',
 				'values' => array('N', 'Y'),
 				'expression' => array(
-					'CASE WHEN %s > '.$helper->addSecondsToDateTime('(-120)').' THEN \'Y\' ELSE \'N\' END',
+					'CASE WHEN %s > '.$helper->addSecondsToDateTime('(-'.self::getSecondsForLimitOnline().')').' THEN \'Y\' ELSE \'N\' END',
 					'LAST_ACTIVITY_DATE',
 				)
 			),
+			'IS_REAL_USER' => array(
+				'data_type' => 'boolean',
+				'values' => array('N', 'Y'),
+				'expression' => array(
+					'CASE WHEN %s IN ("'.join('", "', static::getExternalUserTypes()).'") THEN \'N\' ELSE \'Y\' END',
+					'EXTERNAL_AUTH_ID',
+				)
+			),
+			'INDEX' => array(
+				'data_type' => 'Bitrix\Main\UserIndex',
+				'reference' => array('=this.ID' => 'ref.USER_ID'),
+				'join_type' => 'INNER',
+			),
+			(new Entity\ReferenceField(
+				'COUNTER',
+				\Bitrix\Main\UserCounterTable::class,
+				Entity\Query\Join::on('this.ID', 'ref.USER_ID')->where('ref.CODE', 'tasks_effective')
+			))
 		);
+	}
+
+	public static function getSecondsForLimitOnline()
+	{
+		$seconds = intval(ini_get("session.gc_maxlifetime"));
+
+		if ($seconds == 0)
+		{
+			$seconds = 1440;
+		}
+		else if ($seconds < 120)
+		{
+			$seconds = 120;
+		}
+
+		return intval($seconds);
 	}
 
 	public static function getActiveUsersCount()
@@ -269,42 +313,139 @@ class UserTable extends Entity\DataManager
 		if(!in_array(2, $groups))
 			$groups[] = 2;
 
-		// private groups
-		$nowTimeExpression = new SqlExpression(
-			static::getEntity()->getConnection()->getSqlHelper()->getCurrentDateTimeFunction()
-		);
-
-		$result = GroupTable::getList(array(
-			'select' => array('ID'),
-			'filter' => array(
-				'=UserGroup:GROUP.USER_ID' => $userId,
-				'=ACTIVE' => 'Y',
-				array(
-					'LOGIC' => 'OR',
-					'=UserGroup:GROUP.DATE_ACTIVE_FROM' => null,
-					'<=UserGroup:GROUP.DATE_ACTIVE_FROM' => $nowTimeExpression,
-				),
-				array(
-					'LOGIC' => 'OR',
-					'=UserGroup:GROUP.DATE_ACTIVE_TO' => null,
-					'>=UserGroup:GROUP.DATE_ACTIVE_TO' => $nowTimeExpression,
-				),
-				array(
-					'LOGIC' => 'OR',
-					'!=ANONYMOUS' => 'Y',
-					'=ANONYMOUS' => null
-				)
-			)
-		));
-
-		while ($row = $result->fetch())
+		if($userId > 0)
 		{
-			$groups[] = $row['ID'];
+			// private groups
+			$nowTimeExpression = new SqlExpression(
+				static::getEntity()->getConnection()->getSqlHelper()->getCurrentDateTimeFunction()
+			);
+
+			$result = GroupTable::getList(array(
+				'select' => array('ID'),
+				'filter' => array(
+					'=UserGroup:GROUP.USER_ID' => $userId,
+					'=ACTIVE' => 'Y',
+					array(
+						'LOGIC' => 'OR',
+						'=UserGroup:GROUP.DATE_ACTIVE_FROM' => null,
+						'<=UserGroup:GROUP.DATE_ACTIVE_FROM' => $nowTimeExpression,
+					),
+					array(
+						'LOGIC' => 'OR',
+						'=UserGroup:GROUP.DATE_ACTIVE_TO' => null,
+						'>=UserGroup:GROUP.DATE_ACTIVE_TO' => $nowTimeExpression,
+					),
+					array(
+						'LOGIC' => 'OR',
+						'!=ANONYMOUS' => 'Y',
+						'=ANONYMOUS' => null
+					)
+				)
+			));
+
+			while ($row = $result->fetch())
+			{
+				$groups[] = $row['ID'];
+			}
 		}
 
 		sort($groups);
 
 		return $groups;
+	}
+
+	public static function getExternalUserTypes()
+	{
+		static $types = array("bot", "email", "controller", "replica", "imconnector", "sale", "saleanonymous");
+		return $types;
+	}
+
+	public static function indexRecord($id)
+	{
+		$id = intval($id);
+		if($id == 0)
+		{
+			return false;
+		}
+
+		$intranetInstalled = ModuleManager::isModuleInstalled('intranet');
+
+		$select = array('ID', 'NAME', 'SECOND_NAME', 'LAST_NAME', 'WORK_POSITION', 'LOGIN', 'EMAIL');
+		if ($intranetInstalled)
+		{
+			$select[] = 'UF_DEPARTMENT';
+		}
+
+		$record = parent::getList(array(
+			'select' => $select,
+			'filter' => array('=ID' => $id)
+		))->fetch();
+
+		if(!is_array($record))
+		{
+			return false;
+		}
+
+		$record['UF_DEPARTMENT_NAMES'] = array();
+		if ($intranetInstalled)
+		{
+			$departmentNames = UserUtils::getDepartmentNames($record['UF_DEPARTMENT']);
+			foreach ($departmentNames as $departmentName)
+			{
+				$record['UF_DEPARTMENT_NAMES'][] = $departmentName['NAME'];
+			}
+		}
+
+		$departmentName = isset($record['UF_DEPARTMENT_NAMES'][0])? $record['UF_DEPARTMENT_NAMES'][0]: '';
+		$searchDepartmentContent = implode(' ', $record['UF_DEPARTMENT_NAMES']);
+
+		UserIndexTable::merge(array(
+			'USER_ID' => $id,
+			'NAME' => (string)$record['NAME'],
+			'SECOND_NAME' => (string)$record['SECOND_NAME'],
+			'LAST_NAME' => (string)$record['LAST_NAME'],
+			'WORK_POSITION' => (string)$record['WORK_POSITION'],
+			'UF_DEPARTMENT_NAME' => (string)$departmentName,
+			'SEARCH_USER_CONTENT' => self::generateSearchUserContent($record),
+			'SEARCH_ADMIN_CONTENT' => self::generateSearchAdminContent($record),
+			'SEARCH_DEPARTMENT_CONTENT' => MapBuilder::create()->addText($searchDepartmentContent)->build(),
+		));
+
+		return true;
+	}
+
+	public static function deleteIndexRecord($id)
+	{
+		UserIndexTable::delete($id);
+	}
+
+	private static function generateSearchUserContent(array $fields)
+	{
+		$result = MapBuilder::create()
+			->addInteger($fields['ID'])
+			->addText($fields['NAME'])
+			->addText($fields['SECOND_NAME'])
+			->addText($fields['LAST_NAME'])
+			->addText($fields['WORK_POSITION'])
+			->addText(implode(' ', $fields['UF_DEPARTMENT_NAMES']))
+			->build();
+
+		return $result;
+	}
+
+	private static function generateSearchAdminContent(array $fields)
+	{
+		$result = MapBuilder::create()
+			->addInteger($fields['ID'])
+			->addText($fields['NAME'])
+			->addText($fields['SECOND_NAME'])
+			->addText($fields['LAST_NAME'])
+			->addEmail($fields['EMAIL'])
+			->addText($fields['WORK_POSITION'])
+			->addText($fields['LOGIN'])
+			->build();
+
+		return $result;
 	}
 
 	public static function add(array $data)
@@ -320,5 +461,28 @@ class UserTable extends Entity\DataManager
 	public static function delete($primary)
 	{
 		throw new NotImplementedException("Use CUser class.");
+	}
+
+	public static function onAfterAdd(Entity\Event $event)
+	{
+		$id = $event->getParameter("id");
+		static::indexRecord($id);
+		return new Entity\EventResult();
+	}
+
+	public static function onAfterUpdate(Entity\Event $event)
+	{
+		$primary = $event->getParameter("id");
+		$id = $primary["ID"];
+		static::indexRecord($id);
+		return new Entity\EventResult();
+	}
+
+	public static function onAfterDelete(Entity\Event $event)
+	{
+		$primary = $event->getParameter("id");
+		$id = $primary["ID"];
+		static::deleteIndexRecord($id);
+		return new Entity\EventResult();
 	}
 }

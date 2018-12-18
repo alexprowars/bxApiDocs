@@ -166,6 +166,10 @@ class SftpQueue extends DataProcessor
 			return false;
 
 		$sftp = \Bitrix\Sale\TradingPlatform\Ebay\Helper::getSftp($this->siteId);
+
+		if(!$sftp)
+			return false;
+			
 		$sftp->connect();
 
 		for($i = 0; $i < count($filesToSend); $i++)

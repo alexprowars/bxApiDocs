@@ -73,6 +73,10 @@ class ProductTable extends Main\Entity\DataManager
 	const PAYMENT_PERIOD_YEAR = 'Y';
 	const PAYMENT_PERIOD_DOUBLE_YEAR = 'T';
 
+	const PRICE_MODE_SIMPLE = 'S';
+	const PRICE_MODE_QUANTITY = 'Q';
+	const PRICE_MODE_RATIO = 'R';
+
 	protected static $defaultProductSettings = array();
 
 	protected static $existProductCache = array();
@@ -82,17 +86,6 @@ class ProductTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы товаров торговых каталогов. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_product';
@@ -103,17 +96,6 @@ class ProductTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы товаров торговых каталогов. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -144,11 +126,11 @@ class ProductTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('PRODUCT_ENTITY_WEIGHT_FIELD')
 			)),
 			'TIMESTAMP_X' => new Main\Entity\DatetimeField('TIMESTAMP_X', array(
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('PRODUCT_ENTITY_TIMESTAMP_X_FIELD')
 			)),
 			'PRICE_TYPE' => new Main\Entity\EnumField('PRICE_TYPE', array(
-				'values' => array(self::PAYMENT_TYPE_SINGLE, self::PAYMENT_TYPE_REGULAR, self::PAYMENT_TYPE_TRIAL),
+				'values' => self::getPaymentTypes(false),
 				'default_value' => self::PAYMENT_TYPE_SINGLE,
 				'title' => Loc::getMessage('PRODUCT_ENTITY_PRICE_TYPE_FIELD')
 			)),
@@ -157,16 +139,7 @@ class ProductTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('PRODUCT_ENTITY_RECUR_SCHEME_LENGTH_FIELD')
 			)),
 			'RECUR_SCHEME_TYPE' => new Main\Entity\EnumField('RECUR_SCHEME_TYPE', array(
-				'values' => array(
-					self::PAYMENT_PERIOD_HOUR,
-					self::PAYMENT_PERIOD_DAY,
-					self::PAYMENT_PERIOD_WEEK,
-					self::PAYMENT_PERIOD_MONTH,
-					self::PAYMENT_PERIOD_QUART,
-					self::PAYMENT_PERIOD_SEMIYEAR,
-					self::PAYMENT_PERIOD_YEAR,
-					self::PAYMENT_PERIOD_DOUBLE_YEAR
-				),
+				'values' => self::getPaymentPeriods(false),
 				'default_value' => self::PAYMENT_PERIOD_DAY,
 				'title' => Loc::getMessage('PRODUCT_ENTITY_RECUR_SCHEME_TYPE_FIELD')
 			)),
@@ -178,10 +151,10 @@ class ProductTable extends Main\Entity\DataManager
 				'default_value' => self::STATUS_NO,
 				'title' => Loc::getMessage('PRODUCT_ENTITY_WITHOUT_ORDER_FIELD'),
 			)),
-			'SELECT_BEST_PRICE' => array(
-				'data_type' => 'boolean',
-				'values' => array('N', 'Y')
-			),
+			'SELECT_BEST_PRICE' => new Main\Entity\BooleanField('SELECT_BEST_PRICE', array(
+				'values' => array(self::STATUS_NO, self::STATUS_YES),
+				'default_value' => self::STATUS_YES
+			)),
 			'VAT_ID' => new Main\Entity\IntegerField('VAT_ID', array(
 				'default_value' => 0,
 				'title' => Loc::getMessage('PRODUCT_ENTITY_VAT_ID_FIELD')
@@ -279,19 +252,19 @@ class ProductTable extends Main\Entity\DataManager
 			)),
 			'IBLOCK_ELEMENT' => new Main\Entity\ReferenceField(
 				'IBLOCK_ELEMENT',
-				'Bitrix\Iblock\Element',
+				'\Bitrix\Iblock\Element',
 				array('=this.ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),
 			'TRIAL_IBLOCK_ELEMENT' => new Main\Entity\ReferenceField(
 				'TRIAL_IBLOCK_ELEMENT',
-				'Bitrix\Iblock\Element',
+				'\Bitrix\Iblock\Element',
 				array('=this.TRIAL_PRICE_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),
 			'TRIAL_PRODUCT' => new Main\Entity\ReferenceField(
 				'TRIAL_PRODUCT',
-				'Bitrix\Catalog\Product',
+				'\Bitrix\Catalog\Product',
 				array('=this.TRIAL_PRICE_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			)
@@ -305,18 +278,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @internal
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PRICE_TYPE</code> (тип цены). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/validatepricetype.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 16.5.0 - no longer needed.
-	*/
 	public static function validatePriceType()
 	{
 		return array();
@@ -340,17 +301,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @internal
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TMP_ID</code> (временный символьный идентификатор, используемый для служебных целей). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/validatetmpid.php
-	* @author Bitrix
-	*/
 	public static function validateTmpId()
 	{
 		return array(
@@ -363,17 +313,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @internal
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PURCHASING_CURRENCY</code> (валюта закупочной цены). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/validatepurchasingcurrency.php
-	* @author Bitrix
-	*/
 	public static function validatePurchasingCurrency()
 	{
 		return array(
@@ -440,19 +379,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @param string $value			QUANTITY_TRACE original value.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод получает значение поля <code>QUANTITY_TRACE</code> (включить количественный учет) и, если оно равно <code>D</code>, то вместо текущего значения возвращает настройку поля <code>QUANTITY_TRACE</code> из модуля. Является служебным статическим методом.</p>
-	*
-	*
-	* @param string $value  Значение поля <code>QUANTITY_TRACE</code>.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/preparequantitytrace.php
-	* @author Bitrix
-	*/
 	public static function prepareQuantityTrace($value)
 	{
 		if ($value == self::STATUS_DEFAULT)
@@ -471,19 +397,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @param string $value			CAN_BUY_ZERO original value.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод получает значение поля <code>CAN_BUY_ZERO</code> (разрешение покупки при отсутствии) и, если оно равно <code>D</code>, то вместо текущего значения возвращает настройку поля <code>CAN_BUY_ZERO</code> из модуля. Является служебным статическим методом.</p>
-	*
-	*
-	* @param string $value  Значение поля <code>CAN_BUY_ZERO</code>.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/preparecanbuyzero.php
-	* @author Bitrix
-	*/
 	public static function prepareCanBuyZero($value)
 	{
 		if ($value == self::STATUS_DEFAULT)
@@ -520,19 +433,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @param string $value			SUBSCRIBE original value.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод получает значение поля <code>SUBSCRIBE</code> (разрешение подписки) и, если оно равно <code>D</code>, то вместо текущего значения возвращает настройку поля <code>SUBSCRIBE</code> из модуля. Является служебным статическим методом.</p>
-	*
-	*
-	* @param string $value  Значение поля <code>SUBSCRIBE</code>.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/preparesubscribe.php
-	* @author Bitrix
-	*/
 	public static function prepareSubscribe($value)
 	{
 		if ($value == self::STATUS_DEFAULT)
@@ -551,19 +451,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @return bool
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Метод проверяет наличие информации о товаре с кодом <code>$product</code>. Метод статический.</p>
-	*
-	*
-	* @param integer $product  Идентификатор товара.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/isexistproduct.php
-	* @author Bitrix
-	*/
 	public static function isExistProduct($product)
 	{
 		$product = (int)$product;
@@ -589,20 +476,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @param int $product			Product id or zero (clear all cache).
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод сбрасывает внутренний кеш на хите (в рамках самого класса). Метод статический.</p>
-	*
-	*
-	* @param integer $product  Идентификатор товара или ноль, если следует сбросить кеш всех
-	* товаров.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/clearproductcache.php
-	* @author Bitrix
-	*/
 	public static function clearProductCache($product = 0)
 	{
 		$product = (int)$product;
@@ -624,21 +497,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @return array|bool
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Метод возвращает коэффициент и код единиц измерения для товаров. Метод статический.</p>
-	*
-	*
-	* @param array $array  Идентификаторы товаров.
-	*
-	* @param integer $product  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/getcurrentratiowithmeasure.php
-	* @author Bitrix
-	*/
 	public static function getCurrentRatioWithMeasure($product)
 	{
 		if (!is_array($product))
@@ -729,20 +587,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @return string
 	 * @throws Main\ArgumentNullException
 	 */
-	
-	/**
-	* <p>Метод возвращает флаг Y/N доступности товара к покупке для переданного массива товара. Метод статический.</p>
-	*
-	*
-	* @param array $fields  Массив полей товара. В массиве обязательно должны быть заданы
-	* следующие ключи: <code>QUANTITY</code>, <code>QUANTITY_TRACE</code> и <code>CAN_BUY_ZERO</code>.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/calculateavailable.php
-	* @author Bitrix
-	*/
 	public static function calculateAvailable($fields)
 	{
 		if (empty($fields) || !is_array($fields))
@@ -776,17 +620,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @internal
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод выбирает значения параметров товаров по умолчанию из настроек модуля. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/loaddefaultproductsettings.php
-	* @author Bitrix
-	*/
 	public static function loadDefaultProductSettings()
 	{
 		self::$defaultProductSettings = array(
@@ -803,20 +636,6 @@ class ProductTable extends Main\Entity\DataManager
 	 * @param bool $descr			With description.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список типов товаров. Метод статический.</p>
-	*
-	*
-	* @param boolean $withDescr = false Если параметр принимает значение <i>true</i>, то список будет
-	* возвращен с описанием.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/getproducttypes.php
-	* @author Bitrix
-	*/
 	public static function getProductTypes($descr = false)
 	{
 		if ($descr)
@@ -897,17 +716,6 @@ class ProductTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает доступные по умолчанию настройки. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/producttable/getdefaultavailablesettings.php
-	* @author Bitrix
-	*/
 	public static function getDefaultAvailableSettings()
 	{
 		return array(

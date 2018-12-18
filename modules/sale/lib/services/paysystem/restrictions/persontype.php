@@ -5,6 +5,7 @@ namespace Bitrix\Sale\Services\PaySystem\Restrictions;
 use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Internals\CollectableEntity;
+use Bitrix\Sale\Internals\Entity;
 use Bitrix\Sale\Internals\PersonTypeTable;
 use Bitrix\Sale\Order;
 use Bitrix\Sale\PaymentCollection;
@@ -20,7 +21,7 @@ class PersonType extends Base\Restriction
 	 * @param int $serviceId
 	 * @return bool
 	 */
-	protected static function check($params, array $restrictionParams, $serviceId = 0)
+	public static function check($params, array $restrictionParams, $serviceId = 0)
 	{
 		if (is_array($restrictionParams) && isset($restrictionParams['PERSON_TYPE_ID']))
 		{
@@ -31,16 +32,26 @@ class PersonType extends Base\Restriction
 	}
 
 	/**
-	 * @param CollectableEntity $entity
+	 * @param Entity $entity
 	 * @return int
 	 */
-	public static function extractParams(CollectableEntity $entity)
+	public static function extractParams(Entity $entity)
 	{
-		/** @var PaymentCollection $collection */
-		$collection = $entity->getCollection();
+		if ($entity instanceof CollectableEntity)
+		{
+			/** @var PaymentCollection $collection */
+			$collection = $entity->getCollection();
 
-		/** @var Order $order */
-		$order = $collection->getOrder();
+			/** @var Order $order */
+			$order = $collection->getOrder();
+		}
+		elseif ($entity instanceof Order)
+		{
+			$order = $entity;
+		}
+
+		if (!$order)
+			return false;
 
 		$personTypeId = $order->getPersonTypeId();
 		return $personTypeId;

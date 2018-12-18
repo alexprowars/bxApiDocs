@@ -8,6 +8,9 @@ use Bitrix\Sale\Internals\StatusTable;
 use Bitrix\Sale\Order;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\TradingPlatform\OrderTable;
+use Bitrix\Main\Application;
+use Bitrix\Main\SiteTable;
+use Bitrix\Main\Config\Option;
 
 Loc::loadMessages(__FILE__);
 
@@ -18,10 +21,17 @@ class OrderStatus
 		$data = self::prepareData($order);
 		$orderLocked = \Bitrix\Sale\Order::isLocked($order->getId());
 
+		$allowCancel = false;
+
 		if($showCancel)
-			$bUserCanCancelOrder = \CSaleOrder::CanUserCancelOrder($order->getId(), $user->GetUserGroupArray(), $user->GetID());
-		else
-			$bUserCanCancelOrder = false;
+		{
+			$allowedStatusesCancel = \Bitrix\Sale\OrderStatus::getStatusesUserCanDoOperations($user->GetID(), array('cancel'));
+			if (is_array($allowedStatusesCancel))
+			{
+				$allowCancel = in_array($order->getField("STATUS_ID"), $allowedStatusesCancel);
+			}
+		}
+
 
 		$result = '
 			<table border="0" cellspacing="0" cellpadding="0" width="100%" class="adm-detail-content-table edit-table">
@@ -72,7 +82,7 @@ class OrderStatus
 		{
 			$result .=	'<tr>'.
 							'<td class="adm-detail-content-cell-l">'.Loc::getMessage("SALE_ORDER_STATUS_SOURCE").':</td>'.
-							'<td class="adm-detail-content-cell-r">'.$data['SOURCE_NAME'].'</td>'.
+							'<td class="adm-detail-content-cell-r">'.htmlspecialcharsbx($data['SOURCE_NAME']).'</td>'.
 						'</tr>';
 		}
 
@@ -98,16 +108,37 @@ class OrderStatus
 		if($showSaveButton && !$orderLocked)
 		{
 			$result .= '
-									&nbsp;
-									<span id="save_status_button" class="adm-btn" onclick="BX.Sale.Admin.OrderEditPage.onSaveStatusButton(\''.$order->getId().'\',\'STATUS_ID\');">
-										'.Loc::getMessage("SALE_ORDER_STATUS_SAVE").'
-									</span>';
+				&nbsp;
+				<span id="save_status_button" class="adm-btn" onclick="BX.Sale.Admin.OrderEditPage.onSaveStatusButton(\''.$order->getId().'\',\'STATUS_ID\');">
+					'.Loc::getMessage("SALE_ORDER_STATUS_SAVE").'
+				</span>
+				<span id="save_status_result_ok" class="adm-sale-green-check-mark" style="display:none;" title="'.Loc::getMessage('SALE_ORDER_STATUS_CHANGED_SUCCESS').'"></span>
+				';
 		}
 
 		$result .= '</td>
 			</tr>';
 
-		if($showCancel && $bUserCanCancelOrder)
+		if (\Bitrix\Sale\Helpers\Order::isAllowGuestView($order))
+		{
+			$result .='<tr><td class="adm-detail-content-cell-l">'.Loc::getMessage("SALE_ORDER_GUEST_VIEW").':</td><td class="adm-detail-content-cell-r">';
+
+			$publicLink = \Bitrix\Sale\Helpers\Order::getPublicLink($order);
+			if (empty($publicLink))
+			{
+				$result .= Loc::getMessage("SALE_ORDER_WRONG_GUEST_PATH", array("#LANGUAGE_ID#" => LANGUAGE_ID));
+			}
+			else
+			{
+				$result .= "<a href='{$publicLink}' target='_blank'>".
+					Loc::getMessage("SALE_ORDER_GUEST_PATH", array('#ID#' => $order->getId(),"#ACCOUNT_NUMBER#" => $order->getField('ACCOUNT_NUMBER'))).
+					"</a>";
+			}
+
+			$result .='</td></tr>';
+		}
+
+		if($showCancel && $allowCancel)
 			$result .= self::getCancelBlockHtml($order, $data, $orderLocked);
 
 		$result .= '</tbody>
@@ -144,22 +175,23 @@ class OrderStatus
 				</div>';
 		}
 
-		$reasonCanceled = htmlspecialcharsbx(trim($order->getField("REASON_CANCELED")));
+		$reasonCanceled = trim($order->getField("REASON_CANCELED"));
+		
 		if(!\CSaleYMHandler::isOrderFromYandex($order->getId()))
 		{
 			$reasonHtml = '
 				<div class="adm-s-select-popup-modal-title">'.Loc::getMessage("SALE_ORDER_STATUS_COMMENT").'</div>
-				<textarea style="width:400px;min-height:100px;" name="FORM_REASON_CANCELED" id="FORM_REASON_CANCELED"'.($isCanceled ? ' disabled' : '' ).'>'.(strlen($reasonCanceled) > 0 ? $reasonCanceled : '').'</textarea>
+				<textarea style="width:400px;min-height:100px;" name="FORM_REASON_CANCELED" id="FORM_REASON_CANCELED"'.($isCanceled ? ' disabled' : '' ).'>'.(strlen($reasonCanceled) > 0 ? htmlspecialcharsbx($reasonCanceled) : '').'</textarea>
 			';
 		}
 		else
 		{
 			$reasonHtml = '
 				<div class="adm-s-select-popup-modal-title">'.Loc::getMessage("SALE_ORDER_STATUS_CANCELING_REASON").'</div>
-				<select name="FORM_REASON_CANCELED" id="FORM_REASON_CANCELED" class="adm-bus-select"'.($isCanceled ? ' disabled' : '' ).'>';
+				<select name="FORM_REASON_CANCELED" style="max-width: 400px;" id="FORM_REASON_CANCELED" class="adm-bus-select"'.($isCanceled ? ' disabled' : '' ).'>';
 
 			foreach (\CSaleYMHandler::getOrderSubstatuses() as $statusId => $statusName)
-				$reasonHtml .= '<option value="'.$statusId.'"'.($statusId == $reasonCanceled ? " selected" : "").'>'.$statusName.'</option>';
+				$reasonHtml .= '<option value="'.$statusId.'"'.($statusId == $reasonCanceled ? " selected" : "").'>'.htmlspecialcharsbx($statusName).'</option>';
 
 			$reasonHtml .= '</select>';
 		}

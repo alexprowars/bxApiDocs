@@ -65,8 +65,18 @@ abstract class NameEntity extends Entity\DataManager
 					),
 					$name
 				));
+
 				if(!$res->isSuccess())
-					throw new Main\SystemException(Loc::getMessage('SALE_LOCATION_NAME_NAME_ENTITY_CANNOT_ADD_NAMES_EXCEPTION'));
+				{
+					throw new Main\SystemException(
+						Loc::getMessage('SALE_LOCATION_NAME_NAME_ENTITY_CANNOT_ADD_NAMES_EXCEPTION').
+						' ('.
+						implode(
+							',',
+							$res->getErrorMessages()).
+						')'
+					);
+				}
 			}
 		}
 

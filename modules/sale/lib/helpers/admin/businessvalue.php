@@ -231,7 +231,8 @@ final class BusinessValueControl
 							$file = Input\Manager::getValue($fileInput, $file);
 						}
 
-						$result = BusinessValue::setMapping($codeKey, $consumerKey, $personTypeId, $mapping, true);
+						$common = IsModuleInstalled('bitrix24') ? false : true;
+						$result = BusinessValue::setMapping($codeKey, $consumerKey, $personTypeId, $mapping, $common);
 					}
 
 					if (! $result->isSuccess())
@@ -373,6 +374,9 @@ final class BusinessValueControl
 
 						foreach ($codes as $codeKey => $code)
 						{
+							if ($codeKey === 'USER_COLUMNS')
+								continue;
+
 							$consumerKey = $code['CONSUMER_KEY'];
 							$consumer = $consumers[$consumerKey];
 
@@ -606,7 +610,6 @@ final class BusinessValueControl
 					if ($providerValue)
 						$providerValue = Input\File::loadInfoSingle($providerValue);
 
-					$valueInput['NO_DELETE'] = true;
 					$valueInput['CLASS'] = 'adm-designed-file';
 
 					break;
@@ -822,12 +825,21 @@ final class BusinessValueControl
 						keyElement.disabled = deleteElement.checked;
 
 						var parentElement = valueElement.parentNode;
-						var element = parentElement.firstChild;
-						while (element)
+						var tagList = ['input', 'select'];
+						for (var tagIndex in tagList)
 						{
-							if (element.type != 'button')
-								element.disabled = deleteElement.checked;
-							element = element.nextSibling;
+							if (tagList.hasOwnProperty(tagIndex))
+							{
+								var inputs = BX.findChildren(parentElement, {tag : tagList[tagIndex]}, true);
+								for (var k in inputs)
+								{
+									if (inputs.hasOwnProperty(k))
+									{
+										if (inputs[k].type != 'button')
+											inputs[k].disabled = deleteElement.checked;
+									}
+								}
+							}
 						}
 
 						if (! personTypeId)
@@ -1055,9 +1067,13 @@ final class BusinessValueControl
 							$fieldOptions[$field['GROUP']][$fieldKey] = $field['NAME'] ?: $fieldKey;
 
 					if (count($fieldOptions) == 1)
+					{
 						$fieldOptions = reset($fieldOptions);
+					}
 					elseif (is_array($provider['FIELDS_GROUPS']))
+					{
 						self::sortRenameGroups($fieldOptions, $provider['FIELDS_GROUPS']);
+					}
 
 					if (! empty($fieldOptions))
 					{
@@ -1072,7 +1088,7 @@ final class BusinessValueControl
 				}
 			}
 
-			$personProviderValueInput[$personTypeId][''] = array('TYPE' => 'STRING', 'SIZE' => 30, 'DISABLED' => true); // for filter only
+			$personProviderValueInput[$personTypeId][''] = array('TYPE' => 'STRING', 'SIZE' => 30); // for filter only
 
 			if ($providerOptions)
 			{

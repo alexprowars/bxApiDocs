@@ -47,19 +47,6 @@ class Message
 	 * @param bool $html Html/text switch.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает маркер начала цитаты. Метод статический.</p>
-	*
-	*
-	* @param boolean $html = false Html/text переключатель.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/getquotestartmarker.php
-	* @author Bitrix
-	*/
 	final public static function getQuoteStartMarker($html = false)
 	{
 		return $html ? static::QUOTE_START_MARKER_HTML : static::QUOTE_START_MARKER;
@@ -71,19 +58,6 @@ class Message
 	 * @param bool $html Html/text switch.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает маркер конца цитаты. Метод статический.</p>
-	*
-	*
-	* @param boolean $html = false Html/text переключатель.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/getquoteendmarker.php
-	* @author Bitrix
-	*/
 	final public static function getQuoteEndMarker($html = false)
 	{
 		return $html ? static::QUOTE_END_MARKER_HTML : static::QUOTE_END_MARKER;
@@ -94,17 +68,6 @@ class Message
 	 *
 	 * @return int
 	 */
-	
-	/**
-	* <p>Метод возвращает количество вложений в сообщение. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/attachmentscount.php
-	* @author Bitrix
-	*/
 	public function attachmentsCount()
 	{
 		return is_array($this->attachments) ? count($this->attachments) : 0;
@@ -282,19 +245,6 @@ class Message
 	 * @param array &$message Message.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает автоматически обработанный текст ответа. Метод статический.</p>
-	*
-	*
-	* @param array $array  Сообщение.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/parsereply.php
-	* @author Bitrix
-	*/
 	public static function parseReply(array &$message)
 	{
 		$reply = new static($message, 'reply');
@@ -308,19 +258,6 @@ class Message
 	 * @param array &$message Message.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает автоматически обработанный текст посылаемого сообщения. Метод статический.</p>
-	*
-	*
-	* @param array $array  Сообщение.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/parseforward.php
-	* @author Bitrix
-	*/
 	public static function parseForward(array &$message)
 	{
 		$forward = new static($message, 'forward');
@@ -411,27 +348,39 @@ class Message
 				if (strlen(trim($value)) >= 10 && $subject['sgnlen'] >= 10)
 				{
 					$dist = $subject['strlen']-strlen($value);
-					if ($dist < 10)
+
+					if (abs($dist) < 10)
 					{
-						if ($dist >= 0 && strpos($subject['value'], $value) === $dist)
+						if ($dist >= 0 && strpos($subject['value'], $value) !== false)
+						{
 							return true;
-						else if (levenshtein($subject['value'], $value) < 10)
+						}
+
+						if (max($subject['strlen'], strlen($value)) < 256 && levenshtein($subject['value'], $value) < 10)
+						{
 							return true;
+						}
 					}
 				}
 
 				$date = preg_replace('/(?<=[\s\d])UT$/i', '+0000', trim($value));
-				if (strtotime($date) !== false)
+				if (preg_match('/\d{1,2}:\d{2}(:\d{2})?\x20?(am|pm)?/i', $date) && strtotime($date) !== false)
+				{
 					return true;
+				}
 
 				if (preg_match('/([a-z\d_](\.?[a-z\d_-]+)*)?[a-z\d_]@(([a-z\d][a-z\d-]*)?[a-z\d]\.?)+/i', $value))
+				{
 					return true;
+				}
 
 				return false;
 			};
 
 			foreach ($matches as $item)
+			{
 				$score += (int) $isHeader($item[1], $item[2]);
+			}
 		}
 
 		return $score;
@@ -496,9 +445,9 @@ class Message
 		 * To: <to>
 		 * Subject: <subject>
 		 */
-		$fullHeadRegex = '/(?:^|\n)
+		$fullHeadRegex = '/(?:^|\n\n)
 			(?<hr>_{20,}\n(?:[\t\x20]*\n)?)?
-			(?<head>(?:[^\:\n]{1,20}:[\t\x20]+.+(?:\n|$)){2,8})\s*$
+			(?<head>(?:[^\:\n]{1,20}:[\t\x20]+.+(?:\n|$)){2,6})\s*$
 		/x'.BX_UTF_PCRE_MODIFIER;
 		if (preg_match($fullHeadRegex, $data, $matches))
 		{
@@ -568,11 +517,22 @@ class Message
 
 		$data = static::reduceTags($text);
 
-		$fullHeadRegex = '/(?:^|\n)\s*
-			(?<marker>-{3,}.{4,40}?-{3,}[\t\x20]*\n)?
+		$shortHeadRegex = '/(?:^|\n)\s*
+			-{3,}.{4,40}?-{3,}[\t\x20]*\n
 			(?<head>(?:[\t\x20]*\n)?
-			(?<lines>(?:[^\:\n]{1,20}:[\t\x20]+.+(?:\n|$)){2,8})(?:\s*\n)?)
+			(?<date>.{5,50}\d),?\x20
+			[^\d\n]{0,20}(?<time>\d{1,2}\:\d{2}(?:\:\d{2})?\x20?(?:am|pm)?),?\x20
+			(?<from>.+):(?:\s*\n)?)
+		/ix'.BX_UTF_PCRE_MODIFIER;
+
+		$hasMarker = preg_match($shortHeadRegex, $data);
+		$fullHeadRegex = '/(?:^|\n\n)\s*
+			(?<marker>-{3,}.{4,40}?-{3,}[\t\x20]*\n)'.($hasMarker ? '' : '?').'
+			(?<head>(?:[\t\x20]*\n)?
+			(?<lines>(?:[^\:\n]{1,20}:[\t\x20]+.+(?:\n|$)){2,6}))
+			\s*(?:\n|$)
 		/x'.BX_UTF_PCRE_MODIFIER;
+
 		if (preg_match($fullHeadRegex, $data, $matches, PREG_OFFSET_CAPTURE))
 		{
 			$score  = (int) !empty($matches['marker'][0]);
@@ -597,13 +557,6 @@ class Message
 			}
 		}
 
-		$shortHeadRegex = '/(?:^|\n)\s*
-			-{3,}.{4,40}?-{3,}[\t\x20]*\n
-			(?<head>(?:[\t\x20]*\n)?
-			(?<date>.{5,50}\d),?\x20
-			[^\d\n]{0,20}(?<time>\d{1,2}\:\d{2}(?:\:\d{2})?\x20?(?:am|pm)?),?\x20
-			(?<from>.+):(?:\s*\n)?)
-		/ix'.BX_UTF_PCRE_MODIFIER;
 		if (preg_match($shortHeadRegex, $data, $matches, PREG_OFFSET_CAPTURE))
 		{
 			$score  = 0;
@@ -653,19 +606,6 @@ class Message
 	 * @param array &$text Text.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает только непарные bb-коды. Метод статический.</p>
-	*
-	*
-	* @param array $array  Текст.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/mail/message/reducehead.php
-	* @author Bitrix
-	*/
 	public static function reduceHead(&$text)
 	{
 		preg_match_all('/\[\/?([busi]|img|table|tr|td|th|quote|(url|size|color|font|list)(=.+?)?)\]/is', $text, $tags);

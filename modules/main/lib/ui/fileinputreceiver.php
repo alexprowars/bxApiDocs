@@ -1,17 +1,15 @@
 <?php
 
 namespace Bitrix\Main\UI;
+use Bitrix\Main\AccessDeniedException;
 use \Bitrix\Main\Localization\Loc;
 use \Bitrix\Main\Security\Sign\Signer;
 use \Bitrix\Main\Security\Sign\BadSignatureException;
-use Bitrix\Main\UI\Uploader\Status;
 use \Bitrix\Main\UI\Uploader\Uploader;
-use \Bitrix\Main\UI\Uploader\Error;
 
 Loc::loadMessages(__FILE__);
 class FileInputReceiver
 {
-	protected $signature;
 	protected $status = array();
 	protected $id = "unknown";
 	protected $uploader;
@@ -22,45 +20,23 @@ class FileInputReceiver
 	const STATUS_NEED_AUTH    = 'need_auth';
 	const STATUS_INVALID_SIGN = 'invalid_sign';
 
-	public function setSignature($signature)
-	{
-		$this->signature = $signature;
-		return $this;
-	}
-
-	protected function getAgent()
-	{
-		if (!($this->uploader instanceof Uploader))
-		{
-			$this->uploader = new Uploader(array(), "get");
-			$this->uploader->setHandler("onFileIsUploaded", array($this, "handleFile"));
-		}
-		return $this->uploader;
-	}
-
-	protected function check()
+	function __construct($params = array(), $signature)
 	{
 		global $USER;
-		$this->status = new Status();
-		if(!$USER->IsAuthorized())
-		{
-			$this->status = new Error(self::STATUS_DENIED, Loc::getMessage("BXU_AccessDenied_Authorize"));
-		}
-		else
-		{
-			try
-			{
-				$sign = new Signer;
-				$params = unserialize(base64_decode($sign->unsign($this->signature, "fileinput")));
-				$this->id = $params["id"];
-				$this->getAgent()->setParams($params);
-			}
-			catch (BadSignatureException $e)
-			{
-				$this->status = new Error(self::STATUS_INVALID_SIGN, Loc::getMessage("BXU_AccessDenied_SignBetter"));
-			}
-		}
-		return !($this->status instanceof Error);
+
+		if (!$USER->IsAuthorized())
+			throw new AccessDeniedException(Loc::getMessage("BXU_AccessDenied_Authorize"));
+
+		$sign = new Signer;
+		$params = unserialize(base64_decode($sign->unsign($signature, "fileinput")));
+		$this->id = $params["id"];
+
+		$this->uploader = new Uploader($params, "get");
+		$this->uploader->setHandler("onFileIsUploaded", array($this, "handleFile"));
+	}
+	protected function getAgent()
+	{
+		return $this->uploader;
 	}
 
 	public static function sign($params = array())
@@ -216,14 +192,14 @@ class FileInputReceiver
 			$file["files"][$key]["sizeFormatted"] = \CFile::FormatSize($file["files"][$key]["size"]);
 		}
 
-		$docRoot = \CBXVirtualIo::GetInstance()->CombinePath($_SERVER["DOCUMENT_ROOT"]);
-		$file["path"] = \CBXVirtualIo::GetInstance()->GetFile($file["files"][$key]["tmp_name"])->GetPathWithName();
-		if (strpos($file["path"], $docRoot) === 0)
-			$file["path"] = str_replace("//", "/", "/".substr($file["path"], strlen($docRoot)));
+		$docRoot = \CBXVirtualIo::GetInstance()->CombinePath(\CTempFile::GetAbsoluteRoot());
+		$file["files"][$key]["path"] = \CBXVirtualIo::GetInstance()->GetFile($file["files"][$key]["tmp_name"])->GetPathWithName();
+		if (strpos($file["files"][$key]["path"], $docRoot) === 0)
+			$file["files"][$key]["path"] = str_replace("//", "/", "/".substr($file["files"][$key]["path"], strlen($docRoot)));
 
-		$file["files"][$key]["url"] =
-		$file["files"][$key]["tmp_url"] = \Bitrix\Main\IO\Path::convertPhysicalToUri($file["path"]);
+		$file["files"][$key]["tmp_url"] = $file["files"][$key]["url"];
 		$file["type"] = $file["files"][$key]["type"];
+
 		return true;
 	}
 
@@ -244,8 +220,6 @@ class FileInputReceiver
 
 	public function exec()
 	{
-		if (!$this->check())
-			$this->getAgent()->showError($this->status);
 		$this->getAgent()->checkPost();
 	}
 }

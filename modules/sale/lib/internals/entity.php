@@ -11,6 +11,8 @@ abstract class Entity
 	/** @var Fields */
 	protected $fields;
 
+	protected $eventName = null;
+
 	protected function __construct(array $fields = array())
 	{
 		$this->fields = new Fields($fields);
@@ -26,12 +28,75 @@ abstract class Entity
 		throw new Main\NotImplementedException();
 	}
 
+	public static function getAvailableFieldsMap()
+	{
+		static $fieldsMap = null;
+
+		if ($fieldsMap === null)
+		{
+			$fieldsMap = array_fill_keys(static::getAvailableFields(), true);
+		}
+
+		return $fieldsMap;
+	}
+
 	/**
 	 * @return array
 	 *
 	 * @throws Main\NotImplementedException
 	 */
 	public static function getAllFields()
+	{
+		static $mapFields = array();
+		if ($mapFields)
+		{
+			return $mapFields;
+		}
+
+		$fields = static::getFieldsDescription();
+		foreach ($fields as $field)
+		{
+			$mapFields[$field['CODE']] = $field['CODE'];
+		}
+
+		return $mapFields;
+	}
+
+	/**
+	 * @return array
+	 * @throws Main\NotImplementedException
+	 */
+	public static function getFieldsDescription()
+	{
+		$result = [];
+
+		$map = static::getFieldsMap();
+		foreach ($map as $key => $value)
+		{
+			if (is_array($value) && !isset($value['expression']))
+			{
+				$result[$key] = [
+					'CODE' => $key,
+					'TYPE' => $value['data_type']
+				];
+			}
+			elseif ($value instanceof Main\Entity\ScalarField)
+			{
+				$result[$value->getName()] = [
+					'CODE' => $value->getName(),
+					'TYPE' => $value->getDataType(),
+				];
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @throws Main\NotImplementedException
+	 * @return array
+	 */
+	protected static function getFieldsMap()
 	{
 		throw new Main\NotImplementedException();
 	}
@@ -65,79 +130,28 @@ abstract class Entity
 	 */
 	public function setField($name, $value)
 	{
-		if ($eventName = static::getEntityEventName())
+		if ($this->eventName === null)
 		{
-			/** @var Main\Entity\Event $event */
-			$event = new Main\Event('sale', 'OnBefore'.$eventName.'SetField', array(
-				'ENTITY' => $this,
-				'NAME' => $name,
-				'VALUE' => $value,
-			));
-			$event->send();
-
-			if ($event->getResults())
-			{
-				$result = new Result();
-				/** @var Main\EventResult $eventResult */
-				foreach($event->getResults() as $eventResult)
-				{
-					if($eventResult->getType() == Main\EventResult::SUCCESS)
-					{
-						if ($eventResultData = $eventResult->getParameters())
-						{
-							if (isset($eventResultData['VALUE']) && $eventResultData['VALUE'] != $value)
-							{
-								$value = $eventResultData['VALUE'];
-							}
-						}
-					}
-					elseif($eventResult->getType() == Main\EventResult::ERROR)
-					{
-
-						$errorMsg = new ResultError(Main\Localization\Loc::getMessage('SALE_EVENT_ON_BEFORE_'.strtoupper($eventName).'_SET_FIELD_ERROR'), 'SALE_EVENT_ON_BEFORE_'.strtoupper($eventName).'_SET_FIELD_ERROR');
-
-						if ($eventResultData = $eventResult->getParameters())
-						{
-							if (isset($eventResultData) && $eventResultData instanceof ResultError)
-							{
-								/** @var ResultError $errorMsg */
-								$errorMsg = $eventResultData;
-							}
-						}
-
-						$result->addError($errorMsg);
-
-					}
-				}
-
-				if (!$result->isSuccess())
-				{
-					return $result;
-				}
-			}
+			$this->eventName = static::getEntityEventName();
 		}
 
-
-
-		if (!in_array($name, static::getAvailableFields()))
-			throw new Main\ArgumentOutOfRangeException("name=$name");
-
-		$oldValue = $this->fields->get($name);
-		if ($oldValue != $value || ($oldValue === null && $value !== null))
+		if ($this->eventName)
 		{
-			if ($eventName = static::getEntityEventName())
+			$eventManager = Main\EventManager::getInstance();
+			if ($eventsList = $eventManager->findEventHandlers('sale', 'OnBefore'.$this->eventName.'SetField'))
 			{
-				$event = new Main\Event('sale', 'On'.$eventName.'SetField', array(
+				/** @var Main\Entity\Event $event */
+				$event = new Main\Event('sale', 'OnBefore'.$this->eventName.'SetField', array(
 					'ENTITY' => $this,
 					'NAME' => $name,
 					'VALUE' => $value,
-					'OLD_VALUE' => $oldValue,
 				));
 				$event->send();
 
 				if ($event->getResults())
 				{
-					/** @var Main\EventResult $evenResult */
+					$result = new Result();
+					/** @var Main\EventResult $eventResult */
 					foreach($event->getResults() as $eventResult)
 					{
 						if($eventResult->getType() == Main\EventResult::SUCCESS)
@@ -147,6 +161,70 @@ abstract class Entity
 								if (isset($eventResultData['VALUE']) && $eventResultData['VALUE'] != $value)
 								{
 									$value = $eventResultData['VALUE'];
+								}
+							}
+						}
+						elseif($eventResult->getType() == Main\EventResult::ERROR)
+						{
+
+							$errorMsg = new ResultError(Main\Localization\Loc::getMessage('SALE_EVENT_ON_BEFORE_'.strtoupper($this->eventName).'_SET_FIELD_ERROR'), 'SALE_EVENT_ON_BEFORE_'.strtoupper($this->eventName).'_SET_FIELD_ERROR');
+
+							if ($eventResultData = $eventResult->getParameters())
+							{
+								if (isset($eventResultData) && $eventResultData instanceof ResultError)
+								{
+									/** @var ResultError $errorMsg */
+									$errorMsg = $eventResultData;
+								}
+							}
+
+							$result->addError($errorMsg);
+
+						}
+					}
+
+					if (!$result->isSuccess())
+					{
+						return $result;
+					}
+				}
+			}
+		}
+
+		$availableFields = static::getAvailableFieldsMap();
+		if (!isset($availableFields[$name]))
+		{
+			throw new Main\ArgumentOutOfRangeException("name=$name");
+		}
+
+		$oldValue = $this->fields->get($name);
+		if ($oldValue != $value || ($oldValue === null && $value !== null))
+		{
+			if ($this->eventName)
+			{
+				if ($eventsList = $eventManager->findEventHandlers('sale', 'On'.$this->eventName.'SetField'))
+				{
+					$event = new Main\Event('sale', 'On'.$this->eventName.'SetField', array(
+						'ENTITY' => $this,
+						'NAME' => $name,
+						'VALUE' => $value,
+						'OLD_VALUE' => $oldValue,
+					));
+					$event->send();
+
+					if ($event->getResults())
+					{
+						/** @var Main\EventResult $evenResult */
+						foreach($event->getResults() as $eventResult)
+						{
+							if($eventResult->getType() == Main\EventResult::SUCCESS)
+							{
+								if ($eventResultData = $eventResult->getParameters())
+								{
+									if (isset($eventResultData['VALUE']) && $eventResultData['VALUE'] != $value)
+									{
+										$value = $eventResultData['VALUE'];
+									}
 								}
 							}
 						}
@@ -227,8 +305,8 @@ abstract class Entity
 	abstract public function doFinalAction($hasMeaningfulField = false);
 
 	/**
+	 * @internal
 	 * @param bool|false $value
-	 * @return mixed
 	 */
 	abstract public function setMathActionOnly($value = false);
 
@@ -245,14 +323,15 @@ abstract class Entity
 	 */
 	public function setFieldNoDemand($name, $value)
 	{
-		if (!in_array($name, static::getAllFields()))
+		$allFields = static::getAllFields();
+		if (!isset($allFields[$name]))
 		{
 			throw new Main\ArgumentOutOfRangeException($name);
 		}
 
 		$oldValue = $this->fields->get($name);
 
-		if ($oldValue != $value)
+		if ($oldValue != $value || ($oldValue === null && $value !== null))
 		{
 			$this->fields->set($name, $value);
 			static::addChangesToHistory($name, $oldValue, $value);
@@ -279,44 +358,53 @@ abstract class Entity
 			$oldValues[$key] = $this->fields->get($key);
 		}
 
-		if ($eventName = static::getEntityEventName())
+		if ($this->eventName === null)
 		{
-			$event = new Main\Event('sale', 'OnBefore'.$eventName.'SetFields', array(
-				'ENTITY' => $this,
-				'VALUES' => $values,
-				'OLD_VALUES' => $oldValues
-			));
-			$event->send();
+			$this->eventName = static::getEntityEventName();
+		}
 
-			if ($event->getResults())
+		if ($this->eventName)
+		{
+			$eventManager = Main\EventManager::getInstance();
+			if ($eventsList = $eventManager->findEventHandlers('sale', 'OnBefore'.$this->eventName.'SetFields'))
 			{
-				/** @var Main\EventResult $eventResult */
-				foreach($event->getResults() as $eventResult)
+				$event = new Main\Event('sale', 'OnBefore'.$this->eventName.'SetFields', array(
+					'ENTITY' => $this,
+					'VALUES' => $values,
+					'OLD_VALUES' => $oldValues
+				));
+				$event->send();
+
+				if ($event->getResults())
 				{
-					if($eventResult->getType() == Main\EventResult::SUCCESS)
+					/** @var Main\EventResult $eventResult */
+					foreach($event->getResults() as $eventResult)
 					{
-						if ($eventResultData = $eventResult->getParameters())
+						if($eventResult->getType() == Main\EventResult::SUCCESS)
 						{
-							if (isset($eventResultData['VALUES']))
+							if ($eventResultData = $eventResult->getParameters())
 							{
-								$values = $eventResultData['VALUES'];
+								if (isset($eventResultData['VALUES']))
+								{
+									$values = $eventResultData['VALUES'];
+								}
 							}
 						}
-					}
-					elseif($eventResult->getType() == Main\EventResult::ERROR)
-					{
-						$errorMsg = new ResultError(Main\Localization\Loc::getMessage('SALE_EVENT_ON_BEFORE_'.strtoupper($eventName).'_SET_FIELDS_ERROR'), 'SALE_EVENT_ON_BEFORE_'.strtoupper($eventName).'_SET_FIELDS_ERROR');
-
-						if ($eventResultData = $eventResult->getParameters())
+						elseif($eventResult->getType() == Main\EventResult::ERROR)
 						{
-							if (isset($eventResultData) && $eventResultData instanceof ResultError)
-							{
-								/** @var ResultError $errorMsg */
-								$errorMsg = $eventResultData;
-							}
-						}
+							$errorMsg = new ResultError(Main\Localization\Loc::getMessage('SALE_EVENT_ON_BEFORE_'.strtoupper($this->eventName).'_SET_FIELDS_ERROR'), 'SALE_EVENT_ON_BEFORE_'.strtoupper($this->eventName).'_SET_FIELDS_ERROR');
 
-						$result->addError($errorMsg);
+							if ($eventResultData = $eventResult->getParameters())
+							{
+								if (isset($eventResultData) && $eventResultData instanceof ResultError)
+								{
+									/** @var ResultError $errorMsg */
+									$errorMsg = $eventResultData;
+								}
+							}
+
+							$result->addError($errorMsg);
+						}
 					}
 				}
 			}
@@ -392,7 +480,8 @@ abstract class Entity
 	 */
 	public function initField($name, $value)
 	{
-		if (!in_array($name, static::getAllFields()))
+		$allFields = static::getAllFields();
+		if (!isset($allFields[$name]))
 		{
 			throw new Main\ArgumentOutOfRangeException($name);
 		}
@@ -504,15 +593,23 @@ abstract class Entity
 	 */
 	public function isChanged()
 	{
-		return (($changed = $this->fields->getChangedValues()) && !empty($changed));
+		return (bool)$this->fields->getChangedValues();
 	}
 
 	/**
 	 * @return Result
 	 */
-	static public function verify()
+	public function verify()
 	{
 		return new Result();
+	}
+
+	/**
+	 * @internal
+	 */
+	public function clearChanged()
+	{
+		$this->fields->clearChanged();
 	}
 
 }

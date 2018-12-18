@@ -55,7 +55,7 @@ class ServiceRestrictionTable extends Main\Entity\DataManager
 			),
 			'SORT' => array(
 				'data_type' => 'integer',
-				'default' => 100,
+				'default_value' => 100,
 				'title' => Loc::getMessage('DELIVERY_RESTRICTION_ENTITY_SORT_FIELD'),
 			),
 			'CLASS_NAME' => array(

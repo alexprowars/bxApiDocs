@@ -48,17 +48,6 @@ class HostRestriction
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Обработчик событий для системного события <i>OnPageStart</i>. Ничего не делает в режиме командной строки. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/onpagestart.php
-	* @author Bitrix
-	*/
 	public static function onPageStart()
 	{
 		if (\CSecuritySystemInformation::isCliMode())
@@ -83,19 +72,6 @@ class HostRestriction
 	 * @param string $host Requested host for checking.
 	 * @return $this
 	 */
-	
-	/**
-	* <p>Главный метод, который проверяет текущий хост, логирует и выполняет действия. Метод нестатический.</p>
-	*
-	*
-	* @param string $host = null Проверяемый хост.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/process.php
-	* @author Bitrix
-	*/
 	public function process($host = null)
 	{
 		if (is_null($host))
@@ -119,19 +95,6 @@ class HostRestriction
 	 * @return bool Return true for valid (allowed) host.
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет доменное имя согласно политике ограничения доменных имен.</p>
-	*
-	*
-	* @param string $host  Проверяемый хост.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/isvalidhost.php
-	* @author Bitrix
-	*/
 	public function isValidHost($host)
 	{
 		return (bool) (
@@ -171,19 +134,6 @@ class HostRestriction
 	 * @throws LogicException
 	 * @return $this
 	 */
-	
-	/**
-	* <p>Нестатический метод определяет различные настройки для проверки доменных имен. Сейчас поддерживаются:</p> <p>- <code>hosts</code>: строка с разрешенными доменными именами (маски поддерживаются, например: *.example.com);</p> <p>- <code>action</code>: строка с действиями для неразрешенных доменных имен;</p> <p>- <code>action_options</code>: массив с настройками действий;</p> <p>- <code>logging</code>: <code>bool</code>, если установлено <code>true</code>, то необходима запись в лог неразрешенных хостов;</p> <p>- <code>active</code>: <code>bool</code>, если установлено <code>true</code>, то необходима проверка по каждому запросу.</p>
-	*
-	*
-	* @param array $properties  Настройки.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/setproperties.php
-	* @author Bitrix
-	*/
 	public function setProperties(array $properties)
 	{
 		if (isset($properties['hosts']))
@@ -243,22 +193,6 @@ class HostRestriction
 	 * @throws \Bitrix\Main\ArgumentNullException
 	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
 	 */
-	
-	/**
-	* <p>Нестатический метод определяет действия, выполняемые во время проверки .</p>
-	*
-	*
-	* @param string $action  Действия. Поддерживаются перенаправление и запрет доступа.
-	*
-	* @param array $options = array() Настройки действий, пока что поддерживаются только адрес
-	* перенаправления для перенаправления.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/setaction.php
-	* @author Bitrix
-	*/
 	public function setAction($action, array $options = array())
 	{
 		if (!$action)
@@ -301,19 +235,6 @@ class HostRestriction
 	 * @return $this
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 */
-	
-	/**
-	* <p>Нестатический метод активирует или деактивирует запись в лог запросов неразрешенных хостов.</p>
-	*
-	*
-	* @param boolean $isLogNeeded = true Устанавливает <code>true</code>, если необходимо вести запись в лог.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/setlogging.php
-	* @author Bitrix
-	*/
 	public function setLogging($isLogNeeded = true)
 	{
 		if (!is_bool($isLogNeeded))
@@ -342,19 +263,6 @@ class HostRestriction
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 * @return $this
 	 */
-	
-	/**
-	* <p>Нестатический метод активирует или деактивирует автоматическую проверку.</p>
-	*
-	*
-	* @param boolean $isActive = false При установке <code>true</code> будет включена проверка на каждый запрос.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/setactive.php
-	* @author Bitrix
-	*/
 	public function setActive($isActive = false)
 	{
 		if (!is_bool($isActive))
@@ -382,22 +290,6 @@ class HostRestriction
 	 * @throws LogicException
 	 * @return $this
 	 */
-	
-	/**
-	* <p>Нестатический метод сохраняет разрешенные хосты.</p>
-	*
-	*
-	* @param string $hosts  Разрешенные хосты (маски поддерживаются, например *.example.com).
-	*
-	* @param boolean $ignoreChecking = false При установке <code>false</code> будет отключена проверка хоста перед
-	* установкой.
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/sethosts.php
-	* @author Bitrix
-	*/
 	public function setHosts($hosts, $ignoreChecking = false)
 	{
 		if (!is_string($hosts))
@@ -417,17 +309,6 @@ class HostRestriction
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает регулярные выражения (основанные на доменных именах) для проверки.</p> <p></p> <div class="note"> <b>Примечание:</b> регулярные выражения кешируются для повышения производительности и автоматически удаляются после сохранения.</div> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/getvalidationregexp.php
-	* @author Bitrix
-	*/
 	public function getValidationRegExp()
 	{
 		if ($this->validationRegExp)
@@ -453,17 +334,6 @@ class HostRestriction
 	 *
 	 * @return $this
 	 */
-	
-	/**
-	* <p>Нестатический метод сохраняет все свойства, включает автоматическую проверку и очищает кеш, если необходимо.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Security\HostRestriction 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/security/hostrestriction/save.php
-	* @author Bitrix
-	*/
 	public function save()
 	{
 		Config\Option::set('security', $this->optionPrefix.'hosts', $this->hosts, '');

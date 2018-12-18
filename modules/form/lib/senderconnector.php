@@ -32,7 +32,7 @@ class SenderConnectorForm extends \Bitrix\Sender\Connector
 	/**
 	 * @return string
 	 */
-	static public function getName()
+	public function getName()
 	{
 		return Loc::getMessage('sender_connector_form_name');
 	}
@@ -40,7 +40,7 @@ class SenderConnectorForm extends \Bitrix\Sender\Connector
 	/**
 	 * @return string
 	 */
-	static public function getCode()
+	public function getCode()
 	{
 		return "form";
 	}
@@ -48,7 +48,7 @@ class SenderConnectorForm extends \Bitrix\Sender\Connector
 	/**
 	 * @return bool
 	 */
-	static public function requireConfigure()
+	public function requireConfigure()
 	{
 		return true;
 	}

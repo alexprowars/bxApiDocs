@@ -3,6 +3,7 @@
 namespace Bitrix\Main\UI;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\UI\Uploader\Uploader;
 
 Loc::loadMessages(__FILE__);
 
@@ -34,6 +35,15 @@ class FileInput
 		<input type="text" id="#id#Description" name="#description_name#" value="#description#" class="adm-fileinput-item-description" />
 HTML
 		,
+		'regularInput' => '<input class="bx-bxu-fileinput-value" type="hidden" id="#id#Value" name="#input_name#" value="#input_value#" />',
+		'arrayInput' => <<<HTML
+		<input type="hidden" id="#id#Value" name="#input_name#[tmp_name]" value="#input_value#" />
+		<input type="hidden" name="#input_name#[type]" value="#type#" />
+		<input type="hidden" name="#input_name#[name]" value="#name#" />
+		<input type="hidden" name="#input_name#[size]" value="#size#" />
+		<input type="hidden" name="#input_name#[error]" value="0" />
+HTML
+	,
 		'new' => <<<HTML
 	<div class="adm-fileinput-item">
 		<div class="adm-fileinput-item-preview">
@@ -65,6 +75,39 @@ HTML
 	</div>
 HTML
 		,
+		'unsaved' => <<<HTML
+<div class="adm-fileinput-item-wrapper" id="#id#Block">
+	<div class="adm-fileinput-item">
+		<div class="adm-fileinput-item-preview">
+			<span class="adm-fileinput-item-loading">
+				<span class="container-loading-title">#MESS_LOADING#</span>
+				<span class="container-loading-bg"><span class="container-loading-bg-progress" style="width: 60%;" id="#id#Progress"></span></span>
+			</span>
+			<div class="adm-fileinput-item-preview-icon">
+				<div class="bx-file-icon-container-medium icon-#ext#">
+					<div class="bx-file-icon-cover">
+						<div class="bx-file-icon-corner">
+							<div class="bx-file-icon-corner-fix"></div>
+						</div>
+						<div class="bx-file-icon-images"></div>
+					</div>
+					<div class="bx-file-icon-label"></div>
+				</div>
+				<span class="container-doc-title" id="#id#Name">#name#</span>
+			</div>
+			<div class="adm-fileinput-item-preview-img" id="#id#Canvas"></div>
+			#input#
+		</div>
+		#description#
+		<div class="adm-fileinput-item-panel">
+			<span class="adm-fileinput-item-panel-btn adm-btn-setting" id="#id#Edit">&nbsp;</span>
+			<span class="adm-fileinput-item-panel-btn adm-btn-del" id="#id#Del">&nbsp;</span>
+		</div>
+		<div id="#id#Properties" class="adm-fileinput-item-properties">#properties#</div>
+	</div>
+</div>
+HTML
+	,
 		/**
 		 * adm-fileinput-item-saved - saved
 		 * adm-fileinput-item-error - error
@@ -161,14 +204,18 @@ HTML
 		);
 		$this->templates["uploaded"] = preg_replace(array_keys($replace), array_values($replace), self::$templatePatterns["uploaded"]);
 		$this->templates["unexisted"] = preg_replace(array_keys($replace), array_values($replace), self::$templatePatterns["unexisted"]);
-
 		$this->templates["new"] = preg_replace(array_keys($replace), array_values($replace), self::$templatePatterns["new"]);
+		$this->templates["unsaved"] = preg_replace(array_keys($replace), array_values($replace), self::$templatePatterns["unsaved"]);
 		$replace = array(
 			"#input_name#" => $inputs["name"],
 			"#input_value#" => "",
 			"#description_name#" => self::getInputName($inputs["name"], "_descr")
 		);
 		$this->templates["new"] = str_replace(array_keys($replace), array_values($replace), $this->templates["new"]);
+
+		$this->templates["unsavedArray"] = str_replace("#input#", self::$templatePatterns["arrayInput"], $this->templates["unsaved"]);
+		$this->templates["unsaved"] = str_replace("#input#", self::$templatePatterns["regularInput"], $this->templates["unsaved"]);
+
 		$inputs = array_merge($this->uploadSetts, $params);
 
 		$this->uploadSetts = array(
@@ -218,47 +265,35 @@ HTML
 	 * @param array $values
 	 * @return string
 	 */
-	public function show($values = array())
+	public function show($values = array(), $getDataFromRequest = false)
 	{
 		\CJSCore::Init(array('fileinput'));
 
 		$files = '';
-
-		if (is_array($values))
+		if (!is_array($values) || is_array($values) && array_key_exists("tmp_name", $values))
+			$values = array($this->elementSetts["name"] => $values);
+		$maxIndex = 0;
+		$pattMaxIndex = strpos($this->elementSetts["name"], "#IND#") > 0 ? str_replace("#IND#", "(\\d+)", preg_quote($this->elementSetts["name"])) : null;
+		foreach($values as $inputName => $fileId)
 		{
-			foreach($values as $inputName => $fileId)
+			if ($pattMaxIndex && preg_match("/".$pattMaxIndex."/", $inputName, $matches))
 			{
-				if ($fileId > 0)
+				$maxIndex = max($maxIndex, intval($matches[1]));
+			}
+			if ($res = $this->getFile($fileId, $inputName, $getDataFromRequest))
+			{
+				$t = ($res["fileId"] > 0 ? $this->templates["uploaded"] : (is_array($fileId) ? $this->templates["unsavedArray"] : $this->templates["unsaved"]));
+				if (!is_array($res))
 				{
-					$res = $this->getFile($fileId, $inputName);
-					$t = $this->templates["uploaded"];
-					if (!is_array($res))
-					{
-						$res = $this->formFile($fileId, $inputName);
-						$t = $this->templates["unexisted"];
-					}
-					$patt = array();
-					foreach ($res as $pat => $rep)
-						$patt[] = "#".$pat."#";
-					$files .= str_ireplace($patt, array_values($res), $t);
-					$this->files[] = $res;
+					$res = $this->formFile($fileId, $inputName);
+					$t = $this->templates["unexisted"];
 				}
+				$patt = array();
+				foreach ($res as $pat => $rep)
+					$patt[] = "#".$pat."#";
+				$files .= str_ireplace($patt, array_values($res), $t);
+				$this->files[] = $res;
 			}
-		}
-		else if (($fileId = intval($values)) > 0)
-		{
-			$res = $this->getFile($fileId, $this->elementSetts["name"]);
-			$t = $this->templates["uploaded"];
-			if (!is_array($res))
-			{
-				$res = $this->formFile($fileId, $this->elementSetts["name"]);
-				$t = $this->templates["unexisted"];
-			}
-			$patt = array();
-			foreach ($res as $pat => $rep)
-				$patt[] = "#".$pat."#";
-			$files .= str_ireplace($patt, array_values($res), $t);
-			$this->files[] = $res;
 		}
 
 		$canDelete = true ? '' : 'adm-fileinput-non-delete'; // In case we can not delete files
@@ -266,7 +301,7 @@ HTML
 
 		$settings = \CUserOptions::GetOption('main', 'fileinput');
 		$settings = (is_array($settings) ? $settings : array(
-			"frameFiles" => "Y",
+			"frameFiles" => "N",
 			"pinDescription" => "N",
 			"mode" => "mode-pict",
 			"presets" => array(
@@ -308,7 +343,7 @@ HTML
 			$uploadSetts["presets"] = $settings["presets"];
 			$uploadSetts["presetActive"] = $settings["presetActive"];
 		}
-
+		$uploadSetts["maxIndex"] = $maxIndex;
 		$template = \CUtil::JSEscape($this->templates["new"]);
 		$classSingle = (array_key_exists("maxCount", $uploadSetts) && intval($uploadSetts["maxCount"]) == 1 ? "adm-fileinput-wrapper-single" : "");
 		$uploadSetts = \CUtil::PhpToJSObject($uploadSetts);
@@ -337,9 +372,9 @@ HTML
 {
 	if (BX)
 	{
-		BX.ready(function(){
+		BX.ready(BX.defer(function(){
 			new BX.UI.FileInput('{$this->id}', {$uploadSetts}, {$elementSetts}, {$values}, '{$template}');
-		});
+		}));
 	}
 })(window["BX"] || top["BX"]);
 </script>
@@ -408,21 +443,22 @@ HTML;
 		}
 		return $result;
 	}
-	private function getFile($fileId = "", $inputName = "file")
+	private function getFile($fileId = "", $inputName = "file", $getDataFromRequest = false)
 	{
 		$result = NULL;
 		$properties = array();
-		if (is_array($fileId))
+		if (is_array($fileId) && array_key_exists("ID", $fileId))
 		{
 			$properties = $fileId;
 			unset($properties["ID"]);
 			$fileId = $fileId["ID"];
 		}
 
-		if (($ar = \CFile::GetFileArray($fileId)) && is_array($ar))
+		if ($fileId > 0 && ($ar = \CFile::GetFileArray($fileId)) && is_array($ar))
 		{
 			$name = (strlen($ar['ORIGINAL_NAME'])>0?$ar['ORIGINAL_NAME']:$ar['FILE_NAME']);
 			$result = array(
+				'fileId' => $fileId,
 				'id' => $fileId,
 				'name' => $name,
 				'description_name' => self::getInputName($inputName, "_descr"),
@@ -445,38 +481,62 @@ HTML;
 		}
 		else
 		{
-			$strFilePath = $_SERVER["DOCUMENT_ROOT"].$fileId;
-			$io = \CBXVirtualIo::GetInstance();
-			if($io->FileExists($strFilePath))
+			$file = null;
+			if (is_array($fileId) && array_key_exists("tmp_name", $fileId))
+				$file = array(
+					"tmp_name" => $fileId["tmp_name"],
+					"type" => (array_key_exists("type", $fileId) ? $fileId["type"] : null),
+					"name" => (array_key_exists("name", $fileId) ? $fileId["name"] : null),
+					"description" => (array_key_exists("description", $fileId) ? $fileId["description"] : null)
+				);
+			else if (is_string($fileId))
+				$file = array(
+					"tmp_name" => $fileId,
+					"type" => null,
+					"name" => null,
+					"description" => null
+				);
+			if (is_array($file) && ($paths = Uploader::getPaths($file["tmp_name"])) &&
+				($flTmp = \CBXVirtualIo::GetInstance()->GetFile($paths["tmp_name"])) && $flTmp->IsExists())
 			{
-				$flTmp = $io->GetFile($strFilePath);
-				if ($flTmp->IsExists())
+				$ar = \CFile::GetImageSize($paths["tmp_name"]);
+				$name = is_string($file["name"]) && strlen($file["name"]) > 0 ? $file["name"] : $flTmp->getName();
+				$result = array(
+					'id' => md5($file["tmp_name"]),
+					'name' => $name,
+					'description_name' => self::getInputName($inputName, "_descr"),
+					'description' => is_string($file["description"]) && strlen($file["description"]) > 0 ? $file["description"] : "",
+					'size' => $flTmp->GetFileSize(),
+					'type' => is_string($file["type"]) && strlen($file["type"]) > 0 ? $file["type"] : $flTmp->getType(),
+					'input_name' => $inputName,
+					'input_value' => $file["tmp_name"],
+					'entity' => "file",
+					'ext' => GetFileExtension($name),
+					'real_url' => $paths["tmp_url"]
+				);
+				if (is_array($ar))
 				{
-					$ar = \CFile::GetImageSize($strFilePath);
-					$result = array(
-						'id' => md5($fileId),
-						'name' => $flTmp->getName(),
-						'description_name' => self::getInputName($inputName, "_descr"),
-						'description' => "",
-						'size' => $flTmp->GetFileSize(),
-						'type' => $flTmp->getType(),
-						'input_name' => $inputName,
-						'input_value' => $fileId,
-						'entity' => ((is_array($ar) && $ar["WIDTH"] > 0 && $ar["HEIGHT"] > 0) ? "image" : "file"),
-						'ext' => GetFileExtension($flTmp->getName()),
-						'real_url' => $fileId
-					);
-					if ($result['entity'] == "image")
-						$result['tmp_url'] = $fileId;
+					$result['entity'] = "image";
+					$result['tmp_url'] = $paths["tmp_url"];
+					if (isset($ar["mime"]))
+						$result['type'] = $ar["mime"];
+					$result['width'] = $ar[0];
+					$result['height'] = $ar[1];
 				}
 			}
 		}
-		if (!empty($this->elementSetts["properties"]))
+		if (is_array($result) && !empty($this->elementSetts["properties"]))
 		{
+			$request = null;
+			if ($getDataFromRequest === true)
+			{
+				$request = \Bitrix\Main\Context::getCurrent()->getRequest();
+				$result["description"] = $request->isPost() ? $request->getPost($result["description_name"]) : $request->getQuery($result["description_name"]);
+			}
 			foreach ($this->elementSetts["properties"] as $key)
 			{
 				$result[$key."_name"] = self::getInputName($inputName, "_".$key);
-				$result[$key] = $properties[$key];
+				$result[$key] = (is_null($request) ? $properties[$key] : ($request->isPost() ? $request->getPost($result[$key."_name"]) : $request->getQuery($result[$key."_name"])));
 			}
 		}
 		return $result;
@@ -488,6 +548,21 @@ HTML;
 			return $inputName;
 		$p = strpos($inputName, "[");
 		return  ($p > 0) ? substr($inputName, 0, $p).$type.substr($inputName, $p) : $inputName.$type;
+	}
+
+	/**
+	 * Prepares file array for saving. It is important to use if BX_TEMPORARY_FILES_DIRECTORY is defined.
+	 * @param $file
+	 * @return array|null
+	 */
+	public static function prepareFile($file)
+	{
+		$return = null;
+		if (is_array($file) && isset($file["tmp_name"]) && !empty($file["tmp_name"]))
+		{
+
+		}
+		return $file;
 	}
 }
 ?>

@@ -14,7 +14,7 @@ class Application
 {
 	protected $validUrls = array();
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
@@ -23,17 +23,6 @@ class Application
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет валидность значений для приложения.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/authentication/application/checkscope.php
-	* @author Bitrix
-	*/
 	public function checkScope()
 	{
 		/** @var Main\HttpRequest $request */

@@ -901,7 +901,7 @@ final class ImportProcess extends Process
 	/////////////////////////////////////
 	// about stage util functions
 
-	static public function getTypes()
+	public function getTypes()
 	{
 		$result = array();
 		$res = Location\TypeTable::getList(array(
@@ -1740,7 +1740,7 @@ final class ImportProcess extends Process
 		return self::LOCAL_SETS_PATH.sprintf(self::LOCAL_LOCATION_FILE, $i);
 	}
 
-	static public function saveUserFile($inputName)
+	public function saveUserFile($inputName)
 	{
 		if(is_array($_FILES[$inputName]))
 		{

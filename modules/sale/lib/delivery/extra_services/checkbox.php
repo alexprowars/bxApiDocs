@@ -16,7 +16,7 @@ class Checkbox extends Base
 		$this->params["TYPE"] = "Y/N";
 	}
 
-	static public function getClassTitle()
+	public function getClassTitle()
 	{
 		return Loc::getMessage("DELIVERY_EXTRA_SERVICE_CHECKBOX_TITLE");
 	}

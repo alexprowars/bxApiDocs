@@ -2,7 +2,6 @@
 namespace Bitrix\Main\Data;
 
 use Bitrix\Main;
-use Bitrix\Main\IO;
 
 class CacheEngineFiles
 	implements ICacheEngine, ICacheEngineStat
@@ -23,7 +22,7 @@ class CacheEngineFiles
 	 */
 	public function __construct()
 	{
-		$cacheConfig = \Bitrix\Main\Config\Configuration::getValue("cache");
+		$cacheConfig = Main\Config\Configuration::getValue("cache");
 		if ($cacheConfig && is_array($cacheConfig) && isset($cacheConfig["use_lock"]))
 		{
 			$this->useLock = (bool)$cacheConfig["use_lock"];
@@ -35,17 +34,6 @@ class CacheEngineFiles
 	 *
 	 * @return integer|false
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает количество прочитанных байтов с диска или <i>false</i>, если операция чтения была неуспешной.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/getreadbytes.php
-	* @author Bitrix
-	*/
 	public function getReadBytes()
 	{
 		return $this->read;
@@ -56,17 +44,6 @@ class CacheEngineFiles
 	 *
 	 * @return integer|false
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает количество байтов записанных на диск или <i>false</i> если записи не произошло.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/getwrittenbytes.php
-	* @author Bitrix
-	*/
 	public function getWrittenBytes()
 	{
 		return $this->written;
@@ -77,17 +54,6 @@ class CacheEngineFiles
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает путь к физическому файлу после операции чтения или записи.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/getcachepath.php
-	* @author Bitrix
-	*/
 	public function getCachePath()
 	{
 		return $this->path;
@@ -98,18 +64,7 @@ class CacheEngineFiles
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает <i>true</i> если файл кеша доступен для записи и чтения.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/isavailable.php
-	* @author Bitrix
-	*/
-	static public function isAvailable()
+	public function isAvailable()
 	{
 		return true;
 	}
@@ -206,24 +161,7 @@ class CacheEngineFiles
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод очищает (удаляет) директорию ли файл кеша.</p>
-	*
-	*
-	* @param string $baseDir  Базовая директория кеша (обычно <code>/bitrix/cache</code>).
-	*
-	* @param string $initDir = '' Директория без базы.
-	*
-	* @param string $filename = '' имя файла.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/clean.php
-	* @author Bitrix
-	*/
-	static public function clean($baseDir, $initDir = '', $filename = '')
+	public function clean($baseDir, $initDir = '', $filename = '')
 	{
 		$documentRoot = Main\Loader::getDocumentRoot();
 		if (($filename !== false) && ($filename !== ""))
@@ -343,27 +281,6 @@ class CacheEngineFiles
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Нестатический метод читает кеш в файле. Возвращает <i>true</i> если файл существует, не просрочен и успешно прочитан.</p>
-	*
-	*
-	* @param mixed $mixed  Кешированный результат.
-	*
-	* @param string $baseDir  Базовая директория для кеша (обычно <code>/bitrix/cache</code>).
-	*
-	* @param string $initDir  Директория без базы.
-	*
-	* @param string $filename  имя файла
-	*
-	* @param integer $TTL  Период экспирации в секундах.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/read.php
-	* @author Bitrix
-	*/
 	public function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		$documentRoot = Main\Loader::getDocumentRoot();
@@ -407,32 +324,40 @@ class CacheEngineFiles
 		$this->read = @filesize($fn);
 		$this->path = $fn;
 
-		if (intval($datecreate) < (mktime() - $TTL))
+		$res = true;
+		if (intval($datecreate) < (time() - $TTL))
 		{
 			if ($this->useLock)
 			{
 				if ($this->lock($fn))
 				{
-					return false;
+					$res = false;
 				}
 			}
 			else
 			{
-				return false;
+				$res = false;
 			}
 		}
 
-		if (is_array($arAllVars))
+		if($res == true)
 		{
-			$arAllVars = unserialize($ser_content);
+			if (is_array($arAllVars))
+			{
+				$arAllVars = unserialize($ser_content);
+			}
+			else
+			{
+				$arAllVars = fread($handle, $this->read);
+			}
 		}
-		else
+
+		if($handle)
 		{
-			$arAllVars = fread($handle, $this->read);
 			fclose($handle);
 		}
 
-		return true;
+		return $res;
 	}
 
 	/**
@@ -446,27 +371,6 @@ class CacheEngineFiles
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод записывает кеш в файл.</p>
-	*
-	*
-	* @param mixed $arAllVars  Закешированный результат.
-	*
-	* @param string $baseDir  Базовая директория для кеша (обычно <code>/bitrix/cache</code>).
-	*
-	* @param string $initDir  Директория для кеша без базы.
-	*
-	* @param string $filename  Имя файла.
-	*
-	* @param integer $TTL  Период экспирации в секундах.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/write.php
-	* @author Bitrix
-	*/
 	public function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		static $search = array("\\", "'", "\0");
@@ -485,15 +389,15 @@ class CacheEngineFiles
 			{
 				$contents = "<?";
 				$contents .= "\nif(\$INCLUDE_FROM_CACHE!='Y')return false;";
-				$contents .= "\n\$datecreate = '".str_pad(mktime(), 12, "0", STR_PAD_LEFT)."';";
-				$contents .= "\n\$dateexpire = '".str_pad(mktime() + intval($TTL), 12, "0", STR_PAD_LEFT)."';";
+				$contents .= "\n\$datecreate = '".str_pad(time(), 12, "0", STR_PAD_LEFT)."';";
+				$contents .= "\n\$dateexpire = '".str_pad(time() + intval($TTL), 12, "0", STR_PAD_LEFT)."';";
 				$contents .= "\n\$ser_content = '".str_replace($search, $replace, serialize($arAllVars))."';";
 				$contents .= "\nreturn true;";
 				$contents .= "\n?>";
 			}
 			else
 			{
-				$contents = "BX".str_pad(mktime(), 12, "0", STR_PAD_LEFT).str_pad(mktime() + intval($this->TTL), 12, "0", STR_PAD_LEFT);
+				$contents = "BX".str_pad(time(), 12, "0", STR_PAD_LEFT).str_pad(time() + intval($this->TTL), 12, "0", STR_PAD_LEFT);
 				$contents .= $arAllVars;
 			}
 
@@ -524,20 +428,7 @@ class CacheEngineFiles
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает <i>true</i> если файл кеша просрочен.</p>
-	*
-	*
-	* @param string $path  Абсолютный физический путь.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/iscacheexpired.php
-	* @author Bitrix
-	*/
-	static public function isCacheExpired($path)
+	public function isCacheExpired($path)
 	{
 		if (!file_exists($path))
 		{
@@ -561,7 +452,7 @@ class CacheEngineFiles
 			|| preg_match("/^(\\d{12})/", $header, $match)
 		)
 		{
-			if (strlen($match[1]) <= 0 || doubleval($match[1]) < mktime())
+			if (strlen($match[1]) <= 0 || doubleval($match[1]) < time())
 				return true;
 		}
 
@@ -576,7 +467,7 @@ class CacheEngineFiles
 	 *
 	 * @return void
 	 */
-	protected function deleteOneDir($etime = 0, $ar = false)
+	protected static function deleteOneDir($etime = 0, $ar = false)
 	{
 		$deleteFromQueue = false;
 		$dirName = Main\Loader::getDocumentRoot().$ar["RELATIVE_PATH"];
@@ -637,19 +528,6 @@ class CacheEngineFiles
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статическая функция агент которая удаляет отмеченные директории кеша.</p>
-	*
-	*
-	* @param integer $count = 1 Желаемое для удаления количество.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/data/cacheenginefiles/delayeddelete.php
-	* @author Bitrix
-	*/
 	public static function delayedDelete($count = 1)
 	{
 		$con = Main\Application::getConnection();

@@ -3,27 +3,33 @@
 namespace Bitrix\Sale\Sender;
 
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Loader;
+
+if (!Loader::includeModule('sender'))
+{
+	return;
+}
 
 Loc::loadMessages(__FILE__);
 
 class TriggerOrderPaid extends \Bitrix\Sender\TriggerConnector
 {
-	static public function getName()
+	public function getName()
 	{
 		return Loc::getMessage('sender_trigger_order_paid_name');
 	}
 
-	static public function getCode()
+	public function getCode()
 	{
 		return "order_paid";
 	}
 
-	static public function getEventModuleId()
+	public function getEventModuleId()
 	{
 		return 'sale';
 	}
 
-	static public function getEventType()
+	public function getEventType()
 	{
 		return "OnSalePayOrder";
 	}
@@ -38,7 +44,7 @@ class TriggerOrderPaid extends \Bitrix\Sender\TriggerConnector
 			return $this->filterConnectorData();
 	}
 
-	static public function getConnector()
+	public function getConnector()
 	{
 		$connector = new \Bitrix\Sale\Sender\ConnectorOrder;
 		$connector->setModuleId('sale');

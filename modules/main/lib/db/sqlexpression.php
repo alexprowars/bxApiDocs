@@ -58,17 +58,6 @@ class SqlExpression
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает переменную <code>$expression</code> с перемещёнными плейсхолдерами.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/sqlexpression/compile.php
-	* @author Bitrix
-	*/
 	public function compile()
 	{
 		$this->i = -1;
@@ -93,7 +82,7 @@ class SqlExpression
 
 			$parts = str_replace('\\?', '?', $parts);
 
-			return implode('\\', $parts);
+			return implode('\\\\', $parts);
 		}
 	}
 

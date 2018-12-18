@@ -11,144 +11,91 @@ use Bitrix\Main\ArgumentTypeException;
 
 final class DayContext extends Internals\BaseContext
 {
-	/** Add value to counter. If counter not exists set counter to value.
-	 * @param string    $name  - counter name
-	 * @param int|float $value - number to add
-	 */
-	
 	/**
-	* <p>Нестатический метод добавляет значение к счетчику. Если счетчик не существует, то создается.</p>
-	*
-	*
-	* @param string $name  Имя счетчика.
-	*
-	* @param string $integer  Добавляемое значение.
-	*
-	* @param float $value  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/addcounter.php
-	* @author Bitrix
-	*/
-	public function addCounter($name, $value)
+	 * Add value to counter. If counter not exists set counter to value.
+	 *
+	 * @param Date $day Counter date.
+	 * @param string $name Counter name.
+	 * @param int|float $value Number to add.
+	 * @return void
+	 */
+	public function addCounter($day, $name, $value = null)
 	{
-		if (($id = $this->id) === null)
+		if (func_num_args() == 2)
 		{
-			$value = (float) $value;
+			$value = $name;
+			$name  = $day;
+			$day   = new Date();
+		}
 
-			if ($v =& self::$session['PENDING_COUNTERS'][$name])
-			{
-				$v += $value;
-			}
-			else
-			{
-				$v = $value;
-			}
+		$instance = self::getInstance();
+
+		if ($this->id === null && $this === $instance)
+		{
+			$pending =& self::$session['PENDING_COUNTERS'];
+
+			if (empty($pending[$name]))
+				$pending[$name] = 0;
+
+			$pending[$name] += (float) $value;
 		}
 		else
 		{
-			parent::addCounter(new Date(), $name, $value);
+			parent::addCounter($day, $name, $value);
 		}
 	}
 
-	/** Add value to counter (once a day per person). If counter not exists set counter to value.
-	 * @param string    $name  - counter name
-	 * @param int|float $value - number to add
-	 */
-	
 	/**
-	* <p>Нестатический метод добавляет значение к счетчику (раз в день одному человеку). Если счетчик не существует, то создается.</p>
-	*
-	*
-	* @param string $name  Имя счетчика.
-	*
-	* @param string $integer  Добавляемое значение.
-	*
-	* @param float $value  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/adddaycounter.php
-	* @author Bitrix
-	*/
+	 * Add value to counter (once a day per person). If counter not exists set counter to value.
+	 *
+	 * @param string $name Counter name.
+	 * @param int|float $value Number to add.
+	 * @return void
+	 */
 	public function addDayCounter($name, $value)
 	{
+		$instance = self::getInstance();
 		$session =& self::$session;
 
-		if (($id = $this->id) === null)
+		if ($this->id === null && $this === $instance)
 		{
-			$session['PENDING_DAY_COUNTERS'][$name] = $value;
+			$session['PENDING_DAY_COUNTERS'][$name] = (float) $value;
 		}
 		else
 		{
 			$unique =& $session['UNIQUE'];
 
-			if (! in_array($name, $unique, true))
+			if (!in_array($name, $unique, true))
 			{
-				$unique [] = $name;
+				$unique[] = $name;
 
 				$this->addCounter($name, $value);
-				$this->setCookie(); // TODO HACK save to database into session
+				$this->setCookie();
 			}
 		}
 	}
 
-	/** Add currency value to counter. If counter not exists set counter to value.
-	 * @param string           $name     - counter name
-	 * @param int|float|string $value    - numeric value
-	 * @param string           $currency - currency code (eg: RUB)
-	 */
-	
 	/**
-	* <p>Нестатический метод добавляет значение (в валюте) к счетчику. Если счетчик не существует, то создается.</p>
-	*
-	*
-	* @param string $name  Имя счетчика.
-	*
-	* @param string $integer  Числовое значение.
-	*
-	* @param intege $float  Код валюты (например, RUB).
-	*
-	* @param string $value  
-	*
-	* @param string $currency  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/addcurrencycounter.php
-	* @author Bitrix
-	*/
+	 * Add currency value to counter. If counter not exists set counter to value.
+	 *
+	 * @param string $name Counter name.
+	 * @param int|float|string $value Numeric value.
+	 * @param string $currency Currency code (eg: RUB).
+	 * @return void
+	 */
 	public function addCurrencyCounter($name, $value, $currency)
 	{
 		$this->addCounter($name, Utils::convertToBaseCurrency($value, $currency));
 	}
 
-	/** Attach entity item to context.
-	 * @param string     $entity
-	 * @param string|int $item
-	 * @throws ArgumentTypeException
-	 */
-	
 	/**
-	* <p>Нестатический метод добавляет сущность к контексту.</p>
-	*
-	*
-	* @param string $entity  Тип сущности.
-	*
-	* @param string $string  ID сущности.
-	*
-	* @param integer $item  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/attachentityitem.php
-	* @author Bitrix
-	*/
+	 * Attach entity item to context.
+	 *
+	 * @param string $entity Entity type.
+	 * @param string|int $item Entity item ID.
+	 * @throws ArgumentTypeException
+	 * @return void
+	 */
 	public function attachEntityItem($entity, $item)
 	{
 		if (! is_string($entity))
@@ -157,7 +104,9 @@ final class DayContext extends Internals\BaseContext
 		if (! is_scalar($item))
 			throw new ArgumentTypeException('item', 'scalar');
 
-		if (($id = $this->id) === null)
+		$instance = self::getInstance();
+
+		if ($this->id === null && $this === $instance)
 		{
 			self::$session['PENDING_ENTITY_ITEMS'][$entity.':'.$item] = array('ENTITY' => $entity, 'ITEM' => $item);
 		}
@@ -165,81 +114,79 @@ final class DayContext extends Internals\BaseContext
 		{
 			try
 			{
-				$result = Internals\ContextEntityItemTable::add(array(
-					'CONTEXT_ID' => $id,
+				Internals\ContextEntityItemTable::add(array(
+					'CONTEXT_ID' => $this->id,
 					'ENTITY'     => $entity,
 					'ITEM'       => $item,
 				));
-
-				$result->isSuccess(); // TODO
 			}
 			catch (\Bitrix\Main\DB\SqlQueryException $e)
 			{
-				// TODO log??
 			}
 		}
 	}
 
-	/** Get context of attached entity item.
-	 * @param $entity
-	 * @param $item
+	/**
+	 * Get context of attached entity item.
+	 *
+	 * @param string $entity Entity type.
+	 * @param string|int $item Entity item ID.
 	 * @return self
 	 */
-	
-	/**
-	* <p>Статический метод получает контекст, закрепленный за сущностью.</p>
-	*
-	*
-	* @param mixed $entity  Тип сущности.
-	*
-	* @param $entit $item  ID сущности.
-	*
-	* @return \Bitrix\Conversion\DayContext 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/getentityiteminstance.php
-	* @author Bitrix
-	*/
-	static public function getEntityItemInstance($entity, $item)
+	public static function getEntityItemInstance($entity, $item)
 	{
-		$instance = new self;
+		$instance = self::getInstance();
 
-		if ($row = Internals\ContextEntityItemTable::getRow(array(
+		$context = Internals\ContextEntityItemTable::getList(array(
 			'select' => array('CONTEXT_ID'),
 			'filter' => array('=ENTITY' => $entity, '=ITEM' => $item),
-		)))
+			'limit'  => 1,
+		))->fetch();
+
+		$contextId = !empty($context['CONTEXT_ID']) ? $context['CONTEXT_ID'] : self::EMPTY_CONTEXT_ID;
+		if ($contextId !== $instance->id)
 		{
-			$instance->id = $row['CONTEXT_ID'];
-		}
-		else
-		{
-			$instance->id = self::EMPTY_CONTEXT_ID;
+			$instance = new self;
+			$instance->id = $contextId;
 		}
 
-		self::getInstance(); // load cookie unique counters
+		return $instance;
+	}
+
+	/**
+	 * Returns context for given Site
+	 *
+	 * @param string $siteId Site ID.
+	 * @return self
+	 */
+	public static function getSiteInstance($siteId)
+	{
+		$instance = self::getInstance();
+
+		if (preg_match('/[a-z0-9_]{2}/i', $siteId) && self::getSiteId() != $siteId && \CSite::getById($siteId)->fetch())
+		{
+			$instance = new self;
+
+			foreach (EventManager::getInstance()->findEventHandlers('conversion', 'OnSetDayContextAttributes') as $handler)
+				ExecuteModuleEventEx($handler, array($instance));
+
+			$instance->setAttribute('conversion_site', $siteId);
+			$instance->save();
+		}
 
 		return $instance;
 	}
 
 	/** @var self $instance */
-	static private $instance;
-	static private $session;
+	private static $instance;
+	private static $session;
 
-	/** Get day context singleton instance.
+	/**
+	 * Get day context singleton instance.
+	 *
 	 * @return self
 	 */
-	
-	/**
-	* <p>Статический метод возвращает экземпляр уникального дневного контекста.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Conversion\DayContext 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/conversion/daycontext/getinstance.php
-	* @author Bitrix
-	*/
-	static public function getInstance()
+	public static function getInstance()
 	{
 		if (! self::$instance)
 		{
@@ -252,7 +199,6 @@ final class DayContext extends Internals\BaseContext
 			{
 				$session = array('ID' => null, 'EXPIRE' => $expire, 'UNIQUE' => array());
 
-				//global $APPLICATION; $cookie = $APPLICATION->get_cookie($varname);
 				if ($cookie = $_COOKIE[$varName])
 				{
 					try
@@ -286,12 +232,12 @@ final class DayContext extends Internals\BaseContext
 		return self::$instance;
 	}
 
+	/** @internal */
 	private function setCookie()
 	{
 		$session = self::$session;
 
-		//$APPLICATION->set_cookie($varname, $id, strtotime('today 23:59'));
-		setcookie(self::getVarName(), Json::encode(array(
+		@setcookie(self::getVarName(), Json::encode(array(
 			'ID'     => $session['ID'    ],
 			'EXPIRE' => $session['EXPIRE'],
 			'UNIQUE' => $session['UNIQUE'],
@@ -299,60 +245,43 @@ final class DayContext extends Internals\BaseContext
 	}
 
 	/** @internal */
-	static public function saveInstance()
+	public static function saveInstance()
 	{
 		$instance = self::getInstance();
 		$session =& self::$session;
 
-		// save day context
-
 		if ($instance->id === null)
 		{
 			foreach (EventManager::getInstance()->findEventHandlers('conversion', 'OnSetDayContextAttributes') as $handler)
-			{
 				ExecuteModuleEventEx($handler, array($instance));
-			}
 
 			$instance->save();
-			$session['ID'] = $instance->id;
-			$instance->setCookie();
 		}
 
-		// save pending counters
+		$session['ID'] = $instance->id;
+		$instance->setCookie();
 
-		if ($pending =& $session['PENDING_COUNTERS'])
+		if (!empty($session['PENDING_COUNTERS']) && is_array($session['PENDING_COUNTERS']))
 		{
-			foreach($pending as $name => $value)
-			{
+			foreach ($session['PENDING_COUNTERS'] as $name => $value)
 				$instance->addCounter($name, $value);
-			}
-
-			$pending = array();
 		}
 
-		if ($pending =& $session['PENDING_DAY_COUNTERS'])
+		if (!empty($session['PENDING_DAY_COUNTERS']) && is_array($session['PENDING_DAY_COUNTERS']))
 		{
-			foreach($pending as $name => $value)
-			{
+			foreach ($session['PENDING_DAY_COUNTERS'] as $name => $value)
 				$instance->addDayCounter($name, $value);
-			}
-
-			$pending = array();
 		}
 
-		if ($pending =& $session['PENDING_ENTITY_ITEMS'])
+		if (!empty($session['PENDING_ENTITY_ITEMS']) && is_array($session['PENDING_ENTITY_ITEMS']))
 		{
-			foreach($pending as $i)
-			{
+			foreach ($session['PENDING_ENTITY_ITEMS'] as $i)
 				$instance->attachEntityItem($i['ENTITY'], $i['ITEM']);
-			}
-
-			$pending = array();
 		}
 	}
 
 	/** @internal */
-	static public function getVarName()
+	public static function getVarName()
 	{
 		static $name;
 
@@ -365,7 +294,7 @@ final class DayContext extends Internals\BaseContext
 	}
 
 	/** @internal */
-	static public function getSiteId()
+	public static function getSiteId()
 	{
 		static $siteId = null;
 
@@ -375,8 +304,6 @@ final class DayContext extends Internals\BaseContext
 
 			if (defined('ADMIN_SECTION') && ADMIN_SECTION === true)
 			{
-				// In admin section SITE_ID = "ru" !!!
-
 				if ($row = SiteTable::getList(array(
 					'select' => array('LID'),
 					'order'  => array('DEF' => 'DESC', 'SORT' => 'ASC'),

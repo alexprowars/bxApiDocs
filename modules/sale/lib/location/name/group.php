@@ -31,7 +31,7 @@ class GroupTable extends NameEntity
 		return 'LID';
 	}
 
-	static public function getReferenceFieldName()
+	public function getReferenceFieldName()
 	{
 		return 'LOCATION_GROUP_ID';
 	}

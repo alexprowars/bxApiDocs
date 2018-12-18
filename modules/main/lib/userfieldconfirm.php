@@ -19,11 +19,6 @@ use Bitrix\Main\Entity;
 
 class UserFieldConfirmTable extends Entity\DataManager
 {
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_user_field_confirm';

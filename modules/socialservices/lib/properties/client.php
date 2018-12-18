@@ -24,6 +24,12 @@ class Client
 	const METHOD_COMMON_GET_BY_OGRN = 'ps.common.getByOgrn';
 	const METHOD_ORGANIZATION_SEARCH_BY_NAME = 'ps.organization.searchByName';
 	const METHOD_IP_SEARCH_BY_NAME = 'ps.ip.searchByName';
+	const METHOD_UA_GET_BY_EDRPOU = 'ps.ua.getByEdrpou';
+	const METHOD_UA_GET_UO_BY_ID = 'ps.ua.getUoById';
+	const METHOD_UA_GET_FO_BY_ID = 'ps.ua.getFoById';
+	const METHOD_UA_SEARCH_UO_BY_NAME = 'ps.ua.searchUoByName';
+	const METHOD_UA_SEARCH_FO_BY_NAME = 'ps.ua.searchFoByName';
+	const METHOD_UA_SEARCH_BY_NAME = 'ps.ua.searchByName';
 	const METHOD_IS_SERVICE_ONLINE = 'ps.common.isOnline';
 	const ERROR_WRONG_INPUT = 1;
 	const ERROR_WRONG_LICENSE = 2;
@@ -49,9 +55,9 @@ class Client
 	 * @param string $ogrn OGRN code of the organization or individual businessman.
 	 * @return array|false
 	 */
-	public function getByOgrn($ogrn)
+	public function getByOgrn($ogrn, $showTerminated = false)
 	{
-		return $this->call(static::METHOD_COMMON_GET_BY_OGRN, array('ogrn' => $ogrn));
+		return $this->call(static::METHOD_COMMON_GET_BY_OGRN, array('ogrn' => $ogrn, 'showTerminated'=> $showTerminated));
 	}
 
 	/**
@@ -59,9 +65,9 @@ class Client
 	 * @param string $inn INN code of the organization or individual businessman.
 	 * @return array|false
 	 */
-	public function getByInn($inn)
+	public function getByInn($inn, $showTerminated = false)
 	{
-		return $this->call(static::METHOD_COMMON_GET_BY_INN, array('inn' => $inn));
+		return $this->call(static::METHOD_COMMON_GET_BY_INN, array('inn' => $inn, 'showTerminated' => $showTerminated));
 	}
 
 	/**
@@ -95,6 +101,85 @@ class Client
 			'name' => $name,
 			'second_name' => $secondName,
 			'last_name' => $lastName,
+			'limit' => $limit,
+			'offset' => $offset
+		));
+	}
+
+	/**
+	 * Returns properties of the ukrainian organization by its EDRPOU code.
+	 * @param string $edrpou EDRPOU code of the organization.
+	 * @return array|false
+	 */
+	public function uaGetByEdrpou($edrpou)
+	{
+		return $this->call(static::METHOD_UA_GET_BY_EDRPOU, array('edrpou' => $edrpou));
+	}
+
+	/**
+	 * Performs search of ukrainian organization by identifier and returns its properties.
+	 * @param int $id idenrifier of the organization.
+	 * @return array|false Properties of found organization or false in case of error.
+	 */
+	public function uaGetUoById($id)
+	{
+		return $this->call(static::METHOD_UA_GET_UO_BY_ID, array('id' => $id));
+	}
+
+	/**
+	 * Performs search of ukrainian individual businessmen by identifier and returns its properties.
+	 * @param int $id idenrifier of the individual.
+	 * @return array|false Properties of found individual or false in case of error.
+	 */
+	public function uaGetFoById($id)
+	{
+		return $this->call(static::METHOD_UA_GET_FO_BY_ID, array('id' => $id));
+	}
+
+	/**
+	 * Performs search of ukrainian organizations by name and returns array of found organizations.
+	 * @param string $name Part of the organization's name.
+	 * @param int $limit Maximum size of returning array.
+	 * @param int $offset Offset of the returning array.
+	 * @return array|false Array of found organizations or false in case of error.
+	 */
+	public function uaSearchUoByName($name, $limit, $offset = 0)
+	{
+		return $this->call(static::METHOD_UA_SEARCH_UO_BY_NAME, array(
+			'name' => $name,
+			'limit' => $limit,
+			'offset' => $offset
+		));
+	}
+
+	/**
+	 * Performs search of ukrainian individual businessmen by name and returns array of found individuals.
+	 * @param string $name Part of the individual's name.
+	 * @param int $limit Maximum size of returning array.
+	 * @param int $offset Offset of the returning array.
+	 * @return array|false Array of found individuals or false in case of error.
+	 */
+	public function uaSearchFoByName($name, $limit, $offset = 0)
+	{
+		return $this->call(static::METHOD_UA_SEARCH_FO_BY_NAME, array(
+			'name' => $name,
+			'limit' => $limit,
+			'offset' => $offset
+		));
+	}
+
+	/**
+	 * Performs search of ukrainian organizations and individuals by name and returns array of found
+	 * organizations and individuals.
+	 * @param string $name Part of the name.
+	 * @param int $limit Maximum size of returning array.
+	 * @param int $offset Offset of the returning array.
+	 * @return array|false Array of found organizations and individuals or false in case of error.
+	 */
+	public function uaSearchByName($name, $limit, $offset = 0)
+	{
+		return $this->call(static::METHOD_UA_SEARCH_BY_NAME, array(
+			'name' => $name,
 			'limit' => $limit,
 			'offset' => $offset
 		));
@@ -150,6 +235,16 @@ class Client
 				$additionalParams
 		);
 
+		if($result === false)
+		{
+			$httpErrors = $http->getError();
+			foreach ($httpErrors as $errorCode => $errorText)
+			{
+				$this->errorCollection->add(array(new Error($errorText, $errorCode)));
+			}
+			return false;
+		}
+
 		$answer = $this->prepareAnswer($result);
 
 		if(!is_array($answer) || count($answer) == 0)
@@ -170,7 +265,7 @@ class Client
 				return $this->call($methodName, $additionalParams, true, true);
 			}
 
-			$this->errorCollection->add(array(new Error($answer['error'].". ".$answer['error_description'])));
+			$this->errorCollection->add(array(new Error($answer['error_description'], $answer['error'])));
 			return false;
 		}
 
@@ -266,7 +361,7 @@ class Client
 	 * Drops current stored access credentials.
 	 * @return void
 	 */
-	static public function clearAccessSettings()
+	public function clearAccessSettings()
 	{
 		Option::set('sale', static::SERVICE_ACCESS_OPTION, null);
 	}

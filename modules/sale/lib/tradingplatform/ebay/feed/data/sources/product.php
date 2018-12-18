@@ -63,7 +63,7 @@ class Product
 		return $result;
 	}
 
-	protected  function  getMappedGroups($iblockId)
+	protected function getMappedGroups($iblockId)
 	{
 		$result = array();
 		$catMapEntId = \Bitrix\Sale\TradingPlatform\Ebay\MapHelper::getCategoryEntityId($iblockId);
@@ -75,7 +75,8 @@ class Product
 		));
 
 		while($category = $catRes->fetch())
-			$result[] = $category["VALUE_INTERNAL"];
+			if(intval($category["VALUE_INTERNAL"]) > 0)
+				$result[] = $category["VALUE_INTERNAL"];
 
 		return $result;
 	}

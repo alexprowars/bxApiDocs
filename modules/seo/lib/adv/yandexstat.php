@@ -37,17 +37,6 @@ class YandexStatTable extends Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы статистики по объявлениям из Яндекс.Директа. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/adv/yandexstattable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_seo_yandex_direct_stat';
@@ -58,17 +47,6 @@ class YandexStatTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей таблицы статистики по объявлениям из Яндекс.Директа. Метод статический..</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/adv/yandexstattable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(

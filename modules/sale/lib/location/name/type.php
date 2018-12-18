@@ -26,7 +26,7 @@ class TypeTable extends NameEntity
 		return 'b_sale_loc_type_name';
 	}
 
-	static public function getReferenceFieldName()
+	public function getReferenceFieldName()
 	{
 		return 'TYPE_ID';
 	}

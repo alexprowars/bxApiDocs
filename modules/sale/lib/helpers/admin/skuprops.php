@@ -98,8 +98,7 @@ class SkuProps
 
 	/**
 	 * @param array $skuProps
-	 * @param $productId
-	 * @param $iblock
+	 * @param int $productId
 	 * @param array $skuOrder
 	 * @param $changedSkuId
 	 * @return int|mixed
@@ -148,7 +147,7 @@ class SkuProps
 	}
 
 	/**
-	 * @param $productId
+	 * @param int|array $productIds
 	 * @return array
 	 * @throws \Bitrix\Main\LoaderException
 	 */

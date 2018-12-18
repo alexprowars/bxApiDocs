@@ -15,7 +15,7 @@ class HttpContext
 	 *
 	 * @param HttpApplication $application
 	 */
-	static public function __construct(HttpApplication $application)
+	public function __construct(HttpApplication $application)
 	{
 		parent::__construct($application);
 	}

@@ -93,6 +93,10 @@ class StatusTable extends Entity\DataManager
 				'data_type' => 'datetime',
 				'title' => Loc::getMessage('STATUS_ENTITY_EVENT_UNTIL_DATE_FIELD'),
 			),
+			'USER' => array(
+				'data_type' => 'Bitrix\Main\User',
+				'reference' => array('=this.AUTHOR_ID' => 'ref.ID'),
+			),
 		);
 	}
 	/**

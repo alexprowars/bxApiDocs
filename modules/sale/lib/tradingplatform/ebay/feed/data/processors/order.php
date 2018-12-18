@@ -2,12 +2,15 @@
 
 namespace Bitrix\Sale\TradingPlatform\Ebay\Feed\Data\Processors;
 
+use Bitrix\Catalog;
 use Bitrix\Main\Localization\Loc;
 use \Bitrix\Main\SystemException;
 use \Bitrix\Main\ArgumentNullException;
 use Bitrix\Sale\Fuser;
 use Bitrix\Sale\Internals\SiteCurrencyTable;
 use Bitrix\Sale\Provider;
+use Bitrix\Sale\TradeBindingCollection;
+use Bitrix\Sale\TradeBindingEntity;
 use \Bitrix\Sale\TradingPlatform\Logger;
 use \Bitrix\Sale\TradingPlatform\Ebay\Ebay;
 use \Bitrix\Sale\TradingPlatform\OrderTable;
@@ -159,7 +162,7 @@ class Order extends DataProcessor
 			$orderEbay = \Bitrix\Main\Text\Encoding::convertEncodingArray($orderEbay, 'UTF-8', SITE_CHARSET);
 		*/
 
-		$dbRes = OrderTable::getList(array(
+		$dbRes = TradeBindingCollection::getList(array(
 			"filter" => array(
 				"TRADING_PLATFORM_ID" => $ebay->getId(),
 				"EXTERNAL_ORDER_ID" => $orderEbay["ExtendedOrderID"]
@@ -296,27 +299,46 @@ class Order extends DataProcessor
 					continue;
 				}
 
-				$item = $basket->createItem('catalog',	$ebaySku);
-				$item->setField("PRODUCT_PROVIDER_CLASS", "CCatalogProductProvider");
-
+				$item = null;
 				$itemData = array(
+					"PRODUCT_ID" => $ebaySku,
+					"QUANTITY" => floatval($transaction["QuantityPurchased"]),
 					"CUSTOM_PRICE" => "Y",
 					"PRICE" => floatval($transaction["TransactionPrice"]),
 					"QUANTITY" => floatval($transaction["QuantityPurchased"]),
 					"NAME" => !empty($transactionItem["VariationTitle"]) ? $transactionItem["VariationTitle"] : $transactionItem["Title"],
+				);
+
+				$context = array(
+					'SITE_ID' => $this->siteId,
 					"CURRENCY" => SiteCurrencyTable::getSiteCurrency($this->siteId)
 				);
 
-				$data = Provider::getProductData($basket);
-
-				if(!empty($data[$item->getBasketCode()]))
+				if ($order->getUserId() > 0)
 				{
-					$itemData = array_merge($data[$item->getBasketCode()], $itemData);
+					$context['USER_ID'] = $order->getUserId();
 				}
-				else
+
+
+				$res = Catalog\Product\Basket::addProductToBasket($basket, $itemData, $context);
+				$resultData = $res->getData();
+				if (!empty($resultData['BASKET_ITEM']))
 				{
-					$item->delete();
-					$item = $basket->createItem('',	$ebaySku);
+					/** @var \Bitrix\Sale\BasketItemBase $item */
+					$item = $resultData['BASKET_ITEM'];
+				}
+
+				if (!$res->isSuccess())
+				{
+					if ($item)
+					{
+						$item->delete();
+					}
+
+					$itemData['MODULE'] = '';
+					$itemData['PRODUCT_PROVIDER_CLASS'] = '';
+
+					$res = Catalog\Product\Basket::addProductToBasket($basket, $itemData, $context);
 				}
 
 				$res = $item->setFields($itemData);
@@ -533,6 +555,22 @@ class Order extends DataProcessor
 
 		$order->setField("PRICE", $orderEbay["Total"]);
 		$order->setField("XML_ID", Ebay::TRADING_PLATFORM_CODE."_".$orderEbay["ExtendedOrderID"]);
+
+		$tradeCollection = $order->getTradeBindingCollection();
+
+		/** @var TradeBindingEntity $entity */
+		$entity = TradeBindingEntity::create($tradeCollection);
+		$entity->setFields([
+			"TRADING_PLATFORM_ID" => $ebay->getId(),
+			"EXTERNAL_ORDER_ID" => $orderEbay["ExtendedOrderID"],
+			"PARAMS" => [
+				"ORDER_LINES" => $orderLineItemsIds,
+				"ORDER_ID" => $orderEbay["OrderID"]
+			]
+		]);
+
+		$tradeCollection->addItem($entity);
+
 		$res = $order->save();
 
 		if(!$res->isSuccess())
@@ -542,8 +580,6 @@ class Order extends DataProcessor
 		}
 		else
 		{
-			$bitrixOrderId = $order->getId();
-
 			Ebay::log(
 				Logger::LOG_LEVEL_INFO,
 				"EBAY_DATA_PROCESSOR_ORDER_CREATED",
@@ -555,23 +591,7 @@ class Order extends DataProcessor
 				$this->siteId
 			);
 
-			\CSaleMobileOrderPush::send("ORDER_CREATED", array("ORDER_ID" => $bitrixOrderId));
-
-			$res = OrderTable::add(array(
-				"ORDER_ID" => $bitrixOrderId,
-				"TRADING_PLATFORM_ID" => $ebay->getId(),
-				"EXTERNAL_ORDER_ID" => $orderEbay["ExtendedOrderID"],
-				"PARAMS" => array(
-					"ORDER_LINES" => $orderLineItemsIds,
-					"ORDER_ID" => $orderEbay["OrderID"]
-				)
-			));
-
-			if(!$res->isSuccess())
-			{
-				foreach($res->getErrors() as $error)
-					Ebay::log(Logger::LOG_LEVEL_ERROR, "EBAY_DATA_PROCESSOR_ORDER_DELIVERY_SAVE_ERROR", $orderEbay["ExtendedOrderID"], $error->getMessage(), $this->siteId);
-			}
+			\CSaleMobileOrderPush::send("ORDER_CREATED", array("ORDER_ID" => $order->getId()));
 		}
 
 		// send confirmation

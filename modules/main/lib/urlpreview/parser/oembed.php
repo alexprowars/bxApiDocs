@@ -3,10 +3,11 @@
 namespace Bitrix\Main\UrlPreview\Parser;
 
 use Bitrix\Main\Text\Encoding;
+use Bitrix\Main\UrlPreview\UrlPreview;
 use Bitrix\Main\Web\HttpClient;
-use Bitrix\Main\Web\Json;
 use Bitrix\Main\UrlPreview\HtmlDocument;
 use Bitrix\Main\UrlPreview\Parser;
+use Bitrix\Main\Web\Json;
 
 
 class Oembed extends Parser
@@ -27,35 +28,16 @@ class Oembed extends Parser
 	 * Downloads and parses HTML's document metadata, formatted with oEmbed standard.
 	 *
 	 * @param HtmlDocument $document HTML document.
+	 * @param HttpClient|null $httpClient
 	 */
-	
-	/**
-	* <p>Нестатический метод загружает и парсит метаданные HTML документа, форматируя их по стандарту <b>oEmbed</b>.</p>
-	*
-	*
-	* @param mixed $Bitrix  HTML документ.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $UrlPreview  
-	*
-	* @param HtmlDocument $document  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/parser/oembed/handle.php
-	* @author Bitrix
-	*/
-	public function handle(HtmlDocument $document)
+	public function handle(HtmlDocument $document, HttpClient $httpClient = null)
 	{
 		if(!$this->detectOembedLink($document) || strlen($this->metadataUrl) == 0)
 		{
 			return;
 		}
 
-		$httpClient = new HttpClient();
-		$rawMetadata = $httpClient->get($this->metadataUrl);
+		$rawMetadata = $this->getRawMetaData($httpClient);
 
 		if($rawMetadata === false)
 		{
@@ -83,6 +65,21 @@ class Oembed extends Parser
 			if($document->getEmdbed() == '' && $parsedMetadata['html'] != '')
 			{
 				$document->setEmbed($parsedMetadata['html']);
+			}
+
+			if($document->getExtraField('PROVIDER_NAME') == '' && $parsedMetadata['provider_name'] != '')
+			{
+				$document->setExtraField('PROVIDER_NAME', $parsedMetadata['provider_name']);
+			}
+
+			if($document->getExtraField('VIDEO_WIDTH') == '' && $parsedMetadata['width'] != '')
+			{
+				$document->setExtraField('VIDEO_WIDTH', $parsedMetadata['width']);
+			}
+
+			if($document->getExtraField('VIDEO_HEIGHT') == '' && $parsedMetadata['height'] != '')
+			{
+				$document->setExtraField('VIDEO_HEIGHT', $parsedMetadata['height']);
 			}
 		}
 	}
@@ -166,5 +163,19 @@ class Oembed extends Parser
 		}
 
 		return false;
+	}
+
+	protected function getRawMetaData(HttpClient $httpClient = null)
+	{
+		if(!$httpClient)
+		{
+			$httpClient = new HttpClient();
+			$httpClient->setTimeout(5);
+			$httpClient->setStreamTimeout(5);
+			$httpClient->setHeader('User-Agent', UrlPreview::USER_AGENT, true);
+		}
+		$rawMetadata = $httpClient->get($this->metadataUrl);
+
+		return $rawMetadata;
 	}
 }

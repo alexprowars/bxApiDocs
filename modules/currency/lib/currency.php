@@ -37,17 +37,6 @@ class CurrencyTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы валют в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencytable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_currency';
@@ -58,17 +47,6 @@ class CurrencyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы валют. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencytable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -91,7 +69,7 @@ class CurrencyTable extends Main\Entity\DataManager
 			)),
 			'DATE_UPDATE' => new Main\Entity\DatetimeField('DATE_UPDATE', array(
 				'required' => true,
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('CURRENCY_ENTITY_DATE_UPDATE_FIELD')
 			)),
 			'NUMCODE' => new Main\Entity\StringField('NUMCODE', array(
@@ -107,6 +85,7 @@ class CurrencyTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('CURRENCY_ENTITY_CREATED_BY_FIELD')
 			)),
 			'DATE_CREATE' => new Main\Entity\DatetimeField('DATE_CREATE', array(
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('CURRENCY_ENTITY_DATE_CREATE_FIELD')
 			)),
 			'MODIFIED_BY' => new Main\Entity\IntegerField('MODIFIED_BY', array(
@@ -150,17 +129,6 @@ class CurrencyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CURRENCY</code> (код валюты). Метод статический и используется для валидации новых значений полей при добавлении валюты или изменении параметров уже существующей.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencytable/validatecurrency.php
-	* @author Bitrix
-	*/
 	public static function validateCurrency()
 	{
 		return array(
@@ -173,17 +141,6 @@ class CurrencyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>NUMCODE</code> (цифровой код валюты). Метод статический и используется для валидации новых значений полей при добавлении валюты или изменении параметров уже существующей.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencytable/validatenumcode.php
-	* @author Bitrix
-	*/
 	public static function validateNumcode()
 	{
 		return array(

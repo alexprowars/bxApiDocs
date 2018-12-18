@@ -25,33 +25,6 @@ class Option
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает значение параметра.</p> <p>Аналог методов <a href="http://dev.1c-bitrix.ru/api_help/main/reference/coption/getoptionint.php" >COption::GetOptionInt</a> и <a href="http://dev.1c-bitrix.ru/api_help/main/reference/coption/getoptionstring.php" >COption::GetOptionString</a> в старом ядре.</p>
-	*
-	*
-	* @param string $moduleId  ID модуля. Обязательный.
-	*
-	* @param string $name  Имя параметра. Обязательный.
-	*
-	* @param string $default = "" Возвращается значение по умолчанию, если значение не задано.
-	*
-	* @param mixed $boolean  ID сайта, если значение параметра различно для разных сайтов.
-	*
-	* @param string $siteId = false 
-	*
-	* @return string 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $size = Option::get("main", "max_file_size");
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/get.php
-	* @author Bitrix
-	*/
 	public static function get($moduleId, $name, $default = "", $siteId = false)
 	{
 		if (empty($moduleId))
@@ -105,25 +78,6 @@ class Option
 	 * @return null|string
 	 * @throws Main\ArgumentNullException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает реальные значения параметров, какие были записаны в Базу данных.</p> <p>В отличии от <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/get.php">get</a>, не используются значения по умолчанию. То есть нельзя передать в метод, нельзя учесть изначально заданные значения параметра по умолчанию.</p>
-	*
-	*
-	* @param string $moduleId  ID модуля.
-	*
-	* @param string $name  Название параметра.
-	*
-	* @param string $boolean  ID сайта, если для разных сайтов установлены разные значения.
-	*
-	* @param string $siteId = false 
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/getrealvalue.php
-	* @author Bitrix
-	*/
 	public static function getRealValue($moduleId, $name, $siteId = false)
 	{
 		if (empty($moduleId))
@@ -160,19 +114,6 @@ class Option
 	 * @return array
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает массив с значениями по умолчанию параметров модуля (из файла <b>default_option.php</b>).</p>
-	*
-	*
-	* @param string $moduleId  ID модуля. Обязательный.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/getdefaults.php
-	* @author Bitrix
-	*/
 	public static function getDefaults($moduleId)
 	{
 		static $defaultsCache = array();
@@ -193,6 +134,48 @@ class Option
 			return $defaultsCache[$moduleId] = ${$varName};
 
 		return $defaultsCache[$moduleId] = array();
+	}
+	/**
+	 * Returns an array of set options array(name => value).
+	 *
+	 * @param string $moduleId The module ID.
+	 * @param bool|string $siteId The site ID, if the option differs for sites.
+	 * @return array
+	 * @throws Main\ArgumentNullException
+	 */
+	public static function getForModule($moduleId, $siteId = false)
+	{
+		if (empty($moduleId))
+			throw new Main\ArgumentNullException("moduleId");
+
+		$return = array();
+		static $defaultSite = null;
+		if ($siteId === false)
+		{
+			if ($defaultSite === null)
+			{
+				$context = Main\Application::getInstance()->getContext();
+				if ($context != null)
+					$defaultSite = $context->getSite();
+			}
+			$siteId = $defaultSite;
+		}
+
+		$siteKey = ($siteId == "") ? "-" : $siteId;
+		if (static::$cacheTtl === null)
+			static::$cacheTtl = self::getCacheTtl();
+		if ((static::$cacheTtl === false) && !isset(self::$options[$siteKey][$moduleId])
+			|| (static::$cacheTtl !== false) && empty(self::$options))
+		{
+			self::load($moduleId, $siteId);
+		}
+
+		if (isset(self::$options[$siteKey][$moduleId]))
+			$return = self::$options[$siteKey][$moduleId];
+		else if (isset(self::$options["-"][$moduleId]))
+			$return = self::$options["-"][$moduleId];
+
+		return is_array($return) ? $return : array();
 	}
 
 	private static function load($moduleId, $siteId)
@@ -221,6 +204,8 @@ class Option
 				{
 					$s = ($ar["SITE_ID"] == ""? "-" : $ar["SITE_ID"]);
 					self::$options[$s][$moduleId][$ar["NAME"]] = $ar["VALUE"];
+
+					
 				}
 			}
 		}
@@ -246,6 +231,8 @@ class Option
 						self::$options[$s][$ar["MODULE_ID"]][$ar["NAME"]] = $ar["VALUE"];
 					}
 
+					
+
 					$cache->set("b_option", self::$options);
 				}
 			}
@@ -261,35 +248,6 @@ class Option
 	 * @param string $siteId The site ID, if the option depends on a site.
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
-	
-	/**
-	* <p>Статический метод  устанавливает значения параметра и сохраняет его в Базу данных. После сохранения запускается событие <b>OnAfterSetOption</b>.</p> <p>Аналогичен функциям <a href="http://dev.1c-bitrix.ru/api_help/main/reference/coption/setoptionint.php" >COption::SetOptionInt</a> и <a href="http://dev.1c-bitrix.ru/api_help/main/reference/coption/setoptionstring.php" >COption::SetOptionString</a> в старом ядре.</p>
-	*
-	*
-	* @param string $moduleId  ID модуля. Длина не более 50 символов.
-	*
-	* @param string $name  Имя параметра. Длина не более 50 символов.
-	*
-	* @param string $value = "" Значение параметра. Необязательный. По умолчанию - "".
-	* Максимальная сохраняемая длина значения - 2000 символов.
-	*
-	* @param string $siteId = "" Идентификатор сайта, для которого устанавливается параметр.
-	* Необязательный. Если установлен false, то будет текущий сайт.
-	*
-	* @return public 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* use Bitrix\Main\Config\Option;
-	* 
-	* Option::set("main", "max_file_size", "1024");
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/set.php
-	* @author Bitrix
-	*/
 	public static function set($moduleId, $name, $value = "", $siteId = "")
 	{
 		if (static::$cacheTtl === null)
@@ -313,8 +271,8 @@ class Option
 		$strSqlWhere = sprintf(
 			"SITE_ID %s AND MODULE_ID = '%s' AND NAME = '%s'",
 			($siteId == "") ? "IS NULL" : "= '".$sqlHelper->forSql($siteId, 2)."'",
-			$sqlHelper->forSql($moduleId),
-			$sqlHelper->forSql($name)
+			$sqlHelper->forSql($moduleId, 50),
+			$sqlHelper->forSql($name, 50)
 		);
 
 		$res = $con->queryScalar(
@@ -327,7 +285,7 @@ class Option
 		{
 			$con->queryExecute(
 				"UPDATE b_option SET ".
-				"	VALUE = '".$sqlHelper->forSql($value, 2000)."' ".
+				"	VALUE = '".$sqlHelper->forSql($value)."' ".
 				"WHERE ".$strSqlWhere
 			);
 		}
@@ -340,7 +298,7 @@ class Option
 					($siteId == "") ? "NULL" : "'".$sqlHelper->forSql($siteId, 2)."'",
 					$sqlHelper->forSql($moduleId, 50),
 					$sqlHelper->forSql($name, 50),
-					$sqlHelper->forSql($value, 2000)
+					$sqlHelper->forSql($value)
 				)
 			);
 		}
@@ -405,31 +363,6 @@ class Option
 	 * 		site_id - the site ID (can be empty).
 	 * @throws Main\ArgumentNullException
 	 */
-	
-	/**
-	* <p>Статический метод удаляет значения параметров модуля для сайта из Базы данных. Значение только одно, массив полей передать нельзя. То есть удалить сразу несколько параметров, просто перечислив их имена, нельзя.</p> <p>Аналог метода <a href="http://dev.1c-bitrix.ru/api_help/main/reference/coption/removeoption.php" >COption::RemoveOption</a> в старом ядре.</p>
-	*
-	*
-	* @param string $moduleId  ID модуля. Обязательный.
-	*
-	* @param array $filter = array() Название параметра
-	*
-	* @return public 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Option::delete("main", array(
-	*     "name" =&gt; "max_file_size",
-	*     "site_id" =&gt; "s2"
-	*     )
-	* );
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/config/option/delete.php
-	* @author Bitrix
-	*/
 	public static function delete($moduleId, $filter = array())
 	{
 		if (static::$cacheTtl === null)

@@ -2,6 +2,7 @@
 namespace Bitrix\Main\Web\DOM;
 
 use \Bitrix\Main\Text\HtmlFilter;
+use \Bitrix\Main\Text\BinaryString;
 
 class HtmlParser extends Parser
 {
@@ -14,12 +15,14 @@ class HtmlParser extends Parser
 
 	protected static $objectCounter = 0;
 	protected $currentObjectNumber;
+	protected $storedItemCounter;
 	protected $storedPHP = array();
 
 	public function __construct()
 	{
 		static::$objectCounter++;
 		$this->currentObjectNumber = static::$objectCounter;
+		$this->storedItemCounter = 0;
 
 		$this->setConfig(new HtmlParserConfig);
 	}
@@ -54,7 +57,7 @@ class HtmlParser extends Parser
 				}
 				else
 				{
-					$source = HtmlFilter::encode($node->getNodeValue());
+					$source = HtmlFilter::encode($node->getNodeValue(), ENT_QUOTES);
 				}
 
 				break;
@@ -151,23 +154,17 @@ class HtmlParser extends Parser
 		}
 
 		$isCharOpen = true;
-		$isCharClose = false;
 		$buffer = '';
-		$char = $charPrev = $charNext = '';
 
-		$textLength = strlen($text);
+		$textLength = BinaryString::getLength($text);
 		for($i = 0; $i < $textLength; $i++)
 		{
-			$char = substr($text, $i, 1);
+			$char = BinaryString::getSubstring($text, $i, 1);
 			if($char === '<')
 			{
 				$node = $this->getNextNode($buffer, $node);
-
-				$buffer = '';
-				$buffer .= $char;
-
+				$buffer = $char;
 				$isCharOpen = true;
-				$isCharClose = false;
 			}
 			elseif($char === '>')
 			{
@@ -177,8 +174,6 @@ class HtmlParser extends Parser
 					$node = $this->getNextNode($buffer, $node);
 					$buffer = '';
 				}
-
-				$isCharClose = true;
 				$isCharOpen = false;
 			}
 			else
@@ -467,7 +462,7 @@ class HtmlParser extends Parser
 		else
 		{
 			// Text
-			$cleaned = html_entity_decode($tag, ENT_COMPAT, (defined("BX_UTF") ? "UTF-8" : "ISO-8859-1"));
+			$cleaned = html_entity_decode($tag, ENT_QUOTES, (defined("BX_UTF") ? "UTF-8" : "ISO-8859-1"));
 			$node = $document->createTextNode($cleaned);
 		}
 
@@ -487,7 +482,7 @@ class HtmlParser extends Parser
 	* @param string $html
 	* @return string
 	*/
-	static public function commentPHP($html)
+	public function commentPHP($html)
 	{
 		$html = str_replace(array('<?', '?>'), array('<!--', '-->'),	$html);
 		return $html;
@@ -504,7 +499,8 @@ class HtmlParser extends Parser
 			$prefix = 'BX_DOM_DOCUMENT_PHP_SLICE_PLACEHOLDER_' . $this->currentObjectNumber . '_';
 			foreach($matches as $key => $value)
 			{
-				$this->storedPHP['<!--' . $prefix . (string) $key . '-->'] = $value[0];
+				$this->storedItemCounter++;
+				$this->storedPHP['<!--' . $prefix . $this->storedItemCounter . '-->'] = $value[0];
 			}
 
 			$replaceFrom = array_values($this->storedPHP);

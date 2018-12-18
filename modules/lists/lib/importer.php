@@ -12,7 +12,7 @@ Main\Loader::includeModule("bizproc");
  *
  *
  * 	$APPLICATION->RestartBuffer();
- *	if (ÐµÑÑ‚ÑŒ Ð¿Ñ€Ð°Ð²Ð°)
+ *	if (åñòü ïðàâà)
  *	{
  *      $id = iblock ID
  *		$datum = \Bitrix\Lists\Importer::export($id);
@@ -47,9 +47,12 @@ class Importer
 	const DIRECTION_EXPORT = 0;
 	const DIRECTION_IMPORT = 1;
 
- 	/**
+	private static $listRuLanguage = array('ua', 'by', 'kz');
+
+	/**
 	 * @param int $iblockId This variable is the id iblock.
 	 * @return string
+	 * @throws Main\ArgumentException
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
@@ -67,6 +70,9 @@ class Importer
 		if(!$iblock["CODE"])
 			throw new Main\ArgumentException("Parameter 'CODE' is required.", "matches");
 
+		foreach(\CIBlock::getMessages($iblockId) as $messageKey => $message)
+			$iblock[$messageKey] = $message;
+
 		$list = new \CList($iblockId);
 		$fields = $list->getFields();
 		foreach($fields as $fieldId => $field)
@@ -75,7 +81,7 @@ class Importer
 			{
 				$iblock["~NAME_FIELD"] = array(
 					"NAME" => $field["NAME"],
-					"SETTINGS" => $field["SETTINGS"],
+					"SETTINGS" => $field["SETTlINGS"],
 					"DEFAULT_VALUE" => $field["DEFAULT_VALUE"],
 					"SORT" => $field["SORT"],
 				);
@@ -400,7 +406,13 @@ class Importer
 		if (!$res)
 			static::createIBlockType();
 
+		if(in_array($lang, self::$listRuLanguage))
+			$lang = 'ru';
+
 		$dir = new Main\IO\Directory(Main\Loader::getDocumentRoot() . static::PATH . $lang . "/");
+		if(!$dir->isExists())
+			$dir = new Main\IO\Directory(Main\Loader::getDocumentRoot() . static::PATH . "en/");
+
 		if ($dir->isExists())
 		{
 			$children = $dir->getChildren();
@@ -457,23 +469,25 @@ class Importer
 		if (empty($lang))
 			throw new Main\ArgumentNullException("lang");
 
+		if(in_array($lang, self::$listRuLanguage))
+			$lang = 'ru';
+
 		if(!empty($path))
 		{
+			$path = rtrim($path, "/");
 			$path = $path."/";
 		}
 		else
 		{
-			if($systemProcesses)
-			{
-				$path = Main\Loader::getDocumentRoot() . static::PATH . $lang . "/";
-			}
-			else
-			{
-				$path = Main\Loader::getDocumentRoot() . static::PATH_USER_PROCESSES . $lang . "/";
-			}
+			$path = self::getPathToProcesses($lang, $systemProcesses);
 		}
 
 		$dir = new Main\IO\Directory($path);
+		if (!$dir->isExists() && $lang === 'en')
+		{
+			return;
+		}
+
 		if ($dir->isExists())
 		{
 			$children = $dir->getChildren();
@@ -497,6 +511,25 @@ class Importer
 				}
 			}
 		}
+		else
+		{
+			$path = self::getPathToProcesses("en", $systemProcesses);
+			self::loadDataProcesses('en', $systemProcesses, $fileData, $path);
+		}
+	}
+
+	private static function getPathToProcesses($lang, $systemProcesses = true)
+	{
+		if($systemProcesses)
+		{
+			$path = Main\Loader::getDocumentRoot() . static::PATH . $lang . "/";
+		}
+		else
+		{
+			$path = Main\Loader::getDocumentRoot() . static::PATH_USER_PROCESSES . $lang . "/";
+		}
+
+		return $path;
 	}
 
 	protected static function createIBlockType()
@@ -547,8 +580,15 @@ class Importer
 	 */
 	public static function onAgent($lang)
 	{
-		self::installProcesses($lang);
-		return "";
+		if(Main\Loader::includeModule("iblock") && Main\Loader::includeModule("bizproc"))
+		{
+			self::installProcesses($lang);
+			return "";
+		}
+		else
+		{
+			return '\Bitrix\Lists\Importer::onAgent("'.$lang.'");';
+		}
 	}
 
 	public static function migrateList($id)

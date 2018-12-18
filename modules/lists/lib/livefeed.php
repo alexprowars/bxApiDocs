@@ -14,32 +14,44 @@ class CListsLiveFeed
 			array('ID' => $elementId),
 			false,
 			false,
-			array('ID', 'CREATED_BY', 'IBLOCK_NAME', 'NAME', 'IBLOCK_ID', 'LANG_DIR')
+			array('ID', 'CREATED_BY', 'IBLOCK_NAME', 'NAME', 'IBLOCK_ID', 'LANG_DIR', 'IBLOCK_CODE')
 		);
 		$element = $elementObject->fetch();
 
 		if(!CLists::getLiveFeed($element["IBLOCK_ID"]))
 			return false;
 
+		$listSystemIblockCode = array(
+			'bitrix_holiday',
+			'bitrix_invoice',
+			'bitrix_trip',
+			'bitrix_cash',
+			'bitrix_incoming_doc',
+			'bitrix_outgoing_doc'
+		);
+
 		$params = serialize(array("ELEMENT_NAME" => $element['NAME']));
 
-		$element['NAME'] = preg_replace_callback(
-			'#^[^\[\]]+?\[(\d+)\]#i',
-			function ($matches)
-			{
-				$userId = $matches[1];
-				$db = CUser::GetByID($userId);
-				if ($ar = $db->GetNext())
+		if(in_array($element['IBLOCK_CODE'], $listSystemIblockCode))
+		{
+			$element['NAME'] = preg_replace_callback(
+				'#^[^\[\]]+?\[(\d+)\]#i',
+				function ($matches)
 				{
-					$ix = randString(5);
-					return '<a class="feed-post-user-name" id="bp_'.$userId.'_'.$ix.'" href="/company/personal/user/'.$userId.'/"
-						bx-post-author-id="'.$userId.'">'.CUser::FormatName(CSite::GetNameFormat(false), $ar, true, false).'</a>
+					$userId = $matches[1];
+					$db = CUser::GetByID($userId);
+					if ($ar = $db->GetNext())
+					{
+						$ix = randString(5);
+						return '<a class="feed-post-user-name" id="bp_'.$userId.'_'.$ix.'" href="/company/personal/user/'.$userId.'/"
+						bx-post-author-id="'.$userId.'" bx-post-author-gender="'.$ar['PERSONAL_GENDER'].'">'.CUser::FormatName(CSite::GetNameFormat(false), $ar, true, false).'</a>
 						<script type="text/javascript">if (BX.tooltip) BX.tooltip(\''.$userId.'\', "bp_'.$userId.'_'.$ix.'", "");</script>';
-				}
-				return $matches[0];
-			},
-			$element['NAME']
-		);
+					}
+					return $matches[0];
+				},
+				htmlspecialcharsbx($element['NAME'])
+			);
+		}
 
 		$path = rtrim($element['LANG_DIR'], '/');
 		$urlElement = $path.COption::GetOptionString('lists', 'livefeed_url').'?livefeed=y&list_id='.$element["IBLOCK_ID"].'&element_id='.$elementId;
@@ -104,7 +116,7 @@ class CListsLiveFeed
 					<span class="bp-title-desc-icon">
 						<img src="'.$imageFile['src'].'" width="36" height="30" border="0" />
 					</span>
-					'.$element['NAME'].'
+					'.in_array($element['IBLOCK_CODE'], $listSystemIblockCode) ? $element['NAME'] : htmlspecialcharsbx($element['NAME']).'
 				</span>
 			';
 
@@ -569,7 +581,7 @@ class CListsLiveFeed
 		return COption::getOptionString('main', 'site_name', '');
 	}
 
-	public static function BeforeIndexSocNet($bxSocNetSearch, $fields)
+	function BeforeIndexSocNet($bxSocNetSearch, $fields)
 	{
 		static $bizprocForumId = false;
 
@@ -681,6 +693,7 @@ class CListsLiveFeed
 			CListsLiveFeed::notifyComment(
 				array(
 					"LOG_ID" => $comment["LOG_ID"],
+					"MESSAGE_ID" => $comment["SOURCE_ID"],
 					"TO_USER_ID" => $log["USER_ID"],
 					"FROM_USER_ID" => $comment["USER_ID"],
 					"URL" => $log["URL"],
@@ -719,6 +732,7 @@ class CListsLiveFeed
 			CListsLiveFeed::notifyComment(
 				array(
 					"LOG_ID" => $log["ID"],
+					"MESSAGE_ID" => $comment["MESSAGE_ID"],
 					"TO_USER_ID" => $log["USER_ID"],
 					"FROM_USER_ID" => $comment["USER_ID"],
 					"URL" => $log["URL"],
@@ -767,6 +781,7 @@ class CListsLiveFeed
 			"NOTIFY_TYPE" => IM_NOTIFY_FROM,
 			"NOTIFY_MODULE" => "lists",
 			"NOTIFY_TAG" => "SONET|EVENT|".$comment["LOG_ID"],
+			"NOTIFY_SUB_TAG" => "FORUM|COMMENT|".$comment["MESSAGE_ID"]."|".$comment["TO_USER_ID"],
 			"NOTIFY_EVENT" => "event_lists_comment_add",
 			"NOTIFY_MESSAGE" => $messageAddComment
 		);
@@ -828,5 +843,27 @@ class CListsLiveFeed
 		{
 			return false;
 		}
+	}
+
+	public static function OnSocNetGroupDelete($groupId)
+	{
+		$iblockIdList = array();
+		$res = \CIBlock::getList(array(), array("SOCNET_GROUP_ID" => $groupId));
+		while($iblock = $res->fetch())
+		{
+			$iblockIdList[] = $iblock["ID"];
+		}
+
+		if (empty($iblockIdList))
+		{
+			return true;
+		}
+
+		foreach($iblockIdList as $iblockId)
+		{
+			CIBlock::Delete($iblockId);
+		}
+
+		return true;
 	}
 }

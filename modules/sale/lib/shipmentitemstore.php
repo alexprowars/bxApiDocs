@@ -11,6 +11,7 @@ Loc::loadMessages(__FILE__);
 
 class ShipmentItemStore
 	extends Internals\CollectableEntity
+	implements \IEntityMarker
 {
 	/** @var  BasketItem */
 	protected $basketItem;
@@ -18,8 +19,7 @@ class ShipmentItemStore
 	/** @var null|array  */
 	protected $barcodeList = null;
 
-
-	protected static $mapFields = array();
+	private static $eventClassName = null;
 
 
 	/**
@@ -38,19 +38,26 @@ class ShipmentItemStore
 		return array();
 	}
 
-	/**
-	 * @return array
-	 */
-	public static function getAllFields()
-	{
-		if (empty(static::$mapFields))
-		{
-			static::$mapFields = parent::getAllFieldsByMap(Sale\Internals\ShipmentItemStoreTable::getMap());
-		}
-		return static::$mapFields;
 
+	/**
+	 * @param $itemData
+	 * @return ShipmentItemStore
+	 */
+	private static function createShipmentItemStoreObject(array $itemData = array())
+	{
+		$registry = Registry::getInstance(static::getRegistryType());
+		$shipmentItemStoreClassName = $registry->getShipmentItemStoreClassName();
+
+		return new $shipmentItemStoreClassName($itemData);
 	}
 
+	/**
+	 * @return string
+	 */
+	public static function getRegistryType()
+	{
+		return Registry::REGISTRY_TYPE_ORDER;
+	}
 
 	public static function create(ShipmentItemStoreCollection $collection, BasketItem $basketItem)
 	{
@@ -58,7 +65,7 @@ class ShipmentItemStore
 			'BASKET_ID' => $basketItem->getId(),
 		);
 
-		$shipmentItemStore = new static($fields);
+		$shipmentItemStore = static::createShipmentItemStoreObject($fields);
 		$shipmentItemStore->setCollection($collection);
 
 		$shipmentItemStore->basketItem = $basketItem;
@@ -74,27 +81,20 @@ class ShipmentItemStore
 	 * @throws Main\NotSupportedException
 	 * @throws \Exception
 	 */
-	
-	/**
-	* <p>Удаляет объект штрих-кода элемента отгрузки. Метод нестатический.</p> <p>Без параметров</p>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/shipmentitemstore/delete.php
-	* @author Bitrix
-	*/
 	public function delete()
 	{
 		$result = new Result();
-		$eventName = static::getEntityEventName();
+
+		if (self::$eventClassName === null)
+		{
+			self::$eventClassName = static::getEntityEventName();
+		}
 
 		/** @var array $oldEntityValues */
 		$oldEntityValues = $this->fields->getOriginalValues();
 
 		/** @var Main\Event $event */
-		$event = new Main\Event('sale', "OnBefore".$eventName."EntityDeleted", array(
+		$event = new Main\Event('sale', "OnBefore".self::$eventClassName."EntityDeleted", array(
 				'ENTITY' => $this,
 				'VALUES' => $oldEntityValues,
 		));
@@ -107,7 +107,7 @@ class ShipmentItemStore
 			{
 				if($eventResult->getType() == Main\EventResult::ERROR)
 				{
-					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_BEFORE_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_BEFORE_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR');
+					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_BEFORE_'.ToUpper(self::$eventClassName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_BEFORE_'.ToUpper(self::$eventClassName).'_ENTITY_DELETED_ERROR');
 					if ($eventResultData = $eventResult->getParameters())
 					{
 						if (isset($eventResultData) && $eventResultData instanceof ResultError)
@@ -137,7 +137,7 @@ class ShipmentItemStore
 		$oldEntityValues = $this->fields->getOriginalValues();
 
 		/** @var Main\Event $event */
-		$event = new Main\Event('sale', "On".$eventName."EntityDeleted", array(
+		$event = new Main\Event('sale', "On".self::$eventClassName."EntityDeleted", array(
 				'ENTITY' => $this,
 				'VALUES' => $oldEntityValues,
 		));
@@ -150,7 +150,7 @@ class ShipmentItemStore
 			{
 				if($eventResult->getType() == Main\EventResult::ERROR)
 				{
-					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_'.ToUpper($eventName).'_ENTITY_DELETED_ERROR');
+					$errorMsg = new ResultError(Loc::getMessage('SALE_EVENT_ON_'.ToUpper(self::$eventClassName).'_ENTITY_DELETED_ERROR'), 'SALE_EVENT_ON_'.ToUpper(self::$eventClassName).'_ENTITY_DELETED_ERROR');
 					if ($eventResultData = $eventResult->getParameters())
 					{
 						if (isset($eventResultData) && $eventResultData instanceof ResultError)
@@ -268,14 +268,14 @@ class ShipmentItemStore
 
 		$items = array();
 
-		$itemDataList = Sale\Internals\ShipmentItemStoreTable::getList(
+		$itemDataList = static::getList(
 			array(
 				'filter' => array('ORDER_DELIVERY_BASKET_ID' => $id),
 				'order' => array('DATE_CREATE' => 'ASC', 'ID' => 'ASC')
 			)
 		);
 		while ($itemData = $itemDataList->fetch())
-			$items[] = new static($itemData);
+			$items[] = static::createShipmentItemStoreObject($itemData);
 
 		return $items;
 	}
@@ -294,7 +294,11 @@ class ShipmentItemStore
 
 		$id = $this->getId();
 		$fields = $this->fields->getValues();
-		$eventName = static::getEntityEventName();
+
+		if (self::$eventClassName === null)
+		{
+			self::$eventClassName = static::getEntityEventName();
+		}
 
 		/** @var ShipmentItemStoreCollection $shipmentItemStoreCollection */
 		if (!$shipmentItemStoreCollection = $this->getCollection())
@@ -341,10 +345,10 @@ class ShipmentItemStore
 		}
 
 
-		if ($this->isChanged() && $eventName)
+		if ($this->isChanged() && self::$eventClassName)
 		{
 			/** @var Main\Entity\Event $event */
-			$event = new Main\Event('sale', 'OnBefore'.$eventName.'EntitySaved', array(
+			$event = new Main\Event('sale', 'OnBefore'.self::$eventClassName.'EntitySaved', array(
 					'ENTITY' => $this,
 					'VALUES' => $this->fields->getOriginalValues()
 			));
@@ -369,10 +373,14 @@ class ShipmentItemStore
 				$fields['MODIFIED_BY'] = $USER->GetID();
 				$this->setFieldNoDemand('MODIFIED_BY', $fields['MODIFIED_BY']);
 
-				$r = Sale\Internals\ShipmentItemStoreTable::update($id, $fields);
+				$r = $this->updateInternal($id, $fields);
 				if (!$r->isSuccess())
 				{
-					OrderHistory::addAction(
+					$registry = Registry::getInstance(static::getRegistryType());
+
+					/** @var OrderHistory $orderHistory */
+					$orderHistory = $registry->getOrderHistoryClassName();
+					$orderHistory::addAction(
 						'SHIPMENT',
 						$order->getId(),
 						'SHIPMENT_ITEM_STORE_UPDATE_ERROR',
@@ -419,10 +427,14 @@ class ShipmentItemStore
 				return $result;
 			}
 
-			$r = Sale\Internals\ShipmentItemStoreTable::add($fields);
+			$r = $this->addInternal($fields);
 			if (!$r->isSuccess())
 			{
-				OrderHistory::addAction(
+				$registry = Registry::getInstance(static::getRegistryType());
+
+				/** @var OrderHistory $orderHistory */
+				$orderHistory = $registry->getOrderHistoryClassName();
+				$orderHistory::addAction(
 					'SHIPMENT',
 					$order->getId(),
 					'SHIPMENT_ITEM_STORE_ADD_ERROR',
@@ -448,10 +460,10 @@ class ShipmentItemStore
 			$result->setId($id);
 		}
 
-		if ($this->isChanged() && $eventName)
+		if ($this->isChanged() && self::$eventClassName)
 		{
 			/** @var Main\Event $event */
-			$event = new Main\Event('sale', 'On'.$eventName.'EntitySaved', array(
+			$event = new Main\Event('sale', 'On'.self::$eventClassName.'EntitySaved', array(
 					'ENTITY' => $this,
 					'VALUES' => $this->fields->getOriginalValues(),
 			));
@@ -529,7 +541,11 @@ class ShipmentItemStore
 					);
 				}
 
-				OrderHistory::addField(
+				$registry = Registry::getInstance(static::getRegistryType());
+
+				/** @var OrderHistory $orderHistory */
+				$orderHistory = $registry->getOrderHistoryClassName();
+				$orderHistory::addField(
 					'SHIPMENT_ITEM_STORE',
 					$order->getId(),
 					$name,
@@ -546,14 +562,14 @@ class ShipmentItemStore
 	}
 
 	/**
-	 * @param array $filter
+	 * @param array $parameters
 	 *
 	 * @return Main\DB\Result
 	 * @throws Main\ArgumentException
 	 */
-	public static function getList(array $filter)
+	public static function getList(array $parameters = array())
 	{
-		return Sale\Internals\ShipmentItemStoreTable::getList($filter);
+		return Sale\Internals\ShipmentItemStoreTable::getList($parameters);
 	}
 
 
@@ -612,6 +628,90 @@ class ShipmentItemStore
 		}
 
 		return $shipmentItemStoreClone;
+	}
+
+
+	/**
+	 * @param $value
+	 *
+	 * @return string
+	 */
+	public function getErrorEntity($value)
+	{
+		static $className = null;
+		$errorsList = static::getAutoFixErrorsList();
+		if (is_array($errorsList) && in_array($value, $errorsList))
+		{
+			if ($className === null)
+				$className = static::getClassName();
+		}
+		return $className;
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return bool
+	 */
+	public function canAutoFixError($value)
+	{
+		$errorsList = static::getAutoFixErrorsList();
+		return (is_array($errorsList) && in_array($value, $errorsList));
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getAutoFixErrorsList()
+	{
+		return array();
+	}
+
+	/**
+	 * @param $code
+	 *
+	 * @return Result
+	 */
+	public function tryFixError($code)
+	{
+		return new Result();
+	}
+
+	public function canMarked()
+	{
+		return false;
+	}
+
+	public function getMarkField()
+	{
+		return null;
+	}
+
+	/**
+	 * @param array $data
+	 * @return Main\Entity\AddResult
+	 */
+	protected function addInternal(array $data)
+	{
+		return Internals\ShipmentItemStoreTable::add($data);
+	}
+
+	/**
+	 * @param $primary
+	 * @param array $data
+	 * @return Main\Entity\UpdateResult
+	 */
+	protected function updateInternal($primary, array $data)
+	{
+		return Internals\ShipmentItemStoreTable::update($primary, $data);
+	}
+
+	/**
+	 * @return array
+	 */
+	protected static function getFieldsMap()
+	{
+		return Internals\ShipmentItemStoreTable::getMap();
 	}
 
 }

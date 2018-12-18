@@ -1,6 +1,7 @@
 <?php
 namespace Bitrix\Scale;
 
+use Bitrix\Main\IO\File;
 use \Bitrix\Main\Localization\Loc;
 Loc::loadMessages(__FILE__);
 
@@ -14,6 +15,8 @@ class Action
 	protected $userParams = array();
 	protected $freeParams = array();
 	protected $actionParams = array();
+	protected $serverHostname = "";
+
 	protected $shellAdapter = null;
 	protected $result = array();
 	protected $logLevel = Logger::LOG_LEVEL_INFO;
@@ -75,7 +78,24 @@ class Action
 		$retStr = $this->actionParams["START_COMMAND_TEMPLATE"];
 
 		foreach ($this->userParams as $key => $paramValue)
+		{
+			if($this->actionParams['USER_PARAMS'][$key]['THROUGH_FILE'] == 'Y')
+			{
+				if(strlen($paramValue) > 0)
+				{
+					$tmpDir = Helper::getTmpDir();
+					$tmpFile = $tmpDir.'/.'.randString();
+					$res = File::putFileContents($tmpFile, $paramValue);
+
+					if($res === false)
+						return '';
+
+					$paramValue = $tmpFile;
+				}
+			}
+
 			$retStr = str_replace('##USER_PARAMS:'.$key.'##', $paramValue, $retStr);
+		}
 
 		if(strlen($this->serverHostname) > 0 && $this->serverHostname != "global")
 		{
@@ -118,23 +138,6 @@ class Action
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 * @throws \Exception
 	 */
-	
-	/**
-	* <p>Возвращает результат запуска задания <i>BitrixVM</i>. Метод нестатический.</p>
-	*
-	*
-	* @param array $arrayinputParams = array() Массив параметров предыдущих запусков. Ключи массива: <ul> <li>
-	* <b>NAME</b> - название задания; </li> <li> <b>RESULT</b> - статус: <code>OK</code> или
-	* <code>ERROR</code>,</li> <li> <b>OUTPUT</b> -  результат на выходе задания:  <ul> <li>
-	* <b>TEXT</b> - текст задания, </li> <li> <b>DATA</b> - данные задания.</li> </ul> </li> <li>
-	* <b>ERROR</b> - ошибка.</li> </ul>
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/scale/action/start.php
-	* @author Bitrix
-	*/
 	public function start(array $inputParams = array())
 	{
 		if(!is_array($inputParams))
@@ -150,7 +153,7 @@ class Action
 				{
 					try
 					{
-						$this->actionParams = call_user_func($modifyerFunction, $this->id, $this->actionParams, $this->serverHostname);
+						$this->actionParams = call_user_func($modifyerFunction, $this->id, $this->actionParams, $this->serverHostname, $this->userParams);
 					}
 					catch(NeedMoreUserInfoException $e)
 					{
@@ -165,27 +168,38 @@ class Action
 		}
 
 		$result = null;
-		$command = $this->makeStartCommand($inputParams);
-		$result =  $this->shellAdapter->syncExec($command);
-		$output = $this->shellAdapter->getLastOutput();
+		$output = '';
 		$arOutput = array();
+		$command = $this->makeStartCommand($inputParams);
 
-		if(strlen($output) > 0)
+		if(strlen($command) > 0)
 		{
-			$arOut = json_decode($output, true);
+			$result =  $this->shellAdapter->syncExec($command);
+			$output = $this->shellAdapter->getLastOutput();
+			$arOutput = array();
 
-			if(is_array($arOut) && !empty($arOut))
-				$arOutput = $arOut;
+			if(strlen($output) > 0)
+			{
+				$arOut = json_decode($output, true);
+
+				if(is_array($arOut) && !empty($arOut))
+					$arOutput = $arOut;
+			}
+
+			//error returned by shell
+			$error = $this->shellAdapter->getLastError();
+
+			//error returned by bitrix-env
+			if(isset($arOutput["error"]) && intval($arOutput["error"]) > 0 && isset($arOutput["message"]) && strlen($arOutput["message"]) > 0)
+				$error .= " ".$arOutput["message"];
+
+			$this->makeLogRecords($command, $result, $output, $error);
 		}
-
-		//error returned by shell
-		$error = $this->shellAdapter->getLastError();
-
-		//error returned by bitrix-env
-		if(isset($arOutput["error"]) && intval($arOutput["error"]) > 0 && isset($arOutput["message"]) && strlen($arOutput["message"]) > 0)
-			$error .= " ".$arOutput["message"];
-
-		$this->makeLogRecords($command, $result, $output, $error);
+		else //$command == ''
+		{
+			$result = false;
+			$error = 'Cant\'t create command for action execution';
+		}
 
 		$this->result = array(
 			$this->id => array(

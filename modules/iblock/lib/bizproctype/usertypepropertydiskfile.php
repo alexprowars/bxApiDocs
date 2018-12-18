@@ -86,17 +86,6 @@ class UserTypePropertyDiskFile extends UserTypeProperty
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Метод возвращает карту конвертации для полей типа <b>Диск (Файл)</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/bizproctype/usertypepropertydiskfile/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -236,4 +225,19 @@ class UserTypePropertyDiskFile extends UserTypeProperty
 			call_user_func_array($property['DeleteAttachedFiles'], array($iblockId, $values));
 		}
 	}
+
+	public static function toSingleValue(FieldType $fieldType, $value)
+	{
+		if (is_array($value) && isset($value['VALUE']))
+		{
+			$value = $value['VALUE'];
+		}
+		if (is_array($value) && isset($value[0]))
+		{
+			$value = $value[0];
+		}
+
+		return $value;
+	}
+
 }

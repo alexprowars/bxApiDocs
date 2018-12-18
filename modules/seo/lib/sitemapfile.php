@@ -39,10 +39,12 @@ class SitemapFile
 	protected $settings = array();
 	protected $parser = false;
 
+	protected $siteRoot = '';
 	protected $partFile = '';
 	protected $partList = array();
 	protected $part = 0;
 	protected $partChanged = false;
+	protected $footerClosed = false;
 
 	protected $urlToSearch = '';
 	protected $urlFound = false;
@@ -58,18 +60,21 @@ class SitemapFile
 		$site = SiteTable::getRow(array("filter" => array("LID" => $this->settings['SITE_ID'])));
 
 		$this->documentRoot = SiteTable::getDocumentRoot($this->settings['SITE_ID']);
+		$this->footerClosed = false;
 
 		$this->siteRoot = Path::combine(
 			$this->documentRoot,
 			$site['DIR']
 		);
 
-		if(substr($fileName, -strlen(self::FILE_EXT)) != self::FILE_EXT)
+//		normalize slashes
+		$fileName = Path::normalize($fileName);
+		if (substr($fileName, -strlen(self::FILE_EXT)) != self::FILE_EXT)
 		{
 			$fileName .= self::FILE_EXT;
 		}
-
-		if($this->partFile == '')
+		
+		if ($this->partFile == '')
 		{
 			$this->partFile = $fileName;
 		}
@@ -96,17 +101,6 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет заголовок к текущему файлу карты сайта. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/addheader.php
-	* @author Bitrix
-	*/
 	public function addHeader()
 	{
 		$this->partChanged = true;
@@ -135,29 +129,16 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет новую запись в виде массива в текущий файл карты сайта. Метод нестатический.</p> <p>Ключи добавляемого массива: </p> <p>XML_LOC - значение, указывающее местнахождение поля;</p> <p>XML_LASTMOD - последнее измененное значение поля.</p>
-	*
-	*
-	* @param array $entry  Добавляемый массив.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/addentry.php
-	* @author Bitrix
-	*/
 	public function addEntry($entry)
 	{
-		if($this->isSplitNeeded())
+		if ($this->isSplitNeeded())
 		{
 			$this->split();
 			$this->addEntry($entry);
 		}
 		else
 		{
-			if(!$this->partChanged)
+			if (!$this->partChanged)
 			{
 				$this->addHeader();
 			}
@@ -177,17 +158,6 @@ class SitemapFile
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод создает следующую часть файла карты сайта. Возвращает имя новой части файла. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/split.php
-	* @author Bitrix
-	*/
 	public function split()
 	{
 		if($this->partChanged)
@@ -213,20 +183,25 @@ class SitemapFile
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список частей файла. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/getnamelist.php
-	* @author Bitrix
-	*/
 	public function getNameList()
 	{
 		return $this->isCurrentPartNotEmpty() ? array_merge($this->partList, array($this->getName())) : $this->partList;
+	}
+	
+	/**
+	 * Divide path to directory and filemname
+	 * @return array
+	 */
+	public function getPathDirectory()
+	{
+//		normalize slashes
+		$siteRoot = Path::normalize($this->siteRoot);
+		$fileName = $this->getName();
+		$path = Path::normalize($this->path);
+		
+		$directory = str_replace(array($siteRoot, $fileName), array('',''), $path);
+		
+		return ltrim($directory, '/');
 	}
 
 	/**
@@ -234,17 +209,6 @@ class SitemapFile
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод возвращает true, если текущая заполняемая часть файла карты сайта уже содержит какие-либо данные, помимо заголовка. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/isnotempty.php
-	* @author Bitrix
-	*/
 	public function isNotEmpty()
 	{
 		return (count($this->partList) > 0) || $this->isCurrentPartNotEmpty();
@@ -255,17 +219,6 @@ class SitemapFile
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод возвращает содержимое текущей части карты сайта, если она содержит что-то кроме заголовка. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/iscurrentpartnotempty.php
-	* @author Bitrix
-	*/
 	public function isCurrentPartNotEmpty()
 	{
 		if($this->isExists())
@@ -288,19 +241,6 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет новую запись в текущий завершенный файл карты сайта. Метод нестатический.</p> <p>Ключи добавляемого массива: </p> <p>XML_LOC - значение, указывающее местнахождение поля;</p> <p>XML_LASTMOD - последнее измененное значение поля.</p>
-	*
-	*
-	* @param array $entry  Добавляемый массив.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/appendentry.php
-	* @author Bitrix
-	*/
 	public function appendEntry($entry)
 	{
 		if($this->isSplitNeeded())
@@ -329,6 +269,8 @@ class SitemapFile
 				Converter::getXmlConverter()->encode($entry['XML_LASTMOD'])
 			).self::FILE_FOOTER);
 			fclose($fd);
+			
+			$this->footerClosed = true;
 		}
 	}
 
@@ -341,24 +283,12 @@ class SitemapFile
 	 *
 	 * @param string $url Entry URL.
 	 *
-	 * @return void
+	 * @return string
 	 */
-	
-	/**
-	* <p>Метод ищет и удаляет запись из текущего завершенного файла карты сайта. Метод нестатический.</p> <p>Ключи добавляемого массива: </p> <p>XML_LOC - значение, указывающее местнахождение поля;</p> <p>XML_LASTMOD - последнее измененное значение поля.</p>
-	*
-	*
-	* @param string $url  URL записи.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/removeentry.php
-	* @author Bitrix
-	*/
 	public function removeEntry($url)
 	{
-		$url = $this->settings['PROTOCOL'].'://'.\CBXPunycode::toASCII($this->settings['DOMAIN'], $e = null).$url;
+		$fileName = $this->partFile;
+		$url = $this->settings['PROTOCOL'] . '://' . \CBXPunycode::toASCII($this->settings['DOMAIN'], $e = NULL) . $url;
 		$pattern = sprintf(self::ENTRY_TPL_SEARCH, $url);
 
 		while($this->isExists())
@@ -388,13 +318,12 @@ class SitemapFile
 			else
 			{
 				$this->part++;
-
-				$fileName = $this->partFile;
-				$fileName = substr($fileName, 0, -strlen(self::FILE_EXT)).self::FILE_PART_SUFFIX.$this->part.substr($fileName, -strlen(self::FILE_EXT));
-
+				$fileName = substr($fileName, 0, -strlen(self::FILE_EXT)) . self::FILE_PART_SUFFIX . $this->part . substr($fileName, -strlen(self::FILE_EXT));
 				$this->reInit($fileName);
 			}
 		}
+		
+		return $fileName;
 	}
 
 	/**
@@ -405,25 +334,6 @@ class SitemapFile
 	 * @return void
 	 * @throws \Bitrix\Main\IO\FileNotFoundException
 	 */
-	
-	/**
-	* <p>Метод добавляет новый файл в текущую карту сайта.  Метод нестатический.</p>
-	*
-	*
-	* @param mixed $Bitrix  Добавляемый файл.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $MaiIO  
-	*
-	* @param I $Filef  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/addfileentry.php
-	* @author Bitrix
-	*/
 	public function addFileEntry(File $f)
 	{
 		if($f->isExists() && !$f->isSystem())
@@ -443,21 +353,6 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет новую запись инфоблока к текущей карте сайта. Метод нестатический.</p>
-	*
-	*
-	* @param string $url  URL инфоблока.
-	*
-	* @param string $modifiedDate  Отметка времени модифицирования инфоблока.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/addiblockentry.php
-	* @author Bitrix
-	*/
 	public function addIBlockEntry($url, $modifiedDate)
 	{
 		$this->addEntry(array(
@@ -474,21 +369,6 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет новую запись инфоблока к существующей завершенной карте сайта. Метод нестатический.</p>
-	*
-	*
-	* @param string $url  URL инфоблока.
-	*
-	* @param string $modifiedDate  Отметка времени модифицирования инфоблока.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/appendiblockentry.php
-	* @author Bitrix
-	*/
 	public function appendIBlockEntry($url, $modifiedDate)
 	{
 		if($this->isExists())
@@ -511,20 +391,10 @@ class SitemapFile
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод добавляет футер (подвал, нижний колонтитул) к текущей части карты сайта. Метод нестатический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/addfooter.php
-	* @author Bitrix
-	*/
 	public function addFooter()
 	{
 		$this->putContents(self::FILE_FOOTER, self::APPEND);
+		$this->footerClosed = true;
 	}
 
 	/**
@@ -532,17 +402,6 @@ class SitemapFile
 	 *
 	 * @return mixed|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает сайт-источник карты сайта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/getsiteroot.php
-	* @author Bitrix
-	*/
 	public function getSiteRoot()
 	{
 		return $this->siteRoot;
@@ -553,17 +412,6 @@ class SitemapFile
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает URL файла карты сайта.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/geturl.php
-	* @author Bitrix
-	*/
 	public function getUrl()
 	{
 		return $this->settings['PROTOCOL'].'://'.\CBXPunycode::toASCII($this->settings['DOMAIN'], $e = null).$this->getFileUrl($this);
@@ -575,17 +423,6 @@ class SitemapFile
 	 * @return bool|\CDataXML
 	 * @throws \Bitrix\Main\IO\FileNotFoundException
 	 */
-	
-	/**
-	* <p>Метод анализирует файл карты сайта. Метод нестатический.</p> <p>Без параметров</p>
-	*
-	*
-	* @return boolean|\CDataXML 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/seo/sitemapfile/parse.php
-	* @author Bitrix
-	*/
 	public function parse()
 	{
 		if(!$this->parser)
@@ -614,11 +451,12 @@ class SitemapFile
 		{
 			$indexNames = GetDirIndexArray();
 		}
-
+		
+		$documentRoot  = Path::normalize($this->documentRoot);
 		$path = '/';
-		if (substr($this->path, 0, strlen($this->documentRoot)) === $this->documentRoot)
+		if (substr($this->path, 0, strlen($documentRoot)) === $documentRoot)
 		{
-			$path = '/'.substr($f->getPath(), strlen($this->documentRoot));
+			$path = '/'.substr($f->getPath(), strlen($documentRoot));
 		}
 
 		$path = Path::convertLogicalToUri($path);

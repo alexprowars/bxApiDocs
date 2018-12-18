@@ -182,7 +182,7 @@ class Google extends Engine implements IEngine
 		{
 			$result = Json::decode($queryResult->getResult());
 			$response = array();
-			if(is_array($result))
+			if(is_array($result) && is_array($result['siteEntry']))
 			{
 				foreach($result['siteEntry'] as $key => $siteInfo)
 				{

@@ -194,7 +194,7 @@ class AliasedQuery extends Query
 
 final class CDBResult extends \CDBResult
 {
-	public function compatibleNavQuery(Query $query, array $arNavStartParams) //, $bIgnoreErrors = false)
+	function compatibleNavQuery(Query $query, array $arNavStartParams) //, $bIgnoreErrors = false)
 	{
 		$cnt = $query->exec()->getSelectedRowsCount(); // TODO check groups
 
@@ -287,7 +287,7 @@ final class CDBResult extends \CDBResult
 //			return false;
 
 //		$this->result = $res_tmp->result;
-		$this->DB = DB;
+		$this->DB = $DB;
 
 		if($this->SqlTraceIndex)
 			$start_time = microtime(true);
@@ -331,7 +331,7 @@ final class CDBResult extends \CDBResult
 		$this->fetchAdapters[] = $adapter;
 	}
 
-	public function Fetch()
+	function Fetch()
 	{
 		if ($row = parent::Fetch())
 			foreach ($this->fetchAdapters as $adapter)
@@ -343,14 +343,14 @@ final class CDBResult extends \CDBResult
 
 interface FetchAdapter
 {
-	static public function adapt(array $row);
+	public function adapt(array $row);
 }
 
 class AggregateAdapter implements FetchAdapter
 {
 	private $aggregated = array();
 
-	public function __construct(array $aggregated)
+	function __construct(array $aggregated)
 	{
 		$this->aggregated = $aggregated;
 	}
@@ -405,7 +405,7 @@ class OrderQuery extends AliasedQuery
 
 	public static function explodeFilterKey($key)
 	{
-		preg_match('/^([!+]{0,1})([<=>@%~]{0,2})(.*)$/', $key, $matches);
+		preg_match('/^([!+*]{0,1})([<=>@%~]{0,2})(.*)$/', $key, $matches);
 
 		return array(
 			'modifier' => $matches[1], // can be ""
@@ -427,14 +427,17 @@ class OrderQuery extends AliasedQuery
 		switch ($operator)
 		{
 			case  '':
-			case '@': $operator = '='; break;
+			case '@': $operator = ($modifier === '*' ? '' : '=');
+				break;
 
-			case '~': $operator =  ''; break;
+			case '~': $operator =  '';
+				break;
 			// default: with no changes
 		}
 
 		switch ($modifier)
 		{
+			case '*':
 			case '' : return $this->addFilter($modifier.$operator.$name, $value);
 
 			case '!': return $operator == '=' && $value

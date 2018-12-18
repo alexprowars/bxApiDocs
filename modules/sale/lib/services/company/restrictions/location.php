@@ -4,7 +4,9 @@ namespace Bitrix\Sale\Services\Company\Restrictions;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Internals\CollectableEntity;
 use Bitrix\Sale\Internals\CompanyLocationTable;
+use Bitrix\Sale\Internals\Entity;
 use Bitrix\Sale\Location\Tree\NodeNotFoundException;
+use Bitrix\Sale\Order;
 use Bitrix\Sale\Services\Base;
 
 Loc::loadMessages(__FILE__);
@@ -39,7 +41,7 @@ class Location extends Base\Restriction
 	 * @param int $serviceId
 	 * @return bool
 	 */
-	protected static function check($params, array $restrictionParams, $serviceId = 0)
+	public static function check($params, array $restrictionParams, $serviceId = 0)
 	{
 		if ((int)$serviceId <= 0)
 			return true;
@@ -64,13 +66,25 @@ class Location extends Base\Restriction
 	}
 
 	/**
-	 * @param CollectableEntity $entity
+	 * @param Entity $entity
+	 *
 	 * @return null|string
 	 */
-	protected static function extractParams(CollectableEntity $entity)
+	protected static function extractParams(Entity $entity)
 	{
-		/** @var \Bitrix\Sale\Order $order */
-		$order = $entity->getCollection()->getOrder();
+		if ($entity instanceof CollectableEntity)
+		{
+			/** @var \Bitrix\Sale\Order $order */
+			$order = $entity->getCollection()->getOrder();
+		}
+		elseif ($entity instanceof Order)
+		{
+			/** @var \Bitrix\Sale\Order $order */
+			$order = $entity;
+		}
+
+		if (!$order)
+			return '';
 
 		if(!$props = $order->getPropertyCollection())
 			return '';

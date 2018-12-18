@@ -162,7 +162,7 @@ abstract class Controller
 	{
 		if(!defined('PUBLIC_AJAX_MODE'))
 		{
-			// define('PUBLIC_AJAX_MODE', true);
+			define('PUBLIC_AJAX_MODE', true);
 		}
 
 		global $APPLICATION;

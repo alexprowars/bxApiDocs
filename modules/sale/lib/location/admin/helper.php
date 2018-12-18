@@ -197,10 +197,25 @@ abstract class Helper
 		{
 			$entityClass = static::getEntityClass();
 			$parameters = Helper::getParametersForList($parameters); // from generalized to orm
-			$resItems = $entityClass::getList(array('filter' => $parameters['filter'], 'select' => array('ID')));
+
+			$glParams = array('select' => array('ID'));
+
+			if(is_array($parameters['filter']) && !empty($parameters['filter']))
+				$glParams['filter'] = $parameters['filter'];
+
+			$resItems = $entityClass::getList($glParams);
 
 			while ($item = $resItems->fetch())
 			{
+
+				/* Locations have tree-style structure so
+				 * we could have deleted some of them
+				 * during previous iterations. Let's check this.
+				*/
+				if(!$entityClass::getById($item['ID'])->fetch())
+					continue;
+				/**/
+
 				$res = static::delete($item['ID']);
 				if(!$res['success'])
 				{
@@ -423,7 +438,7 @@ abstract class Helper
 
 	// function calculates limit and offset for sql select query, based on current request and session
 	// variables, then forms fake old-style database result
-	public static function getList($parameters = array(), $tableId = false, $navigation = 20)
+	public static function getList($parameters = array(), $tableId = false, $navigation = 20, $params = array())
 	{
 		$entityClass = static::getEntityClass();
 
@@ -431,7 +446,11 @@ abstract class Helper
 		$unique = md5($GLOBALS['APPLICATION']->GetCurPage());
 		$showAll = $_SESSION[$unique.'SESS_ALL_'.$navNum] || $_GET['SHOWALL_'.$navNum];
 
-		if(ADMIN_SECTION === true && strlen($tableId))
+		if ($params["uiMode"])
+		{
+			$result = new \CSaleProxyAdminUiResult($parameters, $entityClass, $tableId);
+		}
+		elseif(ADMIN_SECTION === true && strlen($tableId))
 		{
 			$result = new \CSaleProxyAdminResult($parameters, $entityClass, $tableId); // being in admin and knowing table, do admin result api call
 		}
@@ -551,8 +570,10 @@ abstract class Helper
 
 		$parameters['lang'] = LANGUAGE_ID;
 
+		$selfFolderUrl = (defined("SELF_FOLDER_URL") ? SELF_FOLDER_URL : "/bitrix/admin/");
+
 		$packed = self::packUrlParameters($parameters);
-		return '/bitrix/admin/'.$page.(strlen($packed) ? '?'.$packed : '');
+		return $selfFolderUrl.$page.(strlen($packed) ? '?'.$packed : '');
 	}
 
 	#####################################

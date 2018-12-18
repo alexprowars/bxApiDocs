@@ -4,6 +4,8 @@ namespace Bitrix\Sale\Delivery\Restrictions;
 use Bitrix\Sale\Delivery\Restrictions\Base;
 use \Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Internals\CollectableEntity;
+use Bitrix\Sale\Internals\Entity;
+use Bitrix\Sale\Order;
 
 Loc::loadMessages(__FILE__);
 
@@ -36,9 +38,26 @@ class BySite extends Base
 		return $result;
 	}
 
-	protected static function extractParams(CollectableEntity $entity)
+	protected static function extractParams(Entity $entity)
 	{
-		return $entity->getCollection()->getOrder()->getSiteId();
+		if ($entity instanceof CollectableEntity)
+		{
+			/** @var \Bitrix\Sale\ShipmentCollection $collection */
+			$collection = $entity->getCollection();
+
+			/** @var \Bitrix\Sale\Order $order */
+			$order = $collection->getOrder();
+		}
+		elseif ($entity instanceof Order)
+		{
+			/** @var \Bitrix\Sale\Order $order */
+			$order = $entity;
+		}
+
+		if (!$order)
+			return false;
+
+		return $order->getSiteId();
 	}
 
 	public static function getParamsStructure($entityId = 0)
@@ -68,4 +87,13 @@ class BySite extends Base
 
 		return parent::getSeverity($mode);
 	}
+
+	/**
+	 * @return bool
+	 */
+	public static function isAvailable()
+	{
+		return IsModuleInstalled('crm') ? false : true;
+	}
+
 } 

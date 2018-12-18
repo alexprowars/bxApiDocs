@@ -20,17 +20,6 @@ class UrlMetadataTable extends Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает имя таблицы БД для сущности.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlmetadatatable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_urlpreview_metadata';
@@ -41,17 +30,6 @@ class UrlMetadataTable extends Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает описание карты сущностей.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlmetadatatable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -87,19 +65,6 @@ class UrlMetadataTable extends Entity\DataManager
 	 * @return array|false
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает первую запись, отфильтрованную по значению переменной <code>$url</code>.</p>
-	*
-	*
-	* @param string $url  Url страницы с матаданными.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlmetadatatable/getbyurl.php
-	* @author Bitrix
-	*/
 	public static function getByUrl($url)
 	{
 		$parameters = array(

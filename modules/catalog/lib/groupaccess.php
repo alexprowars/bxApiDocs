@@ -29,17 +29,6 @@ class GroupAccessTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы прав доступа групп пользователей на просмотр и покупку товаров по имеющимся в системе типам цен. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/groupaccesstable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_group2group';
@@ -50,17 +39,6 @@ class GroupAccessTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы прав доступа групп пользователей на просмотр и покупку товаров по имеющимся в системе типам цен. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/groupaccesstable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -84,7 +62,7 @@ class GroupAccessTable extends Main\Entity\DataManager
 			)),
 			'CATALOG_GROUP' => new Main\Entity\ReferenceField(
 				'CATALOG_GROUP',
-				'Bitrix\Catalog\Group',
+				'\Bitrix\Catalog\Group',
 				array('=this.CATALOG_GROUP_ID' => 'ref.ID')
 			)
 		);

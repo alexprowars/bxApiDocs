@@ -15,7 +15,7 @@ class ElementProperty extends Base
 	/**
 	 * @param integer $id Iblock element identifier.
 	 */
-	static public function __construct($id)
+	public function __construct($id)
 	{
 		parent::__construct($id);
 	}
@@ -27,19 +27,6 @@ class ElementProperty extends Base
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод устанавливает инфоблок элемента. Нестатический метод.</p>
-	*
-	*
-	* @param integer $iblockId  Идентификатор инфоблока.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/template/entity/elementproperty/setiblockid.php
-	* @author Bitrix
-	*/
 	public function setIblockId($iblockId)
 	{
 		$this->iblockId = intval($iblockId);
@@ -52,19 +39,6 @@ class ElementProperty extends Base
 	 *
 	 * @return \Bitrix\Iblock\Template\Entity\Base
 	 */
-	
-	/**
-	* <p> Метод используется для поиска сущности для обработки шаблона. Нестатический метод.</p>
-	*
-	*
-	* @param string $entity  Сущность, которую необходимо найти.
-	*
-	* @return \Bitrix\Iblock\Template\Entity\Base 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/template/entity/elementproperty/resolve.php
-	* @author Bitrix
-	*/
 	public function resolve($entity)
 	{
 		if ($this->loadFromDatabase())
@@ -92,19 +66,6 @@ class ElementProperty extends Base
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Используется для инициализации полей сущности из некоторого внешнего источника. Нестатический метод.</p>
-	*
-	*
-	* @param array $fields  Массив полей сущности.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/template/entity/elementproperty/setfields.php
-	* @author Bitrix
-	*/
 	public function setFields(array $fields)
 	{
 		parent::setFields($fields);
@@ -225,7 +186,18 @@ class ElementProperty extends Base
 					{
 						if(strlen($property["USER_TYPE"]))
 						{
-							$value = new ElementPropertyUserField($propertyValues, $property);
+							if (is_array($propertyValues))
+							{
+								$value = array();
+								foreach ($propertyValues as $propertyValue)
+								{
+									$value[] = new ElementPropertyUserField($propertyValue, $property);
+								}
+							}
+							else
+							{
+								$value = new ElementPropertyUserField($propertyValues, $property);
+							}
 						}
 						else
 						{
@@ -318,7 +290,7 @@ class ElementPropertyUserField extends LazyValueLoader
 	 * @param integer $key  Iblock element identifier.
 	 * @param array|mixed $property Iblock property array.
 	 */
-	public function __construct($key, $property)
+	function __construct($key, $property)
 	{
 		parent::__construct($key);
 		if (is_array(($property)))

@@ -73,17 +73,6 @@ class UserTypePropertyEmployee extends UserTypeProperty
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Метод возвращает карту конвертации для полей типа <b>Привязка к сотруднику</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/bizproctype/usertypepropertyemployee/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		$userMap = BaseType\User::getConversionMap();
@@ -173,6 +162,12 @@ class UserTypePropertyEmployee extends UserTypeProperty
 		return $value;
 	}
 
+	public static function extractValueMultiple(FieldType $fieldType, array $field, array $request)
+	{
+		$values = parent::extractValueMultiple($fieldType, $field, $request);
+		return array_unique($values);
+	}
+
 	/**
 	 * @param FieldType $fieldType
 	 * @param $value
@@ -198,6 +193,18 @@ class UserTypePropertyEmployee extends UserTypeProperty
 			return htmlspecialcharsback($result);
 		}
 		return parent::formatValuePrintable($fieldType, $value);
+	}
+
+	public static function toSingleValue(FieldType $fieldType, $value)
+	{
+		if (is_array($value) && !isset($value['VALUE']))
+		{
+			$value = \CBPHelper::MakeArrayFlat($value);
+			$value = current($value);
+			return $value;
+		}
+
+		return parent::toSingleValue($fieldType, $value);
 	}
 
 	private static function fixUserPrefix($value)

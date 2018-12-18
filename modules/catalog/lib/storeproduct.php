@@ -59,16 +59,37 @@ class StoreProductTable extends Main\Entity\DataManager
 			)),
 			'STORE' => new Main\Entity\ReferenceField(
 				'STORE',
-				'Bitrix\Catalog\Store',
+				'\Bitrix\Catalog\Store',
 				array('=this.STORE_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),
 			'PRODUCT' => new Main\Entity\ReferenceField(
 				'PRODUCT',
-				'Bitrix\Catalog\Product',
+				'\Bitrix\Catalog\Product',
 				array('=this.PRODUCT_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			)
 		);
+	}
+
+	/**
+	 * Delete all rows for product.
+	 * @internal
+	 *
+	 * @param int $id       Product id.
+	 * @return void
+	 */
+	public static function deleteByProduct($id)
+	{
+		$id = (int)$id;
+		if ($id <= 0)
+			return;
+
+		$conn = Main\Application::getConnection();
+		$helper = $conn->getSqlHelper();
+		$conn->queryExecute(
+			'delete from '.$helper->quote(self::getTableName()).' where '.$helper->quote('PRODUCT_ID').' = '.$id
+		);
+		unset($helper, $conn);
 	}
 }

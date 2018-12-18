@@ -23,6 +23,9 @@ class AutomaticProfile extends Base
 	/** @var Automatic|null $parentAutomatic */
 	protected $parentAutomatic = null;
 	protected $parentHandlerInitParams = array();
+	protected $profileConfig = null;
+	protected $profileOldConfig = null;
+	protected $profileOldConfigActualized = false;
 
 	protected static $isProfile = true;
 
@@ -92,49 +95,118 @@ class AutomaticProfile extends Base
 		}
 	}
 
-	protected function getOldConfig()
+	/**
+	 * @param bool $actualizeProfiles
+	 * @return array Old config.
+	 * @internal
+	 */
+
+	public function getOldConfig($actualizeProfiles = false)
 	{
-		$own = Automatic::createConfig($this->parentHandlerInitParams, $this->config["MAIN"]["OLD_SETTINGS"]);
-		$parent = $this->getParentService()->getOldConfig();
+		if($this->profileOldConfig === null)
+		{
+			$own = Automatic::createConfig($this->parentHandlerInitParams, $this->config["MAIN"]["OLD_SETTINGS"]);
+			$parent = $this->getParentService()->getOldConfig();
 
-		$result = array(
-			"CONFIG" =>	array_merge(
-				isset($parent["CONFIG"]) && is_array($parent["CONFIG"]) ? $parent["CONFIG"] : array(),
-				isset($own["CONFIG"]) && is_array($own["CONFIG"]) ? $own["CONFIG"] : array()
-			),
-			"CONFIG_GROUPS" =>
-				isset($parent["CONFIG_GROUPS"]) && is_array($parent["CONFIG"])? $parent["CONFIG_GROUPS"] : array()
-		);
+			$profileOldConfig = array(
+				"CONFIG" =>	array_merge(
+					isset($parent["CONFIG"]) && is_array($parent["CONFIG"]) ? $parent["CONFIG"] : array(),
+					isset($own["CONFIG"]) && is_array($own["CONFIG"]) ? $own["CONFIG"] : array()
+				),
+				"CONFIG_GROUPS" =>
+					isset($parent["CONFIG_GROUPS"]) && is_array($parent["CONFIG"])? $parent["CONFIG_GROUPS"] : array()
+			);
 
-		if(isset($own["CONFIG"]) && is_array($own["CONFIG"]))
-			foreach($own["CONFIG"] as $k => $v)
-				if(empty($v["GROUP"]) || $v["GROUP"] != $this->profileId)
-					$result["CONFIG"][$k] = $parent["CONFIG"][$k];
+			if(isset($own["CONFIG"]) && is_array($own["CONFIG"]))
+				foreach($own["CONFIG"] as $k => $v)
+					if(empty($v["GROUP"]) || $v["GROUP"] != $this->profileId)
+						$profileOldConfig["CONFIG"][$k] = $parent["CONFIG"][$k];
 
-		return $result;
+			$this->profileOldConfig = $profileOldConfig;
+		}
+
+		if($actualizeProfiles && !$this->profileOldConfigActualized)
+		{
+			$this->profileOldConfig = $this->actualizeProfilesConfig($this->profileOldConfig);
+			$this->profileOldConfigActualized = true;
+		}
+
+		return $this->profileOldConfig;
+	}
+
+	/**
+	 * @param array $oldConfig
+	 * @return array
+	 */
+	protected function actualizeProfilesConfig(array $oldConfig)
+	{
+		$profiles = Manager::getByParentId($this->parentId);
+		$actualizedCodes = array();
+
+		foreach($profiles as $id => $fields)
+		{
+			if($id == $this->id)
+				continue;
+
+			if(strlen($fields['CODE']) > 0)
+			{
+				if($fields['CODE'] == $this->code)
+					continue;
+
+				if(in_array($fields['CODE'], $actualizedCodes))
+					continue;
+			}
+
+			/** @var \Bitrix\Sale\Delivery\Services\AutomaticProfile $service */
+			$service = Manager::getPooledObject($fields);
+
+			if($service)
+			{
+				$config = $service->getConfig();
+				$serviceProfileId = $config['MAIN']['ITEMS']['PROFILE_ID']['VALUE'];
+
+				if($serviceProfileId == $this->profileId)
+					continue;
+
+				$profileOldConfig = $service->getOldConfig();
+
+				foreach($profileOldConfig['CONFIG'] as $k => $v)
+					if(isset($v['GROUP']) && $v['GROUP'] == $serviceProfileId)
+						$oldConfig['CONFIG'][$k] = $v;
+
+				$actualizedCodes[] = $fields['CODE'];
+			}
+		}
+
+		return $oldConfig;
 	}
 
 	public function getConfig()
 	{
-		$result = array();
-		$configStructure = $this->getConfigStructure();
-
-		foreach($configStructure as $key => $configSection)
-			$result[$key] = $this->glueValuesToConfig($configSection, isset($this->config[$key]) ? $this->config[$key] : array());
-
-		if(strlen($this->profileId) > 0)
+		if($this->profileConfig === null)
 		{
-			$oldConfig = Automatic::createConfig($this->parentHandlerInitParams, $this->config["MAIN"]["OLD_SETTINGS"]);
-			$newConfig = Automatic::convertOldConfigToNew($oldConfig);
+			$configStructure = $this->getConfigStructure();
+			$profileConfig = array();
 
-			foreach($newConfig as $groupId => $groupParams)
-				if($groupId != $this->profileId)
-					unset($newConfig[$groupId]);
+			foreach($configStructure as $key => $configSection)
+				$profileConfig[$key] = $this->glueValuesToConfig($configSection, isset($this->config[$key]) ? $this->config[$key] : array());
 
-			$result = array_merge($this->config, $result, $newConfig);
+			if(strlen($this->profileId) > 0)
+			{
+				$oldConfig = Automatic::createConfig($this->parentHandlerInitParams, $this->config["MAIN"]["OLD_SETTINGS"]);
+				$newConfig = Automatic::convertOldConfigToNew($oldConfig);
+
+				foreach($newConfig as $groupId => $groupParams)
+					if($groupId != $this->profileId)
+						unset($newConfig[$groupId]);
+
+				$profileConfig= array_merge($this->config, $profileConfig, $newConfig);
+			}
+
+			$this->profileConfig = $profileConfig;
 		}
 
-		return $result;
+		return $this->profileConfig;
 	}
 
 	public static function getClassTitle()
@@ -149,7 +221,7 @@ class AutomaticProfile extends Base
 
 	protected function calculateConcrete(\Bitrix\Sale\Shipment $shipment)
 	{
-		$result = $this->parentAutomatic->calculateProfile($this->profileId, $this->getOldConfig(), $shipment);
+		$result = $this->parentAutomatic->calculateProfile($this->profileId, $this->getOldConfig(true), $shipment);
 
 		$result->setDeliveryPrice(
 			$result->getPrice() + $this->getMarginPrice($result->getPrice())
@@ -321,7 +393,7 @@ class AutomaticProfile extends Base
 
 	public function isCompatible(Shipment $shipment)
 	{
-		return $this->parentAutomatic->isProfileCompatible($this->profileId, $this->getOldConfig(), $shipment);
+		return $this->parentAutomatic->isProfileCompatible($this->profileId, $this->getOldConfig(true), $shipment);
 	}
 
 	public static function isProfile()

@@ -32,6 +32,36 @@ class UserToGroupTable extends Entity\DataManager
 	}
 
 	/**
+	 * Returns set of all possible roles of a user in a workgroup
+	 *
+	 * @return array
+	 */
+	public static function getRolesAll()
+	{
+		return array(self::ROLE_OWNER, self::ROLE_MODERATOR, self::ROLE_USER, self::ROLE_BAN, self::ROLE_REQUEST);
+	}
+
+	/**
+	 * Returns set of membership roles of a user in a workgroup
+	 *
+	 * @return array
+	 */
+	public static function getRolesMember()
+	{
+		return array(self::ROLE_OWNER, self::ROLE_MODERATOR, self::ROLE_USER);
+	}
+
+	/**
+	 * Returns set of all INITIATED_BY values
+	 *
+	 * @return array
+	 */
+	public static function getInitiatedByAll()
+	{
+		return array(self::INITIATED_BY_USER, self::INITIATED_BY_GROUP);
+	}
+
+	/**
 	 * Returns entity map definition
 	 */
 	public static function getMap()
@@ -59,6 +89,10 @@ class UserToGroupTable extends Entity\DataManager
 			'ROLE' => array(
 				'data_type' => 'enum',
 				'values' => array(self::ROLE_OWNER, self::ROLE_MODERATOR, self::ROLE_USER, self::ROLE_BAN, self::ROLE_REQUEST),
+			),
+			'AUTO_MEMBER' => array(
+				'data_type' => 'boolean',
+				'values' => array('N','Y')
 			),
 			'DATE_CREATE' => array(
 				'data_type' => 'datetime'

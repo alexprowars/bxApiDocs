@@ -144,7 +144,7 @@ class DefaultSiteTable extends Entity\DataManager
 			'SORT' => array(
 				'data_type' => 'integer',
 				'title' => Loc::getMessage('SALE_LOCATION_DEFAULTSITE_ENTITY_SORT_FIELD'),
-				'default' => '100'
+				'default_value' => '100'
 			),
 			'LOCATION_CODE' => array(
 				'data_type' => 'string',

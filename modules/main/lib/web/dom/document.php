@@ -116,7 +116,7 @@ class Document extends Node
 	 * If the node has a parent it is first removed from its parent child list.
 	 * This effectively allows moving a subtree from one document to another.
 	 */
-	static public function adoptNode(Node $source)
+	public function adoptNode(Node $source)
 	{
 		if($source->getParentNode())
 		{
@@ -149,7 +149,7 @@ class Document extends Node
 	 * @param string $tagName
 	 * @return Element
 	 */
-	static public function createElement($tagName)
+	public function createElement($tagName)
 	{
 		static $classByTag = array();
 
@@ -187,7 +187,7 @@ class Document extends Node
 	 * @param string $value
 	 * @return Attr
 	 */
-	static public function createAttribute($name, $value)
+	public function createAttribute($name, $value)
 	{
 		$node = new Attr($name, $value);
 		$node->setOwnerDocument($this);
@@ -198,7 +198,7 @@ class Document extends Node
 	 * @param string $comment
 	 * @return Comment
 	 */
-	static public function createComment($comment)
+	public function createComment($comment)
 	{
 		$node = new Comment($comment);
 		$node->setOwnerDocument($this);
@@ -209,7 +209,7 @@ class Document extends Node
 	 * @param string $text
 	 * @return Text
 	 */
-	static public function createTextNode($text)
+	public function createTextNode($text)
 	{
 		$node = new Text($text);
 		$node->setOwnerDocument($this);
@@ -219,7 +219,7 @@ class Document extends Node
 	/*
 	 * @return null
 	 */
-	static public function createDocumentFragment()
+	public function createDocumentFragment()
 	{
 		throw new DomException('Not implemented');
 	}
@@ -250,7 +250,7 @@ class Document extends Node
 		return $this->getElementsByAttr('name', $name);
 	}
 
-	static public function getTextContent()
+	public function getTextContent()
 	{
 		return null;
 	}

@@ -261,6 +261,7 @@ class ForumTable extends BaseTable
 				'title' => Loc::getMessage('FORUM_TABLE_FIELD_'),
 			),
 			'LAST_POSTER_NAME' => array(
+				'data_type' => 'string',
 				'required' => true,
 				'title' => Loc::getMessage('FORUM_TABLE_FIELD_LAST_POSTER_NAME'),
 			),
@@ -281,6 +282,7 @@ class ForumTable extends BaseTable
 				'title' => Loc::getMessage('FORUM_TABLE_FIELD_'),
 			),
 			'ABS_LAST_POSTER_NAME' => array(
+				'data_type' => 'string',
 				'required' => true,
 				'title' => Loc::getMessage('FORUM_TABLE_FIELD_ABS_LAST_POSTER_NAME'),
 			),

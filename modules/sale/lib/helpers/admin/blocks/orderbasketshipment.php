@@ -12,6 +12,7 @@ use Bitrix\Sale\ResultError;
 use Bitrix\Sale\Shipment;
 use Bitrix\Sale\UserMessageException;
 use Bitrix\Main\Entity\EntityError;
+use Bitrix\Sale\Configuration;
 
 Loc::loadMessages(__FILE__);
 
@@ -31,7 +32,7 @@ class OrderBasketShipment extends OrderBasket
 	 */
 	public function __construct(Shipment $shipment, $jsObjName = "", $idPrefix = "")
 	{
-		self::$useStoreControl = (Option::get('catalog', 'default_use_store_control', 'N') == 'Y');
+		self::$useStoreControl = Configuration::useStoreControl();
 		$order = $shipment->getCollection()->getOrder();
 		$this->visibleColumns = $this->getVisibleColumns('sale_shipment_basket');
 		parent::__construct($order, $jsObjName, $idPrefix);
@@ -100,7 +101,7 @@ class OrderBasketShipment extends OrderBasket
 				</table>
 			</div>';
 
-		$result .= '<div class="adm-list-table-footer" id="b_sale_order_shipment_footer" style="margin-top: -20px; padding-top: 10px;">
+		$result .= '<div class="adm-list-table-footer" id="b_sale_order_shipment_footer" style="margin-top: -5px; padding-top: 10px;">
 			<span class="adm-selectall-wrap" style="margin-top: 5px; font-weight: bold;">'.Loc::getMessage('SALE_ORDER_SHIPMENT_BASKET_GOODS_ALL').': </span><span class="adm-selectall-wrap" style="margin-top: 5px; font-weight: bold;" id="'.$this->idPrefix.'_count">0</span>
 			<span class="adm-selectall-wrap" style="margin-top: 5px; font-weight: bold;">'.Loc::getMessage('SALE_ORDER_SHIPMENT_BASKET_GOODS_SELECTED').': </span><span class="adm-selectall-wrap" style="margin-top: 5px; font-weight: bold;" id="'.$this->idPrefix.'_selected_count">0</span>
 			<span class="adm-selectall-wrap" style="margin-top: 5px; font-weight: bold;">'.str_replace(array('#CURRENT_PAGE#', '#COUNT_PAGE#'), array('1', '1'),Loc::getMessage('SALE_ORDER_SHIPMENT_BASKET_PAGE')).'</span>
@@ -252,12 +253,12 @@ class OrderBasketShipment extends OrderBasket
 		{
 			$basketItem = $item->getBasketItem();
 
-			if ($basketItem->getField("MODULE") == "catalog")
+			if ($basketItem && $basketItem->getField("MODULE") == "catalog")
 				$catalogProductsIds[] = $basketItem->getProductId();
 		}
 
 		if(!empty($catalogProductsIds))
-			$catalogProductsFields = self::getProductsData($catalogProductsIds, $this->order->getSiteId(), $this->visibleColumns);
+			$catalogProductsFields = self::getProductsData($catalogProductsIds, $this->order->getSiteId(), $this->visibleColumns, $this->order->getUserId());
 
 		/** @var \Bitrix\Sale\ShipmentItem $item */
 		foreach($shipmentItemCollection as $item)
@@ -289,7 +290,15 @@ class OrderBasketShipment extends OrderBasket
 					$params["MEASURE_TEXT"] = "";
 
 				if ($basketItem->isBundleParent())
+				{
 					$params["BASE_ELEMENTS_QUANTITY"] = $basketItem->getBundleBaseQuantity();
+					if (!isset($params['IS_SET_ITEM']))
+						$params['IS_SET_ITEM'] = 'N';
+					if (!isset($params['IS_SET_PARENT']))
+						$params['IS_SET_PARENT'] = 'Y';
+					if (!isset($params['OLD_PARENT_ID']))
+						$params['OLD_PARENT_ID'] = '';
+				}
 				$params["BASKET_ID"] = $basketItem->getId();
 				$params["PRODUCT_PROVIDER_CLASS"] = $basketItem->getProvider();
 				$params["NAME"] = $basketItem->getField("NAME");
@@ -344,6 +353,13 @@ class OrderBasketShipment extends OrderBasket
 
 				if ($basketItem->isBundleChild())
 					$params["PARENT_BASKET_ID"] = $basketItem->getParentBasketItem()->getId();
+
+				//If product became bundle, but in saved order it is a simple product.
+				if ($basketItem->getBasketCode() == intval($basketItem->getBasketCode()) && !$basketItem->isBundleParent() && !empty($params['SET_ITEMS']))
+				{
+					unset($params['SET_ITEMS'], $params['OLD_PARENT_ID']);
+					$params['IS_SET_PARENT'] = 'N';
+				}
 			}
 			else
 			{
@@ -611,7 +627,7 @@ class OrderBasketShipment extends OrderBasket
 		$basket = $order->getBasket();
 		$shipmentItemCollection = $shipment->getShipmentItemCollection();
 		if (is_null(self::$useStoreControl))
-			self::$useStoreControl = (Option::get('catalog', 'default_use_store_control', 'N') == 'Y');
+			self::$useStoreControl = Configuration::useStoreControl();
 
 		if(is_array($shipmentBasket))
 		{

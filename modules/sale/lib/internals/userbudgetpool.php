@@ -19,7 +19,7 @@ class UserBudgetPool
 	const BUDGET_TYPE_ORDER_PAY = 'ORDER_PAY'; //
 	const BUDGET_TYPE_ORDER_PAY_PART = 'ORDER_PAY_PART'; //
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 

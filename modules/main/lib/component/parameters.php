@@ -9,11 +9,6 @@ class ParametersTable
 	const SEF_MODE = 'Y';
 	const NOT_SEF_MODE = 'N';
 
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_component_params';

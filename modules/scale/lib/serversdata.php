@@ -51,6 +51,7 @@ class ServersData
 					{
 						$server["BX_ENV_VER"] = static::getBxEnvVer($hostname);
 						$bxInfo = static::getBxInfo($hostname);
+						$server["BX_INFO"] = $bxInfo;
 
 						if(isset($bxInfo["bx_last_password_change"]))
 							$server["LAST_PASSWORD_CHANGE"] = $bxInfo["bx_last_password_change"];
@@ -97,7 +98,7 @@ class ServersData
 		return $result;
 	}
 
-	static public function getDbList($hostname)
+	public function getDbList($hostname)
 	{
 		if(strlen($hostname) <= 0)
 			throw new \Bitrix\Main\ArgumentNullException("hostname");
@@ -177,7 +178,7 @@ class ServersData
 	 * @return bool|string - Version of bitrix environment.
 	 * @throws \Bitrix\Main\ArgumentNullException
 	 */
-	static public function getBxEnvVer($hostname)
+	public function getBxEnvVer($hostname)
 	{
 		if(strlen($hostname) <= 0)
 			throw new \Bitrix\Main\ArgumentNullException("hostname");

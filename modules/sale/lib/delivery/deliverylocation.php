@@ -9,7 +9,7 @@ namespace Bitrix\Sale\Delivery;
 
 use Bitrix\Sale;
 
-final class DeliveryLocationTable extends Sale\Location\Connector
+class DeliveryLocationTable extends Sale\Location\Connector
 {
 	public static function getFilePath()
 	{
@@ -21,7 +21,7 @@ final class DeliveryLocationTable extends Sale\Location\Connector
 		return 'b_sale_delivery2location';
 	}
 
-	static public function getLinkField()
+	public function getLinkField()
 	{
 		return 'DELIVERY_ID';
 	}
@@ -31,9 +31,9 @@ final class DeliveryLocationTable extends Sale\Location\Connector
 		return 'LOCATION_CODE';
 	}
 
-	static public function getTargetEntityName()
+	public function getTargetEntityName()
 	{
-		return 'Bitrix\Sale\Delivery\Delivery';
+		return 'Bitrix\Sale\Delivery\Services\Table';
 	}
 
 	public static function getMap()
@@ -52,7 +52,7 @@ final class DeliveryLocationTable extends Sale\Location\Connector
 			),
 			'LOCATION_TYPE' => array(
 				'data_type' => 'string',
-				'default' => self::DB_LOCATION_FLAG,
+				'default_value' => static::DB_LOCATION_FLAG,
 				'required' => true,
 				'primary' => true
 			),
@@ -62,14 +62,14 @@ final class DeliveryLocationTable extends Sale\Location\Connector
 				'data_type' => '\Bitrix\Sale\Location\Location',
 				'reference' => array(
 					'=this.LOCATION_CODE' => 'ref.CODE',
-					'=this.LOCATION_TYPE' => array('?', self::DB_LOCATION_FLAG)
+					'=this.LOCATION_TYPE' => array('?', static::DB_LOCATION_FLAG)
 				)
 			),
 			'GROUP' => array(
 				'data_type' => '\Bitrix\Sale\Location\Group',
 				'reference' => array(
 					'=this.LOCATION_CODE' => 'ref.CODE',
-					'=this.LOCATION_TYPE' => array('?', self::DB_GROUP_FLAG)
+					'=this.LOCATION_TYPE' => array('?', static::DB_GROUP_FLAG)
 				)
 			),
 

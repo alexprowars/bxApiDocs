@@ -2,15 +2,8 @@
 
 namespace Bitrix\Forum\Comments;
 
-use Bitrix\Forum\Internals\Error\ErrorCollection;
 use \Bitrix\Main\Localization\Loc;
 use \Bitrix\Forum\Internals\Error\Error;
-use \Bitrix\Forum\Comments\ForumEntity;
-use \Bitrix\Forum\Comments\TaskEntity;
-use \Bitrix\Main\Loader;
-use \Bitrix\Main\Event;
-use \Bitrix\Main\ArgumentTypeException;
-use \Bitrix\Main\ArgumentException;
 
 Loc::loadMessages(__FILE__);
 
@@ -34,7 +27,7 @@ class Feed extends BaseObject
 	 */
 	public function canAdd()
 	{
-		return $this->entity->canAdd();
+		return $this->getEntity()->canAdd($this->getUser()->getId());
 	}
 
 	/**
@@ -43,7 +36,7 @@ class Feed extends BaseObject
 	 */
 	public function canRead()
 	{
-		return $this->entity->canRead();
+		return $this->getEntity()->canRead($this->getUser()->getId());
 	}
 
 	/**
@@ -52,14 +45,14 @@ class Feed extends BaseObject
 	 */
 	public function canEdit()
 	{
-		return $this->entity->canEdit();
+		return $this->getEntity()->canEdit($this->getUser()->getId());
 	}
 
 	/**
 	 * @param integer $commentId Message ID in b_forum_message to edit.
 	 * @return bool
 	 */
-	static public function canEditComment($commentId)
+	public function canEditComment($commentId)
 	{
 		return Comment::createFromId($this, $commentId)->canEdit();
 	}
@@ -70,14 +63,14 @@ class Feed extends BaseObject
 	 */
 	public function canDelete()
 	{
-		return $this->entity->canEdit();
+		return $this->getEntity()->canEdit($this->getUser()->getId());
 	}
 
 	/**
 	 * @param  integer $commentId Message ID in b_forum_message to delete.
 	 * @return bool
 	 */
-	static public function canDeleteComment($commentId)
+	public function canDeleteComment($commentId)
 	{
 		return Comment::createFromId($this, $commentId)->canEdit();
 	}
@@ -87,7 +80,14 @@ class Feed extends BaseObject
 	 */
 	public function canModerate()
 	{
-		return $this->entity->canModerate();
+		return $this->getEntity()->canModerate($this->getUser()->getId());
+	}
+	/**
+	 * @return bool
+	 */
+	public function canEditOwn()
+	{
+		return $this->getEntity()->canEditOwn($this->getUser()->getId());
 	}
 
 	/**
@@ -185,7 +185,8 @@ class Feed extends BaseObject
 	 */
 	public function setPermission($permission)
 	{
-		return $this->entity->setPermission($permission);
+		$this->getEntity()->setPermission($this->getUser()->getId(), $permission);
+		return $this;
 	}
 
 	/**
@@ -194,7 +195,8 @@ class Feed extends BaseObject
 	 */
 	public function setEditOwn($allow)
 	{
-		return $this->entity->setEditOwn($allow);
+		$this->getEntity()->setEditOwn($allow);
+		return $this;
 	}
 
 	/**
@@ -203,6 +205,6 @@ class Feed extends BaseObject
 	 */
 	public function getPermission()
 	{
-		return $this->entity->getPermission();
+		return $this->getEntity()->getPermission($this->getUser()->getId());
 	}
 }

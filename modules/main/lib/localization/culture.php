@@ -16,11 +16,6 @@ class CultureTable extends Entity\DataManager
 	const LEFT_TO_RIGHT = 'Y';
 	const RIGHT_TO_LEFT = 'N';
 
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_culture';

@@ -16,7 +16,7 @@ class Im extends ProxyType\Base
 	 * @param $user
 	 * @return SecurityContext
 	 */
-	static public function getSecurityContextByUser($user)
+	public function getSecurityContextByUser($user)
 	{
 		return new DiskSecurityContext($user);
 	}
@@ -24,7 +24,7 @@ class Im extends ProxyType\Base
 	/**
 	 * @inheritdoc
 	 */
-	static public function getStorageBaseUrl()
+	public function getStorageBaseUrl()
 	{
 		return '/';
 	}
@@ -32,7 +32,7 @@ class Im extends ProxyType\Base
 	/**
 	 * @inheritdoc
 	 */
-	static public function getEntityUrl()
+	public function getEntityUrl()
 	{
 		return '/';
 	}
@@ -40,7 +40,7 @@ class Im extends ProxyType\Base
 	/**
 	 * @inheritdoc
 	 */
-	static public function getEntityTitle()
+	public function getEntityTitle()
 	{
 		return Loc::getMessage('IM_DISK_STORAGE_TITLE');
 	}
@@ -48,7 +48,7 @@ class Im extends ProxyType\Base
 	/**
 	 * @inheritdoc
 	 */
-	static public function getEntityImageSrc($width, $height)
+	public function getEntityImageSrc($width, $height)
 	{
 		return '/bitrix/js/im/images/blank.gif';
 	}

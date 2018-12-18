@@ -6,11 +6,6 @@ use Bitrix\Main\Entity;
 
 class UserAccessTable extends Entity\DataManager
 {
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_user_access';

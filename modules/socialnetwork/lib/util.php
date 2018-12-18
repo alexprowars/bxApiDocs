@@ -154,7 +154,7 @@ class Util
 		foreach ($arEmail as $userId => $user)
 		{
 			$email = $user["EMAIL"];
-			$nameFormatted = $user["NAME_FORMATTED"];
+			$nameFormatted = str_replace(array('<', '>', '"'), '', $user["NAME_FORMATTED"]);
 
 			if (
 				intval($userId) <= 0
@@ -180,6 +180,7 @@ class Util
 					&& $backUrl
 				)
 				{
+					$authorName = str_replace(array('<', '>', '"'), '', $authorName);
 					\CEvent::send(
 						$mailTemplateType,
 						$fields["siteId"],
@@ -203,5 +204,83 @@ class Util
 		return true;
 	}
 
+	public static function getEqualityFields(&$fields)
+	{
+		$fields1 = array();
+		foreach ($fields as $key => $value)
+		{
+			if (substr($key, 0, 1) == "=")
+			{
+				$fields1[substr($key, 1)] = $value;
+				unset($fields[$key]);
+			}
+		}
+
+		return $fields1;
+	}
+
+	public static function processEqualityFieldsToInsert($fields1, &$insert)
+	{
+		foreach ($fields1 as $key => $value)
+		{
+			if (strlen($insert[0]) > 0)
+			{
+				$insert[0] .= ", ";
+			}
+			$insert[0] .= $key;
+			if (strlen($insert[1]) > 0)
+			{
+				$insert[1] .= ", ";
+			}
+			$insert[1] .= $value;
+		}
+	}
+
+	public static function processEqualityFieldsToUpdate($fields1, &$update)
+	{
+		foreach ($fields1 as $key => $value)
+		{
+			if (strlen($update) > 0)
+			{
+				$update .= ", ";
+			}
+			$update .= $key."=".$value." ";
+		}
+	}
+
+	public static function detectTags($fieldList, $codeList = array())
+	{
+		static $parser = null;
+
+		$result = array();
+
+		if (
+			!is_array($fieldList)
+			|| !is_array($codeList)
+		)
+		{
+			return false;
+		}
+
+		foreach($codeList as $code)
+		{
+			if (
+				empty($code)
+				|| empty($fieldList[$code])
+			)
+			{
+				continue;
+			}
+
+			if ($parser === null)
+			{
+				$parser = new \CTextParser();
+			}
+
+			$result = array_merge($result, $parser->detectTags($fieldList[$code]));
+		}
+
+		return array_unique($result);
+	}
 }
 ?>

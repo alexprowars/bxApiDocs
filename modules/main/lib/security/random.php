@@ -28,21 +28,6 @@ class Random
 	 * @return int
 	 * @throws \Bitrix\Main\SystemException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает случайное целое число из указанного диапазона.</p>
-	*
-	*
-	* @param integer $min  Нижняя границ диапазона.
-	*
-	* @param integer $max = \PHP_INT_MAX Верхняя граница диапазона.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/security/random/getint.php
-	* @author Bitrix
-	*/
 	public static function getInt($min = 0, $max = \PHP_INT_MAX)
 	{
 		if ($min > $max)
@@ -89,22 +74,6 @@ class Random
 	 * @param bool $caseSensitive Generate case sensitive random string (e.g. `SoMeRandom1`).
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает случайную, если возможно, буквенно-цифровую строку.</p>
-	*
-	*
-	* @param integer $length  Длина строки результата.
-	*
-	* @param boolean $caseSensitive = false Сформировать чувствительную к регистру случайную строку
-	* (например <code>SoMeRandom1</code>).
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/security/random/getstring.php
-	* @author Bitrix
-	*/
 	public static function getString($length, $caseSensitive = false)
 	{
 		$alphabet = self::ALPHABET_NUM | self::ALPHABET_ALPHALOWER;
@@ -121,21 +90,6 @@ class Random
 	 * @param int $alphabet Alpabet masks (e.g. Random::ALPHABET_NUM|Random::ALPHABET_ALPHALOWER).
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает случайную (если возможно) строку в ASCII для заданной алфавитной маски.</p>
-	*
-	*
-	* @param integer $length  Длина строки результата.
-	*
-	* @param integer $alphabet  Алфавитные маски (например: <code>Random::ALPHABET_NUM | Random::ALPHABET_ALPHALOWER</code>).
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/security/random/getstringbyalphabet.php
-	* @author Bitrix
-	*/
 	public static function getStringByAlphabet($length, $alphabet)
 	{
 		$charsetList = static::getCharsetsforAlphabet($alphabet);
@@ -149,21 +103,6 @@ class Random
 	 * @param string $charsetList Charset list, must be ASCII.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает случайную (если возможно) строку для данного листа кодировок.</p>
-	*
-	*
-	* @param integer $length  Длина строки результата.
-	*
-	* @param string $charsetList  Лист кодировок, должен быть в ASCII.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/security/random/getstringbycharsets.php
-	* @author Bitrix
-	*/
 	public static function getStringByCharsets($length, $charsetList)
 	{
 		$charsetVariants = BinaryString::getLength($charsetList);
@@ -184,19 +123,6 @@ class Random
 	 * @param int $length Result byte string length.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает случайную (если возможно) байтовую строку.</p>
-	*
-	*
-	* @param integer $length  Длина результирующей байтовой строки.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/security/random/getbytes.php
-	* @author Bitrix
-	*/
 	public static function getBytes($length)
 	{
 		$backup = null;

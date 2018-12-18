@@ -13,7 +13,7 @@ class BusinessValueCode1CTable extends Main\Entity\DataManager
 
 	public static function getTableName()
 	{
-		return 'b_sale_bizval_code_1C';
+		return 'b_sale_bizval_code_1c';
 	}
 
 	public static function getMap()

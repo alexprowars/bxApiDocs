@@ -85,7 +85,7 @@ class Table extends Entity\DataManager
 			),
 			'SORT' => array(
 				'data_type' => 'integer',
-				'default' => 100,
+				'default_value' => 100,
 				'title' => Loc::getMessage('DELIVERY_SERVICE_ENTITY_SORT_FIELD'),
 			),
 			'LOGOTIP' => array(
@@ -115,8 +115,12 @@ class Table extends Entity\DataManager
 			'ALLOW_EDIT_SHIPMENT' => array(
 				'data_type' => 'boolean',
 				'values' => array('N', 'Y'),
-				'default' => 'Y',
+				'default_value' => 'Y',
 				'title' => Loc::getMessage('DELIVERY_SERVICE_ENTITY_ALLOW_EDIT_SHIPMENT_FIELD')
+			),
+			'VAT_ID' => array(
+				'data_type' => 'integer',
+				'title' => Loc::getMessage('DELIVERY_SERVICE_ENTITY_VAT_ID_FIELD')
 			)
 		);
 	}

@@ -65,17 +65,6 @@ class UserTypeProperty extends BaseType\Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Метод возвращает карту конвертации для текущего типа. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/bizproctype/usertypeproperty/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return BaseType\StringType::getConversionMap();

@@ -18,7 +18,7 @@ class CacheEngineXCache
 	 * Engine constructor.
 	 *
 	 */
-	public function __construct()
+	function __construct()
 	{
 		$cacheConfig = \Bitrix\Main\Config\Configuration::getValue("cache");
 
@@ -74,7 +74,7 @@ class CacheEngineXCache
 	 *
 	 * @return string
 	 */
-	static public function getCachePath()
+	public function getCachePath()
 	{
 		return "";
 	}
@@ -84,7 +84,7 @@ class CacheEngineXCache
 	 *
 	 * @return bool
 	 */
-	static public function isAvailable()
+	public function isAvailable()
 	{
 		return function_exists('xcache_get');
 	}
@@ -334,7 +334,7 @@ class CacheEngineXCache
 	 *
 	 * @return boolean
 	 */
-	static public function isCacheExpired($path)
+	public function isCacheExpired($path)
 	{
 		return false;
 	}

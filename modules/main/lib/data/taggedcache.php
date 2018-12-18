@@ -104,7 +104,7 @@ class TaggedCache
 					{
 						if (!isset($this->dbCacheTags[$path][$tag]))
 						{
-							$strSqlValues .= $sql." '".$sqlHelper->forSql($tag, 50)."')";
+							$strSqlValues .= $sql." '".$sqlHelper->forSql($tag, 100)."')";
 							if (strlen($strSqlValues) > $maxValuesLen)
 							{
 								$con->queryExecute($strSqlPrefix.substr($strSqlValues, 2));

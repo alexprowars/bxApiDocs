@@ -18,17 +18,6 @@ abstract class DataManager extends Entity\DataManager
 	 * Being redefined in HL classes
 	 * @return null
 	 */
-	
-	/**
-	* <p>Метод возвращает информацию о highload-блоке. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return null 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/highloadblock/datamanager/gethighloadblock.php
-	* @author Bitrix
-	*/
 	public static function getHighloadBlock()
 	{
 		return null;
@@ -122,9 +111,6 @@ abstract class DataManager extends Entity\DataManager
 
 		$id = $connection->add($tableName, $data, $identity);
 
-		$result->setId($id);
-		$result->setData($data);
-
 		// save multi values
 		if (!empty($multiValues))
 		{
@@ -139,18 +125,22 @@ abstract class DataManager extends Entity\DataManager
 			}
 		}
 
-		// build stamdard primary
+		// build standard primary
 		$primary = null;
 
 		if (!empty($id))
 		{
-			$primary = $id;
+			$primary = array($entity->getAutoIncrement() => $id);
 			static::normalizePrimary($primary);
 		}
 		else
 		{
 			static::normalizePrimary($primary, $data);
 		}
+
+		// fill result
+		$result->setPrimary($primary);
+		$result->setData($data);
 
 		//event after adding
 		$event = new Entity\Event($entity, self::EVENT_ON_AFTER_ADD, array("id"=>$id, "fields"=>$data));
@@ -253,7 +243,7 @@ abstract class DataManager extends Entity\DataManager
 		}
 		$where = implode(' AND ', $id);
 
-		$sql = "UPDATE ".$tableName." SET ".$update[0]." WHERE ".$where;
+		$sql = "UPDATE ".$helper->quote($tableName)." SET ".$update[0]." WHERE ".$where;
 		$connection->queryExecute($sql, $update[1]);
 
 		$result->setAffectedRowsCount($connection);
@@ -355,7 +345,7 @@ abstract class DataManager extends Entity\DataManager
 		}
 		$where = implode(' AND ', $id);
 
-		$sql = "DELETE FROM ".$tableName." WHERE ".$where;
+		$sql = "DELETE FROM ".$helper->quote($tableName)." WHERE ".$where;
 		$connection->queryExecute($sql);
 
 		$fields = $USER_FIELD_MANAGER->getUserFields('HLBLOCK_'.$hlblock['ID']);
@@ -452,18 +442,42 @@ abstract class DataManager extends Entity\DataManager
 		return array($data, $multiValues);
 	}
 
+	/**
+	 * Modify value before save.
+	 * @param mixed $value Value for converting.
+	 * @param array $userfield Field array.
+	 * @return boolean|null
+	 */
 	protected function convertSingleValueBeforeSave($value, $userfield)
 	{
-		if(is_callable(array($userfield["USER_TYPE"]["CLASS_NAME"], "onbeforesave")))
+		if (!isset($userfield['USER_TYPE']) || !is_array($userfield['USER_TYPE']))
+		{
+			$userfield['USER_TYPE'] = array();
+		}
+
+		if (
+			isset($userfield['USER_TYPE']['CLASS_NAME']) &&
+			is_callable(array($userfield['USER_TYPE']['CLASS_NAME'], 'onbeforesave'))
+		)
 		{
 			$value = call_user_func_array(
-				array($userfield["USER_TYPE"]["CLASS_NAME"], "onbeforesave"), array($userfield, $value)
+				array($userfield['USER_TYPE']['CLASS_NAME'], 'onbeforesave'), array($userfield, $value)
 			);
 		}
 
-		if(static::isNotNull($value))
+		if (static::isNotNull($value))
 		{
 			return $value;
+		}
+		elseif (
+				isset($userfield['USER_TYPE']['BASE_TYPE']) &&
+				(
+					$userfield['USER_TYPE']['BASE_TYPE'] == 'int' ||
+					$userfield['USER_TYPE']['BASE_TYPE'] == 'double'
+				)
+		)
+		{
+			return null;
 		}
 		else
 		{
@@ -471,7 +485,7 @@ abstract class DataManager extends Entity\DataManager
 		}
 	}
 
-	protected function isNotNull($value)
+	protected static function isNotNull($value)
 	{
 		return !($value === null || $value === false || $value === '');
 	}

@@ -49,7 +49,7 @@ abstract class NameHelper extends Helper
 				{
 					$tmpCol = $column;
 
-					$tmpCol['title'] = $tmpCol['title'].'&nbsp;('.$lang.')';
+					$tmpCol['title'] = $tmpCol['title'].' ('.$lang.')';
 					$flds[$code.'_'.ToUpper($lang)] = $tmpCol;
 				}
 			}
@@ -305,7 +305,7 @@ abstract class NameHelper extends Helper
 		$map = static::readMap('name', 'detail');
 
 		// actually, NAME is not required when adding through LocationTable::add(), unless SHORT_NAME is set
-		unset($map['NAME']['required']);
+		// unset($map['NAME']['required']);
 
 		return $map;
 	}

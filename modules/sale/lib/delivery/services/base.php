@@ -3,13 +3,15 @@ namespace Bitrix\Sale\Delivery\Services;
 
 use Bitrix\Main\Error;
 use Bitrix\Main\Event;
+use Bitrix\Main\Loader;
 use Bitrix\Sale\Result;
 use Bitrix\Sale\Delivery;
 use Bitrix\Sale\Shipment;
 use Bitrix\Main\EventResult;
-use Bitrix\Sale\Internals\Input;
+use \Bitrix\Main\ModuleManager;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Sale\Delivery\Requests;
 
 Loc::loadMessages(__FILE__);
 
@@ -26,6 +28,7 @@ abstract class Base
 	protected $id = 0;
 	protected $name = "";
 	protected $code = "";
+	protected $vatId = 0;
 	protected $sort = 100;
 	protected $logotip = 0;
 	protected $parentId = 0;
@@ -35,6 +38,8 @@ abstract class Base
 	protected $config = array();
 	protected $restricted = false;
 	protected $trackingClass = "";
+	/** @var Requests\HandlerBase  */
+	protected $deliveryRequestHandler = null;
 	protected $extraServices = array();
 	protected $trackingParams = array();
 	protected $allowEditShipment = array();
@@ -56,19 +61,6 @@ abstract class Base
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 * @throws \Bitrix\Main\SystemException
 	 */
-	
-	/**
-	* <p>Конструктор класса.</p>
-	*
-	*
-	* @param array $initParams  Массив параметров дополнительной услуги доставки.
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/delivery/services/base/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct(array $initParams)
 	{
 		$initParams = $this->prepareFieldsForUsing($initParams);
@@ -84,7 +76,7 @@ abstract class Base
 		if(!isset($initParams["NAME"]))
 			$initParams["NAME"] = "";
 
-		if(!isset($initParams["CONFIG"]))
+		if(!isset($initParams["CONFIG"]) || !is_array($initParams["CONFIG"]))
 			$initParams["CONFIG"] = array();
 
 		if(!is_array($initParams["CONFIG"]))
@@ -115,6 +107,9 @@ abstract class Base
 		if(isset($initParams["ALLOW_EDIT_SHIPMENT"]))
 			$this->allowEditShipment = $initParams["ALLOW_EDIT_SHIPMENT"];
 
+		if(isset($initParams["VAT_ID"]))
+			$this->vatId = intval($initParams["VAT_ID"]);
+
 		if(isset($initParams["RESTRICTED"]))
 			$this->restricted = $initParams["RESTRICTED"];
 
@@ -134,27 +129,6 @@ abstract class Base
 	 * @param array $extraServices.
 	 * @return \Bitrix\Sale\Delivery\CalculationResult
 	 */
-	
-	/**
-	* <p>Метод рассчитывает стоимость доставки. Метод статический.</p>
-	*
-	*
-	* @param mixed $Bitrix  Экземпляр класса <a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/sale/shipment/index.php">\Bitrix\Sale\Shipment</a>.
-	*
-	* @param Bitri $Sale  Массив дополнительных услуг вида <code>array($service1Id =&gt; $service1Value, $service2Id
-	* =&gt; $service2Value, .....</code>).
-	*
-	* @param Shipment $shipment  
-	*
-	* @param array $extraServices  
-	*
-	* @return \Bitrix\Sale\Delivery\CalculationResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/delivery/services/base/calculate.php
-	* @author Bitrix
-	*/
 	public function calculate(\Bitrix\Sale\Shipment $shipment = null, $extraServices = array()) // null for compability with old configurable services api
 	{
 		if($shipment && !$shipment->getCollection())
@@ -207,7 +181,7 @@ abstract class Base
 	}
 
 	/**
-	 * @return Delivery\ExtraServices\Manager[]
+	 * @return Delivery\ExtraServices\Manager
 	 */
 	public function getExtraServices()
 	{
@@ -234,6 +208,13 @@ abstract class Base
 		{
 			/** @var  \Bitrix\Sale\BasketItem $basketItem */
 			$basketItem = $shipmentItem->getBasketItem();
+
+			if(!$basketItem)
+				continue;
+
+			if($basketItem->isBundleChild())
+				continue;
+
 			$result += $basketItem->getPrice();
 		}
 
@@ -244,17 +225,6 @@ abstract class Base
 	 * Returns class name
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название класса для административного интерфейса. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/delivery/services/base/getclasstitle.php
-	* @author Bitrix
-	*/
 	public static function getClassTitle()
 	{
 		return "";
@@ -264,17 +234,6 @@ abstract class Base
 	 * Returns class description
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает описание класса для административного интерфейса. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/delivery/services/base/getclassdescription.php
-	* @author Bitrix
-	*/
 	public static function getClassDescription()
 	{
 		return "";
@@ -283,19 +242,23 @@ abstract class Base
 	/**
 	 * @param \Bitrix\Sale\Shipment $shipment.
 	 * @return \Bitrix\Sale\Delivery\CalculationResult
+	 * @throws SystemException
 	 */
-	abstract protected function calculateConcrete(\Bitrix\Sale\Shipment $shipment);
+	protected function calculateConcrete(\Bitrix\Sale\Shipment $shipment)
+	{
+		throw new SystemException('Not implemented');
+	}
 
 	/**
 	 * @param array $fields
 	 * @return array
 	 * @throws SystemException
 	 */
-	static public function prepareFieldsForSaving(array $fields)
+	public function prepareFieldsForSaving(array $fields)
 	{
 		$strError = "";
-
 		$structure = $fields["CLASS_NAME"]::getConfigStructure();
+
 		foreach($structure as $key1 => $rParams)
 		{
 			foreach($rParams["ITEMS"] as $key2 => $iParams)
@@ -314,6 +277,11 @@ abstract class Base
 
 		if($strError != "")
 			throw new SystemException($strError);
+
+		if(strpos($fields['CLASS_NAME'], '\\') !== 0)
+		{
+			$fields['CLASS_NAME'] = '\\'.$fields['CLASS_NAME'];
+		}
 
 		return $fields;
 	}
@@ -376,6 +344,14 @@ abstract class Base
 			$configStructure[$key] = $this->glueValuesToConfig($configSection, isset($this->config[$key]) ? $this->config[$key] : array());
 
 		return $configStructure;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getConfigValues()
+	{
+		return $this->config;
 	}
 
 	/**
@@ -498,18 +474,25 @@ abstract class Base
 	}
 
 	/**
-	 * @return Base
+	 * @return Base|null
+	 * @throws SystemException
+	 * @throws \Bitrix\Main\ArgumentNullException
 	 */
-	static public function getParentService()
+	public function getParentService()
 	{
-		return null;
+		$result = null;
+
+		if(intval($this->parentId) > 0)
+			$result =  Manager::getObjectById($this->parentId);
+
+		return $result;
 	}
 
 	/**
 	 * @param array $fields
 	 * @return array
 	 */
-	static public function prepareFieldsForUsing(array $fields)
+	public function prepareFieldsForUsing(array $fields)
 	{
 		return $fields;
 	}
@@ -517,7 +500,7 @@ abstract class Base
 	/**
 	 * @return array
 	 */
-	static public function getEmbeddedExtraServicesList()
+	public function getEmbeddedExtraServicesList()
 	{
 		return array();
 
@@ -578,7 +561,7 @@ abstract class Base
 	 * @param Shipment $shipment
 	 * @return bool
 	 */
-	static public function isCompatible(Shipment $shipment)
+	public function isCompatible(Shipment $shipment)
 	{
 		return true;
 	}
@@ -586,7 +569,7 @@ abstract class Base
 	/**
 	 * @return array Profiles list
 	 */
-	static public function getProfilesList()
+	public function getProfilesList()
 	{
 		return array();
 	}
@@ -626,7 +609,15 @@ abstract class Base
 	/**
 	 * @return bool
 	 */
-	static public function isCalculatePriceImmediately()
+	public function isTrackingInherited()
+	{
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function isCalculatePriceImmediately()
 	{
 		return self::$isCalculatePriceImmediately;
 	}
@@ -643,6 +634,14 @@ abstract class Base
 	 * @return array
 	 */
 	public static function onGetBusinessValueConsumers()
+	{
+		return array();
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function onGetBusinessValueGroups()
 	{
 		return array();
 	}
@@ -679,7 +678,7 @@ abstract class Base
 	 * array("MESSAGE"=>"", "TYPE"=>("ERROR"|"OK"|"PROGRESS"), "DETAILS"=>"", "HTML"=>true)
 	 * @see \CAdminMessage::CAdminMessage
 	 */
-	static public function getAdminMessage()
+	public function getAdminMessage()
 	{
 		return array();
 	}
@@ -688,7 +687,7 @@ abstract class Base
 	 * Execute some code on service edit page if need.
 	 * @return Result
 	 */
-	static public function execAdminAction()
+	public function execAdminAction()
 	{
 		return new Result();
 	}
@@ -697,7 +696,7 @@ abstract class Base
 	 * @param Shipment $shipment
 	 * @return array
 	 */
-	static public function getAdditionalInfoShipmentEdit(Shipment $shipment)
+	public function getAdditionalInfoShipmentEdit(Shipment $shipment)
 	{
 		return array();
 	}
@@ -707,7 +706,7 @@ abstract class Base
 	 * @param array $requestData
 	 * @return Shipment|null
 	 */
-	static public function processAdditionalInfoShipmentEdit(Shipment $shipment, array $requestData)
+	public function processAdditionalInfoShipmentEdit(Shipment $shipment, array $requestData)
 	{
 		return $shipment;
 	}
@@ -716,7 +715,16 @@ abstract class Base
 	 * @param Shipment $shipment
 	 * @return array
 	 */
-	static public function getAdditionalInfoShipmentView(Shipment $shipment)
+	public function getAdditionalInfoShipmentView(Shipment $shipment)
+	{
+		return array();
+	}
+
+	/**
+	 * @param Shipment $shipment
+	 * @return array
+	 */
+	public function getAdditionalInfoShipmentPublic(Shipment $shipment)
 	{
 		return array();
 	}
@@ -779,8 +787,57 @@ abstract class Base
 	/**
 	 * @return array Additional tabs to show on edit admin page.
 	 */
-	static public function getAdminAdditionalTabs()
+	public function getAdminAdditionalTabs()
 	{
 		return array();
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getVatId()
+	{
+		return $this->vatId;
+	}
+
+	/**
+	 * @param int $vatId
+	 */
+	public function setVatId($vatId)
+	{
+		$this->vatId = $vatId;
+	}
+
+	/**
+	 * @return Requests\HandlerBase
+	 */
+	public function getDeliveryRequestHandler()
+	{
+		return $this->deliveryRequestHandler;
+	}
+
+	public function createProfileObject($fields)
+	{
+		return Manager::createObject($fields);
+	}
+
+	public static function isHandlerCompatible()
+	{
+		$result = true;
+
+		//Only configurable are fully compatible with all languages
+		if (ModuleManager::isModuleInstalled('bitrix24')
+			&& Loader::includeModule('bitrix24')
+			&& method_exists('CBitrix24', 'getLicensePrefix'))
+		{
+			$languageId = \CBitrix24::getLicensePrefix();
+
+			if(!in_array($languageId, ['ru', 'kz', 'by']))
+			{
+				$result = false;
+			}
+		}
+
+		return $result;
 	}
 }

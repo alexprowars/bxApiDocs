@@ -75,6 +75,10 @@ class Order extends DataSource implements \Iterator
 		CheckDirPath($tmpDir);
 
 		$sftp = \Bitrix\Sale\TradingPlatform\Ebay\Helper::getSftp($this->siteId);
+
+		if(!$sftp)
+			return array();
+
 		$sftp->connect();
 
 		/*

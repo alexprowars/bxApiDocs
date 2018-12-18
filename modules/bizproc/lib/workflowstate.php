@@ -69,6 +69,13 @@ class WorkflowStateTable extends Entity\DataManager
 				),
 				'join_type' => 'LEFT',
 			),
+			'TEMPLATE' => array(
+				'data_type' => '\Bitrix\Bizproc\WorkflowTemplateTable',
+				'reference' => array(
+					'=this.WORKFLOW_TEMPLATE_ID' => 'ref.ID'
+				),
+				'join_type' => 'LEFT'
+			),
 		);
 	}
 

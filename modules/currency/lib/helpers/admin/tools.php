@@ -1,7 +1,8 @@
 <?php
 namespace Bitrix\Currency\Helpers\Admin;
 
-use Bitrix\Main\Localization\Loc,
+use Bitrix\Main,
+	Bitrix\Main\Localization\Loc,
 	Bitrix\Currency;
 
 Loc::loadMessages(__FILE__);
@@ -25,7 +26,7 @@ class Tools
 
 		$result = array();
 		/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-		$currencyLinkTitle = htmlspecialcharsbx(
+		$currencyLinkTitle = Main\Text\HtmlFilter::encode(
 			($APPLICATION->getGroupRight('currency') < 'W')
 			? Loc::getMessage('CURRENCY_HELPERS_ADMIN_TOOLS_MESS_CURRENCY_VIEW_TITLE')
 			: Loc::getMessage('CURRENCY_HELPERS_ADMIN_TOOLS_MESS_CURRENCY_EDIT_TITLE')
@@ -35,7 +36,7 @@ class Tools
 		foreach ($currencyList as $currency => $title)
 		{
 			$result[$currency] = '<a href="/bitrix/admin/currency_edit.php?ID='.urlencode($currency).'&lang='.LANGUAGE_ID.
-				'" title="'.$currencyLinkTitle.'">'.htmlspecialcharsbx($title).'</a>';
+				'" title="'.$currencyLinkTitle.'">'.Main\Text\HtmlFilter::encode($title).'</a>';
 		}
 		unset($currency, $title, $currencyList);
 

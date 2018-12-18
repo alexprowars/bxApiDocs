@@ -478,7 +478,7 @@ class SubscribeManager
 	 * @param mixed $dateTo An empty value or an instance DateTime.
 	 * @return bool
 	 */
-	static public function checkSubscriptionActivity($dateTo)
+	public function checkSubscriptionActivity($dateTo)
 	{
 		if($dateTo)
 		{
@@ -500,7 +500,7 @@ class SubscribeManager
 	 * @param integer $itemId Product id.
 	 * @return void
 	 */
-	static public function setSessionOfSibscribedProducts($itemId)
+	public function setSessionOfSibscribedProducts($itemId)
 	{
 		$itemId = intval($itemId);
 		if(!empty($_SESSION['SUBSCRIBE_PRODUCT']['LIST_PRODUCT_ID'])

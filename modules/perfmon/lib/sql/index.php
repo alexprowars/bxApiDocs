@@ -11,7 +11,7 @@ class Index extends BaseObject
 	 * @param string $name Index name.
 	 * @param boolean $unique Uniqueness flag.
 	 */
-	public function __construct($name = '', $unique)
+	function __construct($name = '', $unique)
 	{
 		parent::__construct($name);
 		$this->unique = (bool)$unique;
@@ -24,20 +24,7 @@ class Index extends BaseObject
 	 *
 	 * @return Index
 	 */
-	
-	/**
-	* <p>Нестатический метод добавляет колонку таблицы к описанию индекса.</p>
-	*
-	*
-	* @param string $name  Название колонки.
-	*
-	* @return \Bitrix\Perfmon\Sql\Index 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/addcolumn.php
-	* @author Bitrix
-	*/
-	public function addColumn($name)
+	function addColumn($name)
 	{
 		$this->columns[] = trim($name);
 		$this->setBody(implode(", ", $this->columns));
@@ -56,29 +43,6 @@ class Index extends BaseObject
 	 * @return Index
 	 * @throws NotSupportedException
 	 */
-	
-	/**
-	* <p>Статический метод создает объект индексов из токенов.</p> <p></p> <p> Если параметр <code>$indexName</code> не пропущен, то текущая позиция должна быть установлена по названию индекса.</p>
-	*
-	*
-	* @param mixed $Bitrix  Набор токенов.
-	*
-	* @param Bitri $Perfmon  Уникальный флаг.
-	*
-	* @param Perfmo $Sql  Необязательный параметр: название индекса.
-	*
-	* @param Tokenizer $tokenizer  
-	*
-	* @param boolean $unique = false 
-	*
-	* @param string $indexName = '' 
-	*
-	* @return \Bitrix\Perfmon\Sql\Index 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/create.php
-	* @author Bitrix
-	*/
 	public static function create(Tokenizer $tokenizer, $unique = false, $indexName = '')
 	{
 		if (!$indexName)
@@ -149,25 +113,6 @@ class Index extends BaseObject
 	 * @return void
 	 * @throws NotSupportedException
 	 */
-	
-	/**
-	* <p>Статический метод проверяет набор на токенов на наличие ключевого слова <code>'ON'</code>. Передвигает текущую позицию к следующему токену, пропуская пробелы.</p> <br>
-	*
-	*
-	* @param mixed $Bitrix  Набор токенов.
-	*
-	* @param Bitri $Perfmon  
-	*
-	* @param Perfmo $Sql  
-	*
-	* @param Tokenizer $tokenizer  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/searchtablename.php
-	* @author Bitrix
-	*/
 	public static function searchTableName(Tokenizer $tokenizer)
 	{
 		$lineToken = $tokenizer->getCurrentToken();
@@ -191,19 +136,6 @@ class Index extends BaseObject
 	 *
 	 * @return array|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает DDL для создания индекса.</p>
-	*
-	*
-	* @param string $dbType = '' Тип базы данных (<i>MYSQL</i>, <i>ORACLE</i> или <i>MSSQL</i>).
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/getcreateddl.php
-	* @author Bitrix
-	*/
 	public function getCreateDdl($dbType = '')
 	{
 		return "CREATE ".($this->unique? "UNIQUE ": "")."INDEX ".$this->name." ON ".$this->parent->name."(".$this->body.")";
@@ -216,19 +148,6 @@ class Index extends BaseObject
 	 *
 	 * @return array|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает DDL для удаления индекса.</p>
-	*
-	*
-	* @param string $dbType = '' Тип базы данных (<i>MYSQL</i>, <i>ORACLE</i> или <i>MSSQL</i>).
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/getdropddl.php
-	* @author Bitrix
-	*/
 	public function getDropDdl($dbType = '')
 	{
 		switch ($dbType)
@@ -252,27 +171,6 @@ class Index extends BaseObject
 	 *
 	 * @return array|string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает DDL для модификации индекса.</p>
-	*
-	*
-	* @param mixed $Bitrix  Целевой объект.
-	*
-	* @param Bitri $Perfmon  Тип базы данных (<i>MYSQL</i>, <i>ORACLE</i> или <i>MSSQL</i>).
-	*
-	* @param Perfmo $Sql  
-	*
-	* @param BaseObject $target  
-	*
-	* @param string $dbType = '' 
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/perfmon/sql/index/getmodifyddl.php
-	* @author Bitrix
-	*/
 	public function getModifyDdl(BaseObject $target, $dbType = '')
 	{
 		return array(

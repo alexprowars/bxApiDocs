@@ -14,7 +14,6 @@ use Bitrix\Main\Type as Type;
 
 class EventTable extends Entity\DataManager
 {
-
 	/**
 	 * @return string
 	 */
@@ -45,19 +44,15 @@ class EventTable extends Entity\DataManager
 				'data_type' => 'string',
 				'required' => true,
 			),
-
-
 			'C_FIELDS' => array(
 				'data_type' => 'string',
 				//'column_name' => 'C_FIELDS',
 				'save_data_modification' => array(__CLASS__, "getSaveModificatorsForFieldsField"),
 				'fetch_data_modification' => array(__CLASS__, "getFetchModificatorsForFieldsField"),
 			),
-
-
 			'DATE_INSERT' => array(
 				'data_type' => 'datetime',
-				'default_value' => new Type\DateTime(),
+				'default_value' => function(){return new Type\DateTime();},
 			),
 			'DATE_EXEC' => array(
 				'data_type' => 'datetime',
@@ -68,9 +63,11 @@ class EventTable extends Entity\DataManager
 			'DUPLICATE' => array(
 				'data_type' => 'string',
 			),
+			'LANGUAGE_ID' => array(
+				'data_type' => 'string',
+			),
 		);
 	}
-
 
 	/**
 	 * @return array
@@ -81,7 +78,6 @@ class EventTable extends Entity\DataManager
 			array(__CLASS__, "serialize")
 		);
 	}
-
 
 	/**
 	 * @return array
@@ -96,14 +92,22 @@ class EventTable extends Entity\DataManager
 
 	public static function serialize($fields)
 	{
-		if(!is_array($fields)) $fields = array();
+		if(!is_array($fields))
+		{
+			$fields = array();
+		}
+
 		array_walk_recursive($fields, array(__CLASS__, 'replaceValuesBeforeSerialize'));
-		if(!is_array($fields)) $fields = array();
+
+		if(!is_array($fields))
+		{
+			$fields = array();
+		}
 
 		return serialize($fields);
 	}
 
-	protected static function replaceValuesBeforeSerialize(&$item, &$key)
+	protected static function replaceValuesBeforeSerialize(&$item)
 	{
 		if(is_object($item))
 		{
@@ -113,6 +117,7 @@ class EventTable extends Entity\DataManager
 				$item = '';
 		}
 	}
+
 	/**
 	 * @param $str
 	 * @return bool

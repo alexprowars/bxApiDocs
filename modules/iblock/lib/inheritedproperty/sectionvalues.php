@@ -9,6 +9,7 @@ namespace Bitrix\Iblock\InheritedProperty;
 class SectionValues extends BaseValues
 {
 	protected $sectionId = 0;
+	protected $queue = null;
 
 	/**
 	 * @param integer $iblockId Iblock identifier.
@@ -17,7 +18,8 @@ class SectionValues extends BaseValues
 	public function __construct($iblockId, $sectionId)
 	{
 		parent::__construct($iblockId);
-		$this->sectionId = intval($sectionId);
+		$this->sectionId = (int)$sectionId;
+		$this->queue->addElement($this->iblockId, $this->sectionId);
 	}
 
 	/**
@@ -25,18 +27,7 @@ class SectionValues extends BaseValues
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы, в которой будут сохранены значения наследуемых вычисляемых свойств. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/getvaluetablename.php
-	* @author Bitrix
-	*/
-	static public function getValueTableName()
+	public function getValueTableName()
 	{
 		return "b_iblock_section_iprop";
 	}
@@ -46,18 +37,7 @@ class SectionValues extends BaseValues
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает тип сущности, который будет храниться в базе данных. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/gettype.php
-	* @author Bitrix
-	*/
-	static public function getType()
+	public function getType()
 	{
 		return "S";
 	}
@@ -67,17 +47,6 @@ class SectionValues extends BaseValues
 	 *
 	 * @return integer
 	 */
-	
-	/**
-	* <p>Метод возвращает уникальный идентификатор раздела. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/getid.php
-	* @author Bitrix
-	*/
 	public function getId()
 	{
 		return $this->sectionId;
@@ -99,17 +68,6 @@ class SectionValues extends BaseValues
 	 *
 	 * @return array[]\Bitrix\Iblock\InheritedProperty\BaseValues
 	 */
-	
-	/**
-	* <p>Метод возвращает массив всех родителей секции, где в качестве значений массива выступает родительская секция или инфоблок. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Iblock\InheritedProperty\array[]\Bitrix\Iblock\InheritedProperty\BaseValues 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/getparents.php
-	* @author Bitrix
-	*/
 	public function getParents()
 	{
 		$parents = array();
@@ -131,24 +89,16 @@ class SectionValues extends BaseValues
 	 *
 	 * @return array[string]string
 	 */
-	
-	/**
-	* <p>Метод возвращает все вычисленные значения наследуемых свойств для секции. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Iblock\InheritedProperty\array[string]string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/queryvalues.php
-	* @author Bitrix
-	*/
 	public function queryValues()
 	{
+		$connection = \Bitrix\Main\Application::getConnection();
 		$result = array();
 		if ($this->hasTemplates())
 		{
-			$connection = \Bitrix\Main\Application::getConnection();
-			$query = $connection->query("
+			if ($this->queue->getElement($this->iblockId, $this->sectionId) === false)
+			{
+				$ids = $this->queue->get($this->iblockId);
+				$query = $connection->query("
 				SELECT
 					P.ID
 					,P.CODE
@@ -156,47 +106,44 @@ class SectionValues extends BaseValues
 					,P.ENTITY_TYPE
 					,P.ENTITY_ID
 					,IP.VALUE
+					,IP.SECTION_ID
 				FROM
 					b_iblock_section_iprop IP
 					INNER JOIN b_iblock_iproperty P ON P.ID = IP.IPROP_ID
 				WHERE
 					IP.IBLOCK_ID = ".$this->iblockId."
-					AND IP.SECTION_ID = ".$this->sectionId."
-			");
-
-			while ($row = $query->fetch())
-			{
-				$result[$row["CODE"]] = $row;
+					AND IP.SECTION_ID in (".implode(", ", $ids).")
+				");
+				$result = array();
+				while ($row = $query->fetch())
+				{
+					$result[$row["SECTION_ID"]][$row["CODE"]] = $row;
+				}
+				$this->queue->set($this->iblockId, $result);
 			}
+			$result = $this->queue->getElement($this->iblockId, $this->sectionId);
 
 			if (empty($result))
 			{
 				$sqlHelper = $connection->getSqlHelper();
+				$fields = array(
+					"IBLOCK_ID",
+					"SECTION_ID",
+					"IPROP_ID",
+					"VALUE",
+				);
+				$rows = array();
 				$result = parent::queryValues();
 				foreach ($result as $row)
 				{
-					$mergeSql = $sqlHelper->prepareMerge(
-						"b_iblock_section_iprop",
-						array(
-							"SECTION_ID",
-							"IPROP_ID",
-						),
-						array(
-							"IBLOCK_ID" => $this->iblockId,
-							"SECTION_ID" => $this->sectionId,
-							"IPROP_ID" => $row["ID"],
-							"VALUE" => $row["VALUE"],
-						),
-						array(
-							"IBLOCK_ID" => $this->iblockId,
-							"VALUE" => $row["VALUE"],
-						)
+					$rows[] = array(
+						$this->iblockId,
+						$this->sectionId,
+						$row["ID"],
+						$sqlHelper->forSql($row["VALUE"]),
 					);
-					foreach ($mergeSql as $sql)
-					{
-						$connection->query($sql);
-					}
 				}
+				$this->insertValues("b_iblock_section_iprop", $fields, $rows);
 			}
 		}
 		return $result;
@@ -207,18 +154,7 @@ class SectionValues extends BaseValues
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод очищает значения свойств для разделов из кеша базы данных. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/inheritedproperty/sectionvalues/clearvalues.php
-	* @author Bitrix
-	*/
-	public function clearValues()
+	function clearValues()
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
 		$sectionList = \Bitrix\Iblock\SectionTable::getList(array(
@@ -252,5 +188,6 @@ class SectionValues extends BaseValues
 				)
 			");
 		}
+		ValuesQueue::deleteAll($this->iblockId);
 	}
 }

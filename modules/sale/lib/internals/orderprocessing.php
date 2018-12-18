@@ -33,7 +33,7 @@ class OrderProcessingTable extends DataManager
 				'values' => array('N','Y')
 			),
 			'ORDER' => array(
-				'data_type' => "Bitrix\\Ssale\\OrderTable",
+				'data_type' => "Bitrix\\Sale\\OrderTable",
 				'reference' => array('=this.ORDER_ID' => 'ref.ID')
 			)
 		);
@@ -97,6 +97,29 @@ class OrderProcessingTable extends DataManager
 	}
 
 	/**
+	 * Mark orders as processed
+	 *
+	 * @param array $orderIds
+	 */
+	public static function markProductsAddedByList(array $orderIds)
+	{
+		$preparedIds = array();
+		foreach( $orderIds as $orderId)
+		{
+			if ((int)$orderId > 0)
+				$preparedIds[] = (int)$orderId;
+		}
+
+		$connection = \Bitrix\Main\Application::getConnection();
+		$type = $connection->getType();
+		if ($type == "mysql" && !empty($preparedIds))
+		{
+			$sqlUpdate = "UPDATE ". static::getTableName() ." SET PRODUCTS_ADDED = 'Y' WHERE ORDER_ID IN (".implode(',', $preparedIds).")";
+			$connection->query($sqlUpdate);
+		}
+	}
+
+	/**
 	 * Mark order as processed
 	 *
 	 * @param int $orderId
@@ -118,15 +141,29 @@ class OrderProcessingTable extends DataManager
 	}
 
 	/**
+	 * @param $orderId
+	 *
+	 * @return bool
+	 */
+	public static function deleteByOrderId($orderId)
+	{
+		if((int)($orderId) <= 0)
+			return false;
+
+		$con = \Bitrix\Main\Application::getConnection();
+		$con->queryExecute("DELETE FROM ". static::getTableName() ." WHERE ORDER_ID=".(int)($orderId));
+		return true;
+	}
+
+	/**
 	 * Clear table
 	 *
-	 * @param int $orderId
 	 */
 	public static function clear()
 	{
 		$connection = Application::getConnection();
 		$sql = "DELETE FROM " . static::getTableName() . "
-				WHERE ID NOT IN (SELECT ID FROM b_sale_order)";
+				WHERE ORDER_ID NOT IN (SELECT ID FROM b_sale_order)";
 		$connection->query($sql);
 	}
 }

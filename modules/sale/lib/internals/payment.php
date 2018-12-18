@@ -19,6 +19,11 @@ class PaymentTable extends Main\Entity\DataManager
 		return 'b_sale_order_payment';
 	}
 
+	public static function getUfId()
+	{
+		return 'PAYMENT';
+	}
+
 	public static function getMap()
 	{
 		return array(
@@ -138,10 +143,12 @@ class PaymentTable extends Main\Entity\DataManager
 				'validation' => array(__CLASS__, 'validateXmlId'),
 				'title' => Loc::getMessage('ORDER_PAYMENT_ENTITY_XML_ID_FIELD'),
 			),
-			'SUM' => array(
-				'data_type' => 'float',
-				'default_value' => '0.0000',
-				'title' => Loc::getMessage('ORDER_PAYMENT_ENTITY_SUM_FIELD'),
+			new Main\Entity\FloatField(
+				'SUM',
+				array(
+					'default_value' => '0.0000',
+					'required' => true,
+				)
 			),
 			'PRICE_COD' => array(
 				'data_type' => 'float',
@@ -229,6 +236,31 @@ class PaymentTable extends Main\Entity\DataManager
 			),
 
 			new Main\Entity\BooleanField(
+				'MARKED',
+				array(
+					'values' => array('N','Y'),
+					'default_value' => 'N'
+				)
+			),
+
+			new Main\Entity\DatetimeField('DATE_MARKED'),
+
+			new Main\Entity\IntegerField('EMP_MARKED_ID'),
+
+			new Main\Entity\ReferenceField(
+				'EMP_MARKED_BY',
+				'\Bitrix\Main\User',
+				array('=this.EMP_MARKED_ID' => 'ref.ID'),
+				array('join_type' => 'INNER')
+			),
+
+			'REASON_MARKED' => array(
+				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateReasonMarked'),
+				'title' => Loc::getMessage('ORDER_PAYMENT_ENTITY_REASON_MARKED_FIELD'),
+			),
+
+			new Main\Entity\BooleanField(
 				'UPDATED_1C',
 				array(
 					'values' => array('N', 'Y')
@@ -253,17 +285,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PAID</code> (флаг оплаты). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepaid.php
-	* @author Bitrix
-	*/
 	public static function validatePaid()
 	{
 		return array(
@@ -275,17 +296,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PS_STATUS</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepsstatus.php
-	* @author Bitrix
-	*/
 	public static function validatePsStatus()
 	{
 		return array(
@@ -297,17 +307,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PS_STATUS_CODE</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepsstatuscode.php
-	* @author Bitrix
-	*/
 	public static function validatePsStatusCode()
 	{
 		return array(
@@ -319,21 +318,10 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PS_STATUS_DESCRIPTION</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepsstatusdescription.php
-	* @author Bitrix
-	*/
 	public static function validatePsStatusDescription()
 	{
 		return array(
-			new Main\Entity\Validator\Length(null, 250),
+			new Main\Entity\Validator\Length(null, 512),
 		);
 	}
 	/**
@@ -341,17 +329,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PS_STATUS_MESSAGE</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepsstatusmessage.php
-	* @author Bitrix
-	*/
 	public static function validatePsStatusMessage()
 	{
 		return array(
@@ -363,17 +340,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PS_CURRENCY</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepscurrency.php
-	* @author Bitrix
-	*/
 	public static function validatePsCurrency()
 	{
 		return array(
@@ -385,17 +351,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PAY_VOUCHER_NUM</code> (номер документа прихода). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepayvouchernum.php
-	* @author Bitrix
-	*/
 	public static function validatePayVoucherNum()
 	{
 		return array(
@@ -407,17 +362,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PAY_RETURN_NUM</code> (номер документа возврата). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepayreturnnum.php
-	* @author Bitrix
-	*/
 	public static function validatePayReturnNum()
 	{
 		return array(
@@ -429,17 +373,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>XML_ID</code> (внешний код). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatexmlid.php
-	* @author Bitrix
-	*/
 	public static function validateXmlId()
 	{
 		return array(
@@ -451,17 +384,6 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CURRENCY</code> (код валюты). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatecurrency.php
-	* @author Bitrix
-	*/
 	public static function validateCurrency()
 	{
 		return array(
@@ -473,21 +395,21 @@ class PaymentTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PAY_SYSTEM_NAME</code> (название платежной системы). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/paymenttable/validatepaysystemname.php
-	* @author Bitrix
-	*/
 	public static function validatePaySystemName()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 128),
+		);
+	}
+	/**
+	 * Returns validators for REASON_MARKED field.
+	 *
+	 * @return array
+	 */
+	public static function validateReasonMarked()
+	{
+		return array(
+			new Main\Entity\Validator\Length(null, 255),
 		);
 	}
 }

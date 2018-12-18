@@ -30,17 +30,6 @@ class CatalogIblockTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы инфоблоков, являющихся торговыми каталогами. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/catalogiblocktable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_iblock';
@@ -51,17 +40,6 @@ class CatalogIblockTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы инфоблоков, являющихся торговыми каталогами. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/catalogiblocktable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -93,13 +71,13 @@ class CatalogIblockTable extends Main\Entity\DataManager
 			)),
 			'IBLOCK' => new Main\Entity\ReferenceField(
 				'IBLOCK',
-				'Bitrix\Iblock\Iblock',
+				'\Bitrix\Iblock\Iblock',
 				array('=this.IBLOCK_ID' => 'ref.ID'),
 				array('join_type' => 'INNER')
 			),
 			'PRODUCT_IBLOCK' => new Main\Entity\ReferenceField(
 				'PRODUCT_IBLOCK',
-				'Bitrix\Iblock\Iblock',
+				'\Bitrix\Iblock\Iblock',
 				array('=this.PRODUCT_IBLOCK_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			)

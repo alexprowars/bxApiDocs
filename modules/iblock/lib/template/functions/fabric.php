@@ -91,7 +91,7 @@ class FunctionBase
 	/**
 	 * @param mixed|null $data Additional data for function instance.
 	 */
-	public function __construct($data = null)
+	function __construct($data = null)
 	{
 		$this->data = $data;
 	}
@@ -103,7 +103,7 @@ class FunctionBase
 	 *
 	 * @return array
 	 */
-	static public function onPrepareParameters(\Bitrix\Iblock\Template\Entity\Base $entity, array $parameters)
+	public function onPrepareParameters(\Bitrix\Iblock\Template\Entity\Base $entity, array $parameters)
 	{
 		$arguments = array();
 		/** @var \Bitrix\Iblock\Template\NodeBase $parameter */
@@ -121,7 +121,7 @@ class FunctionBase
 	 *
 	 * @return string
 	 */
-	static public function calculate(array $parameters)
+	public function calculate(array $parameters)
 	{
 		return "";
 	}

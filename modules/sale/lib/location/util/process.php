@@ -249,11 +249,11 @@ abstract class Process
 		}
 	}
 
-	static public function onBeforePerformIteration()
+	public function onBeforePerformIteration()
 	{
 	}
 
-	static public function onAfterPerformIteration()
+	public function onAfterPerformIteration()
 	{
 	}
 
@@ -400,7 +400,7 @@ abstract class Process
 		Main\IO\File::putFileContents($logFile, '');
 	}
 
-	static public function getLogFileDir()
+	public function getLogFileDir()
 	{
 		return $_SERVER['DOCUMENT_ROOT'].'/'.str_replace('%BX_ROOT%', BX_ROOT, self::DEBUG_FOLDER);
 	}

@@ -2,6 +2,8 @@
 
 namespace Bitrix\Sale\Delivery\ExtraServices;
 
+use Bitrix\Main\ArgumentNullException;
+use Bitrix\Main\Error;
 use Bitrix\Sale\Internals\Input;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Result;
@@ -40,12 +42,12 @@ class Store extends Base
 		return $result;
 	}
 
-	static public function getClassTitle()
+	public function getClassTitle()
 	{
 		return Loc::getMessage("DELIVERY_EXTRA_SERVICE_STORE_TITLE");
 	}
 
-	static public function getCost()
+	public function getCost()
 	{
 		return false;
 	}
@@ -68,8 +70,11 @@ class Store extends Base
 		);
 	}
 
-	static public function getAdminDefaultControl($name, $value = false)
+	public function getAdminDefaultControl($name = "", $value = false)
 	{
+		if(strlen($name) <= 0)
+			throw new ArgumentNullException(new Error('name'));
+
 		return Input\Manager::getEditHtml(
 			$name,
 			array(

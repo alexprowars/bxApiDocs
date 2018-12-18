@@ -83,23 +83,6 @@ abstract class Application
 	 * @return Application
 	 * @throws SystemException
 	 */
-	
-	/**
-	* <p>Статический метод возвращает текущий экземпляр приложения.</p> <p>Без параметров</p>
-	*
-	*
-	* @return \Bitrix\Main\Application 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Объект приложения можно получить так:$application = Application::getInstance();
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getinstance.php
-	* @author Bitrix
-	*/
 	public static function getInstance()
 	{
 		if (!isset(static::$instance))
@@ -113,17 +96,6 @@ abstract class Application
 	 *
 	 * @throws SystemException
 	 */
-	
-	/**
-	* <p>Нестатичный метод производит первичную инициализацию ядра.</p> <p>Без параметров</p>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/initializebasickernel.php
-	* @author Bitrix
-	*/
 	public function initializeBasicKernel()
 	{
 		if ($this->isBasicKernelInitialized)
@@ -141,19 +113,6 @@ abstract class Application
 	 * @param array $params Parameters of the current request (depends on application type)
 	 * @throws SystemException
 	 */
-	
-	/**
-	* <p>Нестатический метод производит полную инициализацию ядра. Метод следует вызывать после метода <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/initializebasickernel.php">initializeBasicKernel</a>.</p>
-	*
-	*
-	* @param array $params  Параметры текущего запроса (в зависимости от типа приложения).
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/initializeextendedkernel.php
-	* @author Bitrix
-	*/
 	public function initializeExtendedKernel(array $params)
 	{
 		if ($this->isExtendedKernelInitialized)
@@ -185,18 +144,49 @@ abstract class Application
 	 * Starts request execution. Should be called after initialize.
 	 * Should be implemented in subclass.
 	 */
-	
-	/**
-	* <p>Нестатический метод запускает выполнение запроса. Вызывается после методов инициализации.</p> <p>Следует реализовывать как подкласс.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/start.php
-	* @author Bitrix
-	*/
 	abstract public function start();
+
+	/**
+	 * Runs controller and its action and sends response to the output.
+	 *
+	 * It's a stub method and we can't mark it as abstract because there is compatibility.
+	 * @return void
+	 */
+	public function run()
+	{}
+
+	/**
+	 * Ends work of application.
+	 * Sends response and then terminates execution.
+	 * If there is no $response the method will use Context::$response.
+	 *
+	 * @param int $status
+	 * @param Response|null $response
+	 *
+	 * @return void
+	 * @throws SystemException
+	 */
+	public function end($status = 0, Response $response = null)
+	{
+		$response = $response?: $this->context->getResponse();
+		$response->send();
+
+		$this->terminate($status);
+	}
+
+	/**
+	 * Terminates application by invoking exit().
+	 * It's the right way to finish application @see \CMain::finalActions().
+	 *
+	 * @param int $status
+	 * @return void
+	 */
+	public function terminate($status = 0)
+	{
+		/** @noinspection PhpUndefinedClassInspection */
+		\CMain::finalActions();
+		exit($status);
+	}
 
 	/**
 	 * Exception handler can be initialized through the Config\Configuration (.settings.php file).
@@ -258,7 +248,7 @@ abstract class Application
 		$this->exceptionHandler = $exceptionHandler;
 	}
 
-	static public function createExceptionHandlerLog()
+	public function createExceptionHandlerLog()
 	{
 		$exceptionHandling = Config\Configuration::getValue("exception_handling");
 		if ($exceptionHandling === null || !is_array($exceptionHandling) || !isset($exceptionHandling["log"]) || !is_array($exceptionHandling["log"]))
@@ -298,7 +288,7 @@ abstract class Application
 		return $log;
 	}
 
-	static public function createExceptionHandlerOutput()
+	public function createExceptionHandlerOutput()
 	{
 		return new Diag\ExceptionHandlerOutput();
 	}
@@ -355,17 +345,6 @@ abstract class Application
 	 *
 	 * @return Data\ConnectionPool
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает объект пула соединений базы данных.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Data\ConnectionPool 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getconnectionpool.php
-	* @author Bitrix
-	*/
 	public function getConnectionPool()
 	{
 		return $this->connectionPool;
@@ -376,17 +355,6 @@ abstract class Application
 	 *
 	 * @return Context
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает содержание текущего соединения.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Context 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getcontext.php
-	* @author Bitrix
-	*/
 	public function getContext()
 	{
 		return $this->context;
@@ -397,23 +365,6 @@ abstract class Application
 	 *
 	 * @param Context $context
 	 */
-	
-	/**
-	* <p>Нестатический метод изменяет содержание текущего запроса.</p>
-	*
-	*
-	* @param mixed $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Context $context  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/setcontext.php
-	* @author Bitrix
-	*/
 	public function setContext(Context $context)
 	{
 		$this->context = $context;
@@ -427,31 +378,6 @@ abstract class Application
 	 * @param string $name Name of database connection. If empty - default connection.
 	 * @return DB\Connection
 	 */
-	
-	/**
-	* <p>Статический метод возвращает соединение с базой данных указанного имени. Если параметр <b>name</b> - пустой, то возвращается соединение по умолчанию.</p>
-	*
-	*
-	* @param string $name = "" Название соединения. Если пустое - то соединение по умолчанию.
-	*
-	* @return \Bitrix\Main\DB\Connection 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Как из класса приложения получить соединение с БД$connection = Application::getConnection();use Bitrix\Main\Application;
-	* use Bitrix\Main\Diag\Debug;
-	* 
-	* $record = Application::getConnection()
-	* -&gt;query("select 1+1;")
-	* -&gt;fetch();
-	* Debug::writeToFile($record);
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getconnection.php
-	* @author Bitrix
-	*/
 	public static function getConnection($name = "")
 	{
 		$pool = Application::getInstance()->getConnectionPool();
@@ -463,18 +389,7 @@ abstract class Application
 	 *
 	 * @return Data\Cache
 	 */
-	
-	/**
-	* <p>Возвращает новый экземпляр объекта кеша. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Data\Cache 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getcache.php
-	* @author Bitrix
-	*/
-	static public function getCache()
+	public function getCache()
 	{
 		return Data\Cache::createInstance();
 	}
@@ -484,17 +399,6 @@ abstract class Application
 	 *
 	 * @return Data\ManagedCache
 	 */
-	
-	/**
-	* <p>Нестатический метод  возвращает объект управляемого кеша.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Data\ManagedCache 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getmanagedcache.php
-	* @author Bitrix
-	*/
 	public function getManagedCache()
 	{
 		if ($this->managedCache == null)
@@ -510,17 +414,6 @@ abstract class Application
 	 *
 	 * @return Data\TaggedCache
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает объект тегированного кеша.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Data\TaggedCache 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/gettaggedcache.php
-	* @author Bitrix
-	*/
 	public function getTaggedCache()
 	{
 		if ($this->taggedCache == null)
@@ -532,21 +425,21 @@ abstract class Application
 	}
 
 	/**
+	 * Returns UF manager.
+	 *
+	 * @return \CUserTypeManager
+	 */
+	public static function getUserTypeManager()
+	{
+		global $USER_FIELD_MANAGER;
+		return $USER_FIELD_MANAGER;
+	}
+
+	/**
 	 * Returns true id server is in utf-8 mode. False - otherwise.
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Статический метод вернёт <i>true</i> если сервер работает в utf-8. И вернёт <i>false</i> в противном случае.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/isutfmode.php
-	* @author Bitrix
-	*/
 	public static function isUtfMode()
 	{
 		static $isUtfMode = null;
@@ -564,23 +457,6 @@ abstract class Application
 	 *
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает <i>document root</i> сервера.</p> <p class="note">Обратите внимание: вместо <b>$_SERVER["DOCUMENT_ROOT"]</b> сейчас можно использовать <i>Bitrix\Main\Application::getDocumentRoot()</i>.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Как из класса приложения получить <i>document_root</i>:$docRoot = Application::getDocumentRoot()
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getdocumentroot.php
-	* @author Bitrix
-	*/
 	public static function getDocumentRoot()
 	{
 		static $documentRoot = null;
@@ -603,17 +479,6 @@ abstract class Application
 	 *
 	 * @return null|string
 	 */
-	
-	/**
-	* <p>Статический метод возвращает путь к персональной директории (относительно <i>document root</i>).</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/getpersonalroot.php
-	* @author Bitrix
-	*/
 	public static function getPersonalRoot()
 	{
 		static $personalRoot = null;
@@ -634,17 +499,6 @@ abstract class Application
 	/**
 	 * Resets accelerator if any.
 	 */
-	
-	/**
-	* <p>Статический метод производит перезапуск акселлератора.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/application/resetaccelerator.php
-	* @author Bitrix
-	*/
 	public static function resetAccelerator()
 	{
 		if (defined("BX_NO_ACCELERATOR_RESET"))

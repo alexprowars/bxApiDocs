@@ -8,13 +8,14 @@ use Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
 
-class ShipmentItemStoreCollection
-	extends Internals\EntityCollection
+class ShipmentItemStoreCollection extends Internals\EntityCollection
 {
 	/** @var  ShipmentItem */
 	private $shipmentItem;
 
-	private static $errors = array();
+	protected static $errors = array();
+
+	private static $eventClassName = null;
 
 	/**
 	 * @return ShipmentItem
@@ -25,23 +26,44 @@ class ShipmentItemStoreCollection
 	}
 
 	/**
+	 * @return ShipmentItem
+	 */
+	private static function createShipmentItemStoreCollectionObject()
+	{
+		$registry = Registry::getInstance(static::getRegistryType());
+		$shipmentItemStoreCollectionClassName = $registry->getShipmentItemStoreCollectionClassName();
+
+		return new $shipmentItemStoreCollectionClassName();
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getRegistryType()
+	{
+		return Registry::REGISTRY_TYPE_ORDER;
+	}
+
+	/**
 	 * @param ShipmentItem $shipmentItem
-	 * @return ShipmentItemCollection
+	 * @return ShipmentItemStoreCollection
 	 */
 	public static function load(ShipmentItem $shipmentItem)
 	{
 		/** @var ShipmentItemStoreCollection $shipmentItemStoreCollection */
-		$shipmentItemStoreCollection = new static();
+		$shipmentItemStoreCollection = static::createShipmentItemStoreCollectionObject();
 		$shipmentItemStoreCollection->shipmentItem = $shipmentItem;
 
 		if ($shipmentItem->getId() > 0)
 		{
 			$basketItem = $shipmentItem->getBasketItem();
-			$shipmentItemStoreList = ShipmentItemStore::loadForShipmentItem($shipmentItem->getId());
+			/** @var ShipmentItemStore $itemClassName */
+			$itemClassName = static::getItemCollectionClassName();
+			$shipmentItemStoreList = $itemClassName::loadForShipmentItem($shipmentItem->getId());
 			/** @var ShipmentItemStore $shipmentItemStoreDat */
 			foreach ($shipmentItemStoreList as $shipmentItemStoreDat)
 			{
-				$shipmentItemStore = ShipmentItemStore::create($shipmentItemStoreCollection, $basketItem);
+				$shipmentItemStore = $itemClassName::create($shipmentItemStoreCollection, $basketItem);
 
 				$fields = $shipmentItemStoreDat->getFieldValues();
 
@@ -61,8 +83,9 @@ class ShipmentItemStoreCollection
 	 */
 	public function createItem(BasketItem $basketItem)
 	{
-		/** @var ShipmentItemStore $item */
-		$shipmentItemStore = ShipmentItemStore::create($this, $basketItem);
+		/** @var ShipmentItemStore $itemClassName */
+		$itemClassName = static::getItemCollectionClassName();
+		$shipmentItemStore = $itemClassName::create($this, $basketItem);
 
 		$this->addItem($shipmentItemStore);
 
@@ -73,7 +96,7 @@ class ShipmentItemStoreCollection
 	 * @param Internals\CollectableEntity $shipmentItemStore
 	 * @return bool|void
 	 */
-	static public function addItem(Internals\CollectableEntity $shipmentItemStore)
+	public function addItem(Internals\CollectableEntity $shipmentItemStore)
 	{
 		parent::addItem($shipmentItemStore);
 	}
@@ -84,7 +107,7 @@ class ShipmentItemStoreCollection
 	 * @param $index
 	 * @return bool
 	 */
-	static public function deleteItem($index)
+	public function deleteItem($index)
 	{
 		$oldItem = parent::deleteItem($index);
 
@@ -288,15 +311,23 @@ class ShipmentItemStoreCollection
 	{
 		$result = new Main\Entity\Result();
 
-		$oldBarcodeList = array();
-
 		$itemsFromDb = array();
-		if ($this->getShipmentItem() && $this->getShipmentItem()->getId() > 0)
+
+		$shipmentItem = $this->getShipmentItem();
+
+		$originalValues = $shipmentItem->getFields()->getOriginalValues();
+
+		$shipmentItemIsNew = (array_key_exists('ID', $originalValues) && $originalValues['ID'] === null);
+
+		/** @var ShipmentItemStore $itemClassName */
+		$itemClassName = static::getItemCollectionClassName();
+
+		if ($this->getShipmentItem() && $this->getShipmentItem()->getId() > 0 && !$shipmentItemIsNew)
 		{
-			$itemsFromDbList = Internals\ShipmentItemStoreTable::getList(
+			$itemsFromDbList = static::getList(
 				array(
 					"filter" => array("ORDER_DELIVERY_BASKET_ID" => $this->getShipmentItem()->getId()),
-					"select" => ShipmentItemStore::getAllFields()
+					"select" => $itemClassName::getAllFields()
 				)
 			);
 			while ($itemsFromDbItem = $itemsFromDbList->fetch())
@@ -314,20 +345,25 @@ class ShipmentItemStoreCollection
 				unset($itemsFromDb[$shipmentItemStore->getId()]);
 		}
 
-		$itemEventName = ShipmentItemStore::getEntityEventName();
+		if (self::$eventClassName === null)
+		{
+			self::$eventClassName = $itemClassName::getEntityEventName();
+		}
 
 		foreach ($itemsFromDb as $k => $v)
 		{
+			$v['ENTITY_REGISTRY_TYPE'] = static::getRegistryType();
+
 			/** @var Main\Event $event */
-			$event = new Main\Event('sale', "OnBefore".$itemEventName."Deleted", array(
+			$event = new Main\Event('sale', "OnBefore".self::$eventClassName."Deleted", array(
 					'VALUES' => $v,
 			));
 			$event->send();
 
-			Internals\ShipmentItemStoreTable::delete($k);
+			$this->deleteInternal($k);
 
 			/** @var Main\Event $event */
-			$event = new Main\Event('sale', "On".$itemEventName."Deleted", array(
+			$event = new Main\Event('sale', "On".self::$eventClassName."Deleted", array(
 					'VALUES' => $v,
 			));
 			$event->send();
@@ -552,4 +588,69 @@ class ShipmentItemStoreCollection
 		return $shipmentItemStoreCollectionClone;
 	}
 
-} 
+
+	/**
+	 * @param $value
+	 *
+	 * @return string
+	 */
+	public function getErrorEntity($value)
+	{
+		$className = null;
+		/** @var ShipmentItemStore $shipmentItemStore */
+		foreach ($this->collection as $shipmentItemStore)
+		{
+			if ($className = $shipmentItemStore->getErrorEntity($value))
+			{
+				break;
+			}
+		}
+		return $className;
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return string
+	 */
+	public function canAutoFixError($value)
+	{
+		$autoFix = false;
+		/** @var ShipmentItemStore $shipmentItemStore */
+		foreach ($this->collection as $shipmentItemStore)
+		{
+			if ($autoFix = $shipmentItemStore->canAutoFixError($value))
+			{
+				break;
+			}
+		}
+		return $autoFix;
+	}
+
+	/**
+	 * @param array $parameters
+	 * @return \Bitrix\Main\DB\Result
+	 */
+	public static function getList(array $parameters = array())
+	{
+		return Internals\ShipmentItemStoreTable::getList($parameters);
+	}
+
+	/**
+	 * @param $primary
+	 * @return Main\Entity\DeleteResult
+	 */
+	protected function deleteInternal($primary)
+	{
+		return Internals\ShipmentItemStoreTable::delete($primary);
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function getItemCollectionClassName()
+	{
+		$registry = Registry::getInstance(static::getRegistryType());
+		return $registry->getShipmentItemStoreClassName();
+	}
+}

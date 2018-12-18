@@ -3,13 +3,12 @@
 namespace Bitrix\Forum\Comments;
 
 use Bitrix\Forum\Internals\Error\ErrorCollection;
+use Bitrix\Main\Config\Option;
+use Bitrix\Main\Loader;
 use \Bitrix\Main\Localization\Loc;
 use \Bitrix\Forum\Internals\Error\Error;
-use \Bitrix\Forum\Comments\TaskEntity;
-use \Bitrix\Main\Loader;
 use \Bitrix\Main\Event;
 use \Bitrix\Main\EventResult;
-use \Bitrix\Main\ArgumentTypeException;
 use \Bitrix\Main\ArgumentException;
 
 Loc::loadMessages(__FILE__);
@@ -38,7 +37,8 @@ class Comment extends BaseObject
 			"USE_SMILES" => ($params["USE_SMILES"] == "Y" ? "Y" : "N"),
 			"APPROVED" => $this->topic["APPROVED"],
 			"XML_ID" => $this->getEntity()->getXmlId(),
-			"USER_ID" => $this->getUser()->getId()
+			"USER_ID" => $this->getUser()->getId(),
+			"AUX" => isset($params["AUX"]) ? $params["AUX"] : 'N',
 		);
 		$errorCollection = new ErrorCollection();
 		if (strlen($result["POST_MESSAGE"]) <= 0)
@@ -67,7 +67,7 @@ class Comment extends BaseObject
 				"USER_ID" => $result["AUTHOR_ID"],
 				"FORUM" => $this->forum
 			);
-			if (!\CForumFiles::CheckFields($result["FILES"], $res, "NOT_CHECK_DB"))
+			if (!\CForumFiles::checkFields($result["FILES"], $res, "NOT_CHECK_DB"))
 			{
 				$text = "File upload error.";
 				if (($ex = $this->getApplication()->getException()) && $ex)
@@ -77,7 +77,7 @@ class Comment extends BaseObject
 		}
 		if ($result["APPROVED"] != "N")
 		{
-			$result["APPROVED"] = ($this->forum["MODERATION"] != "Y" || $this->getEntity()->canModerate()) ? "Y" : "N";
+			$result["APPROVED"] = ($this->forum["MODERATION"] != "Y" || $this->getEntity()->canModerate($this->getUser()->getId())) ? "Y" : "N";
 		}
 
 		if ($errorCollection->hasErrors())
@@ -88,31 +88,31 @@ class Comment extends BaseObject
 		else
 		{
 			global $USER_FIELD_MANAGER;
-			$USER_FIELD_MANAGER->EditFormAddFields("FORUM_MESSAGE", $result);
+			$USER_FIELD_MANAGER->editFormAddFields("FORUM_MESSAGE", $result);
 			$params = $result;
 			return true;
 		}
 	}
 
-	private function updateStatisticModule($mid)
+	private function updateStatisticModule($messageId)
 	{
-		if (\CModule::IncludeModule("statistic"))
+		if (Loader::includeModule("statistic"))
 		{
-			$F_EVENT1 = $this->forum["EVENT1"];
-			$F_EVENT2 = $this->forum["EVENT2"];
-			$F_EVENT3 = $this->forum["EVENT3"];
-			if (empty($F_EVENT3))
+			$forumEvent1 = $this->forum["EVENT1"];
+			$forumEvent2 = $this->forum["EVENT2"];
+			$forumEvent3 = $this->forum["EVENT3"];
+			if (empty($forumEvent3))
 			{
-				$site = (array) \CForumNew::GetSites($this->forum["ID"]);
-				$F_EVENT3 = \CForumNew::PreparePath2Message((array_key_exists(SITE_ID, $site) ? $site[SITE_ID] : reset($site)),
+				$site = (array) \CForumNew::getSites($this->forum["ID"]);
+				$forumEvent3 = \CForumNew::preparePath2Message((array_key_exists(SITE_ID, $site) ? $site[SITE_ID] : reset($site)),
 					array(
 						"FORUM_ID" => $this->forum["ID"],
 						"TOPIC_ID" => $this->topic["ID"],
-						"MESSAGE_ID" => $mid
+						"MESSAGE_ID" => $messageId
 					)
 				);
 			}
-			\CStatistics::Set_Event($F_EVENT1, $F_EVENT2, $F_EVENT3);
+			\CStatistics::set_Event($forumEvent1, $forumEvent2, $forumEvent3);
 		}
 	}
 
@@ -123,29 +123,32 @@ class Comment extends BaseObject
 	 */
 	public function add(array $params)
 	{
+		$aux = (isset($params['AUX']) && $params['AUX'] == "Y");
+
 		$params = array(
 			"POST_MESSAGE" => trim($params["POST_MESSAGE"]),
 			"AUTHOR_ID" => $this->getUser()->getId(),
 			"AUTHOR_NAME" => trim($params["AUTHOR_NAME"]),
 			"AUTHOR_EMAIL" => trim($params["AUTHOR_EMAIL"]),
 			"USE_SMILES" => $params["USE_SMILES"],
-			"FILES" => $params["FILES"]
+			"FILES" => $params["FILES"],
+			"AUX" => $params["AUX"]
 		);
 
 		if ($this->prepareFields($params, $this->errorCollection))
 		{
-			$AUTHOR_IP = $AUTHOR_IP_tmp = \ForumGetRealIP();
-			$AUTHOR_REAL_IP = $_SERVER['REMOTE_ADDR'];
-			if (\COption::GetOptionString("forum", "FORUM_GETHOSTBYADDR", "N") == "Y")
+			$authorIP = $authorIPTmp = \ForumGetRealIP();
+			$authorRealIP = $_SERVER['REMOTE_ADDR'];
+			if (Option::get("forum", "FORUM_GETHOSTBYADDR", "N") == "Y")
 			{
-				$AUTHOR_IP = @gethostbyaddr($AUTHOR_IP);
-				$AUTHOR_REAL_IP = ($AUTHOR_IP_tmp == $AUTHOR_REAL_IP ? $AUTHOR_IP : @gethostbyaddr($AUTHOR_REAL_IP));
+				$authorIP = @gethostbyaddr($authorIP);
+				$authorRealIP = ($authorIPTmp == $authorRealIP ? $authorIP : @gethostbyaddr($authorRealIP));
 			}
-			$params["AUTHOR_IP"] = ($AUTHOR_IP!==False) ? $AUTHOR_IP : "<no address>";
-			$params["AUTHOR_REAL_IP"] = ($AUTHOR_REAL_IP!==False) ? $AUTHOR_REAL_IP : "<no address>";
+			$params["AUTHOR_IP"] = ($authorIP!==False) ? $authorIP : "<no address>";
+			$params["AUTHOR_REAL_IP"] = ($authorRealIP!==False) ? $authorRealIP : "<no address>";
 			$params["GUEST_ID"] = $_SESSION["SESS_GUEST_ID"];
 
-			if (!(($mid = \CForumMessage::Add($params, false)) > 0))
+			if (!(($mid = \CForumMessage::add($params, false)) > 0))
 			{
 				$text = Loc::getMessage("ADDMESS_ERROR_ADD_MESSAGE");
 				if (($str = $this->getApplication()->getException()) && $str)
@@ -154,22 +157,29 @@ class Comment extends BaseObject
 			}
 			else
 			{
-				$this->updateStatisticModule($mid);
-				\CForumMessage::SendMailMessage($mid, array(), false, "NEW_FORUM_MESSAGE");
+				if (!$aux)
+				{
+					$this->updateStatisticModule($mid);
+					\CForumMessage::sendMailMessage($mid, array(), false, "NEW_FORUM_MESSAGE");
+				}
 
 				$this->setComment($mid);
 
-				$event = new Event("forum", "OnAfterCommentAdd", array(
-					$this->entity->getType(),
-					$this->entity->getId(),
-					array(
-						"TOPIC_ID" => $this->topic["ID"],
-						"MESSAGE_ID" => $mid,
-						"PARAMS" => $params,
-						"MESSAGE" => $this->getComment()
-					))
-				);
-				$event->send();
+				if (!$aux)
+				{
+					$event = new Event("forum", "OnAfterCommentAdd", array(
+							$this->getEntity()->getType(),
+							$this->getEntity()->getId(),
+							array(
+								"TOPIC_ID" => $this->topic["ID"],
+								"MESSAGE_ID" => $mid,
+								"PARAMS" => $params,
+								"MESSAGE" => $this->getComment()
+							))
+					);
+					$event->send();
+				}
+
 				return $this->getComment();
 			}
 		}
@@ -191,8 +201,8 @@ class Comment extends BaseObject
 		{
 			$run = true;
 			$fields = array(
-				$this->entity->getType(),
-				$this->entity->getId(),
+				$this->getEntity()->getType(),
+				$this->getEntity()->getId(),
 				array(
 					"TOPIC_ID" => $this->topic["ID"],
 					"MESSAGE_ID" => $this->message["ID"],
@@ -244,7 +254,7 @@ class Comment extends BaseObject
 					if (strlen($params["EDITOR_NAME"]) <= 0)
 						$params["EDITOR_NAME"] = ($params["EDITOR_ID"] > 0 ? self::getUserName($params["EDITOR_ID"]) : Loc::getMessage("GUEST"));
 				}
-				if (!(($mid = \CForumMessage::Update($this->message["ID"], $params)) > 0))
+				if (!(($mid = \CForumMessage::update($this->message["ID"], $params)) > 0))
 				{
 					$text = Loc::getMessage("ADDMESS_ERROR_EDIT_MESSAGE");
 					if (($str = $this->getApplication()->getException()) && $str)
@@ -253,31 +263,31 @@ class Comment extends BaseObject
 				}
 				else
 				{
-					if ($params["AUTHOR_ID"] != $this->getUser()->getId() || \COption::GetOptionString("forum", "LOGS", "Q") < "U")
+					if ($params["AUTHOR_ID"] != $this->getUser()->getId() || Option::get("forum", "LOGS", "Q") < "U")
 					{
-						$res_log = array();
+						$resLog = array();
 						foreach ($paramsRaw as $key => $val)
 						{
 							if ($val == $this->message[$key])
 								continue;
 							else if ($key == "FILES")
-								$res_log["FILES"] = GetMessage("F_ATTACH_IS_MODIFIED");
+								$resLog["FILES"] = GetMessage("F_ATTACH_IS_MODIFIED");
 							else
-								$res_log[$key] = array(
+								$resLog[$key] = array(
 									"before" => $this->message[$key],
 									"after" => $val
 								);
 						}
-						if (!empty($res_log))
+						if (!empty($resLog))
 						{
-							$res_log["FORUM_ID"] = $this->forum["ID"];
-							$res_log["TOPIC_ID"] = $this->topic["ID"];
-							$res_log["TITLE"] = $this->topic["TITLE"];
-							\CForumEventLog::Log("message", "edit", $this->message["ID"], serialize($res_log));
+							$resLog["FORUM_ID"] = $this->forum["ID"];
+							$resLog["TOPIC_ID"] = $this->topic["ID"];
+							$resLog["TITLE"] = $this->topic["TITLE"];
+							\CForumEventLog::log("message", "edit", $this->message["ID"], serialize($resLog));
 						}
 					}
 					$this->updateStatisticModule($mid);
-					\CForumMessage::SendMailMessage($mid, array(), false, "EDIT_FORUM_MESSAGE");
+					\CForumMessage::sendMailMessage($mid, array(), false, "EDIT_FORUM_MESSAGE");
 
 					$this->setComment($mid);
 					$fields["PARAMS"] = $params;
@@ -305,8 +315,8 @@ class Comment extends BaseObject
 		{
 			$run = true;
 			$fields = array(
-				$this->entity->getType(),
-				$this->entity->getId(),
+				$this->getEntity()->getType(),
+				$this->getEntity()->getId(),
 				array(
 					"TOPIC_ID" => $this->topic["ID"],
 					"MESSAGE_ID" => $this->message["ID"],
@@ -328,9 +338,9 @@ class Comment extends BaseObject
 				}
 			}
 			/***************** /Events *****************************************/
-			if ($run && \CForumMessage::Delete($this->message["ID"]))
+			if ($run && \CForumMessage::delete($this->message["ID"]))
 			{
-				\CForumEventLog::Log("message", "delete", $this->message["ID"], serialize($this->message + array("TITLE" => $this->topic["TITLE"])));
+				\CForumEventLog::log("message", "delete", $this->message["ID"], serialize($this->message + array("TITLE" => $this->topic["TITLE"])));
 				/***************** Events OnCommentDelete ************************/
 				$event = new Event("forum", "OnCommentDelete", $fields);
 				$event->send();
@@ -360,8 +370,8 @@ class Comment extends BaseObject
 		{
 			$run = true;
 			$fields = array(
-				$this->entity->getType(),
-				$this->entity->getId(),
+				$this->getEntity()->getType(),
+				$this->getEntity()->getId(),
 				array(
 					"TOPIC_ID" => $this->topic["ID"],
 					"MESSAGE_ID" => $this->message["ID"],
@@ -384,7 +394,7 @@ class Comment extends BaseObject
 				}
 			}
 			/***************** /Events *****************************************/
-			if ($run && $this->message["APPROVED"] == $fields["PARAMS"]["APPROVED"] || ($mid = \CForumMessage::Update($this->message["ID"], $fields["PARAMS"])) > 0)
+			if ($run && $this->message["APPROVED"] == $fields[2]["PARAMS"]["APPROVED"] || ($mid = \CForumMessage::update($this->message["ID"], $fields[2]["PARAMS"])) > 0)
 			{
 				$this->setComment($this->message["ID"]);
 				/***************** Event onMessageModerate ***********************/
@@ -404,8 +414,8 @@ class Comment extends BaseObject
 					"TITLE" => $this->topic["TITLE"],
 					"TOPIC_ID" => $this->topic["ID"],
 					"FORUM_ID" => $this->topic["FORUM_ID"]));
-				\CForumMessage::SendMailMessage($this->message["ID"], array(), false, ($show ? "NEW_FORUM_MESSAGE" : "EDIT_FORUM_MESSAGE"));
-				\CForumEventLog::Log("message", ($show ? "approve" : "unapprove"), $this->message["ID"], $res);
+				\CForumMessage::sendMailMessage($this->message["ID"], array(), false, ($show ? "NEW_FORUM_MESSAGE" : "EDIT_FORUM_MESSAGE"));
+				\CForumEventLog::log("message", ($show ? "approve" : "unapprove"), $this->message["ID"], $res);
 				return $this->getComment();
 			}
 			else
@@ -428,15 +438,26 @@ class Comment extends BaseObject
 		}
 		else
 		{
-			$result = ($this->entity->canEdit() || (
+			$result = ($this->getEntity()->canEdit($this->getUser()->getId()) || (
 					((int) $this->message["AUTHOR_ID"] > 0) &&
 					((int) $this->message["AUTHOR_ID"] == (int) $this->getUser()->getId()) &&
-					$this->entity->canEditOwn()
+					$this->getEntity()->canEditOwn($this->getUser()->getId())
 				));
 		}
 		return $result;
 	}
 
+	/**
+	 * @return bool
+	 */
+	public function canEditOwn()
+	{
+		return $this->getEntity()->canEditOwn($this->getUser()->getId());
+	}
+
+	/**
+	 * @return bool
+	 */
 	public function canDelete()
 	{
 		return $this->canEdit();
@@ -472,21 +493,20 @@ class Comment extends BaseObject
 	{
 		$forum = $feed->getForum();
 		$comment = new Comment($forum["ID"], $feed->getEntity()->getFullId(), $feed->getUser()->getId());
-		$comment->getEntity()->setPermission($feed->getEntity()->getPermission());
+		$comment->getEntity()->setPermission($feed->getUser()->getId(), $feed->getEntity()->getPermission($feed->getUser()->getId()));
 		$comment->setComment($id);
 		return $comment;
 	}
 	/**
 	 * Creates new
 	 * @param Feed $feed
-	 * @param $id
 	 * @return Comment
 	 */
 	public static function create(Feed $feed)
 	{
 		$forum = $feed->getForum();
 		$comment = new Comment($forum["ID"], $feed->getEntity()->getFullId(), $feed->getUser()->getId());
-		$comment->getEntity()->setPermission($feed->getEntity()->getPermission());
+		$comment->getEntity()->setPermission($feed->getUser()->getId(), $feed->getEntity()->getPermission($feed->getUser()->getId()));
 		return $comment;
 	}
 }

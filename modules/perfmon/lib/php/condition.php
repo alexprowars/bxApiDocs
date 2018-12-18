@@ -8,7 +8,7 @@ class Condition
 	/**
 	 * @param string $predicate Php condition.
 	 */
-	public function __construct($predicate)
+	function __construct($predicate)
 	{
 		$this->predicate = (string)$predicate;
 	}

@@ -104,7 +104,33 @@ class OrderInfo
 			$email = $email->getViewHtml();
 
 		if($phone = $orderProps->getPhone())
-			$phone = $phone->getViewHtml();
+		{
+			$phoneVal = $phone->getValue();
+
+			if($phoneVal != '')
+			{
+				if(!is_array($phoneVal))
+					$phoneVal = array($phoneVal);
+
+				$phone = '';
+
+				foreach($phoneVal as $number)
+				{
+					$number = str_replace("'", "", htmlspecialcharsbx($number));
+
+					if(strlen($phone) > 0)
+						$phone .= ', ';
+
+					$phone .= '<a href="javascript:void(0)" onclick="BX.Sale.Admin.OrderEditPage.desktopMakeCall(\''.$number.'\');">'.
+						$number.
+						'</a>';
+				}
+			}
+			else
+			{
+				$phone = '';
+			}
+		}
 
 		if($name = $orderProps->getPayerName())
 			$name = $name->getViewHtml();
@@ -158,9 +184,7 @@ class OrderInfo
 							<li>
 								<span class="adm-bus-orderinfoblock-content-customer-info-param">'.Loc::getMessage("SALE_ORDER_INFO_PHONE").':</span>
 								<span class="adm-bus-orderinfoblock-content-customer-info-value" id="order_info_buyer_phone">
-									<a href="javascript:void(0)" onclick="BX.Sale.Admin.OrderEditPage.desktopMakeCall(\''.$phone.'\');">'.
-										htmlspecialcharsbx($phone).
-									'</a>
+									'.$phone.'									
 								</span>
 							</li>';
 
@@ -267,7 +291,7 @@ class OrderInfo
 		$result .=      '</ul>
 					</div>
 				</div>
-				<div id="sale-order-edit-block-order-info-pin" onclick="BX.Sale.Admin.OrderEditPage.toggleFix(this.id, \'sale-order-edit-block-order-info\');" class="adm-detail-pin-btn-tabs" style="top: 9px;right: 5px;"></div>
+				<div id="sale-order-edit-block-order-info-pin" onclick="BX.Sale.Admin.OrderEditPage.toggleFix(this.id, \'sale-order-edit-block-order-info\');" class="adm-detail-pin-btn-tabs" style="top: 9px;right: 0;"></div>
 				</div>
 			</div>';
 

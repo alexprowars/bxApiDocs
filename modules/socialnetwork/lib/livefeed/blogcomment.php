@@ -1,22 +1,33 @@
 <?php
 namespace Bitrix\Socialnetwork\Livefeed;
 
-use Bitrix\Main;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Config\Option;
 
 Loc::loadMessages(__FILE__);
 
 final class BlogComment extends Provider
 {
 	const PROVIDER_ID = 'BLOG_COMMENT';
+	const CONTENT_TYPE_ID = 'BLOG_COMMENT';
 
 	public static function getId()
 	{
 		return static::PROVIDER_ID;
 	}
 
-	protected function initSourceFields()
+	public function getEventId()
+	{
+		return array('blog_comment', 'blog_comment_micro');
+	}
+
+	public function getType()
+	{
+		return Provider::TYPE_COMMENT;
+	}
+
+	public function initSourceFields()
 	{
 		$commentId = $this->entityId;
 
@@ -25,18 +36,51 @@ final class BlogComment extends Provider
 			&& Loader::includeModule('blog')
 		)
 		{
-			if (
-				($comment = \CBlogComment::getById($commentId))
-				&& ($post = \CBlogPost::getById($comment["POST_ID"]))
-				&& (BlogPost::canRead(array(
-					'POST' => $post
-				)))
-			)
+			$res = \CBlogComment::getList(
+				array(),
+				array(
+					"ID" => $commentId
+				),
+				false,
+				false,
+				array("ID", "BLOG_ID", "POST_ID", "PARENT_ID", "AUTHOR_ID", "AUTHOR_NAME", "AUTHOR_EMAIL", "AUTHOR_IP", "AUTHOR_IP1", "TITLE", "POST_TEXT", "SHARE_DEST")
+			);
+
+			if ($comment = $res->fetch($commentId))
 			{
-				$this->setSourceDescription($comment['POST_TEXT']);
-				$this->setSourceTitle(TruncateText(preg_replace(array("/\n+/is".BX_UTF_PCRE_MODIFIER, "/\s+/is".BX_UTF_PCRE_MODIFIER), " ", \blogTextParser::killAllTags($comment['POST_TEXT'])), 100));
-				$this->setSourceAttachedDiskObjects($this->getAttachedDiskObjects());
-				$this->setSourceDiskObjects(self::getDiskObjects($commentId, $this->cloneDiskObjects));
+				$res = \CBlogPost::getList(
+					array(),
+					array(
+						"ID" => $comment["POST_ID"]
+					)
+				);
+
+				if (
+					($post = $res->fetch())
+					&& (BlogPost::canRead(array(
+						'POST' => $post
+					)))
+				)
+				{
+					$this->setSourceFields(array_merge($comment, array("POST" => $post)));
+					$this->setSourceDescription(htmlspecialcharsback($comment['POST_TEXT']));
+
+					$title = htmlspecialcharsback($comment['POST_TEXT']);
+					$title = preg_replace(
+						"/\[USER\s*=\s*([^\]]*)\](.+?)\[\/USER\]/is".BX_UTF_PCRE_MODIFIER,
+						"\\2",
+						$title
+					);
+					$p = new \blogTextParser();
+					$title = $p->convert($title, false);
+					$title = preg_replace(array("/\n+/is".BX_UTF_PCRE_MODIFIER, "/\s+/is".BX_UTF_PCRE_MODIFIER), " ", \blogTextParser::killAllTags($title));
+
+					$this->setSourceTitle(truncateText($title, 100));
+					$this->setSourceAttachedDiskObjects($this->getAttachedDiskObjects());
+					$this->setSourceDiskObjects(self::getDiskObjects($commentId, $this->cloneDiskObjects));
+					$this->setSourceOriginalText($comment['POST_TEXT']);
+					$this->setSourceAuxData($comment);
+				}
 			}
 		}
 	}
@@ -79,5 +123,21 @@ final class BlogComment extends Provider
 		return $result;
 	}
 
+	public function getLiveFeedUrl()
+	{
+		$pathToPost = Option::get('socialnetwork', 'userblogpost_page', '', $this->getSiteId());
+
+		if (
+			!empty($pathToPost)
+			&& ($comment = $this->getSourceFields())
+			&& isset($comment["POST"])
+		)
+		{
+			$pathToPost = \CComponentEngine::makePathFromTemplate($pathToPost, array("post_id" => $comment["POST"]["ID"], "user_id" => $comment["POST"]["AUTHOR_ID"]));
+			$pathToPost .= (strpos($pathToPost, '?') === false ? '?' : '&').'commentId='.$comment["ID"].'#com'.$comment["ID"];
+		}
+
+		return $pathToPost;
+	}
 
 }

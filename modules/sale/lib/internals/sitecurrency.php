@@ -45,19 +45,6 @@ class SiteCurrencyTable extends Main\Entity\DataManager
 	 * @param string $siteId		Site id.
 	 * @return bool|array
 	 */
-	
-	/**
-	* <p>Метод возвращает параметры валюты сайта. Метод статический.</p>
-	*
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/sitecurrencytable/getcurrency.php
-	* @author Bitrix
-	*/
 	public static function getCurrency($siteId)
 	{
 		$siteId = (string)$siteId;
@@ -88,21 +75,8 @@ class SiteCurrencyTable extends Main\Entity\DataManager
 	 * Returns site currency.
 	 *
 	 * @param string $siteId				Site id.
-	 * @return bool|string
+	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает код валюты сайта. Метод статический.</p>
-	*
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/sitecurrencytable/getsitecurrency.php
-	* @author Bitrix
-	*/
 	public static function getSiteCurrency($siteId)
 	{
 		$siteData = self::getCurrency($siteId);

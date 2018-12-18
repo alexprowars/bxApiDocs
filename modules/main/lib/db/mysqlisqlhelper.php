@@ -1,7 +1,7 @@
 <?php
 namespace Bitrix\Main\DB;
 
-use Bitrix\Main\Entity;
+use Bitrix\Main\ORM;
 
 class MysqliSqlHelper extends MysqlCommonSqlHelper
 {
@@ -13,21 +13,6 @@ class MysqliSqlHelper extends MysqlCommonSqlHelper
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод выводит специальные символы в строке для использования в SQL операторе</p>
-	*
-	*
-	* @param string $value  Значение для вывода
-	*
-	* @param integer $maxLength  Лимит длины строки, если существует.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqlisqlhelper/forsql.php
-	* @author Bitrix
-	*/
 	public function forSql($value, $maxLength = 0)
 	{
 		if ($maxLength > 0)
@@ -47,26 +32,9 @@ class MysqliSqlHelper extends MysqlCommonSqlHelper
 	 * @param mixed $type Database specific type.
 	 * @param array $parameters Additional information.
 	 *
-	 * @return Entity\ScalarField
+	 * @return \Bitrix\Main\ORM\Fields\ScalarField
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает экземпляр потомка <code>Entity\ScalarField</code>, соответствующий типу БД.</p>
-	*
-	*
-	* @param string $name  Имя колонки БД.
-	*
-	* @param mixed $type  Тип БД.
-	*
-	* @param array $parameters = null Дополнительная информация.
-	*
-	* @return \Bitrix\Main\Entity\ScalarField 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/db/mysqlisqlhelper/getfieldbycolumntype.php
-	* @author Bitrix
-	*/
-	static public function getFieldByColumnType($name, $type, array $parameters = null)
+	public function getFieldByColumnType($name, $type, array $parameters = null)
 	{
 		switch($type)
 		{
@@ -75,21 +43,21 @@ class MysqliSqlHelper extends MysqlCommonSqlHelper
 			case MYSQLI_TYPE_LONG:
 			case MYSQLI_TYPE_INT24:
 			case MYSQLI_TYPE_CHAR:
-				return new Entity\IntegerField($name);
+				return new ORM\Fields\IntegerField($name);
 
 			case MYSQLI_TYPE_DECIMAL:
 			case MYSQLI_TYPE_NEWDECIMAL:
 			case MYSQLI_TYPE_FLOAT:
 			case MYSQLI_TYPE_DOUBLE:
-				return new Entity\FloatField($name);
+				return new ORM\Fields\FloatField($name);
 
 			case MYSQLI_TYPE_DATETIME:
 			case MYSQLI_TYPE_TIMESTAMP:
-				return new Entity\DatetimeField($name);
+				return new ORM\Fields\DatetimeField($name);
 
 			case MYSQLI_TYPE_DATE:
 			case MYSQLI_TYPE_NEWDATE:
-				return new Entity\DateField($name);
+				return new ORM\Fields\DateField($name);
 		}
 		//MYSQLI_TYPE_BIT
 		//MYSQLI_TYPE_LONGLONG
@@ -105,6 +73,6 @@ class MysqliSqlHelper extends MysqlCommonSqlHelper
 		//MYSQLI_TYPE_VAR_STRING
 		//MYSQLI_TYPE_STRING
 		//MYSQLI_TYPE_GEOMETRY
-		return new Entity\StringField($name);
+		return new ORM\Fields\StringField($name);
 	}
 }

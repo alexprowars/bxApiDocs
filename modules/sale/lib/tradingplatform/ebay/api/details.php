@@ -3,7 +3,6 @@
 namespace Bitrix\Sale\TradingPlatform\Ebay\Api;
 
 use Bitrix\Main\Text\Encoding;
-use Bitrix\Sale\TradingPlatform\Helper;
 use Bitrix\Sale\TradingPlatform\Xml2Array;
 
 class Details extends Entity

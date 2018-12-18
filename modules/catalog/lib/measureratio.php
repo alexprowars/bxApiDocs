@@ -26,17 +26,6 @@ class MeasureRatioTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы единиц измерения товаров. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/measureratiotable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_measure_ratio';
@@ -47,17 +36,6 @@ class MeasureRatioTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы единиц измерения товаров. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/measureratiotable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -73,7 +51,18 @@ class MeasureRatioTable extends Main\Entity\DataManager
 			'RATIO' => new Main\Entity\FloatField('RATIO', array(
 				'required' => true,
 				'title' => Loc::getMessage('MEASURE_RATIO_ENTITY_RATIO_FIELD')
-			))
+			)),
+			'IS_DEFAULT' => new Main\Entity\BooleanField('IS_DEFAULT', array(
+				'values' => array('N', 'Y'),
+				'default_value' => 'N',
+				'title' => Loc::getMessage('MEASURE_RATIO_ENTITY_IS_DEFAULT_FIELD')
+			)),
+			'PRODUCT' => new Main\Entity\ReferenceField(
+				'PRODUCT',
+				'\Bitrix\Catalog\Product',
+				array('=this.PRODUCT_ID' => 'ref.ID'),
+				array('join_type' => 'LEFT')
+			),
 		);
 	}
 
@@ -84,21 +73,6 @@ class MeasureRatioTable extends Main\Entity\DataManager
 	 * @return array|bool
 	 * @throws Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Метод возвращает массив коэффициентов единиц измерения для заданного списка товаров. Метод статический.</p>
-	*
-	*
-	* @param array $array  Массив идентификаторов товаров.
-	*
-	* @param integer $product  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/measureratiotable/getcurrentratio.php
-	* @author Bitrix
-	*/
 	public static function getCurrentRatio($product)
 	{
 		if (!is_array($product))
@@ -113,7 +87,7 @@ class MeasureRatioTable extends Main\Entity\DataManager
 		{
 			$ratioIterator = self::getList(array(
 				'select' => array('PRODUCT_ID', 'RATIO'),
-				'filter' => array('@PRODUCT_ID' => $row)
+				'filter' => array('@PRODUCT_ID' => $row, '=IS_DEFAULT' => 'Y')
 			));
 			while ($ratio = $ratioIterator->fetch())
 			{
@@ -129,5 +103,26 @@ class MeasureRatioTable extends Main\Entity\DataManager
 		}
 		unset($row, $ratioRows);
 		return $result;
+	}
+
+	/**
+	 * Delete all rows for product.
+	 * @internal
+	 *
+	 * @param int $id       Product id.
+	 * @return void
+	 */
+	public static function deleteByProduct($id)
+	{
+		$id = (int)$id;
+		if ($id <= 0)
+			return;
+
+		$conn = Main\Application::getConnection();
+		$helper = $conn->getSqlHelper();
+		$conn->queryExecute(
+			'delete from '.$helper->quote(self::getTableName()).' where '.$helper->quote('PRODUCT_ID').' = '.$id
+		);
+		unset($helper, $conn);
 	}
 }

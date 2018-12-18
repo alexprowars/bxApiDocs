@@ -95,6 +95,9 @@ class Automatic extends Base
 
 			foreach($initedHandlers as $handler)
 			{
+				if(isset($handler["DEPRECATED"]) && $handler["DEPRECATED"] = "Y")
+					continue;
+					
 				$handlers[$handler["SID"]] = $handler["NAME"]." [".$handler["SID"]."]";
 				$jsData[$handler["SID"]] = array(
 					htmlspecialcharsbx($handler["NAME"]),
@@ -611,45 +614,53 @@ class Automatic extends Base
 
 	public static function createConfig($initHandlerParams, $settings, $siteId = false)
 	{
-		$result = array(
-			"CONFIG_GROUPS" => array(),
-			"CONFIG" => array(),
-		);
+		static $result = array();
+		$hitCacheId = md5(serialize($initHandlerParams))."_".md5(serialize($settings))."_".strval($siteId);
 
-		if (is_callable($initHandlerParams["GETCONFIG"]))
+		if(!isset($result[$hitCacheId]))
 		{
-			$conf = call_user_func($initHandlerParams["GETCONFIG"], $siteId);
+			$config = array(
+				"CONFIG_GROUPS" => array(),
+				"CONFIG" => array(),
+			);
 
-			if(isset($conf["CONFIG_GROUPS"]))
-				$result["CONFIG_GROUPS"] = $conf["CONFIG_GROUPS"];
+			if (is_callable($initHandlerParams["GETCONFIG"]))
+			{
+				$conf = call_user_func($initHandlerParams["GETCONFIG"], $siteId);
 
-			if (strlen($settings) > 0 && is_callable($initHandlerParams["DBGETSETTINGS"]))
-			{
-				$settings = unserialize($settings);
-				$arConfigValues = call_user_func($initHandlerParams["DBGETSETTINGS"], $settings);
-			}
-			else
-			{
-				$arConfigValues = array();
-			}
+				if(isset($conf["CONFIG_GROUPS"]))
+					$config["CONFIG_GROUPS"] = $conf["CONFIG_GROUPS"];
 
-			foreach ($conf["CONFIG"] as $key => $arConfig)
-			{
-				if (is_array($conf["CONFIG"][$key]))
+				if (strlen($settings) > 0 && is_callable($initHandlerParams["DBGETSETTINGS"]))
 				{
-					$result["CONFIG"][$key] = $conf["CONFIG"][$key];
+					$settings = unserialize($settings);
+					$arConfigValues = call_user_func($initHandlerParams["DBGETSETTINGS"], $settings);
+				}
+				else
+				{
+					$arConfigValues = array();
+				}
 
-					if(isset($arConfigValues[$key]))
-						$result["CONFIG"][$key]["VALUE"] = $arConfigValues[$key];
-					elseif(isset($conf["CONFIG"][$key]["DEFAULT"]))
-						$result["CONFIG"][$key]["VALUE"] = $conf["CONFIG"][$key]["DEFAULT"];
-					else
-						$result["CONFIG"][$key]["VALUE"] = "";
+				foreach ($conf["CONFIG"] as $key => $arConfig)
+				{
+					if (is_array($conf["CONFIG"][$key]))
+					{
+						$config["CONFIG"][$key] = $conf["CONFIG"][$key];
+
+						if(isset($arConfigValues[$key]))
+							$config["CONFIG"][$key]["VALUE"] = $arConfigValues[$key];
+						elseif(isset($conf["CONFIG"][$key]["DEFAULT"]))
+							$config["CONFIG"][$key]["VALUE"] = $conf["CONFIG"][$key]["DEFAULT"];
+						else
+							$config["CONFIG"][$key]["VALUE"] = "";
+					}
 				}
 			}
+
+			$result[$hitCacheId] = $config;
 		}
 
-		return $result;
+		return $result[$hitCacheId];
 	}
 
 	protected function getCalcultor()
@@ -678,10 +689,6 @@ class Automatic extends Base
 			throw new ArgumentNullException("sid");
 
 		static $result = array();
-
-		if(isset($result[$sid]))
-			return $result[$sid];
-
 		$oldOrder = self::convertNewOrderToOld($shipment);
 
 		if(!empty($oldOrder["ITEMS"]) && is_array($oldOrder["ITEMS"]))
@@ -710,9 +717,14 @@ class Automatic extends Base
 				$oldOrder["MAX_DIMENSIONS"] = $maxDimensions;
 		}
 
-		$result[$sid] = call_user_func($compatibilityFunc, $oldOrder, $config["CONFIG"]);
+		$hitCacheId = $sid.'_'.md5(serialize($oldOrder)).'_'.md5(serialize($config["CONFIG"]));
 
-		return $result[$sid];
+		if(!isset($result[$hitCacheId]))
+		{
+			$result[$hitCacheId] = call_user_func($compatibilityFunc, $oldOrder, $config["CONFIG"]);
+		}
+
+		return $result[$hitCacheId];
 	}
 
 	public function isProfileCompatible($profileId, $config, Shipment $shipment)
@@ -722,7 +734,7 @@ class Automatic extends Base
 		if($compatibilityFunc === false)
 			return true;
 
-		$res = $this->getCompatibleProfiles($this->sid, $compatibilityFunc, $config, $shipment);
+		$res = $this->getCompatibleProfiles($this->sid.':'.$profileId, $compatibilityFunc, $config, $shipment);
 		return is_array($res) && in_array($profileId, $res);
 	}
 
@@ -746,8 +758,15 @@ class Automatic extends Base
 	 */
 	public function calculateProfile($profileId, array $profileConfig, \Bitrix\Sale\Shipment $shipment)
 	{
+		static $result = array();
+		$oldOrder = self::convertNewOrderToOld($shipment);
+		$hitCacheId = $this->id.'_'.$profileId.'_'.md5(serialize($profileConfig)).'_'.md5(serialize($oldOrder));
+
+		if(isset($result[$hitCacheId]))
+			return clone $result[$hitCacheId];
+
 		global $APPLICATION;
-		$result = new CalculationResult();
+		$calcRes = new CalculationResult();
 		$step = 0;
 		$tmp = false;
 		/** @var ShipmentCollection $shipmentCollection */
@@ -767,7 +786,7 @@ class Automatic extends Base
 				$calculator,
 				$profileId,
 				$profileConfig["CONFIG"],
-				self::convertNewOrderToOld($shipment),
+				$oldOrder,
 				++$step,
 				$tmp))
 			{
@@ -776,26 +795,35 @@ class Automatic extends Base
 					if($res["RESULT"] == "OK" )
 					{
 						if(isset($res["TEXT"]))
-							$result->setDescription($res["TEXT"]);
+							$calcRes->setDescription($res["TEXT"]);
 
 						if(isset($res["VALUE"]))
-							$result->setDeliveryPrice(floatval($res["VALUE"]));
+							$calcRes->setDeliveryPrice(floatval($res["VALUE"]));
 
 						if(isset($res["TRANSIT"]))
-							$result->setPeriodDescription($res["TRANSIT"]);
+							$calcRes->setPeriodDescription($res["TRANSIT"]);
+
+						if(isset($res["PERIOD_FROM"]))
+							$calcRes->setPeriodFrom($res["PERIOD_FROM"]);
+
+						if(isset($res["PERIOD_TO"]))
+							$calcRes->setPeriodTo($res["PERIOD_TO"]);
+
+						if(isset($res["PERIOD_TYPE"]))
+							$calcRes->setPeriodType($res["PERIOD_TYPE"]);
 					}
 					else
 					{
 						if(isset($res["TEXT"]) && strlen($res["TEXT"]) > 0)
 						{
-							$result->addError(new EntityError(
+							$calcRes->addError(new EntityError(
 								$res["TEXT"],
 								'DELIVERY_CALCULATION'
 							));
 						}
 						else
 						{
-							$result->addError(new EntityError(
+							$calcRes->addError(new EntityError(
 								Loc::getMessage('SALE_DLVR_HANDL_AUT_ERROR_CALCULATION'),
 								'DELIVERY_CALCULATION'
 							));
@@ -804,42 +832,43 @@ class Automatic extends Base
 				}
 				elseif (is_numeric($res))
 				{
-					$result->setDeliveryPrice(floatval($res));
+					$calcRes->setDeliveryPrice(floatval($res));
 				}
 			}
 			else
 			{
 				if ($ex = $APPLICATION->getException())
 				{
-					$result->addError(new EntityError(
+					$calcRes->addError(new EntityError(
 						$ex->getString(),
 						'DELIVERY_CALCULATION'
 					));
 				}
 				else
 				{
-					$result->setDeliveryPrice(0);
+					$calcRes->setDeliveryPrice(0);
 				}
 			}
 
-			if ($result->isSuccess() && $this->currency != $shipmentCurrency)
+			if ($calcRes->isSuccess() && $this->currency != $shipmentCurrency)
 			{
-				$result->setDeliveryPrice(
+				$calcRes->setDeliveryPrice(
 					\CCurrencyRates::convertCurrency(
-						$result->getPrice(),
+						$calcRes->getPrice(),
 						$this->currency,
 						$shipmentCurrency
 				));
 			}
 		}
 
-		$price = $result->getPrice();
+		$price = $calcRes->getPrice();
 
-		$result->setDeliveryPrice(
-			$price + $this->getMarginPrice($price)
+		$calcRes->setDeliveryPrice(
+			$price + $this->getMarginPrice($price, $shipmentCurrency)
 		);
 
-		return $result;
+		$result[$hitCacheId] = $calcRes;
+		return clone $result[$hitCacheId];
 	}
 
 	public static function getChildrenClassNames()
@@ -854,12 +883,28 @@ class Automatic extends Base
 		return $this->config;
 	}
 
-	protected function getMarginPrice($price)
+	protected function getMarginPrice($price, $shipmentCurrency = '')
 	{
 		if($this->config["MAIN"]["MARGIN_TYPE"] == "%")
+		{
 			$marginPrice = $price * floatval($this->config["MAIN"]["MARGIN_VALUE"]) / 100;
+		}
 		else
+		{
 			$marginPrice = floatval($this->config["MAIN"]["MARGIN_VALUE"]);
+
+			if($marginPrice && $shipmentCurrency != '' && $this->currency != $shipmentCurrency)
+			{
+				if(Loader::includeModule('currency'))
+				{
+					$marginPrice = \CCurrencyRates::convertCurrency(
+						$marginPrice,
+						$this->currency,
+						$shipmentCurrency
+					);
+				}
+			}
+		}
 
 		return $marginPrice;
 	}

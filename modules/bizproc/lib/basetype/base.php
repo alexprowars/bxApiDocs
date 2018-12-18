@@ -86,17 +86,6 @@ class Base
 	 * Get formats list.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Статический метод возвращает список форматов.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/base/getformats.php
-	* @author Bitrix
-	*/
 	public static function getFormats()
 	{
 		return static::$formats;
@@ -109,25 +98,6 @@ class Base
 	 * @param mixed $value Field value.
 	 * @return mixed Normalized value
 	 */
-	
-	/**
-	* <p>Статический метод нормализует одиночное значение.</p>
-	*
-	*
-	* @param mixed $Bitrix  Тип поля документа.
-	*
-	* @param Bitri $Bizproc  Значение поля.
-	*
-	* @param FieldType $fieldType  
-	*
-	* @param mixed $value  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/base/tosinglevalue.php
-	* @author Bitrix
-	*/
 	public static function toSingleValue(FieldType $fieldType, $value)
 	{
 		return $value;
@@ -243,17 +213,6 @@ class Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает таблицу преобразования для текущего типа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/base/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -327,9 +286,28 @@ class Base
 		$index = isset($field['Index']) ? $field['Index'] : null;
 		if ($index !== null)
 		{
-			$name .= '[n'.$index.']';
+			$prefix = strpos($index, 'n') === 0 ? '' : 'n';
+			$name .= '['.$prefix.$index.']';
 		}
 		return $name;
+	}
+
+	protected static function generateControlClassName(FieldType $fieldType, array $field)
+	{
+		$prefix = isset($field['ClassNamePrefix']) ? (string)$field['ClassNamePrefix'] : 'bizproc-type-control';
+		$classes = array($prefix);
+		$classes[] = $prefix.'-'.static::getType();
+
+		if ($fieldType->isMultiple())
+		{
+			$classes[] = $prefix.'-multiple';
+		}
+		if ($fieldType->isRequired())
+		{
+			$classes[] = $prefix.'-required';
+		}
+
+		return implode(' ', $classes);
 	}
 
 	/**
@@ -368,8 +346,9 @@ class Base
 	{
 		$name = static::generateControlName($field);
 		$controlId = static::generateControlId($field);
+		$className = static::generateControlClassName($fieldType, $field);
 		// example: control rendering
-		return '<input type="text" size="40" id="'.htmlspecialcharsbx($controlId).'" name="'
+		return '<input type="text" class="'.htmlspecialcharsbx($className).'" size="40" id="'.htmlspecialcharsbx($controlId).'" name="'
 			.htmlspecialcharsbx($name).'" value="'.htmlspecialcharsbx((string) $value).'"/>';
 	}
 
@@ -590,7 +569,7 @@ class Base
 				$value[$k] = $result;
 		}
 
-		//apppend selector value
+		//append selector value
 		$nameText = $field['Field'].'_text';
 		$text = isset($request[$nameText]) ? $request[$nameText] : null;
 		if (\CBPActivity::isExpression($text))

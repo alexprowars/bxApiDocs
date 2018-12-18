@@ -29,25 +29,6 @@ class Date extends Base
 	 * @param mixed $value Field value.
 	 * @return mixed Normalized value
 	 */
-	
-	/**
-	* <p>Статический метод нормализует одиночное значение.</p>
-	*
-	*
-	* @param mixed $Bitrix  Тип поля документа.
-	*
-	* @param Bitri $Bizproc  Значение поля.
-	*
-	* @param FieldType $fieldType  
-	*
-	* @param mixed $value  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/date/tosinglevalue.php
-	* @author Bitrix
-	*/
 	public static function toSingleValue(FieldType $fieldType, $value)
 	{
 		if (is_array($value))
@@ -109,17 +90,6 @@ class Date extends Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает таблицу преобразования для текущего типа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/date/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -145,6 +115,7 @@ class Date extends Base
 	protected static function renderControl(FieldType $fieldType, array $field, $value, $allowSelection, $renderMode)
 	{
 		$name = static::generateControlName($field);
+		$className = static::generateControlClassName($fieldType, $field);
 		$renderResult = '';
 
 		if ($renderMode & FieldType::RENDER_MODE_MOBILE)
@@ -157,7 +128,6 @@ class Date extends Base
 		}
 		elseif ($renderMode & FieldType::RENDER_MODE_ADMIN)
 		{
-			require_once(Loader::getLocal('/modules/main/interface/init_admin.php'));
 			$renderResult = \CAdminCalendar::calendarDate($name, $value, 19, static::getType() == FieldType::DATETIME);
 		}
 		else
@@ -173,7 +143,8 @@ class Date extends Base
 					'FORM_NAME' => $field['Form'],
 					'INPUT_NAME' => $name,
 					'INPUT_VALUE' => $value,
-					'SHOW_TIME' => static::getType() == FieldType::DATETIME ? 'Y' : 'N'
+					'SHOW_TIME' => static::getType() == FieldType::DATETIME ? 'Y' : 'N',
+					'INPUT_ADDITIONAL_ATTR' => 'class="'.htmlspecialcharsbx($className).'"'
 				),
 				false,
 				array('HIDE_ICONS' => 'Y')
@@ -207,6 +178,9 @@ class Date extends Base
 
 		if ($value !== null && is_string($value) && strlen($value) > 0)
 		{
+			if (\CBPActivity::isExpression($value))
+				return $value;
+
 			$format = static::getType() == FieldType::DATETIME ? \FORMAT_DATETIME : \FORMAT_DATE;
 			if(!\CheckDateTime($value, $format))
 			{

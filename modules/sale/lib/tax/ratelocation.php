@@ -21,12 +21,12 @@ final class RateLocationTable extends Sale\Location\Connector
 		return 'b_sale_tax2location';
 	}
 
-	static public function getLinkField()
+	public function getLinkField()
 	{
 		return 'TAX_RATE_ID';
 	}
 
-	static public function getTargetEntityName()
+	public function getTargetEntityName()
 	{
 		return 'Bitrix\Sale\Tax\Rate';
 	}
@@ -52,7 +52,7 @@ final class RateLocationTable extends Sale\Location\Connector
 			),
 			'LOCATION_TYPE' => array(
 				'data_type' => 'string',
-				'default' => self::DB_LOCATION_FLAG,
+				'default_value' => self::DB_LOCATION_FLAG,
 				'required' => true,
 				'primary' => true
 			),

@@ -33,6 +33,7 @@ Loc::loadMessages(__FILE__);
  * <li> ISSUING_CENTER bool optional default 'Y'
  * <li> SHIPPING_CENTER bool optional default 'Y'
  * <li> SITE_ID string(2) optional
+ * <li> CODE string(255) optional
  * </ul>
  *
  * @package Bitrix\Catalog
@@ -44,17 +45,6 @@ class StoreTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы складов в базе данных. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_catalog_store';
@@ -65,17 +55,6 @@ class StoreTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы складов. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -117,11 +96,11 @@ class StoreTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('STORE_ENTITY_LOCATION_ID_FIELD')
 			)),
 			'DATE_MODIFY' => new Main\Entity\DatetimeField('DATE_MODIFY', array(
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('STORE_ENTITY_DATE_MODIFY_FIELD')
 			)),
 			'DATE_CREATE' => new Main\Entity\DatetimeField('DATE_CREATE', array(
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('STORE_ENTITY_DATE_CREATE_FIELD')
 			)),
 			'USER_ID' => new Main\Entity\IntegerField('USER_ID', array(
@@ -166,6 +145,10 @@ class StoreTable extends Main\Entity\DataManager
 				'validation' => array(__CLASS__, 'validateSiteId'),
 				'title' => Loc::getMessage('STORE_ENTITY_SITE_ID_FIELD')
 			)),
+			'CODE' => new Main\Entity\StringField('CODE', array(
+				'validation' => array(__CLASS__, 'validateCode'),
+				'title' => Loc::getMessage('STORE_ENTITY_CODE_FIELD')
+			))
 		);
 	}
 
@@ -174,17 +157,6 @@ class StoreTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает идентификатор объекта, для которого запрашиваются пользовательские поля. Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/getufid.php
-	* @author Bitrix
-	*/
 	public static function getUfId()
 	{
 		return 'CAT_STORE';
@@ -195,219 +167,130 @@ class StoreTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TITLE</code> (название склада). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validatetitle.php
-	* @author Bitrix
-	*/
 	public static function validateTitle()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 75),
 		);
 	}
+
 	/**
 	 * Returns validators for ADDRESS field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>ADDRESS</code> (адрес склада). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validateaddress.php
-	* @author Bitrix
-	*/
 	public static function validateAddress()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 245),
 		);
 	}
+
 	/**
 	 * Returns validators for GPS_N field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>GPS_N</code> (GPS широта). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validategpsn.php
-	* @author Bitrix
-	*/
 	public static function validateGpsN()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 15),
 		);
 	}
+
 	/**
 	 * Returns validators for GPS_S field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>GPS_S</code> (GPS долгота). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validategpss.php
-	* @author Bitrix
-	*/
 	public static function validateGpsS()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 15),
 		);
 	}
+
 	/**
 	 * Returns validators for IMAGE_ID field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>IMAGE_ID</code> (код изображения). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validateimageid.php
-	* @author Bitrix
-	*/
 	public static function validateImageId()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 45),
 		);
 	}
+
 	/**
 	 * Returns validators for PHONE field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>PHONE</code> (телефон склада). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validatephone.php
-	* @author Bitrix
-	*/
 	public static function validatePhone()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 45),
 		);
 	}
+
 	/**
 	 * Returns validators for SCHEDULE field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>SCHEDULE</code> (график работы). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validateschedule.php
-	* @author Bitrix
-	*/
 	public static function validateSchedule()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 255),
 		);
 	}
+
 	/**
 	 * Returns validators for XML_ID field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>XML_ID</code> (внешний код). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validatexmlid.php
-	* @author Bitrix
-	*/
 	public static function validateXmlId()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 255),
 		);
 	}
+
 	/**
 	 * Returns validators for EMAIL field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>EMAIL</code> (адрес электронной почты). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validateemail.php
-	* @author Bitrix
-	*/
 	public static function validateEmail()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 255),
 		);
 	}
+
 	/**
 	 * Returns validators for SITE_ID field.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>SITE_ID</code> (код сайта). Статический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/catalog/storetable/validatesiteid.php
-	* @author Bitrix
-	*/
 	public static function validateSiteId()
 	{
 		return array(
 			new Main\Entity\Validator\Length(null, 2),
+		);
+	}
+
+	/**
+	 * Returns validators for CODE field.
+	 *
+	 * @return array
+	 */
+	public static function validateCode()
+	{
+		return array(
+			new Main\Entity\Validator\Length(null, 255),
 		);
 	}
 }

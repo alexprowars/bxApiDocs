@@ -19,7 +19,9 @@ class ParserChain
 	 * @var array Key is host, value - parser class name
 	 */
 	protected  static $metadataParsersByHost = array(
-
+		'vk.com' => 'Bitrix\Main\UrlPreview\Parser\Vk',
+		'www.facebook.com' => 'Bitrix\Main\UrlPreview\Parser\Facebook',
+		'www.instagram.com' => 'Bitrix\Main\UrlPreview\Parser\Instagram',
 	);
 
 	/**
@@ -44,25 +46,6 @@ class ParserChain
 	 *
 	 * @param HtmlDocument $document
 	 */
-	
-	/**
-	* <p>Статический метод выполняет последовательность парсеров для приходящего <code>$document</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $UrlPreview  
-	*
-	* @param HtmlDocument $document  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/parserchain/extractmetadata.php
-	* @author Bitrix
-	*/
 	public static function extractMetadata(HtmlDocument $document)
 	{
 		foreach(static::getParserChain($document->getUri()) as $parserClassName)
@@ -90,22 +73,6 @@ class ParserChain
 	 * @param string $parserClassName Parser class must extend \Bitrix\Main\UrlPreview\Parser
 	 * @throws ArgumentException
 	 */
-	
-	/**
-	* <p>Статический метод регистрирует специальный парсер для хоста.</p>
-	*
-	*
-	* @param string $host  Хост
-	*
-	* @param string $parserClassName  Класс парсера - расширение <a
-	* href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/parser/index.php">\Bitrix\Main\UrlPreview\Parser</a>
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/parserchain/registermetadataparser.php
-	* @author Bitrix
-	*/
 	public static function registerMetadataParser($host, $parserClassName)
 	{
 		if(!class_exists($parserClassName) || !is_subclass_of($parserClassName, '\Bitrix\Main\UrlPreview\Parser'))

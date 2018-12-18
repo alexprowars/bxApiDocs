@@ -43,6 +43,7 @@ abstract class FileSystemEntry
 			$ar = array(
 				"bitrix" => 1,
 				Main\Config\Option::get("main", "upload_dir", "upload") => 1,
+				"local" => 1,
 				"urlrewrite.php" => 1,
 			);
 			if (isset($ar[$s]))

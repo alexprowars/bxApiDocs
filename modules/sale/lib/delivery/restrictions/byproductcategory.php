@@ -2,7 +2,8 @@
 namespace Bitrix\Sale\Delivery\Restrictions;
 
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale\Internals\CollectableEntity;
+use Bitrix\Sale\Internals\Entity;
+use Bitrix\Sale\Shipment;
 
 Loc::loadMessages(__FILE__);
 
@@ -36,11 +37,25 @@ class ByProductCategory extends Base
 			return true;
 		}
 
-		foreach($categoriesList as $category)
+		foreach($categoriesList as $productId => $productCategories)
 		{
-			$categoryPath = self::getCategoriesPath($category);
+			if(!is_array($productCategories) || empty($productCategories))
+				continue;
 
-			if(!array_intersect($categoryPath, $restrictionParams["CATEGORIES"]))
+			$isProductFromCategory = false;
+
+			foreach($productCategories as $categoryId)
+			{
+				$categoryPath = self::getCategoriesPath($categoryId);
+
+				if(array_intersect($categoryPath, $restrictionParams["CATEGORIES"]))
+				{
+					$isProductFromCategory =  true;
+					break;
+				}
+			}
+
+			if(!$isProductFromCategory)
 				return false;
 		}
 
@@ -60,8 +75,13 @@ class ByProductCategory extends Base
 		return $result;
 	}
 
-	public static function extractParams(CollectableEntity $shipment)
+	public static function extractParams(Entity $entity)
 	{
+		if (!$entity instanceof Shipment)
+		{
+			return array();
+		}
+
 		if(!\Bitrix\Main\Loader::includeModule('iblock'))
 			return array();
 
@@ -71,10 +91,13 @@ class ByProductCategory extends Base
 		$productIds = array();
 
 		/** @var \Bitrix\Sale\ShipmentItem $shipmentItem */
-		foreach($shipment->getShipmentItemCollection() as $shipmentItem)
+		foreach($entity->getShipmentItemCollection() as $shipmentItem)
 		{
 			/** @var \Bitrix\Sale\BasketItem $basketItem */
 			$basketItem = $shipmentItem->getBasketItem();
+
+			if(!$basketItem)
+				continue;
 
 			if($basketItem->getField('MODULE') != 'catalog')
 				continue;
@@ -99,11 +122,16 @@ class ByProductCategory extends Base
 	{
 		$groupsIds = array();
 
-		$res = \CIBlockElement::GetElementGroups($productIds, true, array('ID'));
+		$res = \CIBlockElement::GetElementGroups($productIds, true, array('ID', 'IBLOCK_ELEMENT_ID'));
 
 		while($group = $res->Fetch())
-			if(!in_array($group['ID'], $groupsIds))
-				$groupsIds[] = $group['ID'];
+		{
+			if(!is_array($groupsIds[$group['IBLOCK_ELEMENT_ID']]))
+				$groupsIds[$group['IBLOCK_ELEMENT_ID']] = array();
+
+			if(!in_array($group['ID'], $groupsIds[$group['IBLOCK_ELEMENT_ID']]))
+				$groupsIds[$group['IBLOCK_ELEMENT_ID']][] = $group['ID'];
+		}
 
 		return $groupsIds;
 	}
@@ -113,7 +141,7 @@ class ByProductCategory extends Base
 		$result =  array(
 			"CATEGORIES" => array(
 				"TYPE" => "DELIVERY_PRODUCT_CATEGORIES",
-				"URL" => "/bitrix/admin/cat_section_search.php?lang=ru&m=y&n=SECTIONS_IDS",
+				"URL" => "cat_section_search.php?lang=ru&m=y&n=SECTIONS_IDS",
 				"SCRIPT" => "window.InS".md5('SECTIONS_IDS')."=function(id, name){BX.Sale.Delivery.addRestrictionProductSection(id, name, this);};",
 				"LABEL" => Loc::getMessage("SALE_DLVR_RSTR_BY_PC_CATEGORIES"),
 				"ID" => 'sale-admin-delivery-restriction-cat-add'

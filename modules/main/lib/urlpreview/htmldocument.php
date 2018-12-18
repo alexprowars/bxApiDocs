@@ -37,37 +37,12 @@ class HtmlDocument
 	/** @var array */
 	protected $linkElements = array();
 
-	protected  $hostsAllowedToEmbed = array(
-		'youtube.com', 'youtu.be', 'vimeo.com', 'rutube.ru'
-	);
-
 	/**
 	 * HtmlDocument constructor.
 	 *
 	 * @param string $html Document HTML code.
 	 * @param Uri $uri Document's URL.
 	 */
-	
-	/**
-	* <p>Нестатический метод вызывается при создании экземпляра класса и позволяет в нем произвести какие-то действия при создании объекта.</p>
-	*
-	*
-	* @param string $html  Код HTML документа.
-	*
-	* @param string $Bitrix  URL документа.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Web  
-	*
-	* @param Uri $uri  
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct($html, Uri $uri)
 	{
 		$this->html = $html;
@@ -79,17 +54,6 @@ class HtmlDocument
 	 *
 	 * @return Uri
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает URI документа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Web\Uri 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/geturi.php
-	* @author Bitrix
-	*/
 	public function getUri()
 	{
 		return $this->uri;
@@ -100,17 +64,6 @@ class HtmlDocument
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает полный html код документа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/gethtml.php
-	* @author Bitrix
-	*/
 	public function getHtml()
 	{
 		return $this->html;
@@ -121,17 +74,6 @@ class HtmlDocument
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает <i>true</i> если метаданные заполнены.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/checkmetadata.php
-	* @author Bitrix
-	*/
 	public function checkMetadata()
 	{
 		$result = (    $this->metadata['TITLE'] != ''
@@ -152,17 +94,6 @@ class HtmlDocument
 	 *
 	 * @return array|false
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает метаданные, извлечённые из страницы. Будет возвращён массив с запрошенным ключом TITLE и дополнительными ключами DESCRIPTION и URL.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/getmetadata.php
-	* @author Bitrix
-	*/
 	public function getMetadata()
 	{
 		return $this->metadata;
@@ -173,17 +104,6 @@ class HtmlDocument
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает метаданные TITLE документа.</p> <p> </p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/gettitle.php
-	* @author Bitrix
-	*/
 	public function getTitle()
 	{
 		return $this->metadata['TITLE'];
@@ -195,19 +115,6 @@ class HtmlDocument
 	 * @param string $title Title.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает метаданные TITLE для документа.</p>
-	*
-	*
-	* @param string $title  Название
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/settitle.php
-	* @author Bitrix
-	*/
 	public function setTitle($title)
 	{
 		if(strlen($title) > 0)
@@ -230,19 +137,6 @@ class HtmlDocument
 	 * @param string $description Description.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает метаданные DESCRIPTION для документа.</p>
-	*
-	*
-	* @param string $description  Описание
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/setdescription.php
-	* @author Bitrix
-	*/
 	public function setDescription($description)
 	{
 		if(strlen($description) > 0)
@@ -265,19 +159,6 @@ class HtmlDocument
 	 * @param string $image Main image's url.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает метаданные IMAGE для документа.</p>
-	*
-	*
-	* @param string $image  URL главной картинки документа.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/setimage.php
-	* @author Bitrix
-	*/
 	public function setImage($image)
 	{
 		if(strlen($image) > 0)
@@ -302,19 +183,6 @@ class HtmlDocument
 	 * @param string $embed HTML code for embedding object to the page.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает метаданные EMBED для документа, если это разрешено.</p>
-	*
-	*
-	* @param string $embed  HTML код для ссылающегося объекта на странице.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/setembed.php
-	* @author Bitrix
-	*/
 	public function setEmbed($embed)
 	{
 		if($this->isEmbeddingAllowed())
@@ -332,24 +200,6 @@ class HtmlDocument
 	 * @param string $fieldValue Field value.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает дополнительные поля метаданных.</p>
-	*
-	*
-	* @param string $fieldName  Название поля. Допускаемые значения: <ul> <li>FAVICON: <code>$fieldValue</code>
-	* должен содержать URL для фавикона</li> <li>IMAGES: <code>$fieldValue</code> должен
-	* быть массив URL картинок, обнаруженных в документе.</li>  <li>В других
-	* случаях <code>$fieldValue</code> должен содержать простой текст.</li>   </ul>
-	*
-	* @param string $fieldValue  Значение поля.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/setextrafield.php
-	* @author Bitrix
-	*/
 	public function setExtraField($fieldName, $fieldValue)
 	{
 		if($fieldName == 'FAVICON')
@@ -383,19 +233,6 @@ class HtmlDocument
 	 * @param string $fieldName Name of the field.
 	 * @return string|null Value of the additional metadata field.
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает значение поля дополнительных метаданных.</p>
-	*
-	*
-	* @param string $fieldName  Имя поля.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/getextrafield.php
-	* @author Bitrix
-	*/
 	public function getExtraField($fieldName)
 	{
 		return isset($this->metadata['EXTRA'][$fieldName]) ? $this->metadata['EXTRA'][$fieldName] : null;
@@ -407,19 +244,6 @@ class HtmlDocument
 	 * @param string $encoding Document's encoding.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает кодировку HTML документа.</p>
-	*
-	*
-	* @param string $encoding  Кодировка документа.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/setencoding.php
-	* @author Bitrix
-	*/
 	public function setEncoding($encoding)
 	{
 		$encoding = trim($encoding, " \t\n\r\0\x0B'\"");
@@ -445,17 +269,6 @@ class HtmlDocument
 	 *
 	 * @return string Detected encoding.
 	 */
-	
-	/**
-	* <p>Нестатический метод. Автоопределение и установка кодировки HTML документа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/detectencoding.php
-	* @author Bitrix
-	*/
 	public function detectEncoding()
 	{
 		$result = '';
@@ -490,19 +303,6 @@ class HtmlDocument
 	 * @param string $tagName Name of the tag.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Нестатический метод парсит html контент для атрибутов указанных элементов и заполняет <code>$destination</code> массивом найденных атрибутов.</p>
-	*
-	*
-	* @param string $tagName  Имя тега.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/extractelementattributes.php
-	* @author Bitrix
-	*/
 	public function extractElementAttributes($tagName)
 	{
 		$results = array();
@@ -532,19 +332,6 @@ class HtmlDocument
 	 * @param string $name Value of a name or property attribute.
 	 * @return string
 	 * */
-	
-	/**
-	* <p>Нестатический метод возвращает значение атрибута контента.</p>
-	*
-	*
-	* @param string $name  Значение имени или свойства атрибута.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/getmetacontent.php
-	* @author Bitrix
-	*/
 	public function getMetaContent($name)
 	{
 		if(count($this->metaElements) == 0)
@@ -572,19 +359,6 @@ class HtmlDocument
 	 * @param string $rel Value of the rel attribute.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает значение атрибута <b>href</b> элемента <b>link</b> с указанным атрибутом <b>rel</b>.</p>
-	*
-	*
-	* @param string $rel  Значение атрибута rel.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/htmldocument/getlinkhref.php
-	* @author Bitrix
-	*/
 	public function getLinkHref($rel)
 	{
 		if(count($this->linkElements) == 0)
@@ -614,14 +388,10 @@ class HtmlDocument
 	 */
 	protected function filterString($str)
 	{
-		$sanitizer = new \CBXSanitizer();
-		$sanitizer->SetLevel(\CBXSanitizer::SECURE_LEVEL_HIGH);
-		$sanitizer->ApplyHtmlSpecChars(false);
-
 		$str = html_entity_decode($str, ENT_QUOTES, $this->getEncoding());
 		$str = Encoding::convertEncoding($str, $this->getEncoding(), Context::getCurrent()->getCulture()->getCharset());
 		$str = trim($str);
-		$str = $sanitizer->SanitizeHtml($str);
+		$str = strip_tags($str);
 
 		return $str;
 	}
@@ -720,13 +490,6 @@ class HtmlDocument
 	 */
 	protected function isEmbeddingAllowed()
 	{
-		$result = false;
-		$domainNameParts = explode('.', $this->uri->getHost());
-		if(is_array($domainNameParts) && ($partsCount = count($domainNameParts)) >= 2)
-		{
-			$domainName = $domainNameParts[$partsCount-2] . '.' . $domainNameParts[$partsCount-1];
-			$result = in_array($domainName, $this->hostsAllowedToEmbed);
-		}
-		return $result;
+		return UrlPreview::isHostTrusted($this->uri);
 	}
 }

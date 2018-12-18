@@ -1,8 +1,11 @@
 <?php
 namespace Bitrix\Main\Analytics;
 
+use Bitrix\Main\Application;
+use Bitrix\Main\IO\Directory;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Config\Option;
+use Bitrix\Main\Config\Configuration;
+use Bitrix\Main\ModuleManager;
 
 Loc::loadMessages(__FILE__);
 
@@ -54,18 +57,33 @@ class SiteSpeed
 		}
 	}
 
-	public static function isLicenseAccepted()
+	public static function isRussianSiteManager()
 	{
-		return Option::get("main", "~new_license14_9_sign", "") === "Y";
+		return
+			!ModuleManager::isModuleInstalled("intranet") &&
+			(
+				Directory::isDirectoryExists(Application::getDocumentRoot()."/bitrix/modules/main/lang/ru") ||
+				Directory::isDirectoryExists(Application::getDocumentRoot()."/bitrix/modules/main/lang/ua")
+			)
+		;
 	}
 
 	public static function canGatherStat()
 	{
-		return defined("LICENSE_KEY") && LICENSE_KEY !== "DEMO";
+		$enabled = (defined("LICENSE_KEY") && LICENSE_KEY !== "DEMO");
+		if($enabled)
+		{
+			$settings = Configuration::getValue("analytics_counter");
+			if(isset($settings["enabled"]) && $settings["enabled"] === false)
+			{
+				$enabled = false;
+			}
+		}
+		return $enabled;
 	}
 
 	public static function isOn()
 	{
-		return self::isLicenseAccepted() && self::canGatherStat();
+		return self::isRussianSiteManager() && self::canGatherStat();
 	}
 } 

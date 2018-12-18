@@ -38,19 +38,6 @@ class ElementSku extends Base
 	 *
 	 * @return \Bitrix\Iblock\Template\Entity\Base
 	 */
-	
-	/**
-	* <p>Метод используется для поиска сущности для обработки шаблона. Нестатический метод.</p>
-	*
-	*
-	* @param string $entity  Сущность, которую необходимо найти.
-	*
-	* @return \Bitrix\Iblock\Template\Entity\Base 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/template/entity/elementsku/resolve.php
-	* @author Bitrix
-	*/
 	public function resolve($entity)
 	{
 		if ($entity === "property")
@@ -89,17 +76,6 @@ class ElementSku extends Base
 	 *
 	 * @return boolean
 	 */
-	
-	/**
-	* <p>Метод выбирает значения торговых предложений из базы данных. Возвращает значение <i>true</i> в случае успеха. Нестатический метод.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/template/entity/elementsku/loadfromdatabase.php
-	* @author Bitrix
-	*/
 	public function loadFromDatabase()
 	{
 		if (!isset($this->fields))

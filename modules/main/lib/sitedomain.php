@@ -11,11 +11,6 @@ use Bitrix\Main\Entity;
 
 class SiteDomainTable extends Entity\DataManager
 {
-	public static function getFilePath()
-	{
-		return __FILE__;
-	}
-
 	public static function getTableName()
 	{
 		return 'b_lang_domain';
@@ -29,7 +24,8 @@ class SiteDomainTable extends Entity\DataManager
 				'primary' => true,
 			),
 			'DOMAIN' => array(
-				'data_type' => 'string'
+				'data_type' => 'string',
+				'primary' => true,
 			),
 			'SITE' => array(
 				'data_type' => 'Bitrix\Main\Site',

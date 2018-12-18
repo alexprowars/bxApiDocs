@@ -63,17 +63,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы свойств инфоблоков в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_iblock_property';
@@ -84,17 +73,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы свойств инфоблоков. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -216,12 +194,12 @@ class PropertyTable extends Main\Entity\DataManager
 			)),
 			'LINK_IBLOCK' => new Main\Entity\ReferenceField(
 				'LINK_IBLOCK',
-				'Bitrix\Iblock\Iblock',
+				'\Bitrix\Iblock\Iblock',
 				array('=this.LINK_IBLOCK_ID' => 'ref.ID')
 			),
 			'IBLOCK' => new Main\Entity\ReferenceField(
 				'IBLOCK',
-				'Bitrix\Iblock\Iblock',
+				'\Bitrix\Iblock\Iblock',
 				array('=this.IBLOCK_ID' => 'ref.ID')
 			),
 		);
@@ -232,17 +210,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>NAME</code> (название свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatename.php
-	* @author Bitrix
-	*/
 	public static function validateName()
 	{
 		return array(
@@ -255,17 +222,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>CODE</code> (символьный код свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatecode.php
-	* @author Bitrix
-	*/
 	public static function validateCode()
 	{
 		return array(
@@ -278,17 +234,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>XML_ID</code> (внешний код свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatexmlid.php
-	* @author Bitrix
-	*/
 	public static function validateXmlId()
 	{
 		return array(
@@ -301,17 +246,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>FILE_TYPE</code> (список допустимых расширений для свойств <b>Файл</b>). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatefiletype.php
-	* @author Bitrix
-	*/
 	public static function validateFileType()
 	{
 		return array(
@@ -324,17 +258,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TMP_ID</code> (временный символьный идентификатор, используемый для служебных целей). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatetmpid.php
-	* @author Bitrix
-	*/
 	public static function validateTmpId()
 	{
 		return array(
@@ -347,17 +270,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>USER_TYPE</code> (идентификатор пользовательского типа свойства). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validateusertype.php
-	* @author Bitrix
-	*/
 	public static function validateUserType()
 	{
 		return array(
@@ -370,17 +282,6 @@ class PropertyTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>HINT</code> (подсказка). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/propertytable/validatehint.php
-	* @author Bitrix
-	*/
 	public static function validateHint()
 	{
 		return array(

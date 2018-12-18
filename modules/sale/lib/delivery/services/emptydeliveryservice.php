@@ -90,4 +90,9 @@ class EmptyDeliveryService extends Configurable
 
 		return $res->getId();
 	}
+
+	public static function isHandlerCompatible()
+	{
+		return true;
+	}
 }

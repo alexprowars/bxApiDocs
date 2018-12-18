@@ -22,7 +22,7 @@ class OrderBasketSettings
 		$this->visibleColumns = $params["VISIBLE_COLUMNS"];
 	}
 
-	static public function getScripts()
+	public function getScripts()
 	{
 		$result = '';
 

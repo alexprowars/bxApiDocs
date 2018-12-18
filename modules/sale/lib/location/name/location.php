@@ -42,7 +42,7 @@ class LocationTable extends NameEntity
 		return parent::update($primary, $data);
 	}
 
-	static public function getReferenceFieldName()
+	public function getReferenceFieldName()
 	{
 		return 'LOCATION_ID';
 	}

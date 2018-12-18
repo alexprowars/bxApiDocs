@@ -1,9 +1,9 @@
 <?php
 namespace Bitrix\Main;
 
-final class ModuleManager
+class ModuleManager
 {
-	private static $installedModules = array();
+	protected static $installedModules = array();
 
 	public static function getInstalledModules()
 	{
@@ -36,8 +36,6 @@ final class ModuleManager
 		if (!self::isModuleInstalled($moduleName))
 			return false;
 
-		$version = false;
-
 		if ($moduleName == 'main')
 		{
 			if (!defined("SM_VERSION"))
@@ -52,8 +50,9 @@ final class ModuleManager
 			if ($modulePath === false)
 				return false;
 
+			$arModuleVersion = array();
 			include($_SERVER["DOCUMENT_ROOT"].$modulePath);
-			$version = array_key_exists("VERSION", $arModuleVersion)? $arModuleVersion["VERSION"]: false;
+			$version = (array_key_exists("VERSION", $arModuleVersion)? $arModuleVersion["VERSION"] : false);
 		}
 
 		return $version;
@@ -75,6 +74,7 @@ final class ModuleManager
 
 		$cacheManager = Application::getInstance()->getManagedCache();
 		$cacheManager->clean("b_module");
+		$cacheManager->clean("b_module_to_module");
 	}
 
 	public static function add($moduleName)
@@ -87,6 +87,7 @@ final class ModuleManager
 
 		$cacheManager = Application::getInstance()->getManagedCache();
 		$cacheManager->clean("b_module");
+		$cacheManager->clean("b_module_to_module");
 	}
 
 	public static function registerModule($moduleName)

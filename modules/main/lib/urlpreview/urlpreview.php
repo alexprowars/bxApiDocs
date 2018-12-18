@@ -19,30 +19,28 @@ class UrlPreview
 	/** @var int Maximum allowed length of the description. */
 	const MAX_DESCRIPTION = 500;
 
+	const IFRAME_MAX_WIDTH = 640;
+	const IFRAME_MAX_HEIGHT = 340;
+
+	protected static $trustedHosts = [
+		'youtube.com' => 'youtube.com',
+		'youtu.be' => 'youtu.be',
+		'vimeo.com' => 'vimeo.com',
+		'rutube.ru' => 'rutube.ru',
+		'facebook.com' => 'facebook.com',
+		'vk.com' => 'vk.com',
+		'instagram.com' => 'instagram.com',
+	];
+
 	/**
 	 * Returns associated metadata for the specified URL
 	 *
 	 * @param string $url URL.
 	 * @param bool $addIfNew Should metadata be fetched and saved, if not found in database.
+	 * @param bool $reuseExistingMetadata Allow reading of the cached metadata.
 	 * @return array|false Metadata for the URL if found, or false otherwise.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает метаданные, связанные с указанным URL.</p>
-	*
-	*
-	* @param string $url  URL.
-	*
-	* @param boolean $addIfNew = true Указание должны ли метаданные быть выданы и сохранены, если их
-	* нет в БД.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/getmetadatabyurl.php
-	* @author Bitrix
-	*/
-	public static function getMetadataByUrl($url, $addIfNew = true)
+	public static function getMetadataByUrl($url, $addIfNew = true, $reuseExistingMetadata = true)
 	{
 		if(!static::isEnabled())
 			return false;
@@ -51,13 +49,16 @@ class UrlPreview
 		if($url == '')
 			return false;
 
-		if($metadata = UrlMetadataTable::getByUrl($url))
+		if($reuseExistingMetadata)
 		{
-			if($metadata['TYPE'] == UrlMetadataTable::TYPE_TEMPORARY && $addIfNew)
+			if($metadata = UrlMetadataTable::getByUrl($url))
 			{
-				$metadata = static::resolveTemporaryMetadata($metadata['ID']);
+				if($metadata['TYPE'] == UrlMetadataTable::TYPE_TEMPORARY && $addIfNew)
+				{
+					$metadata = static::resolveTemporaryMetadata($metadata['ID']);
+				}
+				return $metadata;
 			}
-			return $metadata;
 		}
 
 		if(!$addIfNew)
@@ -84,28 +85,6 @@ class UrlPreview
 	 * @param bool $edit Show method build preview for editing the userfield.
 	 * @return string HTML code for the preview.
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает html код для "богатой ссылки".</p>
-	*
-	*
-	* @param array $userField  Значение пользовательского поля.
-	*
-	* @param array $userFieldParams  Параметры пользовательского поля.
-	*
-	* @param string $cacheTag  Тег кеша для кэширования внутренней богатой ссылки (без
-	* параметров).
-	*
-	* @param boolean $edit = false Указание метода как выводить ссылку. Если <i>false</i> - вернется html код
-	* для вывода богатой ссылки в режиме просмотра, если <i>true</i> -
-	* вернется html код для вывода в режиме редактирования.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/showview.php
-	* @author Bitrix
-	*/
 	public static function showView($userField, $userFieldParams, &$cacheTag, $edit = false)
 	{
 		global $APPLICATION;
@@ -181,21 +160,6 @@ class UrlPreview
 	 * @param array $userFieldParams Userfield's parameters.
 	 * @return string HTML code for the preview.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает html код "богатой ссылки" для вывода в режиме редактирования.</p>
-	*
-	*
-	* @param array $userField  Значение пользовательского поля.
-	*
-	* @param array $userFieldParams  Параметры юзерского поля.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/showedit.php
-	* @author Bitrix
-	*/
 	public static function showEdit($userField, $userFieldParams)
 	{
 		return static::showView($userField, $userFieldParams, $cacheTag, true);
@@ -207,19 +171,6 @@ class UrlPreview
 	 * @param string $url Document's URL.
 	 * @return bool True if metadata for the url is located in database, false otherwise.
 	 */
-	
-	/**
-	* <p>Статический метод проверяет, найдены ли закэшированные метаданные для указанного URL.</p>
-	*
-	*
-	* @param string $url  URL документа.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/isurlcached.php
-	* @author Bitrix
-	*/
 	public static function isUrlCached($url)
 	{
 		$url = static::normalizeUrl($url);
@@ -235,27 +186,12 @@ class UrlPreview
 	 *
 	 * @param string $url Document's URL.
 	 * @param bool $addIfNew Should method fetch and store metadata for the document, if it is not found in database.
+	 * @params bool $reuseExistingMetadata Allow reading of the cached metadata.
 	 * @return array|false Metadata for the document, or false if metadata could not be fetched/parsed.
 	 */
-	
-	/**
-	* <p>Статический метод. Если URL - удалённый, то возвращает метаданные для него. Если URL - локальный, проверяет пользователя на доступ к сущности и возвращает "богатую ссылку".</p>
-	*
-	*
-	* @param string $url  URL документа.
-	*
-	* @param boolean $addIfNew = true Указание следует ли методу выбрать и сохранить метаданные для
-	* документа если их нет в БД.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/getmetadataandhtmlbyurl.php
-	* @author Bitrix
-	*/
-	public static function getMetadataAndHtmlByUrl($url, $addIfNew = true)
+	public static function getMetadataAndHtmlByUrl($url, $addIfNew = true, $reuseExistingMetadata = true)
 	{
-		$metadata = static::getMetadataByUrl($url, $addIfNew);
+		$metadata = static::getMetadataByUrl($url, $addIfNew, $reuseExistingMetadata);
 		if($metadata === false)
 			return false;
 
@@ -281,25 +217,10 @@ class UrlPreview
 	 *
 	 * @param array $ids Array of record's IDs.
 	 * @param bool $checkAccess Should method check current user's access to the internal entities, or not.
-	 * @return array Array with provided IDs as the keys.
+	 * @params int $userId. Id of the users to check access. If == 0, will check access for current user.
+	 * @return array|false Array with provided IDs as the keys.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает сохранённые метаданные для массива ID.</p>
-	*
-	*
-	* @param array $ids  Массив ID записей.
-	*
-	* @param boolean $checkAccess = true Указание методу следует ли проверять или нет права доступа
-	* пользователя к внутренним сущностям.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/getmetadataandhtmlbyids.php
-	* @author Bitrix
-	*/
-	public static function getMetadataAndHtmlByIds(array $ids, $checkAccess = true)
+	public static function getMetadataAndHtmlByIds(array $ids, $checkAccess = true, $userId = 0)
 	{
 		if(!static::isEnabled())
 			return false;
@@ -317,7 +238,7 @@ class UrlPreview
 		{
 			if($metadata['TYPE'] == UrlMetadataTable::TYPE_DYNAMIC)
 			{
-				$metadata['HTML'] = static::getDynamicPreview($metadata['URL'], $checkAccess);
+				$metadata['HTML'] = static::getDynamicPreview($metadata['URL'], $checkAccess, $userId);
 				if($metadata['HTML'] === false)
 					continue;
 			}
@@ -333,19 +254,6 @@ class UrlPreview
 	 * @param string $url URL for which temporary record should be created.
 	 * @return int Temporary record's id.
 	 */
-	
-	/**
-	* <p>Статический метод создаёт временную запись для URL.</p>
-	*
-	*
-	* @param string $url  URL для которой должна быть создана временная запись.
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/reserveidforurl.php
-	* @author Bitrix
-	*/
 	public static function reserveIdForUrl($url)
 	{
 		if($metadata = UrlMetadataTable::getByUrl($url))
@@ -369,24 +277,10 @@ class UrlPreview
 	 * not be fetched, deletes record.
 	 * @param int $id Metadata record's id.
 	 * @param bool $checkAccess Should method check current user's access to the entity, or not.
+	 * @params int $userId. Id of the users to check access. If == 0, will check access for current user.
 	 * @return array|false Metadata if fetched, false otherwise.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает и хранит метаданные для временной записи созданной методом <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/reserveidforurl.php">reserveIdForUrl</a>. Если метаданные не могут быть выданы, запись удаляется.</p>
-	*
-	*
-	* @param integer $id  ID записи метаданных
-	*
-	* @param boolean $checkAccess = true Проверять или нет права доступа пользователя к сущности.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/resolvetemporarymetadata.php
-	* @author Bitrix
-	*/
-	public static function resolveTemporaryMetadata($id, $checkAccess = true)
+	public static function resolveTemporaryMetadata($id, $checkAccess = true, $userId = 0)
 	{
 		$metadata = UrlMetadataTable::getById($id)->fetch();
 		if(!is_array($metadata))
@@ -411,7 +305,7 @@ class UrlPreview
 		}
 		else if($metadata['TYPE'] == UrlMetadataTable::TYPE_DYNAMIC)
 		{
-			if($preview = static::getDynamicPreview($metadata['URL'], $checkAccess))
+			if($preview = static::getDynamicPreview($metadata['URL'], $checkAccess, $userId))
 			{
 				$metadata['HTML'] = $preview;
 				return $metadata;
@@ -425,25 +319,10 @@ class UrlPreview
 	 * Returns HTML code for the dynamic (internal url) preview.
 	 * @param string $url URL of the internal document.
 	 * @param bool $checkAccess Should method check current user's access to the entity, or not.
+	 * @params int $userId. Id of the users to check access. If userId == 0, will check access for current user.
 	 * @return string|false HTML code of the preview, or false if case of any errors (including access denied)/
 	 */
-	
-	/**
-	* <p>Статический метод возвращает HTML код для динамической (внутренний URL) "богатой ссылки".</p>
-	*
-	*
-	* @param string $url  URL внутреннего документа.
-	*
-	* @param boolean $checkAccess = true Указание методу проверять или нет права доступа пользователя к
-	* сущности.
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/getdynamicpreview.php
-	* @author Bitrix
-	*/
-	public static function getDynamicPreview($url, $checkAccess = true)
+	public static function getDynamicPreview($url, $checkAccess = true, $userId = 0)
 	{
 		$routeRecord = Router::dispatch(new Uri(static::unfoldShortLink($url)));
 		if($routeRecord === false)
@@ -455,7 +334,10 @@ class UrlPreview
 			$parameters = $routeRecord['PARAMETERS'];
 			$parameters['URL'] = $url;
 
-			if ($checkAccess && (!method_exists($className, 'checkUserReadAccess') || !$className::checkUserReadAccess($parameters, static::getCurrentUserId())))
+			if($userId == 0)
+				$userId = static::getCurrentUserId();
+
+			if ($checkAccess && (!method_exists($className, 'checkUserReadAccess') || $userId == 0 || !$className::checkUserReadAccess($parameters, $userId)))
 				return false;
 
 			if (method_exists($className, 'buildPreview'))
@@ -468,24 +350,46 @@ class UrlPreview
 	}
 
 	/**
+	 * Returns attach for the IM message with the requested internal entity content.
+	 * @param string $url URL of the internal document.
+	 * @param bool $checkAccess Should method check current user's access to the entity, or not.
+	 * @params int $userId. Id of the users to check access. If userId == 0, will check access for current user.
+	 * @return \CIMMessageParamAttach | false
+	 */
+	public static function getImAttach($url, $checkAccess = true, $userId = 0)
+	{
+		//todo: caching
+		$routeRecord = Router::dispatch(new Uri(static::unfoldShortLink($url)));
+		if($routeRecord === false)
+			return false;
+
+		if($userId == 0)
+			$userId = static::getCurrentUserId();
+
+		if(isset($routeRecord['MODULE']) && Loader::includeModule($routeRecord['MODULE']))
+		{
+			$className = $routeRecord['CLASS'];
+			$parameters = $routeRecord['PARAMETERS'];
+			$parameters['URL'] = $url;
+
+			if ($checkAccess && (!method_exists($className, 'checkUserReadAccess') || $userId == 0 || !$className::checkUserReadAccess($parameters, $userId)))
+				return false;
+
+			if (method_exists($className, 'getImAttach'))
+			{
+				return $className::getImAttach($parameters);
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Returns true if current user has read access to the content behind internal url.
 	 * @param string $url URL of the internal document.
+	 * @params int $userId. Id of the users to check access. If userId == 0, will check access for current user.
 	 * @return bool True if current user has read access to the main entity of the document, or false otherwise.
 	 */
-	
-	/**
-	* <p>Статический Метод возвращает <i>true</i> если у текущего пользователя есть права на чтение данных сущности за внутренней ссылкой.</p>
-	*
-	*
-	* @param string $url  URL внутреннего документа.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/checkdynamicpreviewaccess.php
-	* @author Bitrix
-	*/
-	public static function checkDynamicPreviewAccess($url)
+	public static function checkDynamicPreviewAccess($url, $userId = 0)
 	{
 		$routeRecord = Router::dispatch(new Uri(static::unfoldShortLink($url)));
 		if($routeRecord === false)
@@ -496,7 +400,10 @@ class UrlPreview
 			$className = $routeRecord['CLASS'];
 			$parameters = $routeRecord['PARAMETERS'];
 
-			return (method_exists($className, 'checkUserReadAccess') && $className::checkUserReadAccess($parameters, static::getCurrentUserId()));
+			if($userId == 0)
+				$userId = static::getCurrentUserId();
+
+			return (method_exists($className, 'checkUserReadAccess') && $userId > 0 && $className::checkUserReadAccess($parameters, $userId));
 		}
 		return false;
 	}
@@ -508,21 +415,6 @@ class UrlPreview
 	 * @return bool Returns true in case of successful update, or false otherwise.
 	 * @throws ArgumentException
 	 */
-	
-	/**
-	* <p>Статический метод устанавливает картинку с указанным ID, отображающуюся для богатой ссылки.</p>
-	*
-	*
-	* @param integer $id  ID картинки, отображаемой для богатой ссылки.
-	*
-	* @param string $imageUrl  Url картинки.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/setmetadataimage.php
-	* @author Bitrix
-	*/
 	public static function setMetadataImage($id, $imageUrl)
 	{
 		if(!is_int($id))
@@ -562,17 +454,6 @@ class UrlPreview
 	 * Checks if UrlPreview is enabled in module option
 	 * @return bool True if UrlPreview is enabled in module options.
 	 */
-	
-	/**
-	* <p>Статический метод проверяет разрешено ли использование "богатых ссылок" (UrlPreview) в <a href="http://dev.1c-bitrix.ru/user_help/settings/settings/settings.php#settings" >настройках</a> главного модуля.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/isenabled.php
-	* @author Bitrix
-	*/
 	public static function isEnabled()
 	{
 		static $result = null;
@@ -589,19 +470,6 @@ class UrlPreview
 	 * @return string Signed value.
 	 * @throws \Bitrix\Main\ArgumentTypeException
 	 */
-	
-	/**
-	* <p>Статический метод подписывает значение с использованием соли <code>\UrlPreview</code>.</p>
-	*
-	*
-	* @param string $id  Неподписанное значение.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/urlpreview/urlpreview/sign.php
-	* @author Bitrix
-	*/
 	public static function sign($id)
 	{
 		$signer = new Signer();
@@ -658,8 +526,10 @@ class UrlPreview
 	 */
 	protected static function isUrlLocal(Uri $uri)
 	{
-		$host = \Bitrix\Main\Context::getCurrent()->getRequest()->getHttpHost();
+		if($uri->getHost() == '')
+			return true;
 
+		$host = \Bitrix\Main\Context::getCurrent()->getRequest()->getHttpHost();
 		return $uri->getHost() === $host;
 	}
 
@@ -680,8 +550,15 @@ class UrlPreview
 			return false;
 
 		$htmlContentType = strtolower($httpClient->getHeaders()->getContentType());
+		$peerIpAddress = $httpClient->getPeerAddress();
 		if($htmlContentType !== 'text/html')
-			return static::getFileMetadata($httpClient->getEffectiveUrl(), $httpClient->getHeaders());
+		{
+
+			$metadata = static::getFileMetadata($httpClient->getEffectiveUrl(), $httpClient->getHeaders());
+			$metadata['EXTRA']['PEER_IP_ADDRESS'] = $peerIpAddress;
+			$metadata['EXTRA']['PEER_IP_PRIVATE'] = static::isIpAddressPrivate($peerIpAddress);
+			return $metadata;
+		}
 
 		$html = $httpClient->getResult();
 		$htmlDocument = new HtmlDocument($html, $uri);
@@ -705,6 +582,15 @@ class UrlPreview
 						static::MAX_DESCRIPTION
 				);
 			}
+
+			if(!is_array($metadata['EXTRA']))
+			{
+				$metadata['EXTRA'] = array();
+			}
+			$metadata['EXTRA'] = array_merge($metadata['EXTRA'], array(
+				'PEER_IP_ADDRESS' => $peerIpAddress,
+				'PEER_IP_PRIVATE' => static::isIpAddressPrivate($peerIpAddress)
+			));
 
 			return $metadata;
 		}
@@ -758,7 +644,19 @@ class UrlPreview
 	 */
 	protected static function normalizeUrl($url)
 	{
-		if(!preg_match('#^https?://#i', $url))
+		if(strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0)
+		{
+			//nop
+		}
+		else if(strpos($url, '//') === 0)
+		{
+			$url = 'http:'.$url;
+		}
+		else if(strpos($url, '/') === 0)
+		{
+			//nop
+		}
+		else
 		{
 			$url = 'http://'.$url;
 		}
@@ -798,10 +696,9 @@ class UrlPreview
 	 * Returns id of currently logged user.
 	 * @return int User's id.
 	 */
-	protected static function getCurrentUserId()
+	public static function getCurrentUserId()
 	{
-		global $USER;
-		return $USER->getId();
+		return ($GLOBALS['USER'] instanceof \CUser) ? (int)$GLOBALS['USER']->getId() : 0;
 	}
 
 	/**
@@ -842,6 +739,102 @@ class UrlPreview
 					)
 			);
 		}
+		return $result;
+	}
+
+	/**
+	 * @param string $ipAddress
+	 * @return bool
+	 */
+	public static function isIpAddressPrivate($ipAddress)
+	{
+		return filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+	}
+
+	/**
+	 * Returns true if host of $uri is in $trustedHosts list.
+	 *
+	 * @param Uri $uri
+	 * @return bool
+	 */
+	public static function isHostTrusted(Uri $uri)
+	{
+		$result = false;
+		$domainNameParts = explode('.', $uri->getHost());
+		if(is_array($domainNameParts) && ($partsCount = count($domainNameParts)) >= 2)
+		{
+			$domainName = $domainNameParts[$partsCount-2] . '.' . $domainNameParts[$partsCount-1];
+			$result = isset(static::$trustedHosts[$domainName]);
+		}
+		return $result;
+	}
+
+	/**
+	 * Returns video metaData for $url if its host is trusted.
+	 *
+	 * @param string $url
+	 * @return array|false
+	 */
+	public static function fetchVideoMetaData($url)
+	{
+		$uri = new Uri($url);
+		if(static::isHostTrusted($uri) || static::isEnabled())
+		{
+			$url = static::normalizeUrl($url);
+			$metadataId = static::reserveIdForUrl($url);
+			$metadata = static::fetchUrlMetadata($url);
+			if(is_array($metadata) && count($metadata) > 0)
+			{
+				$result = UrlMetadataTable::update($metadataId, $metadata);
+				$metadata['ID'] = $result->getId();
+			}
+			else
+			{
+				return false;
+			}
+			if(isset($metadata['EMBED']) && !empty($metadata['EMBED']) && strpos($metadata['EMBED'], '<iframe') === false)
+			{
+				$url = static::getInnerFrameUrl($metadata['ID'], $metadata['EXTRA']['PROVIDER_NAME']);
+				if(intval($metadata['EXTRA']['VIDEO_WIDTH']) <= 0)
+				{
+					$metadata['EXTRA']['VIDEO_WIDTH'] = self::IFRAME_MAX_WIDTH;
+				}
+				if(intval($metadata['EXTRA']['VIDEO_HEIGHT']) <= 0)
+				{
+					$metadata['EXTRA']['VIDEO_HEIGHT'] = self::IFRAME_MAX_HEIGHT;
+				}
+				$metadata['EMBED'] = '<iframe src="'.$url.'" allowfullscreen="" width="'.$metadata['EXTRA']['VIDEO_WIDTH'].'" height="'.$metadata['EXTRA']['VIDEO_HEIGHT'].'" frameborder="0"></iframe>';
+			}
+
+			if($metadata['EMBED'] || $metadata['EXTRA']['VIDEO'])
+			{
+				return $metadata;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Returns inner frame url to embed third parties html video players.
+	 *
+	 * @param int $id
+	 * @param string $provider
+	 * @return bool|string
+	 */
+	public static function getInnerFrameUrl($id, $provider = '')
+	{
+		$result = false;
+
+		$componentPath = \CComponentEngine::makeComponentPath('bitrix:main.urlpreview');
+		if(!empty($componentPath))
+		{
+			$componentPath = getLocalPath('components'.$componentPath.'/frame.php');
+			$uri = new Uri($componentPath);
+			$uri->addParams(array('id' => $id, 'provider' => $provider));
+			$result = static::normalizeUrl($uri->getLocator());
+		}
+
 		return $result;
 	}
 }

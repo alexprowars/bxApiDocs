@@ -3,7 +3,8 @@ namespace Bitrix\Catalog\Helpers\Admin;
 
 use Bitrix\Main,
 	Bitrix\Iblock,
-	Bitrix\Catalog;
+	Bitrix\Catalog,
+	Bitrix\Currency;
 
 class IblockPriceChanger
 {
@@ -57,7 +58,22 @@ class IblockPriceChanger
 		{
 			$userDialogParams['UNITS'] = null;
 		}
-		
+		else
+		{
+			if ($userDialogParams['UNITS'] != 'percent' && $userDialogParams['UNITS'] != 'multiple')
+			{
+				if (Currency\CurrencyManager::isCurrencyExist($userDialogParams['UNITS']))
+				{
+					$userDialogParams['CURRENCY'] = $userDialogParams['UNITS'];
+					$userDialogParams['UNITS'] = 'currency';
+				}
+				else
+				{
+					$userDialogParams['UNITS'] = null;
+				}
+			}
+		}
+
 		return $this->userDialogParams = $userDialogParams;
 	}
 
@@ -68,8 +84,7 @@ class IblockPriceChanger
 	 */
 	private function collectAllSectionsElements(&$productsIdList)
 	{
-		/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-		$resultAllElementsList = \CIBlockElement::getList(
+		$resultAllElementsList = \CIBlockElement::GetList(
 			array(),
 			array(
 				"SECTION_ID"=>$productsIdList['SECTIONS'],
@@ -82,8 +97,7 @@ class IblockPriceChanger
 			false,
 			false,
 			array('ID'));
-		/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-		while ($subSectionsResult = $resultAllElementsList->fetch())
+		while ($subSectionsResult = $resultAllElementsList->Fetch())
 		{
 			$productsIdList['ELEMENTS'][] = $subSectionsResult['ID'];
 		}
@@ -134,17 +148,23 @@ class IblockPriceChanger
 	 */
 	private function initFilterParams()
 	{
-		$filterList = array();
-		if (is_null($this->userDialogParams['INITIAL_PRICE_TYPE']))
+		$catalogGroups = array();
+		if (isset($this->userDialogParams['INITIAL_PRICE_TYPE']))
 		{
-			$filterList = array("=CATALOG_GROUP_ID"=>intval($this->userDialogParams['PRICE_TYPE']));
+			$id = (int)$this->userDialogParams['INITIAL_PRICE_TYPE'];
+			if ($id > 0)
+				$catalogGroups[$id] = $id;
+			unset($id);
+		}
+		if (isset($this->userDialogParams['PRICE_TYPE']))
+		{
+			$id = (int)$this->userDialogParams['PRICE_TYPE'];
+			if ($id > 0)
+				$catalogGroups[$id] = $id;
+			unset($id);
 		}
 
-		if ($this->userDialogParams['UNITS'] !== "percent"
-			&& $this->userDialogParams['UNITS'] !== "multiple")
-		{
-			$filterList["=CURRENCY"] = $this->userDialogParams['UNITS'];
-		}
+		$filterList = array("@CATALOG_GROUP_ID" => $catalogGroups);
 
 		return $filterList;
 	}
@@ -227,8 +247,7 @@ class IblockPriceChanger
 			$this->collectAllSectionsElements($productsIdList);
 		}
 
-		/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-		if (\CCatalogSku::getInfoByProductIBlock($this->iblockId))
+		if (\CCatalogSku::GetInfoByProductIBlock($this->iblockId))
 		{
 			$priceElementsListSplitedByType = $this->collectPriceSkuElementsId($productsIdList);
 		}
@@ -238,20 +257,40 @@ class IblockPriceChanger
 		}
 		$parameters = array(
 			"select" => array('*', 'ELEMENT_NAME' => 'ELEMENT.NAME', 'ELEMENT_IBLOCK_ID' => 'ELEMENT.IBLOCK_ID'),
-			"filter" => $this->initFilterParams()
+			"filter" => $this->initFilterParams(),
+			'order' => array('PRODUCT_ID' => 'ASC', 'CATALOG_GROUP_ID' => 'ASC')
 		);
-		$elementsCPriceList = array();
-		$boolRecalc = false;
-		$basePriceId = null;
 
-		$groupResult = Catalog\GroupTable::getList(array(
+		$group = Catalog\GroupTable::getList(array(
 			'select' => array('ID'),
 			'filter' => array('=BASE'=>'Y')
-		));
-		while($group = $groupResult->fetch())
+		))->fetch();
+		$basePriceId = (!empty($group) ? (int)$group['ID'] : 0);
+		unset($group);
+
+		$initialType = 0;
+		if (isset($this->userDialogParams['INITIAL_PRICE_TYPE']))
 		{
-			$basePriceId = $group['ID'];
+			$id = (int)$this->userDialogParams['INITIAL_PRICE_TYPE'];
+			if ($id > 0)
+				$initialType = $id;
+			unset($id);
 		}
+
+		$targetType = 0;
+		if (isset($this->userDialogParams['PRICE_TYPE']))
+		{
+			$id = (int)$this->userDialogParams['PRICE_TYPE'];
+			if ($id > 0)
+				$targetType = $id;
+			unset($id);
+		}
+
+		if ($targetType == 0)
+			return $result;
+
+		if ($initialType > 0 && $targetType == $initialType)
+			return $result;
 
 		foreach ($priceElementsListSplitedByType as $typeElements => $priceElementsIdList)
 		{
@@ -262,98 +301,195 @@ class IblockPriceChanger
 
 				$cpriceResult = Catalog\PriceTable::getList($parameters);
 
-				while ($elementCPrice = $cpriceResult->fetch())
-				{
-					if ($this->userDialogParams['PRICE_TYPE'] == $elementCPrice['CATALOG_GROUP_ID'])
-					{
-						$elementsCPriceList[(int)$elementCPrice['PRODUCT_ID']]['TARGET'] = $elementCPrice;
-					}
-					elseif ($this->userDialogParams['INITIAL_PRICE_TYPE'] == $elementCPrice['CATALOG_GROUP_ID'])
-					{
-						$elementsCPriceList[(int)$elementCPrice['PRODUCT_ID']]['INITIAL'] = $elementCPrice;
-					}
-				}
+				$elementsCPriceList = array();
 
-				foreach ($elementsCPriceList as $elementCPrice)
+				while ($row = $cpriceResult->fetch())
 				{
-					if (empty($elementCPrice['TARGET']))
+					$row['PRODUCT_TYPE_CODE'] = $typeElements;
+					$productId = (int)$row['PRODUCT_ID'];
+					if (!isset($elementsCPriceList[$productId]))
+						$elementsCPriceList[$productId] = array(
+							'QUANTITY' => array(),
+							'SIMPLE' => array()
+						);
+					$priceType = (int)$row['CATALOG_GROUP_ID'];
+					if ($row['QUANTITY_FROM'] !== null || $row['QUANTITY_TO'] !== null)
 					{
-						if (!empty($elementCPrice['INITIAL']))
-						{
-							$newPriceElement = $elementCPrice['INITIAL'];
-							$newPriceElement['PRICE'] = $this->calculateResultPrice($newPriceElement['PRICE']);
-
-							if ($newPriceElement['PRICE'] > 0)
-							{
-								$newPriceElement['CATALOG_GROUP_ID'] = $this->userDialogParams['PRICE_TYPE'];
-								unset($newPriceElement['ID']);
-								/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-								\CPrice::add($newPriceElement);
-							}
-						}
+						$hash = ($row['QUANTITY_FROM'] === null ? 'ZERO' : $row['QUANTITY_FROM']).
+							'-'.($row['QUANTITY_TO'] === null ? 'INF' : $row['QUANTITY_TO']);
+						if (!isset($elementsCPriceList[$productId]['QUANTITY'][$hash]))
+							$elementsCPriceList[$productId]['QUANTITY'][$hash] = array();
+						$elementsCPriceList[$productId]['QUANTITY'][$hash][$priceType] = $row;
+						unset($hash);
 					}
 					else
 					{
-						if ($elementCPrice['INITIAL']['PRICE'] > 0)
-						{
-							$elementCPrice['TARGET']['PRICE'] = $elementCPrice['INITIAL']['PRICE'];
-						}
-
-						$elementCPrice['TARGET']['PRICE'] = $this->calculateResultPrice($elementCPrice['TARGET']['PRICE']);
-
-						if ($elementCPrice['TARGET']['PRICE'] <= 0)
-						{
-							$result->addError(
-								new Main\Error("IBLIST_CHPRICE_ERROR_WRONG_VALUE_".$typeElements,
-									array(
-										"#ID#" => $elementCPrice['TARGET']['PRODUCT_ID'],
-										"#NAME#" => $elementCPrice['TARGET']['ELEMENT_NAME'],
-									)
-								)
-							);
-							continue;
-						}
-
-						if (!is_null($elementCPrice['TARGET']['EXTRA_ID']))
-						{
-							$result->addError(
-								new Main\Error("IBLIST_CHPRICE_ERROR_PRICE_WITH_EXTRA_".$typeElements,
-									array(
-										"#ID#" => $elementCPrice['TARGET']['PRODUCT_ID'],
-										"#NAME#" => $elementCPrice['TARGET']['ELEMENT_NAME'],
-									)
-								)
-							);
-							continue;
-						}
-
-						if ($elementCPrice['TARGET']['CATALOG_GROUP_ID'] === $basePriceId && !is_null($elementCPrice['INITIAL']['EXTRA_ID']))
-						{
-							$result->addError(
-								new Main\Error("IBLIST_CHPRICE_ERROR_BASE_FROM_EXTRA_".$typeElements,
-									array(
-										"#ID#" => $elementCPrice['TARGET']['PRODUCT_ID'],
-										"#NAME#" => $elementCPrice['TARGET']['ELEMENT_NAME'],
-									)
-								)
-							);
-							continue;
-						}
-
-						if ($elementCPrice['TARGET']['CATALOG_GROUP_ID'] === $basePriceId)
-						{
-							$boolRecalc = true;
-						}
-						/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-						\CPrice::update($elementCPrice['TARGET']['ID'], $elementCPrice['TARGET'], $boolRecalc);
+						$elementsCPriceList[$productId]['SIMPLE'][$priceType] = $row;
 					}
-					Iblock\PropertyIndex\Manager::updateElementIndex($elementCPrice['TARGET']['ELEMENT_IBLOCK_ID'], $elementCPrice['TARGET']['PRODUCT_ID']);
 				}
-				unset($elementsCPriceList, $elementCPrice);
+
+				if (!empty($elementsCPriceList))
+				{
+					foreach ($elementsCPriceList as $productId => $prices)
+					{
+						foreach ($prices as $key => $data)
+						{
+							if (empty($data))
+								unset($prices[$key]);
+						}
+						unset($key, $data);
+
+						if (count($prices) !== 1)
+							continue;
+
+						if (!empty($prices['QUANTITY']))
+						{
+							foreach ($prices['QUANTITY'] as $hash => $rangePrices)
+							{
+								if (!empty($rangePrices))
+									$this->updatePriceBlock($productId, $rangePrices, $basePriceId);
+							}
+							unset($hash, $rangePrices);
+						}
+
+						if (!empty($prices['SIMPLE']))
+						{
+							$this->updatePriceBlock($productId, $prices['SIMPLE'], $basePriceId);
+						}
+					}
+					unset($productId, $prices);
+				}
+				unset($elementsCPriceList);
 			}
-			/** @noinspection PhpMethodOrClassCallIsNotCaseSensitiveInspection */
-			\CCatalogSku::clearCache();
 		}
 		return $result;
+	}
+
+	private function updatePriceBlock($productId, array $prices, $basePriceId)
+	{
+		$result = new Main\Result();
+
+		$initialType = 0;
+		if (isset($this->userDialogParams['INITIAL_PRICE_TYPE']))
+		{
+			$id = (int)$this->userDialogParams['INITIAL_PRICE_TYPE'];
+			if ($id > 0)
+				$initialType = $id;
+			unset($id);
+		}
+
+		$targetType = 0;
+		if (isset($this->userDialogParams['PRICE_TYPE']))
+		{
+			$id = (int)$this->userDialogParams['PRICE_TYPE'];
+			if ($id > 0)
+				$targetType = $id;
+			unset($id);
+		}
+
+		if (!empty($prices))
+		{
+			$destinationPrice = null;
+			if ($initialType > 0)
+			{
+				if (isset($prices[$initialType]))
+				{
+					$sourcePrice = $prices[$initialType];
+					$destinationPrice = $prices[$initialType];
+					unset($destinationPrice['ID']);
+					$destinationPrice['EXTRA_ID'] = false;
+					$destinationPrice['CATALOG_GROUP_ID'] = $targetType;
+					if (isset($prices[$targetType]))
+						$destinationPrice = $prices[$targetType];
+					if (
+						$this->userDialogParams['UNITS'] != 'currency'
+						|| (
+							$sourcePrice['CURRENCY'] == $this->userDialogParams['CURRENCY']
+							&& $destinationPrice['CURRENCY'] == $this->userDialogParams['CURRENCY']
+						)
+					)
+						$destinationPrice['PRICE'] = $this->calculateResultPrice($sourcePrice['PRICE']);
+					else
+						$destinationPrice = null;
+					unset($sourcePrice);
+				}
+			}
+			else
+			{
+				if (isset($prices[$targetType]))
+				{
+					$destinationPrice = $prices[$targetType];
+					if (
+						$this->userDialogParams['UNITS'] != 'currency'
+						|| $destinationPrice['CURRENCY'] == $this->userDialogParams['CURRENCY']
+					)
+						$destinationPrice['PRICE'] = $this->calculateResultPrice($destinationPrice['PRICE']);
+					else
+						$destinationPrice = null;
+				}
+			}
+			if (!empty($destinationPrice))
+			{
+				if ($destinationPrice['PRICE'] <= 0)
+				{
+					$result->addError(
+						new Main\Error("IBLIST_CHPRICE_ERROR_WRONG_VALUE_".$destinationPrice['PRODUCT_TYPE_CODE'],
+							array(
+								'#ID#' => $destinationPrice['PRODUCT_ID'],
+								'#NAME#' => $destinationPrice['ELEMENT_NAME'],
+							)
+						)
+					);
+				}
+				elseif ($destinationPrice['EXTRA_ID'] > 0)
+				{
+					$result->addError(
+						new Main\Error("IBLIST_CHPRICE_ERROR_PRICE_WITH_EXTRA_".$destinationPrice['PRODUCT_TYPE_CODE'],
+							array(
+								'#ID#' => $destinationPrice['PRODUCT_ID'],
+								'#NAME#' => $destinationPrice['ELEMENT_NAME'],
+							)
+						)
+					);
+				}
+				else
+				{
+					if (!empty($destinationPrice['ID']))
+					{
+						$priceResult = \CPrice::Update(
+							$destinationPrice['ID'],
+							array(
+								'PRODUCT_ID' => $productId,
+								'CATALOG_GROUP_ID' => $destinationPrice['CATALOG_GROUP_ID'],
+								'PRICE' => $destinationPrice['PRICE'],
+								'CURRENCY' => $destinationPrice['CURRENCY'],
+							),
+							$basePriceId == $targetType
+						);
+					}
+					else
+					{
+						$priceResult = \CPrice::Add(array(
+							'PRODUCT_ID' => $productId,
+							'CATALOG_GROUP_ID' => $targetType,
+							'PRICE' => $destinationPrice['PRICE'],
+							'CURRENCY' => $destinationPrice['CURRENCY'],
+							'EXTRA_ID' => $destinationPrice['EXTRA_ID'],
+							'QUANTITY_FROM' => ($destinationPrice['QUANTITY_FROM'] !== null ? $destinationPrice['QUANTITY_FROM'] : false),
+							'QUANTITY_TO' => ($destinationPrice['QUANTITY_TO'] !== null ? $destinationPrice['QUANTITY_TO'] : false)
+						));
+					}
+					if ($priceResult)
+					{
+						Iblock\PropertyIndex\Manager::updateElementIndex($destinationPrice['ELEMENT_IBLOCK_ID'], $destinationPrice['PRODUCT_ID']);
+						$ipropValues = new Iblock\InheritedProperty\ElementValues($destinationPrice['ELEMENT_IBLOCK_ID'], $destinationPrice['PRODUCT_ID']);
+						$ipropValues->clearValues();
+						unset($ipropValues);
+					}
+					unset($priceResult);
+				}
+			}
+			unset($destinationPrice);
+		}
 	}
 }

@@ -25,17 +25,6 @@ class ReversePageNavigation extends PageNavigation
 	 * Returns number of pages.
 	 * @return int
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает число страниц.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/ui/reversepagenavigation/getpagecount.php
-	* @author Bitrix
-	*/
 	public function getPageCount()
 	{
 		if($this->allRecords)
@@ -54,17 +43,6 @@ class ReversePageNavigation extends PageNavigation
 	 * Returns the current page number.
 	 * @return int
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает номер текущей страницы.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/ui/reversepagenavigation/getcurrentpage.php
-	* @author Bitrix
-	*/
 	public function getCurrentPage()
 	{
 		if($this->currentPage !== null)
@@ -78,17 +56,6 @@ class ReversePageNavigation extends PageNavigation
 	 * Returns offset of the first record of the current page.
 	 * @return int
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает смещение первой записи текущей страницы.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/ui/reversepagenavigation/getoffset.php
-	* @author Bitrix
-	*/
 	public function getOffset()
 	{
 		if($this->allRecords)
@@ -115,17 +82,6 @@ class ReversePageNavigation extends PageNavigation
 	 * Returns the number of records in the current page.
 	 * @return int
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает число записей на текущей странице.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/ui/reversepagenavigation/getlimit.php
-	* @author Bitrix
-	*/
 	public function getLimit()
 	{
 		if($this->allRecords)

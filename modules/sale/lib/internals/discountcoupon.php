@@ -56,17 +56,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает название таблицы купонов правил корзины в базе данных. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/gettablename.php
-	* @author Bitrix
-	*/
 	public static function getTableName()
 	{
 		return 'b_sale_discount_coupon';
@@ -77,17 +66,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список полей для таблицы купонов правил корзины. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/getmap.php
-	* @author Bitrix
-	*/
 	public static function getMap()
 	{
 		return array(
@@ -140,7 +118,7 @@ class DiscountCouponTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('DISCOUNT_COUPON_ENTITY_DATE_APPLY_FIELD')
 			)),
 			'TIMESTAMP_X' => new Main\Entity\DatetimeField('TIMESTAMP_X', array(
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('DISCOUNT_COUPON_ENTITY_TIMESTAMP_X_FIELD')
 			)),
 			'MODIFIED_BY' => new Main\Entity\IntegerField('MODIFIED_BY', array(
@@ -148,7 +126,7 @@ class DiscountCouponTable extends Main\Entity\DataManager
 				'title' => Loc::getMessage('DISCOUNT_COUPON_ENTITY_MODIFIED_BY_FIELD')
 			)),
 			'DATE_CREATE' => new Main\Entity\DatetimeField('DATE_CREATE', array(
-				'default_value' => new Main\Type\DateTime(),
+				'default_value' => function(){ return new Main\Type\DateTime(); },
 				'title' => Loc::getMessage('DISCOUNT_COUPON_ENTITY_DATE_CREATE_FIELD')
 			)),
 			'CREATED_BY' => new Main\Entity\IntegerField('CREATED_BY', array(
@@ -185,17 +163,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>DISCOUNT_ID</code> (идентификатор правила). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/validatediscountid.php
-	* @author Bitrix
-	*/
 	public static function validateDiscountId()
 	{
 		return array(
@@ -208,17 +175,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>COUPON</code> (код купона). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/validatecoupon.php
-	* @author Bitrix
-	*/
 	public static function validateCoupon()
 	{
 		return array(
@@ -232,17 +188,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает валидатор для поля <code>TYPE</code> (тип купона). Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/validatetype.php
-	* @author Bitrix
-	*/
 	public static function validateType()
 	{
 		return array(
@@ -259,33 +204,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Field $field		Field object.
 	 * @return bool|string
 	 */
-	
-	/**
-	* <p>Метод проверяет поле с идентификатором правила. Метод статический.</p>
-	*
-	*
-	* @param integer $value  Текущее значение поля с идентификатором правила.
-	*
-	* @param integer $array  Первичный ключ записи.
-	*
-	* @param integer $primary  Массив обновляемых значений.
-	*
-	* @param array $row  Поле объекта.
-	*
-	* @param array $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Field $field  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/checkdiscountid.php
-	* @author Bitrix
-	*/
 	public static function checkDiscountId($value, $primary, array $row, Main\Entity\Field $field)
 	{
 		if ((int)$value <= 0)
@@ -303,33 +221,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Field $field		Field object.
 	 * @return bool|string
 	 */
-	
-	/**
-	* <p>Метод проверяет поле <code>TYPE</code> (тип купона). Метод статический.</p>
-	*
-	*
-	* @param integer $value  Текущее значение поля.
-	*
-	* @param integer $array  Первичный ключ записи.
-	*
-	* @param integer $primary  Массив обновляемых значений.
-	*
-	* @param array $row  Поле объекта.
-	*
-	* @param array $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Field $field  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/checktype.php
-	* @author Bitrix
-	*/
 	public static function checkType($value, $primary, array $row, Main\Entity\Field $field)
 	{
 		if (
@@ -351,33 +242,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Field $field		Field object.
 	 * @return bool|string
 	 */
-	
-	/**
-	* <p>Метод проверяет купон на уникальность и существование. Метод статический.</p>
-	*
-	*
-	* @param integer $value  Код купона.
-	*
-	* @param integer $array  Первичный ключ записи.
-	*
-	* @param integer $primary  Массив обновляемых значений.
-	*
-	* @param array $row  Поле объекта.
-	*
-	* @param array $Bitrix  
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Field $field  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/checkcoupon.php
-	* @author Bitrix
-	*/
 	public static function checkCoupon($value, $primary, array $row, Main\Entity\Field $field)
 	{
 		$value = trim((string)$value);
@@ -400,25 +264,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for add.
 	 * @return Main\Entity\EventResult
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onBeforeAdd</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для добавления.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return \Bitrix\Main\Entity\EventResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onbeforeadd.php
-	* @author Bitrix
-	*/
 	public static function onBeforeAdd(Main\Entity\Event $event)
 	{
 		$result = new Main\Entity\EventResult;
@@ -441,25 +286,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for add.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onAfterAdd</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для добавления.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onafteradd.php
-	* @author Bitrix
-	*/
 	public static function onAfterAdd(Main\Entity\Event $event)
 	{
 		if (!self::isCheckedCouponsUse())
@@ -477,25 +303,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for update.
 	 * @return Main\Entity\EventResult
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onBeforeUpdate</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для изменения.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return \Bitrix\Main\Entity\EventResult 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onbeforeupdate.php
-	* @author Bitrix
-	*/
 	public static function onBeforeUpdate(Main\Entity\Event $event)
 	{
 		$result = new Main\Entity\EventResult;
@@ -518,25 +325,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for update.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onUpdate</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для обновления.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onupdate.php
-	* @author Bitrix
-	*/
 	public static function onUpdate(Main\Entity\Event $event)
 	{
 		if (!self::isCheckedCouponsUse())
@@ -569,25 +357,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for update.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onAfterUpdate</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для изменения.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onafterupdate.php
-	* @author Bitrix
-	*/
 	public static function onAfterUpdate(Main\Entity\Event $event)
 	{
 		self::updateUseCoupons();
@@ -599,25 +368,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for delete.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onDelete</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для удаления.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/ondelete.php
-	* @author Bitrix
-	*/
 	public static function onDelete(Main\Entity\Event $event)
 	{
 		if (!self::isCheckedCouponsUse())
@@ -640,25 +390,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Entity\Event $event		Current data for delete.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Является обработчиком по умолчанию события <code>onAfterDelete</code>.</p>
-	*
-	*
-	* @param mixed $Bitrix  Данные для удаления.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Entity  
-	*
-	* @param Event $event  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/onafterdelete.php
-	* @author Bitrix
-	*/
 	public static function onAfterDelete(Main\Entity\Event $event)
 	{
 		self::updateUseCoupons();
@@ -670,20 +401,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param bool $extendedMode			Get type ids or ids with title.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список типов купонов. Метод статический.</p>
-	*
-	*
-	* @param boolean $extendedMode = false Параметр определяет возвращать только идентификаторы типов или
-	* идентификаторы с названием.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/getcoupontypes.php
-	* @author Bitrix
-	*/
 	public static function getCouponTypes($extendedMode = false)
 	{
 		$extendedMode = ($extendedMode === true);
@@ -703,17 +420,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод запрещает пересчет флага <b>Имеет купоны</b> для правил после вызова методов <code>add/update/delete</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/disablecheckcouponsuse.php
-	* @author Bitrix
-	*/
 	public static function disableCheckCouponsUse()
 	{
 		self::$checkDiscountCouponsUse--;
@@ -724,17 +430,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод разрешает пересчет флага <b>Имеет купоны</b> для правил после вызова методов <code>add/update/delete</code>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/enablecheckcouponsuse.php
-	* @author Bitrix
-	*/
 	public static function enableCheckCouponsUse()
 	{
 		self::$checkDiscountCouponsUse++;
@@ -745,17 +440,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод определяет пересчитывать ли у правил корзины, относящихся к обработанным купонам, флаг <b>Имеет купоны</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/ischeckedcouponsuse.php
-	* @author Bitrix
-	*/
 	public static function isCheckedCouponsUse()
 	{
 		return (self::$checkDiscountCouponsUse >= 0);
@@ -766,17 +450,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод очищает список правил, чтобы обновить флаг <b>Имеет купоны</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/cleardiscountchecklist.php
-	* @author Bitrix
-	*/
 	public static function clearDiscountCheckList()
 	{
 		self::$discountCheckList = array();
@@ -788,21 +461,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param array|int $discountList			Discount ids for check.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод заполняет список правил, чтобы обновить флаг <b>Имеет купоны</b>. Метод статический.</p>
-	*
-	*
-	* @param array $array  Массив идентификаторов правил корзины.
-	*
-	* @param integer $discountList  
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/setdiscountchecklist.php
-	* @author Bitrix
-	*/
 	public static function setDiscountCheckList($discountList)
 	{
 		if (!is_array($discountList))
@@ -816,17 +474,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод обновляет флаг <b>Имеет купоны</b> для списка правил корзины. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/updateusecoupons.php
-	* @author Bitrix
-	*/
 	public static function updateUseCoupons()
 	{
 		if (!self::isCheckedCouponsUse() || empty(self::$discountCheckList))
@@ -875,19 +522,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param int $discount			Discount id.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод удаляет все купоны для правила с кодом <code>$discount</code>. Метод статический.</p>
-	*
-	*
-	* @param integer $discount  Идентификатор правила корзины.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/deletebydiscount.php
-	* @author Bitrix
-	*/
 	public static function deleteByDiscount($discount)
 	{
 		$discount = (int)$discount;
@@ -922,29 +556,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param Main\Type\DateTime $currentTime	Current datetime.
 	 * @return array|bool
 	 */
-	
-	/**
-	* <p>Метод сохраняет информацию о примененных купонах. Метод статический.</p>
-	*
-	*
-	* @param array $coupons  Массив купонов.
-	*
-	* @param integer $userId  Идентификатор пользователя.
-	*
-	* @param integer $Bitrix  Текущая дата и время.
-	*
-	* @param Bitri $Main  
-	*
-	* @param Mai $Type  
-	*
-	* @param DateTime $currentTime  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/saveapplied.php
-	* @author Bitrix
-	*/
 	public static function saveApplied($coupons, $userId, Main\Type\DateTime $currentTime)
 	{
 		$currentTimestamp = $currentTime->getTimestamp();
@@ -1060,19 +671,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param bool $check		Check new coupon or no.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод генерирует код купона. Метод статический.</p>
-	*
-	*
-	* @param boolean $check = false Параметр определяет, проверять новый купон или нет.
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/generatecoupon.php
-	* @author Bitrix
-	*/
 	public static function generateCoupon($check = false)
 	{
 		static $eventExists = null;
@@ -1133,23 +731,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param int $limit				Maximum number of attempts.
 	 * @return Main\Entity\Result
 	 */
-	
-	/**
-	* <p>Метод создает один или несколько купонов для правила корзины. Метод статический.</p>
-	*
-	*
-	* @param array $data  Массив параметров купона.
-	*
-	* @param integer $count  Количество купонов.
-	*
-	* @param integer $limit  Максимальное количество попыток.
-	*
-	* @return \Bitrix\Main\Entity\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/addpacket.php
-	* @author Bitrix
-	*/
 	public static function addPacket(array $data, $count, $limit = 0)
 	{
 		$result = new Main\Entity\Result();
@@ -1265,21 +846,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param bool $newDiscount			New discount flag.
 	 * @return Main\Entity\Result
 	 */
-	
-	/**
-	* <p>Метод проверяет данные для создания одного или нескольких купонов. Метод статический.</p>
-	*
-	*
-	* @param array $data  Массив с данными купона.
-	*
-	* @param boolean $newDiscount = false Флаг того, что правило является новым.
-	*
-	* @return \Bitrix\Main\Entity\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/checkpacket.php
-	* @author Bitrix
-	*/
 	public static function checkPacket(array $data, $newDiscount = false)
 	{
 		$result = new Main\Entity\Result();
@@ -1329,19 +895,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param array &$fields				Coupon data.
 	 * @return Main\Entity\Result
 	 */
-	
-	/**
-	* <p>Метод подготавливает данные по купону. Метод статический и используется только для страниц административной части сайта.</p>
-	*
-	*
-	* @param array &$fields  Массив с данными по купону.
-	*
-	* @return \Bitrix\Main\Entity\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/preparecoupondata.php
-	* @author Bitrix
-	*/
 	public static function prepareCouponData(&$fields)
 	{
 		$result = new Main\Entity\Result();
@@ -1349,27 +902,13 @@ class DiscountCouponTable extends Main\Entity\DataManager
 		{
 			if (isset($fields['ACTIVE_FROM']) && is_string($fields['ACTIVE_FROM']))
 			{
-				try
-				{
-					$fields['ACTIVE_FROM'] = trim($fields['ACTIVE_FROM']);
-					$fields['ACTIVE_FROM'] = ($fields['ACTIVE_FROM'] !== '' ? new Main\Type\DateTime($fields['ACTIVE_FROM']) : null);
-				}
-				catch (Main\ObjectException $e)
-				{
-					$fields['ACTIVE_FROM'] = new Main\Type\Date($fields['ACTIVE_FROM']);
-				}
+				$fields['ACTIVE_FROM'] = trim($fields['ACTIVE_FROM']);
+				$fields['ACTIVE_FROM'] = ($fields['ACTIVE_FROM'] !== '' ? Main\Type\DateTime::createFromUserTime($fields['ACTIVE_FROM']) : null);
 			}
 			if (isset($fields['ACTIVE_TO']) && is_string($fields['ACTIVE_TO']))
 			{
-				try
-				{
-					$fields['ACTIVE_TO'] = trim($fields['ACTIVE_TO']);
-					$fields['ACTIVE_TO'] = ($fields['ACTIVE_TO'] !== '' ? new Main\Type\DateTime($fields['ACTIVE_TO']) : null);
-				}
-				catch(Main\ObjectException $e)
-				{
-					$fields['ACTIVE_TO'] = new Main\Type\Date($fields['ACTIVE_TO']);
-				}
+				$fields['ACTIVE_TO'] = trim($fields['ACTIVE_TO']);
+				$fields['ACTIVE_TO'] = ($fields['ACTIVE_TO'] !== '' ? Main\Type\DateTime::createFromUserTime($fields['ACTIVE_TO']) : null);
 			}
 		}
 		return $result;
@@ -1381,19 +920,6 @@ class DiscountCouponTable extends Main\Entity\DataManager
 	 * @param int $couponType			Coupon type.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод проверяет валиден ли тип купона. Метод статический.</p>
-	*
-	*
-	* @param integer $couponType  Тип купона.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/internals/discountcoupontable/isvalidcoupontype.php
-	* @author Bitrix
-	*/
 	public static function isValidCouponType($couponType)
 	{
 		$couponType = (int)$couponType;

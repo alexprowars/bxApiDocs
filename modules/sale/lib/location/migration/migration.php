@@ -130,7 +130,7 @@ final class MigrationProcess extends Location\Util\Process
 		$this->nextStage();
 	}
 
-	static public function hideNotifier()
+	public function hideNotifier()
 	{
 		\CAdminNotify::DeleteByTag(
 			self::NOTIF_TAG

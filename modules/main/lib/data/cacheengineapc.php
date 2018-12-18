@@ -73,7 +73,7 @@ class CacheEngineApc
 	 *
 	 * @return string
 	 */
-	static public function getCachePath()
+	public function getCachePath()
 	{
 		return "";
 	}
@@ -83,7 +83,7 @@ class CacheEngineApc
 	 *
 	 * @return bool
 	 */
-	static public function isAvailable()
+	public function isAvailable()
 	{
 		return function_exists('apc_fetch');
 	}
@@ -333,7 +333,7 @@ class CacheEngineApc
 	 *
 	 * @return boolean
 	 */
-	static public function isCacheExpired($path)
+	public function isCacheExpired($path)
 	{
 		return false;
 	}

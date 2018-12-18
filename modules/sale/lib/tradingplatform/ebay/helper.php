@@ -7,6 +7,7 @@ use Bitrix\Main\IO\Directory;
 use Bitrix\Main\Result;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Sale\TradingPlatform\Logger;
 use Bitrix\Sale\TradingPlatform\Sftp;
 use Bitrix\Main\ArgumentNullException;
 use Bitrix\Sale\TradingPlatform\Ebay\Feed\Manager;
@@ -25,17 +26,6 @@ class Helper
 	 * @return Result
 	 * @throws SystemException
 	 */
-	
-	/**
-	* <p>Метод проверяет все необходимые расширения и т.п. Метод статический.</p> <p>Без параметров</p>
-	*
-	*
-	* @return \Bitrix\Main\Result 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/tradingplatform/ebay/helper/checkenveronment.php
-	* @author Bitrix
-	*/
 	public static function checkEnveronment()
 	{
 		$result = new Result();
@@ -61,17 +51,6 @@ class Helper
 	 * Creates filestructure for information exchange via sftp.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Создает файловую структуру для информационного обмена с помощью SFTP. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/tradingplatform/ebay/helper/createfeedfilestructure.php
-	* @author Bitrix
-	*/
 	public static function createFeedFileStructure()
 	{
 		$sftpDir = self::getSftpPath();
@@ -103,17 +82,6 @@ class Helper
 	 * Creates events for sending e-mail.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Создает события для отправки e-mail. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/tradingplatform/ebay/helper/installevents.php
-	* @author Bitrix
-	*/
 	public static function installEvents()
 	{
 		$dbEvent = \CEventMessage::GetList($b="ID", $order="ASC", Array("EVENT_NAME" => "SALE_EBAY_ERROR"));
@@ -187,21 +155,6 @@ class Helper
 	 * @param string $val "Y"|"N"
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Отправляет в eBay сообщение об отгрузке. Если присутствует и трек номер, то он также будет отправлен. Метод статический.</p>
-	*
-	*
-	* @param string $orderId  Идентификатор заказа.
-	*
-	* @param string $val  Метка отгрузки: <code>Y</code> - отгружен, N - не отгружен.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/tradingplatform/ebay/helper/onsaledeductorder.php
-	* @author Bitrix
-	*/
 	public static function onSaleDeductOrder($orderId, $val)
 	{
 		if($val != "Y")
@@ -311,6 +264,7 @@ class Helper
 			"EBAY_DATA_PROCESSOR_ORDER_SAVE_ERROR" => Loc::getMessage("SALE_EBAY_AT_DATA_PROCESSOR_ORDER_SAVE_ERROR"),
 			"EBAY_DATA_PROCESSOR_ORDER_CORR_SAVE_ERROR" => Loc::getMessage("SALE_EBAY_AT_DATA_PROCESSOR_ORDER_CORR_SAVE_ERROR"),
 			"EBAY_DATA_PROCESSOR_SFTPQUEUE_FLUSHING" => Loc::getMessage("SALE_EBAY_AT_DATA_PROCESSOR_SFTPQUEUE_FLUSHING"),
+			"EBAY_SFTP_TOKEN_EXP" => Loc::getMessage("SALE_EBAY_AT_SFTP_TOKEN_EXP"),
 		);
 
 		array_walk($result, function(&$value, $key, $prefix)	{
@@ -338,11 +292,25 @@ class Helper
 		{
 			$ebay = \Bitrix\Sale\TradingPlatform\Ebay\Ebay::getInstance();
 			$settings = $ebay->getSettings();
+			$host = isset($settings[$siteId]["SFTP_HOST"]) ? $settings[$siteId]["SFTP_HOST"] : "mip.ebay.com";
+			$port = isset($settings[$siteId]["SFTP_PORT"]) ? $settings[$siteId]["SFTP_PORT"] : 22;
+			$fingerprint = strlen($settings[$siteId]["SFTP_HOST_FINGERPRINT"]) > 0 ? $settings[$siteId]["SFTP_HOST_FINGERPRINT"] : "DD1FEE728C2E1FF2AACC2724929C3CF1";
 
-			$sftp[$siteId] = new Sftp(
-				$settings[$siteId]["SFTP_LOGIN"],
-				$settings[$siteId]["SFTP_PASS"]
-			);
+			if(!empty($settings[$siteId]["SFTP_TOKEN_EXP"]) && date('c') > date($settings[$siteId]["SFTP_TOKEN_EXP"]))
+			{
+					Ebay::log(Logger::LOG_LEVEL_ERROR, "EBAY_SFTP_TOKEN_EXP", 'SFTP token', Loc::getMessage('SALE_EBAY_AT_SFTP_TOKEN_EXP_MESSAGE'), $siteId);
+					throw new SystemException(Loc::getMessage('SALE_EBAY_AT_SFTP_TOKEN_EXP_MESSAGE'));
+			}
+			else
+			{
+				$sftp[$siteId] = new Sftp(
+					$settings[$siteId]["SFTP_LOGIN"],
+					$settings[$siteId]["SFTP_PASS"],
+					$host,
+					$port,
+					$fingerprint
+				);
+			}
 		}
 
 		return $sftp[$siteId];
@@ -356,23 +324,6 @@ class Helper
 	 * @param bool $localInfoOnly Get it from Ebay site if not found in table.
 	 * @return array
 	 */
-	
-	/**
-	* <p>Возвращает свойства товаров для данной категории. Если свойство не найдено в таблице, то оно будут получено через API и сохранено в таблицу. Метод статический.</p>
-	*
-	*
-	* @param string $ebayCategoryId  Идентификатор категории eBay.
-	*
-	* @param string $siteId  Идентификатор сайта.
-	*
-	* @param boolean $localInfoOnly = false Получать ли свойство с eBay, если оно не найдено в таблице.
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/sale/tradingplatform/ebay/helper/getebaycategoryvariations.php
-	* @author Bitrix
-	*/
 	public static function getEbayCategoryVariations($ebayCategoryId, $siteId, $localInfoOnly = false)
 	{
 		$result = array();

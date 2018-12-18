@@ -2,9 +2,10 @@
 
 namespace Bitrix\Iblock\BizprocType;
 
-use Bitrix\Bizproc\BaseType;
-use Bitrix\Bizproc\FieldType;
-use Bitrix\Main\Localization\Loc;
+use Bitrix\Main,
+	Bitrix\Bizproc\BaseType,
+	Bitrix\Bizproc\FieldType,
+	Bitrix\Main\Localization\Loc;
 
 class UserTypePropertyHtml extends UserTypeProperty
 {
@@ -63,17 +64,6 @@ class UserTypePropertyHtml extends UserTypeProperty
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Метод возвращает карту конвертации для полей типа <b>HTML/текст</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/bizproctype/usertypepropertyhtml/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		$parentMap = parent::getConversionMap();
@@ -216,9 +206,9 @@ class UserTypePropertyHtml extends UserTypeProperty
 	 */
 	protected static function wrapCloneableControls(array $controls, $wrapperId)
 	{
-		$wrapperId = (string) $wrapperId;
+		$wrapperId = Main\Text\HtmlFilter::encode((string)$wrapperId);
 		$renderResult = '<table width="100%" border="0" cellpadding="2" cellspacing="2" id="BizprocCloneable_'
-			.htmlspecialcharsbx($wrapperId).'">';
+			.$wrapperId.'">';
 
 		foreach ($controls as $control)
 		{
@@ -227,7 +217,7 @@ class UserTypePropertyHtml extends UserTypeProperty
 		$renderResult .= '</table>';
 		$renderResult .= '<input type="button" value="'.Loc::getMessage('BPDT_BASE_ADD')
 			.'" onclick="BX.Bizproc.cloneTypeControlHtml(\'BizprocCloneable_'
-			.htmlspecialcharsbx($wrapperId).'\', \''.htmlspecialcharsbx($wrapperId).'\')"/><br />';
+			.$wrapperId.'\', \''.$wrapperId.'\')"/><br />';
 
 		return $renderResult;
 	}

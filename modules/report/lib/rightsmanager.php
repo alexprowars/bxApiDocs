@@ -20,22 +20,9 @@ class RightsManager
 
 	/**
 	 * Checks the right to read.
-	 * @param $reportId
+	 * @param int $reportId Id report.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет наличие прав на чтение.</p>
-	*
-	*
-	* @param mixed $reportId  Идентификатор отчета.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/report/rightsmanager/canread.php
-	* @author Bitrix
-	*/
 	public function canRead($reportId)
 	{
 		if(!$this->isOwner($reportId))
@@ -57,22 +44,9 @@ class RightsManager
 
 	/**
 	 * Checks the right to edit.
-	 * @param $reportId
+	 * @param int $reportId Id report.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет наличие прав на редактирование.</p>
-	*
-	*
-	* @param mixed $reportId  Идентификатор отчета.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/report/rightsmanager/canedit.php
-	* @author Bitrix
-	*/
 	public function canEdit($reportId)
 	{
 		if(!$this->isOwner($reportId))
@@ -94,22 +68,9 @@ class RightsManager
 
 	/**
 	 * Checks the right to delete.
-	 * @param $reportId
+	 * @param int $reportId Id report.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет наличие прав на удаление.</p>
-	*
-	*
-	* @param mixed $reportId  Идентификатор отчета.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/report/rightsmanager/candelete.php
-	* @author Bitrix
-	*/
 	public function canDelete($reportId)
 	{
 		return $this->isOwner($reportId);
@@ -117,22 +78,9 @@ class RightsManager
 
 	/**
 	 * Checks the right to share.
-	 * @param $reportId
+	 * @param int $reportId Id report.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод проверяет наличие прав на возможность дать общий доступ.</p>
-	*
-	*
-	* @param mixed $reportId  Идентификатор отчета.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/report/rightsmanager/canshare.php
-	* @author Bitrix
-	*/
 	public function canShare($reportId)
 	{
 		return $this->isOwner($reportId);
@@ -144,17 +92,6 @@ class RightsManager
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Bitrix\Main\LoaderException
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает список сущностей (групп и отделов) пользователя в виде индексированного массива.</p> <p>Без параметров</p>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/report/rightsmanager/getgroupsanddepartments.php
-	* @author Bitrix
-	*/
 	public function getGroupsAndDepartments()
 	{
 		$cacheTime = defined('BX_COMP_MANAGED_CACHE') ? 3153600 : 3600*4;
@@ -192,7 +129,12 @@ class RightsManager
 
 				if(!empty($userData['UF_DEPARTMENT']))
 				{
+					$parentDepartmentList = array();
 					foreach($userData['UF_DEPARTMENT'] as $departmentId)
+						$parentDepartmentList[] = \CIntranetUtils::getIBlockTopSection($departmentId);
+
+					$childrenDepartmentList = \CIntranetUtils::getIBlockSectionChildren($parentDepartmentList);
+					foreach($childrenDepartmentList as $departmentId)
 						$listEntity[] = Sharing::CODE_DEPARTMENT.$departmentId;
 				}
 			}

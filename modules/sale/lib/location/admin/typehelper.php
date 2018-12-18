@@ -21,7 +21,7 @@ class TypeHelper extends NameHelper
 	* Function returns class name for an attached entity
 	* @return string Entity class name
 	*/
-	static public function getEntityRoadMap()
+	public function getEntityRoadMap()
 	{
 		return array(
 			'main' => array(

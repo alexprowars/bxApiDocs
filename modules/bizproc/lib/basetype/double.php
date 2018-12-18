@@ -29,25 +29,6 @@ class Double extends Base
 	 * @param mixed $value Field value.
 	 * @return mixed Normalized value
 	 */
-	
-	/**
-	* <p>Статический метод нормализует одиночное значение.</p>
-	*
-	*
-	* @param mixed $Bitrix  Тип поля документа.
-	*
-	* @param Bitri $Bizproc  Значение поля.
-	*
-	* @param FieldType $fieldType  
-	*
-	* @param mixed $value  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/double/tosinglevalue.php
-	* @author Bitrix
-	*/
 	public static function toSingleValue(FieldType $fieldType, $value)
 	{
 		if (is_array($value))
@@ -103,17 +84,6 @@ class Double extends Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает таблицу преобразования для текущего типа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/double/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -142,7 +112,9 @@ class Double extends Base
 	{
 		$name = static::generateControlName($field);
 		$controlId = static::generateControlId($field);
-		$renderResult = '<input type="text" size="10" id="'.htmlspecialcharsbx($controlId).'" name="'
+		$className = static::generateControlClassName($fieldType, $field);
+		$renderResult = '<input type="text" class="'.htmlspecialcharsbx($className)
+			.'" size="10" id="'.htmlspecialcharsbx($controlId).'" name="'
 			.htmlspecialcharsbx($name).'" value="'.htmlspecialcharsbx((string) $value).'"/>';
 
 		if ($allowSelection)
@@ -216,7 +188,7 @@ class Double extends Base
 	 * @param array $request
 	 * @return float|null
 	 */
-	protected static function extractValue(FieldType $fieldType, $field, $request)
+	protected static function extractValue(FieldType $fieldType, array $field, array $request)
 	{
 		$value = parent::extractValue($fieldType, $field, $request);
 

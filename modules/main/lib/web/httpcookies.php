@@ -9,7 +9,7 @@ namespace Bitrix\Main\Web;
 
 class HttpCookies extends \Bitrix\Main\Type\Dictionary
 {
-	static public function __construct(array $values = null)
+	public function __construct(array $values = null)
 	{
 		parent::__construct($values);
 	}
@@ -24,7 +24,7 @@ class HttpCookies extends \Bitrix\Main\Type\Dictionary
 		return $str;
 	}
 
-	static public function addFromString($str)
+	public function addFromString($str)
 	{
 		if (($pos = strpos($str, ';')) !== false && $pos > 0)
 		{

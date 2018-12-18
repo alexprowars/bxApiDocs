@@ -16,7 +16,7 @@ class CatalogSectionTab
 {
 	protected static $tabHandlers = array();
 
-	public static function OnInit($args)
+	function OnInit($args)
 	{
 		$result = array();
 
@@ -53,7 +53,7 @@ class CatalogSectionTab
 		return $result;
 	}
 
-	public static function Action($arArgs)
+	function Action($arArgs)
 	{
 		/** @var \CMain $APPLICATION*/
 		global $APPLICATION;
@@ -77,7 +77,7 @@ class CatalogSectionTab
 		return $result;
 	}
 
-	public static function Check($arArgs)
+	function Check($arArgs)
 	{
 		/** @var \CMain $APPLICATION*/
 		global $APPLICATION;
@@ -101,7 +101,7 @@ class CatalogSectionTab
 		return $result;
 	}
 
-	public static function GetTabs($arArgs)
+	function GetTabs($arArgs)
 	{
 		$arTabs = array(
 			array(
@@ -115,7 +115,7 @@ class CatalogSectionTab
 	}
 
 	// arArgs = array("ID" => $ID, "IBLOCK"=>$arIBlock, "IBLOCK_TYPE"=>$arIBTYPE)
-	public static function ShowTab($divName, $arArgs, $bVarsFromForm)
+	function ShowTab($divName, $arArgs, $bVarsFromForm)
 	{
 		if ($divName == "edit_trading_platforms")
 		{
@@ -128,7 +128,7 @@ class CatalogSectionTab
 				$body = $handler->showTabSection($divName, $arArgs, $bVarsFromForm);
 
 				if(strlen($body) <= 0)
-					$body = '<tr><td colspan="2">'.Loc::getMessage('SALE_TRADING_PLATFORMS_NOT_ACTIVE').'</td></tr>';
+					$body = '<tr><td colspan="2">'.Loc::getMessage('SALE_TRADING_PLATFORMS_NOT_ACTIVE').' ('.$siteId = $arArgs["IBLOCK"]["LID"].')</td></tr>';
 
 				$result .= $header.$body;
 			}

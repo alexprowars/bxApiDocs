@@ -3,7 +3,7 @@
  * Bitrix Framework
  * @package bitrix
  * @subpackage main
- * @copyright 2001-2012 Bitrix
+ * @copyright 2001-2016 Bitrix
  */
 namespace Bitrix\Main\Mail;
 
@@ -14,14 +14,23 @@ use Bitrix\Main\Type as Type;
 
 class EventManager
 {
-
 	/**
-	 * @return string|void
+	 * @return string|null
 	 */
 	public static function checkEvents()
 	{
-		if((defined("DisableEventsCheck") && DisableEventsCheck===true) || (defined("BX_CRONTAB_SUPPORT") && BX_CRONTAB_SUPPORT===true && BX_CRONTAB!==true))
-			return;
+		if(
+			(defined("DisableEventsCheck") && DisableEventsCheck === true)
+			||
+			(
+				defined("BX_CRONTAB_SUPPORT") && BX_CRONTAB_SUPPORT === true
+				&&
+				(!defined("BX_CRONTAB") || BX_CRONTAB !== true)
+			)
+		)
+		{
+			return null;
+		}
 
 		$manage_cache = \Bitrix\Main\Application::getInstance()->getManagedCache();
 		if(CACHED_b_event !== false && $manage_cache->read(CACHED_b_event, "events"))
@@ -50,6 +59,7 @@ class EventManager
 		if($bulk <= 0)
 			$bulk = 5;
 
+		$rsMails = null;
 
 		$connection = \Bitrix\Main\Application::getConnection();
 		if($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection)
@@ -79,7 +89,9 @@ class EventManager
 			}
 
 			$strSql = "
-				SELECT ID, C_FIELDS, EVENT_NAME, MESSAGE_ID, LID, DATE_FORMAT(DATE_INSERT, '%d.%m.%Y %H:%i:%s') as DATE_INSERT, DUPLICATE
+				SELECT ID, C_FIELDS, EVENT_NAME, MESSAGE_ID, LID,
+					DATE_FORMAT(DATE_INSERT, '%d.%m.%Y %H:%i:%s') as DATE_INSERT,
+					DUPLICATE, LANGUAGE_ID
 				FROM b_event
 				WHERE SUCCESS_EXEC='N'
 				ORDER BY ID
@@ -95,18 +107,14 @@ class EventManager
 			\CTimeZone::Disable();
 			$strSql = "
 				SELECT TOP ".$bulk."
-					ID,
-					C_FIELDS,
-					EVENT_NAME,
-					MESSAGE_ID,
-					LID,
+					ID,	C_FIELDS, EVENT_NAME, MESSAGE_ID, LID,
 					".$connection->getSqlHelper()->getDateToCharFunction("DATE_INSERT")." as DATE_INSERT,
-					DUPLICATE
+					DUPLICATE, LANGUAGE_ID
 				FROM b_event
 				WITH (TABLOCKX)
 				WHERE SUCCESS_EXEC = 'N'
 				ORDER BY ID
-				";
+			";
 			$rsMails = $connection->query($strSql);
 			\CTimeZone::Enable();
 		}
@@ -116,36 +124,48 @@ class EventManager
 
 			$strSql = "
 				SELECT /*+RULE*/ E.ID, E.C_FIELDS, E.EVENT_NAME, E.MESSAGE_ID, E.LID,
-					TO_CHAR(E.DATE_INSERT, 'DD.MM.YYYY HH24:MI:SS') as DATE_INSERT, DUPLICATE
+					TO_CHAR(E.DATE_INSERT, 'DD.MM.YYYY HH24:MI:SS') as DATE_INSERT,
+					E.DUPLICATE, E.LANGUAGE_ID
 				FROM b_event E
 				WHERE E.SUCCESS_EXEC='N'
 				ORDER BY E.ID
 				FOR UPDATE NOWAIT
-				";
+			";
 
 			$rsMails = $connection->query($strSql);
 		}
-
-
 
 		if($rsMails)
 		{
 			$arCallableModificator = array();
 			$cnt = 0;
 			foreach(EventTable::getFetchModificatorsForFieldsField() as $callableModificator)
-				if(is_callable($callableModificator)) $arCallableModificator[] = $callableModificator;
+			{
+				if(is_callable($callableModificator))
+				{
+					$arCallableModificator[] = $callableModificator;
+				}
+			}
 			while($arMail = $rsMails->fetch())
 			{
 				foreach($arCallableModificator as $callableModificator)
 					$arMail['C_FIELDS'] = call_user_func_array($callableModificator, array($arMail['C_FIELDS']));
 
 				$arFiles = array();
-				$fileListDb = EventAttachmentTable::getList(array('select' => array('FILE_ID'), 'filter' => array('EVENT_ID' => $arMail["ID"])));
+				$fileListDb = EventAttachmentTable::getList(array(
+					'select' => array('FILE_ID'),
+					'filter' => array('=EVENT_ID' => $arMail["ID"])
+				));
 				while($file = $fileListDb->fetch())
+				{
 					$arFiles[] = $file['FILE_ID'];
+				}
 				$arMail['FILE'] = $arFiles;
 
-				if(!is_array($arMail['C_FIELDS'])) $arMail['C_FIELDS'] = array();
+				if(!is_array($arMail['C_FIELDS']))
+				{
+					$arMail['C_FIELDS'] = array();
+				}
 				try
 				{
 					$flag = Event::handleEvent($arMail);
@@ -168,8 +188,6 @@ class EventManager
 			}
 		}
 
-
-
 		if($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection)
 		{
 			$connection->query("SELECT RELEASE_LOCK('".$uniq."_event')");
@@ -184,8 +202,10 @@ class EventManager
 			$connection->commitTransaction();
 		}
 
-		if($cnt===0 && CACHED_b_event!==false)
+		if($cnt === 0 && CACHED_b_event !== false)
 			$manage_cache->set("events", true);
+
+		return null;
 	}
 
 	/**

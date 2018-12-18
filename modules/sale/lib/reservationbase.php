@@ -25,7 +25,7 @@ abstract class ReservationBase extends Attributes
 	/**
 	 * @return bool
 	 */
-	static public function getEnableReservation()
+	public function getEnableReservation()
 	{
 		//default_use_store_control = Y
 		return (COption::GetOptionString("catalog", "enable_reservation") == "Y"

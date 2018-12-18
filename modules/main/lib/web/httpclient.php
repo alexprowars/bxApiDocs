@@ -20,6 +20,7 @@ class HttpClient
 	const HTTP_PUT = "PUT";
 	const HTTP_HEAD = "HEAD";
 	const HTTP_PATCH = "PATCH";
+	const HTTP_DELETE = "DELETE";
 
 	const BUF_READ_LEN = 16384;
 	const BUF_POST_LEN = 131072;
@@ -33,6 +34,7 @@ class HttpClient
 	protected $socketTimeout = 30;
 	protected $streamTimeout = 60;
 	protected $error = array();
+	protected $peerSocketName;
 
 	/** @var HttpHeaders */
 	protected $requestHeaders;
@@ -46,6 +48,7 @@ class HttpClient
 	protected $version = self::HTTP_1_0;
 	protected $requestCharset = '';
 	protected $sslVerify = true;
+	protected $bodyLengthMax = 0;
 
 	protected $status = 0;
 	/** @var HttpHeaders */
@@ -71,46 +74,10 @@ class HttpClient
 	 *		"proxyPassword" string Proxy password
 	 *		"compress" bool Accept gzip encoding (default false)
 	 *		"charset" string Charset for body in POST and PUT
-	 *		"disableSslVerification" bool Pass true to disable ssl check.
+	 *		"disableSslVerification" bool Pass true to disable ssl check
+	 *      "bodyLengthMax" int Maximum length of the body.
 	 * 	All the options can be set separately with setters.
 	 */
-	
-	/**
-	* <p>Нестатический метод вызывается при создании экземпляра класса и позволяет в нем произвести какие-то действия при создании объекта.</p>
-	*
-	*
-	* @param array $options = null Массив параметров: <ul> <li>bool <b>redirect</b> Следовать переадресации (по
-	* умолчанию <i>true</i> - редирект).</li> <li>int <b>redirectMax</b> Максимальное
-	* количество редиректов (по умолчанию  5).</li>  <li>bool <b>waitResponse</b> 
-	* Дождаться ответа или отключиться сразу после запроса (по
-	* умолчанию <i>true</i> - ожидание ответа)</li>  <li>int <b>socketTimeout</b> Таймаут
-	* соединения в секундах (по умолчанию  30).</li> <li>int <b>streamTimeout</b> 
-	* Таймаут потока в секундах (по умолчанию  60).</li>  <li>string <b>version</b>
-	* Версия HTTP (HttpClient::HTTP_1_0, HttpClient::HTTP_1_1) (по умолчанию  "1.0").</li>  <li>string
-	* <b>proxyHost</b> Имя\адрес прокси сервера.</li> <li>int <b>proxyPort</b> Порт прокси
-	* сервера.</li>  <li>string <b>proxyUser</b> Имя пользователя прокси сервера.</li> 
-	* <li>string <b>proxyPassword</b> Пароль прокси.</li>  <li>bool <b>compress</b> Использование
-	* сжатия zip (по умолчанию <i>false</i>). Если <i>true</i>, будет послан
-	* <code>Accept-Encoding: gzip</code>.</li> <li>string <b>charset</b> Кодировка для содержимого POST
-	* и PUT запросов. (Используется в поле заголовка запроса Content-Type.)</li> 
-	* <li>bool <b>disableSslVerification</b> Если установлено <i>true</i>, то верификация
-	* ssl-сертификатов производиться не будет.</li>  </ul> Все эти опции не
-	* обязательно указывать при создании экземпляра класса, их можно
-	* установить в дальнейшем.
-	*
-	* @return public 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Создать экземпляр класса:$http=new \Bitrix\Main\Web\HttpClient(array $options = null);)Выполнение <a href="/api_d7/bitrix/main/web/httpclient/get.php">GET</a> запроса. В параметр необходимо передать абсолютный путь. Возвращается строка ответа или <i>false</i>, если произошла ошибка. Обратите внимание, что пустая строка не является ошибкой.$http-&gt;get($url)Выполнение <a href="/api_d7/bitrix/main/web/httpclient/post.php">POST</a> запроса. Первый параметр - абсолютный путь. Второй параметр может быть массивом, строкой, объектом. Аналогично предыдущему методу возвращает строку ответа или <i>false</i>, если произошла ошибка.$http-&gt;post($url, $postData = null)Установка <a href="/api_d7/bitrix/main/web/httpclient/setheader.php">заголовока http</a> в запросе. Первый параметр устанавливает имя поля заголовка, второй параметр значение этого поля. (Обратите внимание, что в обоих случаях передается строка. То есть если нужно сразу установить несколько заголовков, то метод нужно будет вызвать несколько раз.) Третий параметр отвечает за то, будет ли перезаписываться заголовок, если уже установлен параметр с таким же именем или нет.$http-&gt;setHeader($name, $value, $replace = true)Установка <a href="%5CBitrix%5CMain%5CWeb%5CHttpClient::setCookies" target="_blank">cookies</a> для запроса. Единственный параметр принимает массив, где ключ - это имя cookies, а значение - значение cookies.$http-&gt;setCookies(array $cookies)Установка поля заголовка запроса базовой http <a href="/api_d7/bitrix/main/web/httpclient/setauthorization.php">авторизации</a>. В параметрах передается имя пользователя и пароль.$http-&gt;setAuthorization($user, $pass)Установка <a href="/api_d7/bitrix/main/web/httpclient/setredirect.php">опции перенаправления</a>. Первый параметр устанавливает делать ли перенаправления или нет, а второй задаёт максимальное количество перенаправлений.$http-&gt;setRedirect($value, $max = null)Установка <a href="/api_d7/bitrix/main/web/httpclient/waitresponse.php">параметра</a>, который задаёт ожидание отклика от сервера или закрытие соединения сразу после запроса. По умолчанию - ожидание.$http-&gt;waitResponse($value)Установка максимального <a href="/api_d7/bitrix/main/web/httpclient/settimeout.php">времени ожидания</a> ответа в секундах.$http-&gt;setTimeout($value)Установка <a href="/api_d7/bitrix/main/web/httpclient/setversion.php">версии HTTP</a> протокола. По умолчанию 1.0. Можно установить 1.1$http-&gt;setVersion($value)Указание, использовать ли <a href="/api_d7/bitrix/main/web/httpclient/setcompress.php">сжатие</a> или нет. Обратите внимание, что сжатый ответ в любом случае обрабатывается, если верно переданы заголовки.$http-&gt;setCompress($value)Установка <a href="/api_d7/bitrix/main/web/httpclient/setcharset.php">кодировки</a> для тела объектов запросов POST и PUT$http-&gt;setCharset($value)Установка параметров для использования <a href="/api_d7/bitrix/main/web/httpclient/setproxy.php">прокси сервера</a>. Указывается первым параметром хост или адрес, вторым - порт, третий параметр - это имя пользователя и четвертый - пароль. Все параметры кроме имени хоста не обязательны.$http-&gt;setProxy($proxyHost, $proxyPort = null, $proxyUser = null, $proxyPassword = null)Указание, что результатом будет <a href="/api_d7/bitrix/main/web/httpclient/setoutputstream.php">поток</a>. Параметром передается реcурс на файл или на поток.$http-&gt;setOutputStream($handler)
-	* <a href="/api_d7/bitrix/main/web/httpclient/download.php">Загрузка</a> и сохранение файла. Первый параметр - это адрес откуда нужно скачать файл. Второй параметр - это абсолютный путь для сохранения файла.$http-&gt;download($url, $filePath)
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/__construct.php
-	* @author Bitrix
-	*/
 	public function __construct(array $options = null)
 	{
 		$this->requestHeaders = new HttpHeaders();
@@ -167,23 +134,16 @@ class HttpClient
 			{
 				$this->disableSslVerification();
 			}
+			if(isset($options["bodyLengthMax"]))
+			{
+				$this->setBodyLengthMax($options["bodyLengthMax"]);
+			}
 		}
 	}
 
 	/**
 	 * Closes the connection on the object destruction.
 	 */
-	
-	/**
-	* <p>Нестатический метод вызывается при уничтожении последней ссылки на экземпляр объекта, но не уничтожает объект класса.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return public 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/__destruct.php
-	* @author Bitrix
-	*/
 	public function __destruct()
 	{
 		$this->disconnect();
@@ -195,20 +155,6 @@ class HttpClient
 	 * @param string $url Absolute URI eg. "http://user:pass @ host:port/path/?query".
 	 * @return string|bool Response entity string or false on error. Note, it's empty string if outputStream is set.
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет GET запрос.</p>
-	*
-	*
-	* @param string $url  абсолютный URI, например: <code>&lt;a href="http://user:pass"&gt;http://user:pass&lt;/a&gt; @
-	* host:port/path/?query</code>
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/get.php
-	* @author Bitrix
-	*/
 	public function get($url)
 	{
 		if($this->query(self::HTTP_GET, $url))
@@ -224,20 +170,6 @@ class HttpClient
 	 * @param string $url Absolute URI eg. "http://user:pass @ host:port/path/?query"
 	 * @return HttpHeaders|bool Response headers or false on error.
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет HEAD запрос.</p>
-	*
-	*
-	* @param string $url  абсолютный URI, например: <code>&lt;a href="http://user:pass"&gt;http://user:pass&lt;/a&gt; @
-	* host:port/path/?query</code>
-	*
-	* @return \Bitrix\Main\Web\HttpHeaders|boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/head.php
-	* @author Bitrix
-	*/
 	public function head($url)
 	{
 		if($this->query(self::HTTP_HEAD, $url))
@@ -252,36 +184,101 @@ class HttpClient
 	 *
 	 * @param string $url Absolute URI eg. "http://user:pass @ host:port/path/?query".
 	 * @param array|string|resource $postData Entity of POST/PUT request. If it's resource handler then data will be read directly from the stream.
+	 * @param boolean $multipart Whether or not to use multipart/form-data encoding. If true, method accepts file as a resource or as an array with keys 'resource' (or 'content') and optionally 'filename' and 'contentType'
 	 * @return string|bool Response entity string or false on error. Note, it's empty string if outputStream is set.
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет POST запрос.</p>
-	*
-	*
-	* @param string $url  Абсолютный URI, например: <code>&lt;a href="http://user:pass"&gt;http://user:pass&lt;/a&gt; @
-	* host:port/path/?query</code>.
-	*
-	* @param string $array  Сущность POST/PUT запроса. Если это - обработчик ресурсов, то чтение
-	* данных осуществляется непосредственно из потока.
-	*
-	* @param arra $string  
-	*
-	* @param resource $postData = null 
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/post.php
-	* @author Bitrix
-	*/
-	public function post($url, $postData = null)
+	public function post($url, $postData = null, $multipart = false)
 	{
+		if ($multipart)
+		{
+			$postData = $this->prepareMultipart($postData);
+		}
+
 		if($this->query(self::HTTP_POST, $url, $postData))
 		{
 			return $this->getResult();
 		}
 		return false;
+	}
+
+	/**
+	 * Performs multipart/form-data encoding.
+	 * Accepts file as a resource or as an array with keys 'resource' (or 'content') and optionally 'filename' and 'contentType'
+	 *
+	 * @param array|string|resource $postData Entity of POST/PUT request
+	 * @return string
+	 */
+	protected function prepareMultipart($postData)
+	{
+		if (is_array($postData))
+		{
+			$boundary = 'BXC'.md5(rand().time());
+			$this->setHeader('Content-type', 'multipart/form-data; boundary='.$boundary);
+
+			$data = '';
+
+			foreach ($postData as $k => $v)
+			{
+				$data .= '--'.$boundary."\r\n";
+
+				if ((is_resource($v) && get_resource_type($v) === 'stream') || is_array($v))
+				{
+					$filename = $k;
+					$contentType = 'application/octet-stream';
+
+					if (is_array($v))
+					{
+						$content = '';
+
+						if (isset($v['resource']) && is_resource($v['resource']) && get_resource_type($v['resource']) === 'stream')
+						{
+							$resource = $v['resource'];
+							$content = stream_get_contents($resource);
+						}
+						else
+						{
+							if (isset($v['content']))
+							{
+								$content = $v['content'];
+							}
+							else
+							{
+								$this->error["MULTIPART"] = "File `{$k}` not found for multipart upload";
+								trigger_error($this->error["MULTIPART"], E_USER_WARNING);
+							}
+						}
+
+						if (isset($v['filename']))
+						{
+							$filename = $v['filename'];
+						}
+
+						if (isset($v['contentType']))
+						{
+							$contentType = $v['contentType'];
+						}
+					}
+					else
+					{
+						$content = stream_get_contents($v);
+					}
+
+					$data .= 'Content-Disposition: form-data; name="'.$k.'"; filename="'.$filename.'"'."\r\n";
+					$data .= 'Content-Type: '.$contentType."\r\n\r\n";
+					$data .= $content."\r\n";
+				}
+				else
+				{
+					$data .= 'Content-Disposition: form-data; name="'.$k.'"'."\r\n\r\n";
+					$data .= $v."\r\n";
+				}
+			}
+
+			$data .= '--'.$boundary."--\r\n";
+			$postData = $data;
+		}
+
+		return $postData;
 	}
 
 	/**
@@ -292,30 +289,6 @@ class HttpClient
 	 * @param array|string|resource $entityBody Entity body of the request. If it's resource handler then data will be read directly from the stream.
 	 * @return bool Query result (true or false). Response entity string can be get via getResult() method. Note, it's empty string if outputStream is set.
 	 */
-	
-	/**
-	* <p>Нестатический метод выполняет HTTP запрос.</p>
-	*
-	*
-	* @param string $method  HTTP метод (GET, POST и так далее). <b>Важно</b>: должно быть набрано в
-	* верхнем регистре.
-	*
-	* @param string $url  Абсолютный URI, например: <code>&lt;a href="http://user:pass"&gt;http://user:pass&lt;/a&gt; @
-	* host:port/path/?query</code>.
-	*
-	* @param string $array  Сущность POST/PUT запроса. Если это - обработчик ресурсов, то данные
-	* будут читаться непосредственно из потока.
-	*
-	* @param arra $string  
-	*
-	* @param resource $postData = null 
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/query.php
-	* @author Bitrix
-	*/
 	public function query($method, $url, $entityBody = null)
 	{
 		$queryMethod = $method;
@@ -399,24 +372,6 @@ class HttpClient
 	 * @param bool $replace Replace existing header field with the same name or add one more.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает поле заголовка HTTP запроса.</p>
-	*
-	*
-	* @param string $name  Имя поля заголовка.
-	*
-	* @param string $value  Значение поля.
-	*
-	* @param boolean $replace = true Заменить существующий заголовок с текщим именем или добавить ещё
-	* один.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setheader.php
-	* @author Bitrix
-	*/
 	public function setHeader($name, $value, $replace = true)
 	{
 		if($replace == true || $this->requestHeaders->get($name) === null)
@@ -426,24 +381,19 @@ class HttpClient
 	}
 
 	/**
+	 * Clears all HTTP request header fields.
+	 */
+	public function clearHeaders()
+	{
+		$this->requestHeaders->clear();
+	}
+
+	/**
 	 * Sets an array of cookies for HTTP request.
 	 *
 	 * @param array $cookies Array of cookie_name => value pairs.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает массив cookies для HTTP запроса.</p>
-	*
-	*
-	* @param array $cookies  Массив пар <code>cookie_name =&gt; value</code>.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setcookies.php
-	* @author Bitrix
-	*/
 	public function setCookies(array $cookies)
 	{
 		$this->requestCookies->set($cookies);
@@ -456,21 +406,6 @@ class HttpClient
 	 * @param string $pass Password.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает поле заголовка запроса аутентификации (Basic Authorization).</p>
-	*
-	*
-	* @param string $user  Логин.
-	*
-	* @param string $pass  Пароль.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setauthorization.php
-	* @author Bitrix
-	*/
 	public function setAuthorization($user, $pass)
 	{
 		$this->setHeader("Authorization", "Basic ".base64_encode($user.":".$pass));
@@ -483,23 +418,6 @@ class HttpClient
 	 * @param null|int $max Maximum allowed redirect count.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает опции редиректа.</p>
-	*
-	*
-	* @param boolean $value  Если <i>true</i>, выполняется редирект (по умолчанию <i>true</i>).
-	*
-	* @param boolean $null  Максимально возможное число редиректов.
-	*
-	* @param integer $max = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setredirect.php
-	* @author Bitrix
-	*/
 	public function setRedirect($value, $max = null)
 	{
 		$this->redirect = ($value? true : false);
@@ -515,20 +433,6 @@ class HttpClient
 	 * @param bool $value If true, wait for response. If false, return just after request (default true).
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает опцию ожидания ответа.</p>
-	*
-	*
-	* @param boolean $value  Если <i>true</i>, ожидает ответ. Если <i>false</i>, возвращает сразу после
-	* запроса. (По умолчанию <i>true</i>).
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/waitresponse.php
-	* @author Bitrix
-	*/
 	public function waitResponse($value)
 	{
 		$this->waitResponse = ($value? true : false);
@@ -540,19 +444,6 @@ class HttpClient
 	 * @param int $value Connection timeout in seconds (default 30).
 	 * @return void
 	 */
-	
-	/**
-	* Нестатический метод устанавливает таймаут соединения.
-	*
-	*
-	* @param integer $value  Таймаут соединения в секундах (по умолчанию 30).
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/settimeout.php
-	* @author Bitrix
-	*/
 	public function setTimeout($value)
 	{
 		$this->socketTimeout = intval($value);
@@ -564,20 +455,6 @@ class HttpClient
 	 * @param int $value Stream reading timeout in seconds; "0" means no timeout (default 60).
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает таймаут чтения потока сокетов.</p>
-	*
-	*
-	* @param integer $value  Таймаут чтения потока  в секундах; "0" - нет ограничений (по
-	* умолчанию 60).
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setstreamtimeout.php
-	* @author Bitrix
-	*/
 	public function setStreamTimeout($value)
 	{
 		$this->streamTimeout = intval($value);
@@ -589,19 +466,6 @@ class HttpClient
 	 * @param string $value Version "1.0" or "1.1" (default "1.0").
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает версию HTTP протокола. В версии 1.1 возможен фрагментированный ответ.</p>
-	*
-	*
-	* @param string $value  Версия "1.0" или "1.1" (По умолчанию "1.0").
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setversion.php
-	* @author Bitrix
-	*/
 	public function setVersion($value)
 	{
 		$this->version = $value;
@@ -615,19 +479,6 @@ class HttpClient
 	 * @param bool $value If true, "Accept-Encoding: gzip" will be sent.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает опции компрессии.</p> <p class="note">Примите во внимание, что не нужно использовать опции сжатия с выходным потоком, если контент может быть большим. Учтите что сжатый ответ обрабатывается в любом случае, если установлено поле заголовка Content-Encoding.</p>
-	*
-	*
-	* @param boolean $value  Если <i>true</i>, будет послан <b>Accept-Encoding: gzip</b>.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setcompress.php
-	* @author Bitrix
-	*/
 	public function setCompress($value)
 	{
 		$this->compress = ($value? true : false);
@@ -639,19 +490,6 @@ class HttpClient
 	 * @param string $value Charset.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает кодировку для тела объекта (используется в поле заголовка запроса Content-Type для POST и PUT).</p>
-	*
-	*
-	* @param string $value  Кодировка.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setcharset.php
-	* @author Bitrix
-	*/
 	public function setCharset($value)
 	{
 		$this->requestCharset = $value;
@@ -662,17 +500,6 @@ class HttpClient
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод запрещает верификацию ssl сертификата.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/disablesslverification.php
-	* @author Bitrix
-	*/
 	public function disableSslVerification()
 	{
 		$this->sslVerify = false;
@@ -687,31 +514,6 @@ class HttpClient
 	 * @param null|string $proxyPassword Proxy password.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает HTTP прокси для запроса.</p>
-	*
-	*
-	* @param string $proxyHost  Имя или адрес хоста (без <i>http://</i>).
-	*
-	* @param string $null  Номер порта.
-	*
-	* @param integer $proxyPort = null Имя пользователя.
-	*
-	* @param mixed $null  Пароль пользователя.
-	*
-	* @param string $proxyUser = null 
-	*
-	* @param mixed $null  
-	*
-	* @param string $proxyPassword = null 
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setproxy.php
-	* @author Bitrix
-	*/
 	public function setProxy($proxyHost, $proxyPort = null, $proxyUser = null, $proxyPassword = null)
 	{
 		$this->proxyHost = $proxyHost;
@@ -732,22 +534,19 @@ class HttpClient
 	 * @param resource $handler File or stream handler.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Нестатический метод устанавливает вывод ответа в поток вместо строкового результата. Используется для больших ответов.</p> <p class="note"><b>Внимание!</b> Поток должен иметь возможность записи/чтения, чтобы поддерживать сжатый ответ. В этом режиме строчный ответ - пустой.</p>
-	*
-	*
-	* @param resource $handler  Файл либо обработчик потока.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setoutputstream.php
-	* @author Bitrix
-	*/
 	public function setOutputStream($handler)
 	{
 		$this->outputStream = $handler;
+	}
+
+	/**
+	 * Sets the maximum body length that will be received in $this->readBody().
+	 *
+	 * @param int $bodyLengthMax
+	 */
+	public function setBodyLengthMax($bodyLengthMax)
+	{
+		$this->bodyLengthMax = intval($bodyLengthMax);
 	}
 
 	/**
@@ -757,21 +556,6 @@ class HttpClient
 	 * @param string $filePath Absolute file path.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Нестатический метод скачивает и сохраняет файлы.</p>
-	*
-	*
-	* @param string $url  URI для скачивания.
-	*
-	* @param string $filePath  Абсолютный путь.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/download.php
-	* @author Bitrix
-	*/
 	public function download($url, $filePath)
 	{
 		$dir = IO\Path::getDirectory($filePath);
@@ -800,17 +584,6 @@ class HttpClient
 	 * Returns URL of the last redirect if request was redirected, or initial URL if request was not redirected.
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает URL последнего редиректа, если запрос был перенаправлен, или первоначалный URL если перенаправления не было.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/geteffectiveurl.php
-	* @author Bitrix
-	*/
 	public function getEffectiveUrl()
 	{
 		return $this->effectiveUrl;
@@ -852,6 +625,7 @@ class HttpClient
 		if(is_resource($res))
 		{
 			$this->resource = $res;
+			$this->peerSocketName = stream_socket_get_name($this->resource, true);
 
 			if($this->streamTimeout > 0)
 			{
@@ -1046,6 +820,7 @@ class HttpClient
 
 	protected function readBody()
 	{
+		$receivedBodyLength = 0;
 		if($this->responseHeaders->get("Transfer-Encoding") == "chunked")
 		{
 			while(!feof($this->resource))
@@ -1084,7 +859,14 @@ class HttpClient
 						$this->error['STREAM_READING'] = "Stream reading error";
 						return false;
 					}
-					$length -= BinaryString::getLength($buf);
+					$currentReceivedBodyLength = BinaryString::getLength($buf);
+					$length -= $currentReceivedBodyLength;
+					$receivedBodyLength += $currentReceivedBodyLength;
+					if($this->bodyLengthMax > 0 && $receivedBodyLength > $this->bodyLengthMax)
+					{
+						$this->error['STREAM_LENGTH'] = "Maximum content length has been reached. Break reading";
+						return false;
+					}
 				}
 			}
 		}
@@ -1105,6 +887,12 @@ class HttpClient
 				if($buf === false)
 				{
 					$this->error['STREAM_READING'] = "Stream reading error";
+					return false;
+				}
+				$receivedBodyLength += BinaryString::getLength($buf);
+				if($this->bodyLengthMax > 0 && $receivedBodyLength > $this->bodyLengthMax)
+				{
+					$this->error['STREAM_LENGTH'] = "Maximum content length has been reached. Break reading";
 					return false;
 				}
 			}
@@ -1171,17 +959,6 @@ class HttpClient
 	 *
 	 * @return HttpHeaders
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает отпарсенные заголовки HTTP ответов.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Web\HttpHeaders 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getheaders.php
-	* @author Bitrix
-	*/
 	public function getHeaders()
 	{
 		return $this->responseHeaders;
@@ -1192,17 +969,6 @@ class HttpClient
 	 *
 	 * @return HttpCookies
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает отпарсенный HTTP ответ cookies.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return \Bitrix\Main\Web\HttpCookies 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getcookies.php
-	* @author Bitrix
-	*/
 	public function getCookies()
 	{
 		return $this->responseCookies;
@@ -1213,17 +979,6 @@ class HttpClient
 	 *
 	 * @return int
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает код статуса HTTP ответа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return integer 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getstatus.php
-	* @author Bitrix
-	*/
 	public function getStatus()
 	{
 		return $this->status;
@@ -1234,17 +989,6 @@ class HttpClient
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает строку сущности HTTP ответа. </p> <p class="note"> <b>Важно</b>! если установлен <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/setoutputstream.php">OutputStream</a>, то результатом будет пустая строка.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getresult.php
-	* @author Bitrix
-	*/
 	public function getResult()
 	{
 		if($this->waitResponse && $this->resource)
@@ -1260,17 +1004,6 @@ class HttpClient
 	 *
 	 * @return array Array with "error_code" => "error_message" pair
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает массив ошибок при неудаче.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/geterror.php
-	* @author Bitrix
-	*/
 	public function getError()
 	{
 		return $this->error;
@@ -1281,17 +1014,6 @@ class HttpClient
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает тип контента ответа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getcontenttype.php
-	* @author Bitrix
-	*/
 	public function getContentType()
 	{
 		return $this->responseHeaders->getContentType();
@@ -1302,19 +1024,42 @@ class HttpClient
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Нестатический метод возвращает кодировку контента ответа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/main/web/httpclient/getcharset.php
-	* @author Bitrix
-	*/
 	public function getCharset()
 	{
 		return $this->responseHeaders->getCharset();
+	}
+
+	/**
+	 * Returns remote peer socket name (usually in form ip:port)
+	 *
+	 * @return string
+	 */
+	public function getPeerSocketName()
+	{
+		return $this->peerSocketName ?: '';
+	}
+
+	/**
+	 * Returns remote peer ip address.
+	 * @return string|false
+	 */
+	public function getPeerAddress()
+	{
+		if(!preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+):(\d+)$/', $this->peerSocketName, $matches))
+			return false;
+
+		return sprintf('%d.%d.%d.%d', $matches[1], $matches[2], $matches[3], $matches[4]);
+	}
+
+	/**
+	 * Returns remote peer ip address.
+	 * @return int|false
+	 */
+	public function getPeerPort()
+	{
+		if(!preg_match('/^(\d+)\.(\d+)\.(\d+)\.(\d+):(\d+)$/', $this->peerSocketName, $matches))
+			return false;
+
+		return (int)$matches[5];
 	}
 }

@@ -28,25 +28,6 @@ class BoolType extends Base
 	 * @param mixed $value Field value.
 	 * @return mixed Normalized value
 	 */
-	
-	/**
-	* <p>Статический метод нормализует одиночное значение.</p>
-	*
-	*
-	* @param mixed $Bitrix  Тип поля документа.
-	*
-	* @param Bitri $Bizproc  Значение поля.
-	*
-	* @param FieldType $fieldType  
-	*
-	* @param mixed $value  
-	*
-	* @return mixed 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/booltype/tosinglevalue.php
-	* @author Bitrix
-	*/
 	public static function toSingleValue(FieldType $fieldType, $value)
 	{
 		if (is_array($value))
@@ -101,17 +82,6 @@ class BoolType extends Base
 	 * Return conversion map for current type.
 	 * @return array Map.
 	 */
-	
-	/**
-	* <p>Статический метод возвращает таблицу преобразования для текущего типа.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/bizproc/basetype/booltype/getconversionmap.php
-	* @author Bitrix
-	*/
 	public static function getConversionMap()
 	{
 		return array(
@@ -135,8 +105,10 @@ class BoolType extends Base
 	 */
 	protected static function renderControl(FieldType $fieldType, array $field, $value, $allowSelection, $renderMode)
 	{
+		$className = static::generateControlClassName($fieldType, $field);
 		$renderResult = '<select id="'.htmlspecialcharsbx(static::generateControlId($field))
-				.'" name="'.htmlspecialcharsbx(static::generateControlName($field)).'">';
+				.'" name="'.htmlspecialcharsbx(static::generateControlName($field))
+				.'" class="'.htmlspecialcharsbx($className).'">';
 
 		if (!$fieldType->isRequired())
 			$renderResult .= '<option value="">['.Loc::getMessage("BPDT_BOOL_NOT_SET").']</option>';

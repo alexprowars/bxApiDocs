@@ -33,20 +33,6 @@ class CurrencyManager
 	 * @param string $currency	Currency id.
 	 * @return bool|string
 	 */
-	
-	/**
-	* <p>Метод проверяет идентификатор валюты. Метод статический.</p>
-	*
-	*
-	* @param string $currency  Идентификатор валюты.
-	*
-	* @return mixed <p>В случае успеха возвращает идентификатор валюты. В случае
-	* ошибки - <i>false</i>. </p><a name="example"></a>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/checkcurrencyid.php
-	* @author Bitrix
-	*/
 	public static function checkCurrencyID($currency)
 	{
 		$currency = (string)$currency;
@@ -59,20 +45,6 @@ class CurrencyManager
 	 * @param string $language	Language.
 	 * @return bool|string
 	 */
-	
-	/**
-	* <p>Метод проверяет идентификатор языка интерфейса. Метод статический.</p>
-	*
-	*
-	* @param string $language  Идентификатор языка интерфейса.
-	*
-	* @return mixed <p>В случае успеха возвращает идентификатор языка. В случае ошибки
-	* - <i>false</i>. </p><a name="example"></a>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/checklanguage.php
-	* @author Bitrix
-	*/
 	public static function checkLanguage($language)
 	{
 		$language = (string)$language;
@@ -84,17 +56,6 @@ class CurrencyManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод возвращает код базовой валюты.</p> <p>Одна из валют сайта должна иметь курс, равный 1, флаг <code>BASE = 'Y'</code> и не иметь записей в таблице курсов. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/getbasecurrency.php
-	* @author Bitrix
-	*/
 	public static function getBaseCurrency()
 	{
 		if (self::$baseCurrency === '')
@@ -141,17 +102,6 @@ class CurrencyManager
 	 * @return array
 	 * @throws \Bitrix\Main\ArgumentException
 	 */
-	
-	/**
-	* <p>Метод возвращает список всех валют в следующем формате: ключ - код валюты, значение - название валюты на текущем языке. Метод статический.</p> <p>Без параметров</p>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/getcurrencylist.php
-	* @author Bitrix
-	*/
 	public static function getCurrencyList()
 	{
 		$currencyTableName = CurrencyTable::getTableName();
@@ -183,21 +133,25 @@ class CurrencyManager
 	}
 
 	/**
+	 * Verifying the existence of the currency by its code.
+	 *
+	 * @param string $currency		Currency code.
+	 * @return bool
+	 */
+	public static function isCurrencyExist($currency)
+	{
+		$currency = static::checkCurrencyID($currency);
+		if ($currency === false)
+			return false;
+		$currencyList = static::getCurrencyList();
+		return isset($currencyList[$currency]);
+	}
+
+	/**
 	 * Return currency list, create to install module.
 	 *
 	 * @return array
 	 */
-	
-	/**
-	* <p>Метод возвращает список валют, созданных при установке модуля <b>Валюты</b>. Метод статический.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return array 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/getinstalledcurrencies.php
-	* @author Bitrix
-	*/
 	public static function getInstalledCurrencies()
 	{
 		$installedCurrencies = (string)Option::get('currency', 'installed_currencies');
@@ -276,19 +230,6 @@ class CurrencyManager
 	 * @param string $language		Language id.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод сбрасывает кеш валют. Метод статический.</p>
-	*
-	*
-	* @param string $language = '' Идентификатор языка интерфейса.
-	*
-	* @return void <p>Нет.</p><a name="example"></a>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/clearcurrencycache.php
-	* @author Bitrix
-	*/
 	public static function clearCurrencyCache($language = '')
 	{
 		$language = static::checkLanguage($language);
@@ -327,19 +268,6 @@ class CurrencyManager
 	 * @param string $currency	Currency id.
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод сбрасывает тегированный кеш валюты <code>currency</code>. Метод статический.</p>
-	*
-	*
-	* @param string $currency  Идентификатор валюты.
-	*
-	* @return void <p>Нет.</p><a name="example"></a>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/cleartagcache.php
-	* @author Bitrix
-	*/
 	public static function clearTagCache($currency)
 	{
 		if (!defined('BX_COMP_MANAGED_CACHE'))
@@ -355,17 +283,6 @@ class CurrencyManager
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Метод для расчета и обновления текущей (актуальной) стоимости одной единицы валюты в базовой. Метод статический и необходим для корректной сортировки и фильтрации по ценам с учетом валют.</p> <p>Без параметров</p> <a name="example"></a>
-	*
-	*
-	* @return string 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/currencybaserateagent.php
-	* @author Bitrix
-	*/
 	public static function currencyBaseRateAgent()
 	{
 		static::updateBaseRates();
@@ -380,19 +297,6 @@ class CurrencyManager
 	 * @throws Main\ArgumentException
 	 * @throws \Exception
 	 */
-	
-	/**
-	* <p>Метод вычисляет и сохраняет в таблице валют актуальный курс валюты <code>updateCurrency</code> на текущую дату по отношению к базовой на основании курсов валют, уже занесенных в базу. Метод статический.</p>
-	*
-	*
-	* @param string $updateCurrency = '' Идентификатор валюты.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/updatebaserates.php
-	* @author Bitrix
-	*/
 	public static function updateBaseRates($updateCurrency = '')
 	{
 		$currency = (string)static::getBaseCurrency();
@@ -436,19 +340,6 @@ class CurrencyManager
 	 * @param string $currency			Currency id.
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Метод валюту <code>currency</code> делает базовой. Метод статический.</p>
-	*
-	*
-	* @param string $currency  Идентификатор валюты.
-	*
-	* @return boolean 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/currency/currencymanager/updatebasecurrency.php
-	* @author Bitrix
-	*/
 	public static function updateBaseCurrency($currency)
 	{
 		/** @global \CUser $USER */

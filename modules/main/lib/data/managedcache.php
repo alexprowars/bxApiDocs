@@ -20,7 +20,7 @@ class ManagedCache
 	protected $vars = array();
 	protected $ttl = array();
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
@@ -53,7 +53,7 @@ class ManagedCache
 		}
 	}
 
-	static public function getImmediate($ttl, $uniqueId, $tableId = false)
+	public function getImmediate($ttl, $uniqueId, $tableId = false)
 	{
 		$cache = Cache::createInstance();
 		$cachePath = static::getDbType().($tableId === false ? "" : "/".$tableId);
@@ -63,8 +63,13 @@ class ManagedCache
 		return false;
 	}
 
-	// This method is used to read the variable value
-	// from the cache after successfull Read
+	/**
+	 * This method is used to read the variable value
+	 * from the cache after successfull Read
+	 *
+	 * @param string $uniqueId
+	 * @return mixed
+	 */
 	public function get($uniqueId)
 	{
 		if (array_key_exists($uniqueId, $this->vars))
@@ -164,7 +169,7 @@ class ManagedCache
 		}
 	}
 
-	static public function getCompCachePath($relativePath)
+	public function getCompCachePath($relativePath)
 	{
 		// TODO: global var!
 		global $BX_STATE;

@@ -22,31 +22,6 @@ class Tools
 	 *
 	 * @return void
 	 */
-	
-	/**
-	* <p>Метод выполняет действия согласно передаваемым в него параметрам. Метод статический.</p>
-	*
-	*
-	* @param string $message = "" Сообщение, которое будет отображено компонентом
-	* <b>bitrix:system.show_message</b>.
-	*
-	* @param boolean $defineConstant = true Если параметр принимает значение <i>true</i>, то константа
-	* <code>ERROR_404</code> примет значение <code>Y</code>.
-	*
-	* @param boolean $setStatus = true Если параметр принимает значение <i>true</i>, то будет установлен
-	* статус <code>404 Not Found</code>.
-	*
-	* @param boolean $showPage = false Если параметр принимает значение <i>true</i>, то рабочая область будет
-	* очищена и будет показано содержимое файла <b>/404.php</b>.
-	*
-	* @param string $pageFile = "" Файл, который должен быть показан вместо <b>/404.php</b>.
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_d7/bitrix/iblock/component/tools/process404.php
-	* @author Bitrix
-	*/
 	public static function process404($message = "", $defineConstant = true, $setStatus = true, $showPage = false, $pageFile = "")
 	{
 		/** @global \CMain $APPLICATION */
@@ -70,7 +45,7 @@ class Tools
 
 		if ($defineConstant && !defined("ERROR_404"))
 		{
-			// define("ERROR_404", "Y");
+			define("ERROR_404", "Y");
 		}
 
 		if ($setStatus)
@@ -82,6 +57,9 @@ class Tools
 		{
 			if ($APPLICATION->RestartWorkarea())
 			{
+				if (!defined("BX_URLREWRITE"))
+					define("BX_URLREWRITE", true);
+				\Bitrix\Main\Page\Frame::setEnable(false);
 				if ($pageFile)
 					require(\Bitrix\Main\Application::getDocumentRoot().rel2abs("/", "/".$pageFile));
 				else
@@ -126,8 +104,12 @@ class Tools
 				}
 				else
 				{
-					$imageData['UNSAFE_SRC'] = $imageData['SRC'];
-					$imageData['SRC'] = \CHTTP::urnEncode($imageData['SRC'], 'UTF-8');
+					if (!preg_match('/^(ftp|ftps|http|https):\/\//', $imageData['SRC']))
+					{
+						$imageData['UNSAFE_SRC'] = $imageData['SRC'];
+						$imageData['SAFE_SRC'] = \CHTTP::urnEncode($imageData['SRC'], 'UTF-8');
+						$imageData['SRC'] = $imageData['SAFE_SRC'];
+					}
 				}
 				$imageData['ALT'] = '';
 				$imageData['TITLE'] = '';
@@ -136,8 +118,8 @@ class Tools
 					$entityPrefix = $entity.'_'.$fieldName;
 					if (isset($item[$ipropertyKey][$entityPrefix.'_FILE_ALT']))
 						$imageData['ALT'] = $item[$ipropertyKey][$entityPrefix.'_FILE_ALT'];
-					if (isset($item[$ipropertyKey][$entityPrefix.'_FILE_ALT']))
-						$imageData['ALT'] = $item[$ipropertyKey][$entityPrefix.'_FILE_TITLE'];
+					if (isset($item[$ipropertyKey][$entityPrefix.'_FILE_TITLE']))
+						$imageData['TITLE'] = $item[$ipropertyKey][$entityPrefix.'_FILE_TITLE'];
 					unset($entityPrefix);
 				}
 				if ($imageData['ALT'] == '' && isset($item['NAME']))
@@ -166,9 +148,18 @@ class Tools
 		$safe = ($safe === true);
 
 		if ($safe)
-			$result = (isset($image['SAFE_SRC']) ? $image['SAFE_SRC'] : \CHTTP::urnEncode($image['SRC'], 'UTF-8'));
+		{
+			if (isset($image['SAFE_SRC']))
+				$result = $image['SAFE_SRC'];
+			elseif (preg_match('/^(ftp|ftps|http|https):\/\//', $image['SRC']))
+				$result = $image['SRC'];
+			else
+				$result = \CHTTP::urnEncode($image['SRC'], 'UTF-8');
+		}
 		else
+		{
 			$result = (isset($image['UNSAFE_SRC']) ? $image['UNSAFE_SRC'] : $image['SRC']);
+		}
 
 		return $result;
 	}

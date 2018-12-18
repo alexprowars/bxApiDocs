@@ -10,7 +10,7 @@ Loc::loadMessages(__FILE__);
 */
 class Helper
 {
-	const BX_ENV_MIN_VERSION = "5.0-44";
+	const BX_ENV_MIN_VERSION = "7.2.0";
 
 	public static function checkBxEnvVersion($version = false)
 	{
@@ -201,5 +201,27 @@ class Helper
 		}
 
 		return $result;
+	}
+
+	public static function isScaleCanBeUsed()
+	{
+		global $DB;
+
+		return getenv('BITRIX_VA_VER')
+			&& stristr(php_uname('s'), 'linux')
+			&& strtolower($DB->type) == 'mysql'
+			&& self::checkBxEnvVersion();
+	}
+
+	public static function getTmpDir()
+	{
+		$path = '/home/bitrix/.webdir';
+		$permissionsForOwnerOnly = '0600';
+		$res = true;
+
+		if(!file_exists($path))
+			$res = mkdir($path, $permissionsForOwnerOnly, true);
+
+		return $res ? $path : '';
 	}
 }

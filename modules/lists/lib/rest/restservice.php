@@ -41,6 +41,7 @@ class RestService extends \IRestService
 				'lists.element.get' => array(__CLASS__, 'getElement'),
 				'lists.element.update' => array(__CLASS__, 'updateElement'),
 				'lists.element.delete' => array(__CLASS__, 'deleteElement'),
+				'lists.element.get.file.url' => array(__CLASS__, 'getFileUrl'),
 			)
 		);
 	}
@@ -114,9 +115,22 @@ class RestService extends \IRestService
 		if(!empty($params['SOCNET_GROUP_ID']))
 			$params['SOCNET_GROUP_ID'] = intval($params['SOCNET_GROUP_ID']);
 		if(empty($params['IBLOCK_ID']))
+		{
 			$params['IBLOCK_ID'] = false;
+			if(empty($params['IBLOCK_CODE']))
+				self::checkIblockTypePermission($params);
+			else
+			{
+				self::getIblocksData($params);
+				if(empty($params['IBLOCK_ID']))
+					throw new AccessException();
+			}
+		}
+		else
+		{
+			self::checkIblockPermission($params);
+		}
 
-		self::checkIblockPermission($params);
 		$listIblock = self::getIblocksData($params);
 
 		if(!empty($listIblock))
@@ -226,7 +240,7 @@ class RestService extends \IRestService
 		$listIblock = self::getIblocksData($params);
 		if(empty($listIblock))
 			throw new RestException('Iblock not found', self::ERROR_IBLOCK_NOT_FOUND);
-		self::checkIblockPermission($params);
+		self::checkBasePermission($params);
 
 		$fields = array();
 		if(!empty($params['FIELD_ID']))
@@ -259,7 +273,13 @@ class RestService extends \IRestService
 				$option = array();
 				$propertyEnum = \CIBlockProperty::getPropertyEnum($field['ID']);
 				while($listEnum = $propertyEnum->fetch())
+				{
+					if ($listEnum['DEF'] === "Y")
+					{
+						$field["DEFAULT_VALUE"] = $listEnum["ID"];
+					}
 					$option[$listEnum['ID']] = $listEnum['VALUE'];
+				}
 				$field['DISPLAY_VALUES_FORM'] = $option;
 			}
 			elseif($field['TYPE'] == 'G')
@@ -381,6 +401,8 @@ class RestService extends \IRestService
 	 * @return bool
 	 * @throws AccessException
 	 * @throws RestException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \CBPArgumentOutOfRangeException
 	 */
 	public static function addElement($params, $n, $server)
 	{
@@ -449,12 +471,58 @@ class RestService extends \IRestService
 
 		list($listElement, $elementSelect, $elementFields,
 			$elementProperty, $queryObject) = self::getElementsData($params, $n);
-		self::checkElementPermission($params);
+
+		if(empty($params['ELEMENT_ID']) && empty($params['ELEMENT_CODE']))
+			self::checkListElementPermission($params);
+		else
+			self::checkElementPermission($params);
 
 		if(!empty($listElement))
 			return self::setNavData(array_values($listElement), $queryObject);
 		else
 			return array();
+	}
+
+	public static function getFileUrl($params, $n, $server)
+	{
+		self::checkElementPermission($params);
+
+		if (empty($params['ELEMENT_ID']) || empty($params['FIELD_ID']))
+		{
+			throw new RestException('Required parameters are missing.', self::ERROR_REQUIRED_PARAMETERS_MISSING);
+		}
+
+		$urls = array();
+		$queryProperty = \CIBlockElement::getProperty(
+			$params['IBLOCK_ID'],
+			$params['ELEMENT_ID'],
+			array('sort'=>'asc', 'id'=>'asc', 'enum_sort'=>'asc', 'value_id'=>'asc'),
+			array('ACTIVE'=>'Y', 'EMPTY'=>'N', "ID" => $params['FIELD_ID'])
+		);
+		while ($property = $queryProperty->fetch())
+		{
+			if ($property['PROPERTY_TYPE'] == 'F')
+			{
+				$file = new \CListFile($params['IBLOCK_ID'], 0, $params['ELEMENT_ID'],
+					"PROPERTY_".$params['FIELD_ID'], $property['VALUE']);
+				$urls[] = \CHTTP::urlAddParams($file->GetImgSrc(array('url_template' =>
+					'/company/lists/#list_id#/file/#section_id#/#element_id#/#field_id#/#file_id#/')), array('download' => 'y'));
+			}
+			elseif ($property["USER_TYPE"] == "DiskFile")
+			{
+				if (is_array($property['VALUE']))
+				{
+					foreach($property['VALUE'] as $attacheId)
+					{
+						$driver = \Bitrix\Disk\Driver::getInstance();
+						$urls[] = $driver->getUrlManager()->getUrlUfController(
+							'download', array('attachedId' => $attacheId));
+					}
+				}
+			}
+		}
+
+		return $urls;
 	}
 
 	/**
@@ -464,6 +532,8 @@ class RestService extends \IRestService
 	 * @return bool
 	 * @throws AccessException
 	 * @throws RestException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \CBPArgumentOutOfRangeException
 	 */
 	public static function updateElement($params, $n, $server)
 	{
@@ -476,7 +546,7 @@ class RestService extends \IRestService
 
 		list($listElement, $elementSelect, $elementFields,
 			$elementProperty, $queryObject) = self::getElementsData($params, $n);
-		if(empty($listElement))
+		if(empty($listElement) || empty($elementFields))
 			throw new RestException('Element not found.', self::ERROR_SAVE_ELEMENT);
 		self::checkElementPermission($params);
 
@@ -486,15 +556,17 @@ class RestService extends \IRestService
 		if(empty($errors))
 		{
 			$elementObject = new \CIBlockElement;
-			$params['ELEMENT_ID'] = $elementObject->update($element['ID'], $element, false, true, true);
-			if($params['ELEMENT_ID'])
+			$isUpdateSuccess = $elementObject->update($element['ID'], $element, false, true, true);
+			if($isUpdateSuccess && is_array($elementFields[$element['ID']]))
 			{
 				if($params['ENABLED_BIZPROC'] && $params['TEMPLATES_ON_STARTUP'])
 				{
 					$changedElementFields = \CLists::checkChangedFields(
-						$params['IBLOCK_ID'], $params['ELEMENT_ID'], $elementSelect,
-						$elementFields[$params['ELEMENT_ID']], $elementProperty);
+						$params['IBLOCK_ID'], $element['ID'], $elementSelect,
+						$elementFields[$element['ID']], $elementProperty);
 
+					$params['ELEMENT_ID'] = $element['ID'];
+					$params['ELEMENT_NAME'] = $element['NAME'];
 					self::startBizproc($params, $documentStates, $bizprocParameters, $changedElementFields, $errors);
 				}
 			}
@@ -564,6 +636,7 @@ class RestService extends \IRestService
 	 * @return array
 	 * @throws RestException
 	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \CBPArgumentOutOfRangeException
 	 */
 	private static function prepareElementFields(array &$params, $object, &$errors)
 	{
@@ -580,12 +653,16 @@ class RestService extends \IRestService
 		$fields = $object->getFields();
 		foreach($fields as $fieldId => $fieldData)
 		{
+			if (empty($params['FIELDS'][$fieldId]) && $fieldData['IS_REQUIRED'] === 'Y')
+			{
+				$errors .= str_replace("#FIELD#", $fieldData["NAME"], GetMessage("LRS_FIELD_REQUIED"));
+			}
 			$fieldValue = $params['FIELDS'][$fieldId];
 			if($object->is_field($fieldId))
 			{
 				$isField = true;
 				if(is_array($fieldValue))
-					$fieldValue = $fieldValue[0];
+					$fieldValue = current($fieldValue);
 			}
 			else
 			{
@@ -617,44 +694,94 @@ class RestService extends \IRestService
 			}
 			else
 			{
-				if($fieldData['TYPE'] == 'F')
+				switch ($fieldData['TYPE'])
 				{
-					if(!empty($params['FIELDS'][$fieldId.'_DEL']))
-						$delete = $params['FIELDS'][$fieldId.'_DEL'];
-					else
-						$delete = array();
-
-					foreach($fieldValue as $key => $value)
-						$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = \CRestUtil::saveFile($value);
-
-					foreach($delete as $fileId => $checked)
-					{
-						if(array_key_exists($fileId, $element['PROPERTY_VALUES'][$fieldData['ID']]))
-							$element['PROPERTY_VALUES'][$fieldData['ID']][$fileId]['VALUE']['del'] = 'Y';
-					}
-				}
-				elseif($fieldData['TYPE'] == 'N')
-				{
-					foreach($fieldValue as $key => $value)
-					{
-						$value = str_replace(' ', '', str_replace(',', '.', $value));
-						if (!is_numeric($value))
-							$errors .= 'Value of the "'.$fieldData['NAME'].'" field is not correct. ';
-						$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = floatval($value);
-					}
-				}
-				else
-				{
-					foreach($fieldValue as $key => $value)
-					{
-						if(is_array($value))
-						{
-							foreach($value as $k => $v)
-								$element['PROPERTY_VALUES'][$fieldData['ID']][$k]['VALUE'] = $v;
-						}
+					case 'F':
+						if(!empty($params['FIELDS'][$fieldId.'_DEL']))
+							$delete = $params['FIELDS'][$fieldId.'_DEL'];
 						else
-							$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = $value;
-					}
+							$delete = array();
+
+						foreach($fieldValue as $key => $value)
+							$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = \CRestUtil::saveFile($value);
+
+						foreach($delete as $fileId => $checked)
+						{
+							if(array_key_exists($fileId, $element['PROPERTY_VALUES'][$fieldData['ID']]))
+								$element['PROPERTY_VALUES'][$fieldData['ID']][$fileId]['VALUE']['del'] = 'Y';
+						}
+						break;
+					case 'N':
+						foreach($fieldValue as $key => $value)
+						{
+							$value = str_replace(' ', '', str_replace(',', '.', $value));
+							if ($value && !is_numeric($value))
+								$errors .= 'Value of the "'.$fieldData['NAME'].'" field is not correct. ';
+							$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = floatval($value);
+						}
+						break;
+					case 'S:DiskFile':
+						foreach ($fieldValue as $key => $value)
+						{
+							if (is_array($value))
+							{
+								$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = $value;
+							}
+							else
+							{
+								if (!is_array($element['PROPERTY_VALUES'][$fieldData['ID']]['VALUE']))
+									$element['PROPERTY_VALUES'][$fieldData['ID']]['VALUE'] = array();
+								$element['PROPERTY_VALUES'][$fieldData['ID']]['VALUE'][] = $value;
+							}
+						}
+						break;
+					case 'S:Date':
+						foreach ($fieldValue as $key => $value)
+						{
+							if (is_array($value))
+							{
+								foreach($value as $k => $v)
+								{
+									$element['PROPERTY_VALUES'][$fieldData['ID']][$k]['VALUE'] =
+										\CRestUtil::unConvertDate($v);
+								}
+							}
+							else
+							{
+								$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] =
+									\CRestUtil::unConvertDate($value);
+							}
+						}
+						break;
+					case 'S:DateTime':
+						foreach ($fieldValue as $key => $value)
+						{
+							if (is_array($value))
+							{
+								foreach($value as $k => $v)
+								{
+									$element['PROPERTY_VALUES'][$fieldData['ID']][$k]['VALUE'] =
+										\CRestUtil::unConvertDateTime($v);
+								}
+							}
+							else
+							{
+								$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] =
+									\CRestUtil::unConvertDateTime($value);
+							}
+						}
+						break;
+					default:
+						foreach($fieldValue as $key => $value)
+						{
+							if(is_array($value))
+							{
+								foreach($value as $k => $v)
+									$element['PROPERTY_VALUES'][$fieldData['ID']][$k]['VALUE'] = $v;
+							}
+							else
+								$element['PROPERTY_VALUES'][$fieldData['ID']][$key]['VALUE'] = $value;
+						}
 				}
 			}
 		}
@@ -663,8 +790,7 @@ class RestService extends \IRestService
 		$userId = $USER->getID();
 		$element['MODIFIED_BY'] = $userId;
 		unset($element['TIMESTAMP_X']);
-
-		$params['ENABLED_BIZPROC'] = Loader::includeModule('bizproc') && ($params['BIZPROC'] === 'Y');
+		$params['ENABLED_BIZPROC'] = Loader::includeModule('bizproc') && \CBPRuntime::isFeatureEnabled() && ($params['BIZPROC'] === 'Y');
 		$bizprocParameters = array();
 		$documentStates = array();
 		$params['TEMPLATES_ON_STARTUP'] = false;
@@ -856,7 +982,7 @@ class RestService extends \IRestService
 		if(preg_match("/^(G|G:|E|E:)/", $fields["TYPE"]))
 		{
 			$fields['LINK_IBLOCK_ID'] = intval($fields['LINK_IBLOCK_ID']);
-			$blocks = \CLists::getIBlocks($params['IBLOCK_TYPE_ID'], !$params['CAN_EDIT_IBLOCK'], $params['SOCNET_GROUP_ID']);
+			$blocks = \CLists::getIBlocks($params['IBLOCK_TYPE_ID'], 'Y', $params['SOCNET_GROUP_ID']);
 
 			if(substr($fields['TYPE'], 0, 1) == 'G')
 				unset($blocks[$params['IBLOCK_ID']]);
@@ -918,7 +1044,8 @@ class RestService extends \IRestService
 		return $fields;
 	}
 
-	private static function checkIblockPermission(&$params)
+
+	private static function checkIblockPermission($params)
 	{
 		global $USER;
 		$listPerm = \CListPermissions::checkAccess(
@@ -935,15 +1062,26 @@ class RestService extends \IRestService
 			throw new AccessException();
 		}
 
-		$params['CAN_EDIT_IBLOCK'] = $listPerm >= \CListPermissions::IS_ADMIN
-			|| ($params['IBLOCK_ID'] && \CIBlockRights::userHasRightTo(
-					$params['IBLOCK_ID'], $params['IBLOCK_ID'], 'iblock_edit'));
-		$params['CAN_ADMIN'] = $listPerm >= \CListPermissions::IS_ADMIN;
-
 		return true;
 	}
 
-	private function checkElementPermission(array &$params)
+	private static function checkIblockTypePermission($params)
+	{
+		global $USER;
+		$listPerm = \CListPermissions::checkAccess(
+			$USER, $params['IBLOCK_TYPE_ID'], false, $params['SOCNET_GROUP_ID']);
+		if($listPerm < 0)
+		{
+			throw new AccessException();
+		}
+		elseif($listPerm <= \CListPermissions::ACCESS_DENIED)
+		{
+			throw new AccessException();
+		}
+		return true;
+	}
+
+	private static function checkBasePermission(array $params)
 	{
 		global $USER;
 		$listPerm = \CListPermissions::checkAccess(
@@ -952,12 +1090,25 @@ class RestService extends \IRestService
 		{
 			throw new AccessException();
 		}
-		elseif(($params['ELEMENT_ID'] && $listPerm < \CListPermissions::CAN_READ
+
+		return true;
+	}
+
+	private static function checkElementPermission(array &$params)
+	{
+		global $USER;
+
+		$params['ELEMENT_ID'] = intval($params['ELEMENT_ID']);
+		$listPerm = \CListPermissions::checkAccess(
+			$USER, $params['IBLOCK_TYPE_ID'], $params['IBLOCK_ID'], $params['SOCNET_GROUP_ID']);
+		if($listPerm < 0)
+		{
+			throw new AccessException();
+		}
+		elseif(($params['ELEMENT_ID'] > 0 && $listPerm < \CListPermissions::CAN_READ
 			&& !\CIBlockElementRights::userHasRightTo($params['IBLOCK_ID'], $params['ELEMENT_ID'], 'element_read'))
-			|| (!$params['ELEMENT_ID'] && $listPerm < \CListPermissions::CAN_READ
+			|| ($params['ELEMENT_ID'] == 0 && $listPerm < \CListPermissions::CAN_READ
 				&& !\CIBlockSectionRights::userHasRightTo($params['IBLOCK_ID'], 0, 'section_element_bind'))
-			|| (!$params['ELEMENT_ID'] && $listPerm < \CListPermissions::CAN_READ
-				&& !\CIBlockElementRights::userHasRightTo($params['IBLOCK_ID'], $params['IBLOCK_ID'], 'element_read'))
 		)
 		{
 			throw new AccessException();
@@ -983,6 +1134,40 @@ class RestService extends \IRestService
 		return true;
 	}
 
+	private static function checkListElementPermission(array $params)
+	{
+		global $USER;
+		$listPerm = \CListPermissions::checkAccess(
+			$USER, $params['IBLOCK_TYPE_ID'], $params['IBLOCK_ID'], $params['SOCNET_GROUP_ID']);
+		if($listPerm < 0)
+		{
+			throw new AccessException();
+		}
+		elseif($listPerm < \CListPermissions::CAN_READ
+			&& !(
+				\CIBlockRights::userHasRightTo($params['IBLOCK_ID'], $params['IBLOCK_ID'], 'element_read')
+				|| \CIBlockSectionRights::userHasRightTo($params['IBLOCK_ID'], 0, 'section_element_bind')
+			)
+		)
+		{
+			throw new AccessException();
+		}
+	}
+
+	private static function prepareOrderArray(array $order, array $availableFieldsId, array $availableParams)
+	{
+		foreach ($order as $fieldId => $orderParams)
+		{
+			if (!in_array(strtoupper($fieldId), $availableFieldsId)
+				|| !in_array(strtolower($orderParams), $availableParams))
+			{
+				unset($order[$fieldId]);
+			}
+		}
+
+		return $order;
+	}
+
 	private static function getIblocksData(&$params)
 	{
 		$listIblock = array();
@@ -992,13 +1177,21 @@ class RestService extends \IRestService
 			'ID' => $params['IBLOCK_ID'] ? $params['IBLOCK_ID'] : '',
 			'CODE' => $params['IBLOCK_CODE'] ? $params['IBLOCK_CODE'] : '',
 			'ACTIVE' => 'Y',
-			'CHECK_PERMISSIONS' => ($params['CAN_ADMIN'] || $params['SOCNET_GROUP_ID']) ? 'N' : 'Y',
+			'CHECK_PERMISSIONS' => ($params['SOCNET_GROUP_ID']) ? 'N' : 'Y',
 		);
 		if($params['SOCNET_GROUP_ID'])
 			$filter['=SOCNET_GROUP_ID'] = $params['SOCNET_GROUP_ID'];
 		else
 			$filter['SITE_ID'] = SITE_ID;
-		$queryObject = \CIBlock::getList(array(), $filter);
+		$order = array('ID' => 'ASC');
+		if (is_array($params['IBLOCK_ORDER']))
+		{
+			$availableFieldsId = array('ID', 'IBLOCK_TYPE', 'NAME',
+				'ACTIVE', 'CODE', 'SORT', 'ELEMENT_CNT', 'TIMESTAMP_X');
+			$availableParams = array("asc", "desc");
+			$order = self::prepareOrderArray($params['IBLOCK_ORDER'], $availableFieldsId, $availableParams);
+		}
+		$queryObject = \CIBlock::getList($order, $filter);
 		while($result = $queryObject->fetch())
 			$listIblock[] = $result;
 
@@ -1032,13 +1225,30 @@ class RestService extends \IRestService
 				$elementSelect[] = 'USER_NAME';
 		}
 
-		$queryObject = \CIBlockElement::getList(array(), array(
+		$order = array('ID' => 'ASC');
+		if (is_array($params['ELEMENT_ORDER']))
+		{
+			$availableFieldsId = array('ID', 'SORT', 'TIMESTAMP_X', 'NAME', 'ACTIVE_FROM',
+				'ACTIVE_TO', 'STATUS', 'CODE', 'IBLOCK_ID', 'MODIFIED_BY', 'ACTIVE', 'IBLOCK_SECTION_ID');
+			$availableParams = array("nulls,asc", "asc,nulls", "nulls,desc", "desc,nulls", "asc", "desc");
+			$order = self::prepareOrderArray($params['ELEMENT_ORDER'], $availableFieldsId, $availableParams);
+		}
+
+		$filter = array(
 			'IBLOCK_TYPE' => $params['IBLOCK_TYPE_ID'],
 			'IBLOCK_ID' => $params['IBLOCK_ID'],
 			'ID' => $params['ELEMENT_ID'] ? $params['ELEMENT_ID'] : '',
 			'CODE' => $params['ELEMENT_CODE'] ? $params['ELEMENT_CODE'] : '',
-			'SHOW_NEW' => ($params['CAN_FULL_EDIT_ELEMENT'] ? 'Y' : 'N')
-		), false, self::getNavData($n), $elementSelect);
+			'SHOW_NEW' => ($params['CAN_FULL_EDIT_ELEMENT'] ? 'Y' : 'N'),
+			'CHECK_PERMISSIONS' => 'Y'
+		);
+
+		if (!empty($params['FILTER']))
+		{
+			$filter = self::prepareElementFilter($filter, $params['FILTER']);
+		}
+
+		$queryObject = \CIBlockElement::getList($order, $filter, false, self::getNavData($n), $elementSelect);
 		$elementFields = array();
 		$elementProperty = array();
 		while($result = $queryObject->fetch())
@@ -1084,6 +1294,76 @@ class RestService extends \IRestService
 			$params['ELEMENT_ID'] = key($listElement);
 
 		return array($listElement, $elementSelect, $elementFields, $elementProperty, $queryObject);
+	}
+
+	private static function prepareElementFilter(array $filter, array $inputFilter)
+	{
+		$availableFields = self::getAvailableFields($filter["IBLOCK_ID"]);
+
+		foreach ($inputFilter as $key => $value)
+		{
+			$fieldId = self::getFieldId($key);
+
+			if (in_array($fieldId, $availableFields))
+			{
+				$filter[$key] = $value;
+			}
+		}
+
+		return $filter;
+	}
+
+	private static function getAvailableFields($iblockId)
+	{
+		$availableFields = array("ID", "ACTIVE", "NAME", "TAGS", "XML_ID", "EXTERNAL_ID", "PREVIEW_TEXT",
+			"PREVIEW_TEXT_TYPE", "PREVIEW_PICTURE", "DETAIL_TEXT", "DETAIL_TEXT_TYPE", "DETAIL_PICTURE",
+			"CHECK_PERMISSIONS", "PERMISSIONS_BY", "CATALOG_TYPE", "MIN_PERMISSION", "SEARCHABLE_CONTENT",
+			"SORT", "TIMESTAMP_X", "DATE_MODIFY_FROM", "DATE_MODIFY_TO", "MODIFIED_USER_ID", "MODIFIED_BY",
+			"DATE_CREATE", "CREATED_USER_ID", "CREATED_BY", "DATE_ACTIVE_FROM", "DATE_ACTIVE_TO", "ACTIVE_DATE",
+			"ACTIVE_FROM", "ACTIVE_TO", "SECTION_ID");
+
+		$object = new \CList($iblockId);
+		$fields = $object->getFields();
+
+		foreach ($fields as $field)
+		{
+			if (strlen($field["CODE"]) > 0)
+			{
+				$availableFields[] = "PROPERTY_".$field["CODE"];
+			}
+		}
+
+		$availableFields = array_merge($availableFields, array_keys($fields));
+
+		return $availableFields;
+	}
+
+	private static function getFieldId($key)
+	{
+		if (substr($key, 0, 1) == "?")
+			$key = substr($key, 1);
+		elseif (substr($key, 0, 2) == "!%")
+			$key = substr($key, 2);
+		elseif (substr($key, 0, 2) == ">=")
+			$key = substr($key, 2);
+		elseif (substr($key, 0, 2) == "><")
+			$key = substr($key, 2);
+		elseif (substr($key, 0, 3) == "!><")
+			$key = substr($key, 3);
+		elseif (substr($key, 0, 1) == ">")
+			$key = substr($key, 1);
+		elseif (substr($key, 0, 2) == "<=")
+			$key = substr($key, 2);
+		elseif (substr($key, 0, 1) == "<")
+			$key = substr($key, 1);
+		elseif (substr($key, 0, 1) == "%")
+			$key = substr($key, 1);
+		elseif (substr($key, 0, 1) == "=")
+			$key = substr($key, 1);
+		elseif (substr($key, 0, 1) == "*")
+			$key = substr($key, 1);
+
+		return $key;
 	}
 
 	private static function getProperty($iblockId, $code)
@@ -1175,8 +1455,8 @@ class RestService extends \IRestService
 			}
 		}
 
-		\CBPDocument::addDocumentToHistory(
+		/*\CBPDocument::addDocumentToHistory(
 			\BizProcDocument::getDocumentComplexId($params['IBLOCK_TYPE_ID'], $params['ELEMENT_ID']),
-			$params['ELEMENT_NAME'], $userId);
+			$params['ELEMENT_NAME'], $userId);*/
 	}
 }

@@ -5,7 +5,6 @@ namespace Bitrix\Sale\Location\Migration;
 use Bitrix\Main;
 use Bitrix\Main\Config;
 use Bitrix\Sale\Delivery;
-use Bitrix\Sale\Tax\Rate;
 use Bitrix\Sale;
 use Bitrix\Main\Localization\Loc;
 
@@ -956,6 +955,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 	private function convertEntityLocationLinks($entityName)
 	{
+		/** @var  \Bitrix\Sale\Location\Connector $class */
 		$class = 				$entityName.'Table';
 		$typeField = 			$class::getTypeField();
 		$locationLinkField = 	$class::getLocationLinkField();
@@ -975,7 +975,15 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 		foreach($links as $entityId => $rels)
 		{
-			$rels[$class::DB_LOCATION_FLAG] = $class::normalizeLocationList($rels[$class::DB_LOCATION_FLAG]);
+			if(is_array($rels[$class::DB_LOCATION_FLAG]))
+				$rels[$class::DB_LOCATION_FLAG] = $class::normalizeLocationList($rels[$class::DB_LOCATION_FLAG]);
+
+			if(isset($rels[$class::DB_LOCATION_FLAG]) && (!is_array($rels[$class::DB_LOCATION_FLAG]) || empty($rels[$class::DB_LOCATION_FLAG])))
+				unset($rels[$class::DB_LOCATION_FLAG]);
+
+			if(isset($rels[$class::DB_GROUP_FLAG]) && (!is_array($rels[$class::DB_GROUP_FLAG]) || empty($rels[$class::DB_GROUP_FLAG])))
+				unset($rels[$class::DB_GROUP_FLAG]);
+
 			$class::resetMultipleForOwner($entityId, $rels);
 		}
 	}
@@ -995,7 +1003,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		$this->convertEntityLocationLinks('\Bitrix\Sale\Tax\RateLocation');
 	}
 
-	static public function convertSalesZones()
+	public function convertSalesZones()
 	{
 		$siteList = \CSaleLocation::getSites();
 		$siteList[] = ''; // 'empty site' too
@@ -1017,7 +1025,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		}
 	}
 
-	static public function copyDefaultLocations()
+	public function copyDefaultLocations()
 	{
 		$sRes = Main\SiteTable::getList();
 		$sites = array();
@@ -1140,7 +1148,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		}
 	}
 
-	static public function resetLegacyPath()
+	public function resetLegacyPath()
 	{
 		Helper::dropTable(self::TABLE_LEGACY_RELATIONS);
 
@@ -1157,12 +1165,12 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		Location\LocationTable::resetLegacyPath();
 	}
 
-	static public function rollBack()
+	public function rollBack()
 	{
 		if(Helper::checkTableExists(self::TABLE_LEGACY_RELATIONS))
 		{
 			Helper::mergeTables(
-				'b_sale_location', 
+				'b_sale_location',
 				self::TABLE_LEGACY_RELATIONS,
 				array(
 					'COUNTRY_ID' => 'COUNTRY_ID',
