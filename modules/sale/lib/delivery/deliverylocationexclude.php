@@ -1,12 +1,11 @@
 <?php
-/**
- * Bitrix Framework
- * @package bitrix
- * @subpackage sale
- * @copyright 2001-2014 Bitrix
- */
+
 namespace Bitrix\Sale\Delivery;
 
+/**
+ * Class DeliveryLocationExcludeTable
+ * @package Bitrix\Sale\Delivery
+ */
 final class DeliveryLocationExcludeTable extends DeliveryLocationTable
 {
 	const DB_LOCATION_FLAG = 'LE';

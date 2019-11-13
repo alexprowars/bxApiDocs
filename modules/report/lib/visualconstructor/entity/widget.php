@@ -13,8 +13,8 @@ use Bitrix\Report\VisualConstructor\RuntimeProvider\WidgetProvider;
 
 /**
  * Class Widget
- * @method addReports(Report | Reports[] $report) add report/reports to this widget.
- * @method deleteReports(Report | Reports[] $report) delete report connection adn if it is ONE-TO-MANY delete Report entity.
+ * @method addReports(Report | Report[] $report) add report/reports to this widget.
+ * @method deleteReports(Report | Report[] $report) delete report connection adn if it is ONE-TO-MANY delete Report entity.
  * @method deleteRow(DashboardRow $row) delete report connection with row.
  * @package Bitrix\Report\VisualConstructor\Entity
  */
@@ -185,9 +185,11 @@ class Widget extends ConfigurableModel
 	}
 
 	/**
+	 * @param bool $isRuntime
+	 *
 	 * @return BaseWidget
 	 */
-	public function getWidgetHandler()
+	public function getWidgetHandler($isRuntime = false)
 	{
 		if (!$this->widgetHandler)
 		{
@@ -197,13 +199,18 @@ class Widget extends ConfigurableModel
 			if ($widgetHandlerFromEvent)
 			{
 				$this->widgetHandler = new $widgetHandlerFromEvent;
-				$this->loadAttribute('configurations');
+				if (!$isRuntime)
+				{
+					$this->loadAttribute('configurations');
+				}
 				$this->widgetHandler->fillWidget($this);
 			}
 		}
 
 		return $this->widgetHandler;
 	}
+
+
 
 	/**
 	 * Setter for widget handler.
@@ -240,6 +247,23 @@ class Widget extends ConfigurableModel
 			$result[$report->getGId()] = $report;
 		}
 		return $result;
+	}
+
+	/**
+	 * @param string $reportGId
+	 * @return Report|null
+	 */
+	public function getReportByGId($reportGId)
+	{
+		foreach ($this->getReports() as $report)
+		{
+			echo $report->getGId() . PHP_EOL;
+			if($report->getGId() === $reportGId)
+			{
+				return $report;
+			}
+		}
+		return null;
 	}
 
 	/**

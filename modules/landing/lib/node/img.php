@@ -1,6 +1,7 @@
 <?php
 namespace Bitrix\Landing\Node;
 
+use \Bitrix\Landing\File;
 use \Bitrix\Landing\Manager;
 use \Bitrix\Main\Web\DOM\StyleInliner;
 
@@ -29,36 +30,65 @@ class Img extends \Bitrix\Landing\Node
 
 		foreach ($data as $pos => $value)
 		{
-			// 2x – this for retina support
+			// 2x - this for retina support
 
 			$src = isset($value['src']) ? trim($value['src']) : '';
 			$src2x = isset($value['src2x']) ? trim($value['src2x']) : '';
 			$alt = isset($value['alt']) ? trim($value['alt']) : '';
-			$url = isset($value['url']) ? trim($value['url']) : '';
 			$id = isset($value['id']) ? intval($value['id']) : 0;
 			$id2x = isset($value['id2x']) ? intval($value['id2x']) : 0;
 
-			if ($src != '')
+			if (isset($value['url']))
 			{
-				if (isset($resultList[$pos]))
+				$url = is_array($value['url'])
+						? json_encode($value['url'])
+						: $value['url'];
+			}
+			else
+			{
+				$url = '';
+			}
+
+			if (isset($resultList[$pos]))
+			{
+				// check permissions to this file ids
+				if ($id || $id2x)
 				{
-					if ($resultList[$pos]->getTagName() !== 'IMG')
+					static $files = null;
+					if ($files === null)
 					{
-						$styles = StyleInliner::getStyle($resultList[$pos]);
-						$oldStyles = [];
-						// collect existing styles
-						foreach ($styles as $key => $styleValue)
+						$files = File::getFilesFromBlock($block->getId());
+					}
+					if (!in_array($id, $files))
+					{
+						$id = 0;
+					}
+					if (!in_array($id2x, $files))
+					{
+						$id2x = 0;
+					}
+				}
+				// update in content
+				if ($resultList[$pos]->getTagName() !== 'IMG')
+				{
+					$styles = StyleInliner::getStyle($resultList[$pos]);
+					$oldStyles = [];
+					$newStyles = [];
+					// collect existing styles
+					foreach ($styles as $key => $styleValue)
+					{
+						if ($key !== 'background' && $key !== 'background-image')
 						{
-							if ($key !== 'background' && $key !== 'background-image')
-							{
-								$oldStyles[] = "{$key}: {$styleValue};";
-							}
+							$oldStyles[] = "{$key}: {$styleValue};";
 						}
-						// and one two additional bor bg
+					}
+					// add images to bg
+					if ($src)
+					{
+						// and one two additional bg
 						$newStyles = [
 							"background-image: url('{$src}');"
 						];
-
 						if ($src2x)
 						{
 							$newStyles = array_merge(
@@ -69,32 +99,49 @@ class Img extends \Bitrix\Landing\Node
 								]
 							);
 						}
-
-						$style = array_merge($oldStyles, $newStyles);
-						$style = implode(' ', $style);
-						$resultList[$pos]->setAttribute('style', $style);
 					}
+					// or remove exists
 					else
 					{
-						$resultList[$pos]->setAttribute('alt', $alt);
-						$resultList[$pos]->setAttribute('src', $src);
-						if ($src2x)
+						foreach (['fileid', 'fileid2x'] as $dataCode)
 						{
-							$resultList[$pos]->setAttribute('srcset', "{$src2x} 2x");
+							$oldId = $resultList[$pos]->getAttribute(
+								'data-' . $dataCode
+							);
+							if ($oldId > 0)
+							{
+								File::deleteFromBlock(
+									$block->getId(),
+									$oldId
+								);
+							}
 						}
 					}
-					if ($id)
+
+					$style = array_merge($oldStyles, $newStyles);
+					$style = implode(' ', $style);
+					$resultList[$pos]->setAttribute('style', $style);
+				}
+				else
+				{
+					$resultList[$pos]->setAttribute('alt', $alt);
+					$resultList[$pos]->setAttribute('src', $src);
+					if ($src2x)
 					{
-						$resultList[$pos]->setAttribute('data-fileid', $id);
+						$resultList[$pos]->setAttribute('srcset', "{$src2x} 2x");
 					}
-					if ($id2x)
-					{
-						$resultList[$pos]->setAttribute('data-fileid2x', $id2x);
-					}
-					if ($url)
-					{
-						$resultList[$pos]->setAttribute('data-pseudo-url', $url);
-					}
+				}
+				if ($id)
+				{
+					$resultList[$pos]->setAttribute('data-fileid', $id);
+				}
+				if ($id2x)
+				{
+					$resultList[$pos]->setAttribute('data-fileid2x', $id2x);
+				}
+				if ($url)
+				{
+					$resultList[$pos]->setAttribute('data-pseudo-url', $url);
 				}
 			}
 		}
@@ -169,10 +216,17 @@ class Img extends \Bitrix\Landing\Node
 					$data[$pos]['src2x'] = $matches[1];
 				}
 			}
-			$pseudoUrl = $res->getAttribute('data-pseudo-url');
-			if ($pseudoUrl)
+			$dataAtrs = [
+				'data-pseudo-url' => 'url',
+				'data-fileid' => 'id',
+				'data-fileid2x' => 'id2x'
+			];
+			foreach ($dataAtrs as $codeFrom => $codeTo)
 			{
-				$data[$pos]['data-pseudo-url'] = $pseudoUrl;
+				if ($val = $res->getAttribute($codeFrom))
+				{
+					$data[$pos][$codeTo] = $val;
+				}
 			}
 		}
 

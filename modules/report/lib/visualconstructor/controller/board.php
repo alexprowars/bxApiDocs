@@ -3,12 +3,14 @@
 namespace Bitrix\Report\VisualConstructor\Controller;
 
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\UI\Filter\Options;
 use Bitrix\Report\VisualConstructor\Internal\Engine\Response\Component;
 use Bitrix\Report\VisualConstructor\Entity\Dashboard;
 use Bitrix\Report\VisualConstructor\Helper\Dashboard as DashboardHelper;
 use Bitrix\Report\VisualConstructor\Helper\Row;
 use Bitrix\Report\VisualConstructor\Helper\Util;
 use Bitrix\Report\VisualConstructor\Internal\Error\Error;
+use Bitrix\Report\VisualConstructor\RuntimeProvider\AnalyticBoardProvider;
 
 /**
  * Class Board
@@ -32,6 +34,20 @@ class Board extends Base
 		{
 			$dashboardForUser->delete();
 		}
+
+		$analyticBoardProvider = new AnalyticBoardProvider;
+		$analyticBoardProvider->addFilter('boardKey', $boardKey);
+		$analyticBoard = $analyticBoardProvider->execute()->getFirstResult();
+
+		if (!empty($analyticBoard))
+		{
+			$filter = $analyticBoard->getFilter();
+			$filterId = $filter->getFilterParameters()['FILTER_ID'];
+
+			$options = new Options($filterId, $filter::getPresetsList());
+			$options->setFilterSettingsArray($filter::getPresetsList());
+		}
+
 		return true;
 	}
 
@@ -108,7 +124,6 @@ class Board extends Base
 			return false;
 		}
 
-
 		$widget = \Bitrix\Report\VisualConstructor\Entity\Widget::getWidgetByGId($formParams['patternWidgetId']);
 
 		$copy = $widget->getCopyForCurrentUser();
@@ -136,5 +151,4 @@ class Board extends Base
 		$dashboardForUser->save();
 		return $copy->getGId();
 	}
-
 }

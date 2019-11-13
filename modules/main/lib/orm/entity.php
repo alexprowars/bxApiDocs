@@ -17,6 +17,7 @@ use Bitrix\Main\ORM\Fields\ScalarField;
 use Bitrix\Main\ORM\Objectify\EntityObject;
 use Bitrix\Main\ORM\Objectify\Collection;
 use Bitrix\Main\ORM\Query\Query;
+use Bitrix\Main\Text\StringHelper;
 
 /**
  * Base entity
@@ -47,11 +48,13 @@ class Entity
 	/** @var UField[] */
 	protected $u_fields;
 
-	protected
-		$references;
+	/** @var string Unique code */
+	protected $code;
 
-	protected static
-		$instances;
+	protected $references;
+
+	/** @var static[] */
+	protected static $instances;
 
 	/** @var bool */
 	protected $isClone = false;
@@ -174,7 +177,7 @@ class Entity
 			}
 			else
 			{
-				$fieldClass = Entity::snake2camel($fieldInfo['data_type']) . 'Field';
+				$fieldClass = StringHelper::snake2camel($fieldInfo['data_type']) . 'Field';
 				$fieldClass = '\\Bitrix\\Main\\Entity\\'.$fieldClass;
 
 				if (strlen($fieldInfo['data_type']) && class_exists($fieldClass))
@@ -263,7 +266,7 @@ class Entity
 			// add class
 			if ($this->name !== end($_classPath))
 			{
-				$this->dbTableName .= Entity::camel2snake($this->name);
+				$this->dbTableName .= StringHelper::camel2snake($this->name);
 			}
 			else
 			{
@@ -428,7 +431,7 @@ class Entity
 	 */
 	protected function appendField(Field $field)
 	{
-		if (isset($this->fields[strtoupper($field->getName())]) && !$this->isClone)
+		if (isset($this->fields[StringHelper::strtoupper($field->getName())]) && !$this->isClone)
 		{
 			trigger_error(sprintf(
 				'Entity `%s` already has Field with name `%s`.', $this->getFullName(), $field->getName()
@@ -443,7 +446,7 @@ class Entity
 			$this->references[$field->getRefEntityName()][] = $field;
 		}
 
-		$this->fields[strtoupper($field->getName())] = $field;
+		$this->fields[StringHelper::strtoupper($field->getName())] = $field;
 
 		if ($field instanceof ScalarField && $field->isPrimary())
 		{
@@ -477,7 +480,7 @@ class Entity
 			$newRefField = new Reference($refFieldName, $newFieldInfo['data_type'], $newFieldInfo['reference'][0], $newFieldInfo['reference'][1]);
 			$newRefField->setEntity($this);
 
-			$this->fields[strtoupper($refFieldName)] = $newRefField;
+			$this->fields[StringHelper::strtoupper($refFieldName)] = $newRefField;
 		}
 
 		return true;
@@ -528,14 +531,14 @@ class Entity
 	/**
 	 * @param $name
 	 *
-	 * @return Field
+	 * @return Field|ScalarField
 	 * @throws Main\ArgumentException
 	 */
 	public function getField($name)
 	{
 		if ($this->hasField($name))
 		{
-			return $this->fields[strtoupper($name)];
+			return $this->fields[StringHelper::strtoupper($name)];
 		}
 
 		throw new Main\ArgumentException(sprintf(
@@ -545,7 +548,7 @@ class Entity
 
 	public function hasField($name)
 	{
-		return isset($this->fields[strtoupper($name)]);
+		return isset($this->fields[StringHelper::strtoupper($name)]);
 	}
 
 	/**
@@ -712,11 +715,27 @@ class Entity
 		return $this->uf_id;
 	}
 
+	/**
+	 * @param Query $query
+	 *
+	 * @return Query
+	 */
+	public function setDefaultScope($query)
+	{
+		$dataClass = $this->className;
+		return $dataClass::setDefaultScope($query);
+	}
+
 	public static function isExists($name)
 	{
 		return class_exists(static::normalizeEntityClass($name));
 	}
 
+	/**
+	 * @param $entityName
+	 *
+	 * @return string|DataManager
+	 */
 	public static function normalizeEntityClass($entityName)
 	{
 		if (strtolower(substr($entityName, -5)) !== 'table')
@@ -732,32 +751,54 @@ class Entity
 		return $entityName;
 	}
 
+	public static function getEntityClassParts($class)
+	{
+		$class = static::normalizeEntityClass($class);
+		$lastPos = strrpos($class, '\\');
+
+		if($lastPos === 0)
+		{
+			//global namespace
+			$namespace = "";
+		}
+		else
+		{
+			$namespace = substr($class, 1, $lastPos-1);
+		}
+		$name = substr($class, $lastPos+1, -5);
+
+		return compact('namespace', 'name');
+	}
+
 	public function getCode()
 	{
-		$code = '';
-
-		// get absolute path to class
-		$class_path = explode('\\', strtoupper(ltrim($this->className, '\\')));
-
-		// cut class name to leave namespace only
-		$class_path = array_slice($class_path, 0, -1);
-
-		// cut Bitrix namespace
-		if ($class_path[0] === 'BITRIX')
+		if ($this->code === null)
 		{
-			$class_path = array_slice($class_path, 1);
+			$this->code = '';
+
+			// get absolute path to class
+			$class_path = explode('\\', strtoupper(ltrim($this->className, '\\')));
+
+			// cut class name to leave namespace only
+			$class_path = array_slice($class_path, 0, -1);
+
+			// cut Bitrix namespace
+			if ($class_path[0] === 'BITRIX')
+			{
+				$class_path = array_slice($class_path, 1);
+			}
+
+			// glue module name
+			if (count($class_path))
+			{
+				$this->code = join('_', $class_path).'_';
+			}
+
+			// glue entity name
+			$this->code .= strtoupper(StringHelper::camel2snake($this->getName()));
 		}
 
-		// glue module name
-		if (count($class_path))
-		{
-			$code = join('_', $class_path).'_';
-		}
-
-		// glue entity name
-		$code .= strtoupper(Entity::camel2snake($this->getName()));
-
-		return $code;
+		return $this->code;
 	}
 
 	public function getLangCode()
@@ -765,15 +806,41 @@ class Entity
 		return $this->getCode().'_ENTITY';
 	}
 
-	public static function camel2snake($str)
+	public function getTitle()
 	{
-		return strtolower(preg_replace('/(.)([A-Z])/', '$1_$2', $str));
+		$dataClass = $this->getDataClass();
+		$title = $dataClass::getTitle();
+
+		if ($title === null)
+		{
+			$title = Main\Localization\Loc::getMessage($this->getLangCode());
+		}
+
+		return $title;
 	}
 
+	/**
+	 * @deprecated Use Bitrix\StringHelper::camel2snake instead
+	 *
+	 * @param $str
+	 *
+	 * @return string
+	 */
+	public static function camel2snake($str)
+	{
+		return StringHelper::camel2snake($str);
+	}
+
+	/**
+	 * @deprecated Use Bitrix\StringHelper::snake2camel instead
+	 *
+	 * @param $str
+	 *
+	 * @return mixed
+	 */
 	public static function snake2camel($str)
 	{
-		$str = str_replace('_', ' ', strtolower($str));
-		return str_replace(' ', '', ucwords($str));
+		return StringHelper::snake2camel($str);
 	}
 
 	public static function normalizeName($entityName)
@@ -905,7 +972,7 @@ class Entity
 	/**
 	 * @param string               $entityName
 	 * @param null|array[]|Field[] $fields
-	 * @param array                $parameters [namespace, table_name, uf_id]
+	 * @param array                $parameters [namespace, table_name, uf_id, parent, parent_map, default_scope]
 	 *
 	 * @return Entity
 	 *
@@ -930,6 +997,7 @@ class Entity
 			));
 		}
 
+		/** @var DataManager $fullEntityName */
 		$fullEntityName = $entityName;
 
 		// namespace configuration
@@ -950,8 +1018,10 @@ class Entity
 			$fullEntityName = '\\'.$namespace.'\\'.$fullEntityName;
 		}
 
+		$parentClass = !empty($parameters['parent']) ? $parameters['parent'] : DataManager::class;
+
 		// build entity code
-		$classCode = $classCode."class {$entityName} extends \\".DataManager::class." {";
+		$classCode = $classCode."class {$entityName} extends \\".$parentClass." {";
 		$classCodeEnd = '}'.$classCodeEnd;
 
 		if (!empty($parameters['table_name']))
@@ -964,10 +1034,25 @@ class Entity
 			$classCode .= 'public static function getUfId(){return '.var_export($parameters['uf_id'], true).';}';
 		}
 
+		if (!empty($parameters['default_scope']))
+		{
+			$classCode .= 'public static function setDefaultScope($query){'.$parameters['default_scope'].'}';
+		}
+
+		if (isset($parameters['parent_map']) && $parameters['parent_map'] == false)
+		{
+			$classCode .= 'public static function getMap(){return [];}';
+		}
+
+		if(isset($parameters['object_parent']) && is_a($parameters['object_parent'], EntityObject::class, true))
+		{
+			$classCode .= 'public static function getObjectParentClass(){return '.var_export($parameters['object_parent'], true).';}';
+		}
+
 		// create entity
 		eval($classCode.$classCodeEnd);
 
-		$entity = self::getInstance($fullEntityName);
+		$entity = $fullEntityName::getEntity();
 
 		// add fields
 		if (!empty($fields))
@@ -988,15 +1073,23 @@ class Entity
 	public function compileDbTableStructureDump()
 	{
 		$fields = $this->getScalarFields();
+
+		/** @var Main\DB\MysqlCommonConnection $connection */
 		$connection = $this->getConnection();
 
-		$autocomplete = array();
+		$autocomplete = [];
+		$unique = [];
 
 		foreach ($fields as $field)
 		{
 			if ($field->isAutocomplete())
 			{
 				$autocomplete[] = $field->getName();
+			}
+
+			if ($field->isUnique())
+			{
+				$unique[] = $field->getName();
 			}
 		}
 
@@ -1006,6 +1099,13 @@ class Entity
 		// create table
 		$connection->createTable($this->getDBTableName(), $fields, $this->getPrimaryArray(), $autocomplete);
 
+		// create indexes
+		foreach ($unique as $fieldName)
+		{
+			$connection->createIndex($this->getDBTableName(), $fieldName, [$fieldName], null,
+				Main\DB\MysqlCommonConnection::INDEX_UNIQUE);
+		}
+
 		// stop collecting queries
 		$connection->enableQueryExecuting();
 
@@ -1013,11 +1113,14 @@ class Entity
 	}
 
 	/**
+	 * @param $dataClass
+	 *
 	 * @return EntityObject|string
 	 */
-	public function compileObjectClass()
+	public static function compileObjectClass($dataClass)
 	{
-		$dataClass = $this->getDataClass();
+		$dataClass = static::normalizeEntityClass($dataClass);
+		$classParts = static::getEntityClassParts($dataClass);
 
 		if (class_exists($dataClass::getObjectClass(), false)
 			&& is_subclass_of($dataClass::getObjectClass(), EntityObject::class))
@@ -1026,15 +1129,21 @@ class Entity
 			return $dataClass::getObjectClass();
 		}
 
-		$namespace = trim($this->getNamespace(), '\\');
-		$baseObjectClass = '\\'.EntityObject::class;
-		$objectClassName = static::getDefaultObjectClassName($this->getName());
+		$baseObjectClass = '\\'.$dataClass::getObjectParentClass();
+		$objectClassName = static::getDefaultObjectClassName($classParts['name']);
 
-		$eval = "namespace {$namespace} {";
+		$eval = "";
+		if($classParts['namespace'] <> '')
+		{
+			$eval .= "namespace {$classParts['namespace']} {";
+		}
 		$eval .= "class {$objectClassName} extends {$baseObjectClass} {";
 		$eval .= "static public \$dataClass = '{$dataClass}';";
 		$eval .= "}"; // end class
-		$eval .= "}"; // end namespace
+		if($classParts['namespace'] <> '')
+		{
+			$eval .= "}"; // end namespace
+		}
 
 		eval($eval);
 
@@ -1042,11 +1151,14 @@ class Entity
 	}
 
 	/**
+	 * @param $dataClass
+	 *
 	 * @return Collection|string
 	 */
-	public function compileCollectionClass()
+	public static function compileCollectionClass($dataClass)
 	{
-		$dataClass = $this->getDataClass();
+		$dataClass = static::normalizeEntityClass($dataClass);
+		$classParts = static::getEntityClassParts($dataClass);
 
 		if (class_exists($dataClass::getCollectionClass(), false)
 			&& is_subclass_of($dataClass::getCollectionClass(), Collection::class))
@@ -1055,15 +1167,21 @@ class Entity
 			return $dataClass::getCollectionClass();
 		}
 
-		$namespace = trim($this->getNamespace(), '\\');
-		$baseCollectionClass = '\\'.Collection::class;
-		$collectionClassName = static::getDefaultCollectionClassName($this->getName());
+		$baseCollectionClass = '\\'.$dataClass::getCollectionParentClass();
+		$collectionClassName = static::getDefaultCollectionClassName($classParts['name']);
 
-		$eval = "namespace {$namespace} {";
+		$eval = "";
+		if($classParts['namespace'] <> '')
+		{
+			$eval .= "namespace {$classParts['namespace']} {";
+		}
 		$eval .= "class {$collectionClassName} extends {$baseCollectionClass} {";
 		$eval .= "static public \$dataClass = '{$dataClass}';";
 		$eval .= "}"; // end class
-		$eval .= "}"; // end namespace
+		if($classParts['namespace'] <> '')
+		{
+			$eval .= "}"; // end namespace
+		}
 
 		eval($eval);
 
@@ -1231,7 +1349,7 @@ class Entity
 		{
 			$options = unserialize($optionString);
 		}
-		$options[strtoupper($field)] = $mode;
+		$options[StringHelper::strtoupper($field)] = $mode;
 		Main\Config\Option::set("main", "~ft_".$table, serialize($options));
 	}
 
@@ -1250,7 +1368,7 @@ class Entity
 		$optionString = Main\Config\Option::get("main", "~ft_".$table);
 		if($optionString <> '')
 		{
-			$field = strtoupper($field);
+			$field = StringHelper::strtoupper($field);
 			$options = unserialize($optionString);
 			if(isset($options[$field]) && $options[$field] === true)
 			{

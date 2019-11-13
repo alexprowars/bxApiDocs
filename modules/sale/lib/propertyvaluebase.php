@@ -2,7 +2,6 @@
 
 namespace Bitrix\Sale;
 
-use	Bitrix\Sale\Internals\Input;
 use Bitrix\Main;
 
 /**
@@ -21,7 +20,7 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	 * @param array|null $relation
 	 * @throws Main\SystemException
 	 */
-	protected function __construct(array $property = null, array $value = null, array $relation = null)
+	protected function __construct(array $property = null, array $value = [], array $relation = null)
 	{
 		if (!$property && !$value)
 		{
@@ -53,15 +52,6 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 
 		$this->property = new $propertyClassName($property, $relation);
 
-		if (!$value)
-		{
-			$value = array(
-				'ORDER_PROPS_ID' => $this->property->getId(),
-				'NAME' => $this->property->getName(),
-				'CODE' => $this->property->getField('CODE')
-			);
-		}
-
 		if (isset($value['VALUE']))
 		{
 			$value['VALUE'] = $this->property->normalizeValue($value['VALUE']);
@@ -69,10 +59,30 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 
 		parent::__construct($value);
 
-		if (!isset($value['VALUE']) && !empty($this->property->getField('DEFAULT_VALUE')))
+		if (!$value)
 		{
-			$this->setFieldNoDemand('VALUE', $this->property->getField('DEFAULT_VALUE'));
+			$value = array(
+				'ORDER_PROPS_ID' => $this->property->getId(),
+				'NAME' => $this->property->getName(),
+				'CODE' => $this->property->getField('CODE'),
+				'XML_ID' => static::generateXmlId()
+			);
+
+			if (!empty($this->property->getField('DEFAULT_VALUE')))
+			{
+				$value['VALUE'] = $this->property->getField('DEFAULT_VALUE');
+			}
+
+			$this->setFieldsNoDemand($value);
 		}
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function generateXmlId()
+	{
+		return uniqid('bx_');
 	}
 
 	/**
@@ -103,26 +113,48 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 			}
 		}
 
-		$filter = array();
+		$filter = [];
 		if ($order->getPersonTypeId() > 0)
 		{
 			$filter['=PERSON_TYPE_ID'] = $order->getPersonTypeId();
 		}
+
+		$filter[] = self::constructRelatedEntitiesFilter($order);
 
 		$registry = Registry::getInstance(static::getRegistryType());
 
 		/** @var PropertyBase $propertyClassName */
 		$propertyClassName = $registry->getPropertyClassName();
 
-		$dbRes = $propertyClassName::getList(array(
+		$dbRes = $propertyClassName::getList([
 			'select' => array('ID', 'PERSON_TYPE_ID', 'NAME', 'TYPE', 'REQUIRED', 'DEFAULT_VALUE', 'SORT',
 				'USER_PROPS', 'IS_LOCATION', 'PROPS_GROUP_ID', 'DESCRIPTION', 'IS_EMAIL', 'IS_PROFILE_NAME',
 				'IS_PAYER', 'IS_LOCATION4TAX', 'IS_FILTERED', 'CODE', 'IS_ZIP', 'IS_PHONE', 'IS_ADDRESS',
 				'ACTIVE', 'UTIL', 'INPUT_FIELD_LOCATION', 'MULTIPLE', 'SETTINGS'
 			),
 			'filter' => $filter,
+			'runtime' => [
+				new Main\Entity\ReferenceField(
+					'RELATION_PS',
+					'\Bitrix\Sale\Internals\OrderPropsRelation',
+					[
+						'=this.ID' => 'ref.PROPERTY_ID',
+						'ref.ENTITY_TYPE' => new Main\DB\SqlExpression('?', 'P')
+					],
+					'left_join'
+				),
+				new Main\Entity\ReferenceField(
+					'RELATION_DLV',
+					'\Bitrix\Sale\Internals\OrderPropsRelation',
+					[
+						'=this.ID' => 'ref.PROPERTY_ID',
+						'ref.ENTITY_TYPE' => new Main\DB\SqlExpression('?', 'D')
+					],
+					'left_join'
+				),
+			],
 			'order' => array('SORT' => 'ASC')
-		));
+		]);
 
 		$properties = array();
 		$propRelation = array();
@@ -163,18 +195,73 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 					continue;
 				}
 
-				$fields = null;
+				$fields = [];
 			}
 
-			$result[] = static::createPropertyValueObject($property, $fields, $propRelation[$id]);
+			$result[$id] = static::createPropertyValueObject($property, $fields, $propRelation[$id]);
 		}
 
 		foreach ($propertyValues as $propertyValue)
 		{
-			$result[] = static::createPropertyValueObject(null, $propertyValue);
+			$result[$propertyValue['ORDER_PROPS_ID']] = static::createPropertyValueObject(null, $propertyValue);
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @param OrderBase $order
+	 * @return array
+	 */
+	protected static function constructRelatedEntitiesFilter(OrderBase $order)
+	{
+		$result = [];
+
+		$subFilter = [
+			'LOGIC' => 'OR',
+			'=RELATION_PS.ENTITY_ID' => null,
+		];
+
+		$paySystemList = static::extractPaySystemIdList($order);
+		if ($paySystemList)
+		{
+			$subFilter['@RELATION_PS.ENTITY_ID'] = $paySystemList;
+		}
+
+		$result[] = $subFilter;
+
+		$subFilter = [
+			'LOGIC' => 'OR',
+			'=RELATION_DLV.ENTITY_ID' => null,
+		];
+
+		$deliveryList = static::extractDeliveryIdList($order);
+		if ($deliveryList)
+		{
+			$subFilter['@RELATION_DLV.ENTITY_ID'] = $deliveryList;
+		}
+
+		$result[] = $subFilter;
+
+		return $result;
+	}
+
+	/**
+	 * @param OrderBase $order
+	 * @return array
+	 */
+	protected static function extractPaySystemIdList(OrderBase $order)
+	{
+		return [$order->getField('PAY_SYSTEM_ID')];
+	}
+
+	/**
+	 * @param OrderBase $order
+	 * @return array
+	 */
+	protected static function extractDeliveryIdList(OrderBase $order)
+	{
+		return [(int)$order->getField('DELIVERY_ID')];
 	}
 
 	/**
@@ -200,24 +287,12 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	 * @throws Main\ArgumentException
 	 * @throws Main\NotImplementedException
 	 */
-	protected static function createPropertyValueObject(array $property = null, array $value = null, array $relation = null)
+	protected static function createPropertyValueObject(array $property = null, array $value = [], array $relation = null)
 	{
 		$registry = Registry::getInstance(static::getRegistryType());
 		$propertyValueClassName = $registry->getPropertyValueClassName();
 
 		return new $propertyValueClassName($property, $value, $relation);
-	}
-
-	/**
-	 * @return int
-	 */
-	private function getParentOrderId()
-	{
-		/** @var PropertyValueCollectionBase $collection */
-		$collection = $this->getCollection();
-		$order = $collection->getOrder();
-
-		return $order->getId();
 	}
 
 	/**
@@ -231,7 +306,7 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	/**
 	 * @return array
 	 */
-	public static function getMeaningfulFields()
+	protected static function getMeaningfulFields()
 	{
 		return array();
 	}
@@ -260,12 +335,17 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	}
 
 	/**
+	 * @internal
+	 *
 	 * @return Result
 	 * @throws Main\ArgumentOutOfRangeException
 	 * @throws Main\NotImplementedException
+	 * @throws Main\ObjectNotFoundException
 	 */
 	public function save()
 	{
+		$this->checkCallingContext();
+
 		$result = new Result();
 
 		if (!$this->isChanged())
@@ -293,6 +373,41 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	}
 
 	/**
+	 * @throws Main\ObjectNotFoundException
+	 */
+	private function checkCallingContext()
+	{
+		$order = $this->getOrder();
+
+		if (!$order->isSaveRunning())
+		{
+			trigger_error("Incorrect call to the save process. Use method save() on \Bitrix\Sale\Order entity", E_USER_WARNING);
+		}
+	}
+
+	/**
+	 * @return Order|null
+	 */
+	public function getOrder()
+	{
+		/** @var PropertyValueCollectionBase $collection */
+		$collection = $this->getCollection();
+		if (!$collection)
+		{
+			return null;
+		}
+
+		/** @var Order $order */
+		$order = $collection->getOrder();
+		if (!$order)
+		{
+			return null;
+		}
+
+		return $order;
+	}
+
+	/**
 	 * @return Result
 	 * @throws Main\NotImplementedException
 	 */
@@ -300,7 +415,7 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	{
 		$result = new Result();
 
-		$value = $this->property->prepareValueBeforeSave($this->fields->get('VALUE'));
+		$value = $this->property->getPreparedValueForSave($this);
 
 		$r = static::updateInternal($this->getId(), array('VALUE' => $value));
 		if ($r->isSuccess())
@@ -324,17 +439,16 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	{
 		$result = new Result();
 
-		$originalFields = $this->fields->getOriginalValues();
-
-		$value = $this->property->prepareValueBeforeSave($this->fields->get('VALUE'), $originalFields['VALUE']);
+		$value = $this->property->getPreparedValueForSave($this);
 
 		$r = static::addInternal(
 			array(
-				'ORDER_ID' => $this->getParentOrderId(),
+				'ORDER_ID' => $this->getOrder()->getId(),
 				'ORDER_PROPS_ID' => $this->property->getId(),
 				'NAME' => $this->property->getName(),
 				'VALUE' => $value,
 				'CODE' => $this->property->getField('CODE'),
+				'XML_ID' => $this->getField('XML_ID'),
 			)
 		);
 
@@ -356,10 +470,8 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	 */
 	private function callEventOnPropertyValueEntitySaved()
 	{
-		$eventName = static::getEntityEventName();
-
 		/** @var Main\Event $event */
-		$event = new Main\Event('sale', 'On'.$eventName.'EntitySaved', array(
+		$event = new Main\Event('sale', 'OnSalePropertyValueEntitySaved', array(
 			'ENTITY' => $this,
 			'VALUES' => $this->fields->getOriginalValues(),
 		));
@@ -377,7 +489,7 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	{
 		$result = new Result();
 
-		$key = ($this->property->getId() > 0) ? $this->property->getId() : "n".$this->getId();
+		$key = ($this->getField('ORDER_PROPS_ID')) ?: "n".$this->getInternalIndex();
 
 		if (is_array($post['PROPERTIES']) && array_key_exists($key, $post['PROPERTIES']))
 		{
@@ -533,12 +645,11 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	}
 
 	/**
-	 * @throws Main\NotImplementedException
 	 * @return string
 	 */
-	public static function getRegistryType()
+	public static function getRegistryEntity()
 	{
-		throw new Main\NotImplementedException();
+		return Registry::ENTITY_PROPERTY_VALUE;
 	}
 
 	/**
@@ -603,6 +714,27 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 	}
 
 	/**
+	 * @return Result
+	 * @throws Main\SystemException
+	 */
+	public function verify()
+	{
+		$r = $this->checkValue($this->getPropertyId(), $this->getValue());
+		if (!$r->isSuccess())
+		{
+			$order = $this->getOrder();
+
+			$registry = Registry::getInstance(static::getRegistryType());
+
+			/** @var EntityMarker $entityMarker */
+			$entityMarker = $registry->getEntityMarkerClassName();
+			$entityMarker::addMarker($order, $this, $r);
+		}
+
+		return $r;
+	}
+
+	/**
 	 * @deprecated
 	 * @see \Bitrix\Sale\Property::getOptions
 	 *
@@ -620,7 +752,12 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 		$propertyClassName = $registry->getPropertyClassName();
 		$property = $propertyClassName::getObjectById($propertyId);
 
-		return $property->getOptions();
+		if ($property)
+		{
+			return $property->getOptions();
+		}
+
+		return [];
 	}
 
 	/**
@@ -642,5 +779,15 @@ abstract class PropertyValueBase extends Internals\CollectableEntity
 		/** @var PropertyBase $propertyClassName */
 		$propertyClassName = $registry->getPropertyClassName();
 		return $propertyClassName::getMeaningfulValues($personTypeId, $request);
+	}
+
+	/**
+	 * @return null|string
+	 * @internal
+	 *
+	 */
+	public static function getEntityEventName()
+	{
+		return 'SalePropertyValue';
 	}
 }

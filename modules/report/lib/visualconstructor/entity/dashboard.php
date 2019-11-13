@@ -71,7 +71,6 @@ class Dashboard extends Model
 		);
 	}
 
-
 	/**
 	 * Return board with fully loaded rows and widgets by board key and user id.
 	 *
@@ -122,9 +121,9 @@ class Dashboard extends Model
 	}
 
 	/**
-	 * Retun dashbaord by board key.
+	 * Return dashboard by board key.
 	 *
-	 * @param sting $boardKey Board key.
+	 * @param string $boardKey Board key.
 	 * @return static
 	 */
 	public static function getDefaultBoardByBoardKey($boardKey)

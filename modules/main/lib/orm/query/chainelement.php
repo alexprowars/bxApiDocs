@@ -76,9 +76,19 @@ class ChainElement
 		return $this->value;
 	}
 
+	/**
+	 * @param $name
+	 *
+	 * @return mixed|null
+	 */
 	public function getParameter($name)
 	{
-		return $this->parameters[$name];
+		if (array_key_exists($name, $this->parameters))
+		{
+			return $this->parameters[$name];
+		}
+
+		return null;
 	}
 
 	public function setParameter($name, $value)

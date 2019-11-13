@@ -3,6 +3,7 @@
 namespace Bitrix\Main\UI\Viewer\Transformation;
 
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Web\MimeType;
 use Bitrix\Transformer\DocumentTransformer;
 
@@ -66,6 +67,8 @@ class Document extends Transformation
 
 	public function getInputMaxSize()
 	{
-		return intval(Option::get('main', 'max_size_for_document_transformation', 40)) * 1024 * 1024;
+		$defaultValue = ModuleManager::isModuleInstalled('bitrix24')? 40 : 10;
+
+		return intval(Option::get('main', 'max_size_for_document_transformation', $defaultValue)) * 1024 * 1024;
 	}
 }

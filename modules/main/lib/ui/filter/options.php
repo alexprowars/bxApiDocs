@@ -277,6 +277,11 @@ class Options
 			(!$USER->isAuthorized() && !isset($_SESSION["main.ui.filter"][$this->getId()]["options"])))
 		{
 			$options = \CUserOptions::getOption("main.ui.filter", $id, array(), self::getUserId());
+
+			if (empty($options))
+			{
+				$options = \CUserOptions::getOption("main.ui.filter.common", $id, array(), 0);
+			}
 		}
 		else
 		{
@@ -394,6 +399,7 @@ class Options
 			$quarterId = $id."_quarter";
 			$yearId = $id."_year";
 			$monthId = $id."_month";
+			$daysId = $id."_days";
 			$nameId = $id."_name";
 			$labelId = $id."_label";
 			$valueId = $id."_value";
@@ -407,6 +413,7 @@ class Options
 						$request[$toId] !== null ||
 						$request[$quarterId] !== null ||
 						$request[$yearId] !== null ||
+						$request[$daysId] !== null ||
 						$request[$monthId] !== null))
 				{
 					$result["fields"][$dateselId] = $request[$dateselId];
@@ -414,6 +421,7 @@ class Options
 					$result["fields"][$toId] = $request[$toId] !== null ? $request[$toId] : "";
 					$result["fields"][$yearId] = $request[$yearId] !== null ? $request[$yearId] : "";
 					$result["fields"][$monthId] = $request[$monthId] !== null ? $request[$monthId] : "";
+					$result["fields"][$daysId] = $request[$daysId] !== null ? $request[$daysId] : "";
 					$result["rows"][] = $id;
 				}
 			}
@@ -429,10 +437,22 @@ class Options
 			}
 			else if ($type == "custom_entity")
 			{
-				if ($request[$valueId] !== null && ($request[$nameId] !== null || $request[$labelId]))
+				if ($request[$id] !== null)
 				{
-					$result["fields"][$valueId] = $request[$valueId];
-					$result["fields"][$labelId] = $request[$nameId] !== null ? $request[$nameId] : $request[$labelId];
+					if ($request[$id] !== null || $request[$labelId] !== null)
+					{
+						$result["fields"][$labelId] = ($request[$nameId] !== null ?
+							$request[$nameId] : $request[$labelId]);
+					}
+					$result["fields"][$id] = $request[$id];
+					$result["rows"][] = $id;
+				}
+			}
+			else if ($type == "dest_selector")
+			{
+				if ($request[$id] !== null)
+				{
+					$result["fields"][$id] = $request[$id];
 					$result["rows"][] = $id;
 				}
 			}
@@ -654,7 +674,6 @@ class Options
 	{
 		$filterFields = self::fetchFieldsFromFilterSettings($filterSettings, $additionalFields);
 		$resultFields = array();
-
 		foreach ($filterFields as $key => $field)
 		{
 			$isStrictField = false;
@@ -730,10 +749,23 @@ class Options
 				$result["FIND"] = $this->getSearchString();
 			}
 		}
-
 		return $result;
 	}
 
+	/**
+	 * Gets current filter values that available for DB seach
+	 * @param array $sourceFields Filter fields $arParams["FILTER"]
+	 * @return array
+	 */
+	public function getFilterLogic($sourceFields = array())
+	{
+		$filter = $this->getFilter($sourceFields);
+		if ($filter["FILTER_APPLIED"] === true)
+		{
+			return Type::getLogicFilter($filter, $sourceFields);
+		}
+		return [];
+	}
 
 	/**
 	 * Gets filter search string
@@ -809,6 +841,8 @@ class Options
 	 */
 	public function saveForAll()
 	{
+		global $USER;
+
 		if (self::isCurrentUserEditOtherSettings())
 		{
 			$allUserOptions = $this->getAllUserOptions();
@@ -836,8 +870,12 @@ class Options
 						if (!self::isCommon($userOptions))
 						{
 							$currentUserOptions["deleted_presets"] = $currentOptions["deleted_presets"];
-							$currentUserOptions["default_presets"] = $forAllPresets;
 							$currentUserOptions["filters"] = $forAllPresets;
+
+							if (!$USER->CanDoOperation("edit_other_settings", $userOptions["USER_ID"]))
+							{
+								$currentUserOptions["default_presets"] = $forAllPresets;
+							}
 						}
 
 						$this->saveOptionsForUser($currentUserOptions, $userOptions["USER_ID"]);
@@ -982,7 +1020,13 @@ class Options
 			$this->options["filter"] = $settings["current_preset"];
 			$request = $this->getRequest();
 
-			if (isset($request["for_all"]))
+			if (
+				isset($request["params"]["forAll"])
+				&& (
+					$request["params"]["forAll"] === "true"
+					|| $request["params"]["forAll"] === true
+				)
+			)
 			{
 				$this->saveForAll();
 			}
@@ -1018,11 +1062,19 @@ class Options
 					(strtoupper($request->get("with_preset")) == "Y") ||
 					(strtoupper($params["with_preset"]) == "Y")
 				);
+				$currentPresetId = $this->getCurrentFilterId();
 
-				if (($useRequest && ($isApplyFilter || $isClearFilter) && !$isWithPreset) || $useRequest === false)
+				if (
+					($useRequest
+						&& ($isApplyFilter || $isClearFilter)
+						&& (!$isWithPreset || $currentPresetId === static::DEFAULT_FILTER)
+					)
+					|| $useRequest === false
+				)
 				{
 					$_SESSION["main.ui.filter"][$this->id]["filter"] = $presetId;
 				}
+
 			}
 
 			if (!is_array($this->options["filters"][$presetId]))

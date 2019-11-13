@@ -492,7 +492,6 @@ class DiscountCompatibility
 	/**
 	 * @param int|string $code				Basket code.
 	 * @param array $providerData			Product data from provider.
-	 * @throws Main\ArgumentNullException
 	 * @return void
 	 */
 	public static function setBasketItemData($code, $providerData)
@@ -851,12 +850,17 @@ class DiscountCompatibility
 		{
 			if (!empty($stepResult['BASKET']))
 			{
-				foreach ($stepResult['BASKET'] as $basketCode => $itemResult)
+				$publicMode = self::usedByClient();
+				foreach ($order['BASKET_ITEMS'] as $basketCode => $basketItem)
 				{
-					if ($itemResult['APPLY'] == 'Y')
+					$code = ($publicMode ? $basketItem['ID'] : $basketCode);
+					if (empty($stepResult['BASKET'][$code]))
+						continue;
+					if ($stepResult['BASKET'][$code]['APPLY'] == 'Y')
 						$order['BASKET_ITEMS'][$basketCode]['ACTION_APPLIED'] = 'Y';
 				}
-				unset($basketCode, $itemResult);
+				unset($code, $basketCode, $basketItem);
+				unset($publicMode);
 			}
 
 			self::$discountResult['ORDER'][] = array(
@@ -1352,10 +1356,10 @@ class DiscountCompatibility
 					'BASKET_ID' => $code,
 					'ACTION_BLOCK_LIST' => array_keys($basketResult)
 				);
-				if (is_array($result['BASKET'][$basketCode]['DESCR']))
-					$result['BASKET'][$basketCode]['DESCR'] = implode(', ', $result['BASKET'][$basketCode]['DESCR']);
+				if (is_array($result['BASKET'][$code]['DESCR']))
+					$result['BASKET'][$code]['DESCR'] = implode(', ', $result['BASKET'][$code]['DESCR']);
 			}
-			unset($basketCode, $basketResult);
+			unset($code, $basketCode, $basketResult);
 		}
 		unset($stepResult);
 

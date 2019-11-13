@@ -10,12 +10,15 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Result;
 use Bitrix\Main\SystemException;
+use Bitrix\Main\Type\DateTime;
+use Bitrix\Main\Web\MimeType;
 use Bitrix\Transformer\Command;
 use Bitrix\Transformer\FileTransformer;
 
 final class TransformerManager
 {
-	const PULL_TAG = 'mainTransform';
+	const QUEUE_NAME = 'main_preview';
+	const PULL_TAG   = 'mainTransform';
 
 	protected static $transformationList = [];
 
@@ -128,14 +131,14 @@ final class TransformerManager
 
 		$shouldSendPullTag = true;
 		$information = $this->getTransformationInformation($fileId);
-		if (!$information)
+		if ($this->shouldSendToTransformation($information, $fileData))
 		{
 			$result = $transformer->transform(
 				(int)$fileId,
 				[$transformation->getOutputExtension()],
 				'main',
 				CallbackHandler::class,
-				['id' => $fileId, 'fileId' => $fileId, 'queue' => 'disk_on_load']
+				['id' => $fileId, 'fileId' => $fileId, 'queue' => self::QUEUE_NAME]
 			);
 
 			if (!$result->isSuccess())
@@ -159,6 +162,36 @@ final class TransformerManager
 		}
 
 		return $result;
+	}
+
+	protected function shouldSendToTransformation($information, array $fileData)
+	{
+		if (!$information)
+		{
+			return true;
+		}
+
+		if (!isset($information['status']))
+		{
+			return true;
+		}
+
+		if ($information['status'] !== Command::STATUS_SUCCESS)
+		{
+			/** @var DateTime $date */
+			$date = $information['time'];
+			if ($date && (time() - $date->getTimestamp()) > 24 * 3600)
+			{
+				return true;
+			}
+		}
+
+		if ($information['status'] === Command::STATUS_SUCCESS && !CallbackHandler::existSavedFile($fileData['ID']))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	protected function getTransformationInformation($fileId)
@@ -187,10 +220,39 @@ final class TransformerManager
 	 */
 	public function buildTransformationByFile(array $fileData)
 	{
+		if (empty($fileData['CONTENT_TYPE']))
+		{
+			return null;
+		}
+
+		$transformation = $this->buildTransformationByContentType($fileData['CONTENT_TYPE']);
+		if ($transformation)
+		{
+			return $transformation;
+		}
+
+		if (empty($fileData['ORIGINAL_NAME']))
+		{
+			return null;
+		}
+
+		$mimeType = MimeType::getByFilename($fileData['ORIGINAL_NAME']);
+
+		return $this->buildTransformationByContentType($mimeType);
+	}
+
+	/**
+	 * @param $contentType
+	 *
+	 * @return Transformation|null
+	 * @throws \ReflectionException
+	 */
+	private function buildTransformationByContentType($contentType)
+	{
 		foreach (static::$transformationList as $transformationClass)
 		{
 			/** @var Transformation $transformationClass */
-			if (in_array($fileData['CONTENT_TYPE'], $transformationClass::getInputContentTypes(), true))
+			if (in_array($contentType, $transformationClass::getInputContentTypes(), true))
 			{
 				$reflectionClass = new \ReflectionClass($transformationClass);
 

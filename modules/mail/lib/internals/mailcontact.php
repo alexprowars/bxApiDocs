@@ -67,13 +67,40 @@ class MailContactTable extends Entity\DataManager
 	 */
 	public static function addContactsBatch($contactsData)
 	{
-		if (!$contactsData)
+		if (empty($contactsData))
+		{
+			return;
+		}
+		$contactsToCheck = [];
+		foreach ($contactsData as $index => $item)
+		{
+			$item['EMAIL'] = trim($item['EMAIL']);
+			$contactsToCheck[$item['USER_ID']][] = $item;
+		}
+		foreach ($contactsToCheck as $userId => $items)
+		{
+			$alreadyAdded = static::query()
+				->addSelect('EMAIL', 'EMAIL')
+				->where('USER_ID', $userId)
+				->whereIn('EMAIL', array_column($items, 'EMAIL'))
+				->exec()
+				->fetchAll();
+			$alreadyAdded = array_column($alreadyAdded, 'EMAIL');
+			foreach ($items as $item)
+			{
+				if (!in_array($item['EMAIL'], $alreadyAdded, true))
+				{
+					$contactsToAdd[$item['EMAIL']] = $item;
+				}
+			}
+		}
+		if (empty($contactsToAdd))
 		{
 			return;
 		}
 		$sqlHelper = Application::getConnection()->getSqlHelper();
 		$values = [];
-		foreach ($contactsData as $item)
+		foreach ($contactsToAdd as $item)
 		{
 			$item = [
 				'USER_ID' => intval($item['USER_ID']),
@@ -84,7 +111,7 @@ class MailContactTable extends Entity\DataManager
 			];
 			$values[] = implode(", ", $item);
 		}
-		$keys = implode(', ', array_keys(current($contactsData)));
+		$keys = implode(', ', array_keys(reset($contactsToAdd)));
 		$values = implode('), (', $values);
 
 		$tableName = static::getTableName();

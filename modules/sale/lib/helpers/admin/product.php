@@ -280,10 +280,18 @@ class Product
 
 	private function fillIblockData()
 	{
-		$select = array_merge(
-			array("ID", "NAME", "IBLOCK_ID", "IBLOCK_SECTION_ID", "DETAIL_PICTURE", "PREVIEW_PICTURE", "XML_ID", "IBLOCK_EXTERNAL_ID"),
-			$this->columnsList
+		$select = array("ID", "NAME", "IBLOCK_ID", "IBLOCK_SECTION_ID", "DETAIL_PICTURE", "PREVIEW_PICTURE", "XML_ID", "IBLOCK_EXTERNAL_ID");
+		$blockedFields = array(
+			'QUANTITY' => true,
+			'AVAILABLE' => true,
+			'PRICE' => true
 		);
+		foreach ($this->columnsList as $field)
+		{
+			if (isset($blockedFields[$field]))
+				continue;
+			$select[] = $field;
+		}
 
 		if (!empty($this->productsIds))
 		{

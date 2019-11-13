@@ -3,10 +3,10 @@ namespace Bitrix\Sale\Helpers\Order\Builder;
 
 use Bitrix\Sale\BasketItem;
 
-final class BasketBuilderExist implements IBasketBuilderDelegate
+class BasketBuilderExist implements IBasketBuilderDelegate
 {
 	/** @var BasketBuilder */
-	private  $builder = null;
+	protected  $builder = null;
 
 	public function __construct(BasketBuilder $builder)
 	{

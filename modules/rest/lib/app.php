@@ -407,6 +407,34 @@ class AppTable extends Main\Entity\DataManager
 		}
 	}
 
+	public static function checkUninstallAvailability($appId, $clean = 0)
+	{
+		$event = new Main\Event('rest', 'onBeforeApplicationUninstall', [
+			'ID' => $appId,
+			'CLEAN' => $clean
+		]);
+		$event->send();
+
+		$result = new Main\ErrorCollection();
+		if ($event->getResults())
+		{
+			/** @var \Bitrix\Main\EventResult $eventResult */
+			foreach ($event->getResults() as $eventResult)
+			{
+				if($eventResult->getType() === Main\EventResult::ERROR)
+				{
+					$eventResultData = $eventResult->getParameters();
+					if ($eventResultData instanceof Main\Error)
+					{
+						$result->add([$eventResultData]);
+					}
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	public static function updateAppStatusInfo()
 	{
 		$appList = OAuthService::getEngine()->getClient()->getApplicationList();
@@ -432,20 +460,21 @@ class AppTable extends Main\Entity\DataManager
 			{
 				if(array_key_exists($app['client_id'], $localApps))
 				{
-					$dateFinish = $localApps[$app['client_id']]['DATE_FINISH']
+					$dateFinishLocal = $localApps[$app['client_id']]['DATE_FINISH']
 						? $localApps[$app['client_id']]['DATE_FINISH']->getTimestamp()
 						: '';
+					$dateFinishRemote = $app['date_finish'] ? Main\Type\Date::createFromTimestamp($app['date_finish'])->getTimestamp() : '';
 
 					if(
 						$localApps[$app['client_id']]['STATUS'] !== $app['status']
-						|| $app['date_finish'] != $dateFinish
+						|| $dateFinishRemote != $dateFinishLocal
 					)
 					{
-						$dateFinish = $app['date_finish'] ? Main\Type\Date::createFromTimestamp($app['date_finish']) : '';
-
 						$appFields = array(
 							'STATUS' => $app['status'],
-							'DATE_FINISH' => $dateFinish,
+							'DATE_FINISH' => $app['date_finish']
+								? Main\Type\Date::createFromTimestamp($app['date_finish'])
+								: '',
 						);
 
 						static::setSkipRemoteUpdate(true);

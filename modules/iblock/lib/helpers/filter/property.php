@@ -152,11 +152,6 @@ class Property
 			$filterData = $filterOption->getFilter();
 			foreach($listProperty as $property)
 			{
-				if (empty($property['LINK_IBLOCK_ID']) || empty($property['FIELD_ID']))
-				{
-					continue;
-				}
-
 				$currentElements = array();
 				if(!empty($filterData[$property['FIELD_ID']]))
 				{
@@ -189,7 +184,7 @@ class Property
 						'SELECTOR_ID' => $filterId.'_'.$property['FIELD_ID'],
 						'SEARCH_INPUT_ID' => $filterId.'_'.$property['FIELD_ID'],
 						'IBLOCK_ID' => $property['LINK_IBLOCK_ID'],
-						'MULTIPLE' => $property['MULTIPLE'],
+						'MULTIPLE' => 'Y',
 						'PANEL_SELECTED_VALUES' => 'N',
 						'CURRENT_ELEMENTS_ID' => $currentElements
 					),
@@ -203,7 +198,7 @@ class Property
 							{
 								fieldId: '<?=\CUtil::JSEscape($property['FIELD_ID'])?>',
 								controlId: '<?=\CUtil::JSEscape($filterId.'_'.$property['FIELD_ID'])?>',
-								multiple: '<?=\CUtil::JSEscape($property['MULTIPLE'])?>'
+								multiple: 'Y'
 							}
 						);
 					});
@@ -1137,7 +1132,7 @@ class Property
 									}
 									else
 									{
-										this._control.removeSquare();
+										this._control.removeSquares();
 									}
 								}
 								else

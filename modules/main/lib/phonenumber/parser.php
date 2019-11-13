@@ -176,11 +176,11 @@ class Parser
 		$result = new PhoneNumber();
 		$result->setRawNumber($phoneNumber);
 
-		$formattedPhoneNumber = $this->extractFormattedPhoneNumber($phoneNumber);
-		if(!$this->isViablePhoneNumber($formattedPhoneNumber))
+		if(!$this->isViablePhoneNumber($phoneNumber))
 		{
 			return $result;
 		}
+		$formattedPhoneNumber = $this->extractFormattedPhoneNumber($phoneNumber);
 
 		list($extensionSeparator, $extension) = $this->stripExtension($formattedPhoneNumber);
 		$result->setNationalNumber($formattedPhoneNumber);
@@ -257,11 +257,15 @@ class Parser
 		$result->setHasPlus($hasPlus);
 		$result->setCountry($country);
 		$result->setCountryCode($countryCode);
-		$result->setNationalNumber($localNumber);
 		$result->setNumberType($numberType);
-		$result->setInternational($isInternational);
-		$result->setNationalPrefix($nationalPrefix);
 		$result->setValid($numberType !== false);
+
+		if($result->isValid())
+		{
+			$result->setNationalNumber($localNumber);
+			$result->setInternational($isInternational);
+			$result->setNationalPrefix($nationalPrefix);
+		}
 
 		return $result;
 	}

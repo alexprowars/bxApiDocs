@@ -6,6 +6,7 @@ use Bitrix\Main\SystemException;
 use Bitrix\Sale\TradingPlatform\TimeIsOverException;
 use Bitrix\Sale\TradingPlatform\Vk;
 use Bitrix\Sale\TradingPlatform\Timer;
+use Bitrix\Sale\TradingPlatform\Vk\Api\PhotoUploader;
 
 /**
  * Class ProductAdd - Processor for adding product to VK
@@ -76,8 +77,19 @@ class ProductAdd extends DataProcessor
 			if (!empty($data))
 			{
 				$logger->addLog("Upload main photo");
-				$mainPhotoSaveResults = self::$apiHelper->uploadPhotos($data, $this->vkGroupId, 'PRODUCT_MAIN_PHOTO',
-					$timer);
+				$photoUploader = new PhotoUploader($this->exportId, PhotoUploader::TYPE_PRODUCT_MAIN_PHOTO, $timer);
+				$mainPhotoSaveResults = $photoUploader->upload($data);
+				
+//				photos UPLOAD may be FAILED on VK side. SKIP product
+				if(array_key_exists('errors', $mainPhotoSaveResults))
+				{
+					foreach($mainPhotoSaveResults['errors'] as $errorId)
+					{
+						unset($data[$errorId]);
+					}
+					unset($mainPhotoSaveResults['errors']);
+				}
+				
 				$data = Vk\Api\ApiHelper::addResultToData($data, $mainPhotoSaveResults, "BX_ID");
 			}
 
@@ -85,13 +97,29 @@ class ProductAdd extends DataProcessor
 //			UPLOAD photoS
 			foreach ($data as &$product)
 			{
+//				todo: if fail load photo - just log
 				if ($product["PHOTOS"])
 				{
+//					if error in some photo - just skip them
 					$logger->addLog("Upload product photos");
-					$productPhotosSaveResults = self::$apiHelper->uploadPhotos($product["PHOTOS"], $this->vkGroupId,
-						'PRODUCT_PHOTOS', $timer);
-					$product["PHOTOS"] = Vk\Api\ApiHelper::addResultToData($product["PHOTOS"], $productPhotosSaveResults,
-						"PHOTO_BX_ID");
+					$photoUploader = new PhotoUploader($this->exportId, PhotoUploader::TYPE_PRODUCT_PHOTOS, $timer);
+					$photosSaveResults = $photoUploader->upload($product["PHOTOS"]);
+					
+//					photos UPLOAD may be FAILED on VK side. SKIP photo
+					if(array_key_exists('errors', $photosSaveResults))
+					{
+						foreach($photosSaveResults['errors'] as $errorId)
+						{
+							unset($product["PHOTOS"][$errorId]);
+						}
+						unset($photosSaveResults['errors']);
+					}
+					
+					$product["PHOTOS"] = Vk\Api\ApiHelper::addResultToData(
+						$product["PHOTOS"],
+						$photosSaveResults,
+						"PHOTO_BX_ID"
+					);
 				}
 			}
 			unset($product);

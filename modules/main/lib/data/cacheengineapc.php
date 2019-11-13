@@ -9,34 +9,39 @@ class CacheEngineApc
 	private $written = false;
 	private $read = false;
 
-	protected $useLock = true;
+	protected $useLock = false;
 	protected $ttlMultiplier = 2;
 	protected static $locks = array();
 
 	/**
 	 * Engine constructor.
-	 *
+	 * @param array $options Cache options.
 	 */
-	public function __construct()
+	public function __construct($options = [])
 	{
-		$cacheConfig = \Bitrix\Main\Config\Configuration::getValue("cache");
+		$config = \Bitrix\Main\Config\Configuration::getValue("cache");
 
-		if ($cacheConfig && is_array($cacheConfig))
+		if ($config && is_array($config))
 		{
-			if (isset($cacheConfig["use_lock"]))
+			if (isset($config["use_lock"]))
 			{
-				$this->useLock = (bool)$cacheConfig["use_lock"];
+				$this->useLock = (bool)$config["use_lock"];
 			}
 
-			if (isset($cacheConfig["sid"]) && ($cacheConfig["sid"] != ""))
+			if (isset($config["sid"]) && ($config["sid"] != ""))
 			{
-				$this->sid = $cacheConfig["sid"];
+				$this->sid = $config["sid"];
 			}
 
-			if (isset($cacheConfig["ttl_multiplier"]) && $this->useLock)
+			if (isset($config["ttl_multiplier"]) && $this->useLock)
 			{
-				$this->ttlMultiplier = (integer)$cacheConfig["ttl_multiplier"];
+				$this->ttlMultiplier = (integer)$config["ttl_multiplier"];
 			}
+		}
+
+		if (!empty($options) && isset($options['actual_data']))
+		{
+			$this->useLock = !((bool) $options['actual_data']);
 		}
 
 		$this->sid .= !$this->useLock;
@@ -191,13 +196,17 @@ class CacheEngineApc
 		{
 			$baseDirVersion = apc_fetch($this->sid.$baseDir);
 			if ($baseDirVersion === false)
+			{
 				return;
+			}
 
 			if ($initDir !== false)
 			{
 				$initDirVersion = apc_fetch($baseDirVersion."|".$initDir);
 				if ($initDirVersion === false)
+				{
 					return;
+				}
 			}
 			else
 			{
@@ -213,7 +222,9 @@ class CacheEngineApc
 			{
 				$baseDirVersion = apc_fetch($this->sid.$baseDir);
 				if ($baseDirVersion === false)
+				{
 					return;
+				}
 
 				apc_delete($baseDirVersion."|".$initDir);
 			}
@@ -222,13 +233,14 @@ class CacheEngineApc
 				apc_delete($this->sid.$baseDir);
 			}
 		}
+
 		$this->unlock($baseDir, $initDir, $key."~");
 	}
 
 	/**
 	 * Reads cache from the apc. Returns true if key value exists, not expired, and successfully read.
 	 *
-	 * @param mixed &$arAllVars Cached result.
+	 * @param mixed &$allVars Cached result.
 	 * @param string $baseDir Base cache directory (usually /bitrix/cache).
 	 * @param string $initDir Directory within base.
 	 * @param string $filename File name.
@@ -236,17 +248,21 @@ class CacheEngineApc
 	 *
 	 * @return boolean
 	 */
-	public function read(&$arAllVars, $baseDir, $initDir, $filename, $TTL)
+	public function read(&$allVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		$baseDirVersion = apc_fetch($this->sid.$baseDir);
 		if ($baseDirVersion === false)
+		{
 			return false;
+		}
 
 		if ($initDir !== false)
 		{
 			$initDirVersion = apc_fetch($baseDirVersion."|".$initDir);
 			if ($initDirVersion === false)
+			{
 				return false;
+			}
 		}
 		else
 		{
@@ -254,9 +270,9 @@ class CacheEngineApc
 		}
 
 		$key = $baseDirVersion."|".$initDirVersion."|".$filename;
-		$arAllVars = apc_fetch($key);
+		$allVars = apc_fetch($key);
 
-		if ($arAllVars === false)
+		if ($allVars === false)
 		{
 			return false;
 		}
@@ -270,8 +286,8 @@ class CacheEngineApc
 				}
 			}
 
-			$this->read = strlen($arAllVars);
-			$arAllVars = unserialize($arAllVars);
+			$this->read = strlen($allVars);
+			$allVars = unserialize($allVars);
 		}
 
 		return true;
@@ -280,7 +296,7 @@ class CacheEngineApc
 	/**
 	 * Puts cache into the apc.
 	 *
-	 * @param mixed $arAllVars Cached result.
+	 * @param mixed $allVars Cached result.
 	 * @param string $baseDir Base cache directory (usually /bitrix/cache).
 	 * @param string $initDir Directory within base.
 	 * @param string $filename File name.
@@ -288,14 +304,16 @@ class CacheEngineApc
 	 *
 	 * @return void
 	 */
-	public function write($arAllVars, $baseDir, $initDir, $filename, $TTL)
+	public function write($allVars, $baseDir, $initDir, $filename, $TTL)
 	{
 		$baseDirVersion = apc_fetch($this->sid.$baseDir);
 		if ($baseDirVersion === false)
 		{
 			$baseDirVersion = md5(mt_rand());
 			if (!apc_store($this->sid.$baseDir, $baseDirVersion))
+			{
 				return;
+			}
 		}
 
 		if ($initDir !== false)
@@ -305,7 +323,9 @@ class CacheEngineApc
 			{
 				$initDirVersion = md5(mt_rand());
 				if (!apc_store($baseDirVersion."|".$initDir, $initDirVersion))
+				{
 					return;
+				}
 			}
 		}
 		else
@@ -313,11 +333,11 @@ class CacheEngineApc
 			$initDirVersion = "";
 		}
 
-		$arAllVars = serialize($arAllVars);
-		$this->written = strlen($arAllVars);
+		$allVars = serialize($allVars);
+		$this->written = strlen($allVars);
 
 		$key = $baseDirVersion."|".$initDirVersion."|".$filename;
-		apc_store($key, $arAllVars, intval($TTL) * $this->ttlMultiplier);
+		apc_store($key, $allVars, intval($TTL) * $this->ttlMultiplier);
 
 		if ($this->useLock)
 		{

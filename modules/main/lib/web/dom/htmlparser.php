@@ -238,7 +238,7 @@ class HtmlParser extends Parser
 		$attributes = array();
 		if ($text !== "")
 		{
-			preg_match_all("/(?'name'[\w-_:]+)(?'eq'\s*=\s*)?(?(eq)([\"'])(?'val'.*?)\g{-2})/s", $text, $attrTmp);
+			preg_match_all("/(?'name'[\w\-_:]+)(?'eq'\s*=\s*)?(?(eq)([\"'])(?'val'.*?)\g{-2})/s", $text, $attrTmp);
 			if(strpos($text, "&")===false)
 			{
 				foreach($attrTmp['name'] as $i => $attrName)

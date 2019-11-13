@@ -3,6 +3,7 @@ namespace Bitrix\Landing\PublicAction;
 
 use \Bitrix\Landing\Manager;
 use \Bitrix\Landing\File;
+use \Bitrix\Landing\Rights;
 use \Bitrix\Landing\Landing;
 use \Bitrix\Landing\Site as SiteCore;
 use \Bitrix\Landing\PublicActionResult;
@@ -14,10 +15,10 @@ class Site
 {
 	/**
 	 * Clear disallow keys from add/update fields.
-	 * @param array $fields
+	 * @param array $fields Array fields.
 	 * @return array
 	 */
-	protected static function clearDisallowFields($fields)
+	protected static function clearDisallowFields(array $fields)
 	{
 		$disallow = array('ACTIVE');
 
@@ -43,6 +44,7 @@ class Site
 	public static function getAdditionalFields($id)
 	{
 		$result = new PublicActionResult();
+		$id = (int)$id;
 
 		if (($fields = SiteCore::getAdditionalFields($id)))
 		{
@@ -63,11 +65,26 @@ class Site
 	}
 
 	/**
+	 * Gets public url of site (or sites).
+	 * @param int[] $id Site id or array of ids.
+	 * @return \Bitrix\Landing\PublicActionResult
+	 */
+	public static function getPublicUrl($id)
+	{
+		static $mixedParams = ['id'];
+
+		$result = new PublicActionResult();
+		$result->setResult(SiteCore::getPublicUrl($id));
+		return $result;
+	}
+
+
+	/**
 	 * Get available sites.
 	 * @param array $params Params ORM array.
 	 * @return \Bitrix\Landing\PublicActionResult
 	 */
-	public static function getList($params = array())
+	public static function getList(array $params = array())
 	{
 		$result = new PublicActionResult();
 
@@ -98,6 +115,14 @@ class Site
 		$res = SiteCore::getList($params);
 		while ($row = $res->fetch())
 		{
+			if (isset($row['DATE_CREATE']))
+			{
+				$row['DATE_CREATE'] = (string) $row['DATE_CREATE'];
+			}
+			if (isset($row['DATE_MODIFY']))
+			{
+				$row['DATE_MODIFY'] = (string) $row['DATE_MODIFY'];
+			}
 			$data[] = $row;
 		}
 		$result->setResult($data);
@@ -110,7 +135,7 @@ class Site
 	 * @param array $fields Site data.
 	 * @return \Bitrix\Landing\PublicActionResult
 	 */
-	public static function add($fields)
+	public static function add(array $fields)
 	{
 		$result = new PublicActionResult();
 		$error = new \Bitrix\Landing\Error;
@@ -139,7 +164,7 @@ class Site
 	 * @param array $fields Site new data.
 	 * @return \Bitrix\Landing\PublicActionResult
 	 */
-	public static function update($id, $fields)
+	public static function update($id, array $fields)
 	{
 		$result = new PublicActionResult();
 		$error = new \Bitrix\Landing\Error;
@@ -196,6 +221,7 @@ class Site
 	{
 		$result = new PublicActionResult();
 		$error = new \Bitrix\Landing\Error;
+		$id = (int)$id;
 
 		if ($mark)
 		{
@@ -238,39 +264,51 @@ class Site
 	{
 		$result = new PublicActionResult();
 		$error = new \Bitrix\Landing\Error;
+		$wasError = false;
+		$id = (int)$id;
 
-		$res = SiteCore::update($id, array(
-			'ACTIVE' => $mark ? 'Y' : 'N'
+		// work with pages
+		$res = Landing::getList(array(
+			'select' => array(
+				'ID'
+			),
+			'filter' => array(
+				'SITE_ID' => $id
+			)
 		));
-		if ($res->isSuccess())
+		while ($row = $res->fetch())
 		{
-			$result->setResult($res->getId());
-			// work with pages
-			$res = Landing::getList(array(
-				'select' => array(
-					'ID'
-				),
-				'filter' => array(
-					'SITE_ID' => $id
-				)
-			));
-			while ($row = $res->fetch())
+			$landing = Landing::createInstance($row['ID']);
+			if ($mark)
 			{
-				$landing = Landing::createInstance($row['ID']);
-				if ($mark)
-				{
-					$landing->publication();
-				}
-				else
-				{
-					$landing->unpublic();
-				}
+				$landing->publication();
+			}
+			else
+			{
+				$landing->unpublic();
+			}
+			if (!$landing->getError()->isEmpty())
+			{
+				$result->setError($landing->getError());
+				$wasError = true;
+				break;
 			}
 		}
-		else
+
+		if (!$wasError)
 		{
-			$error->addFromResult($res);
-			$result->setError($error);
+			$res = SiteCore::update($id, array(
+				'ACTIVE' => $mark ? 'Y' : 'N'
+			));
+			if (!$res->isSuccess())
+			{
+				$error->addFromResult($res);
+				$result->setError($error);
+			}
+			else
+			{
+				$result->setResult($res->getId());
+			}
 		}
 
 		return $result;
@@ -292,13 +330,98 @@ class Site
 	 * @param array $params Params array.
 	 * @return \Bitrix\Landing\PublicActionResult
 	 */
-	public static function fullExport($id, $params = array())
+	public static function fullExport($id, array $params = array())
 	{
 		$result = new PublicActionResult();
 
 		$result->setResult(
 			SiteCore::fullExport($id, $params)
 		);
+
+		return $result;
+	}
+
+	/**
+	 * Set rights for site.
+	 * @param int $id Site id.
+	 * @param array $rights Array of rights for site.
+	 * @return \Bitrix\Landing\PublicActionResult
+	 */
+	public static function setRights($id, $rights = [])
+	{
+		static $mixedParams = ['rights'];
+
+		$result = new PublicActionResult();
+		$error = new \Bitrix\Landing\Error;
+		$result->setResult(false);
+		$id = (int)$id;
+
+		if (!is_array($rights))
+		{
+			$rights = [];
+		}
+
+		// check access for set rights
+		if (!Rights::isAdmin())
+		{
+			$error->addError(
+				'IS_NOT_ADMIN',
+				Loc::getMessage('LANDING_IS_NOT_ADMIN_ERROR')
+			);
+			$result->setError($error);
+		}
+		else if (!Manager::checkFeature(Manager::FEATURE_PERMISSIONS_AVAILABLE))
+		{
+			$error->addError(
+				'FEATURE_NOT_AVAIL',
+				Loc::getMessage('LANDING_FEATURE_NOT_AVAIL_ERROR')
+			);
+			$result->setError($error);
+		}
+		// set rights
+		else
+		{
+			$result->setResult(
+				Rights::setOperationsForSite(
+					$id,
+					$rights
+				)
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Get rights about site.
+	 * @param int $id Site id.
+	 * @return \Bitrix\Landing\PublicActionResult
+	 */
+	public static function getRights($id)
+	{
+		$result = new PublicActionResult();
+		$error = new \Bitrix\Landing\Error;
+		$result->setResult([]);
+		$id = (int)$id;
+
+		// check access for get rights
+		if (!Manager::checkFeature(Manager::FEATURE_PERMISSIONS_AVAILABLE))
+		{
+			$error->addError(
+				'FEATURE_NOT_AVAIL',
+				Loc::getMessage('LANDING_FEATURE_NOT_AVAIL_ERROR')
+			);
+			$result->setError($error);
+		}
+		// get rights
+		else
+		{
+			$result->setResult(
+				Rights::getOperationsForSite(
+					$id
+				)
+			);
+		}
 
 		return $result;
 	}
@@ -311,13 +434,15 @@ class Site
 	 * @param array $params Some file params.
 	 * @return \Bitrix\Landing\PublicActionResult
 	 */
-	public static function uploadFile($id, $picture, $ext = false, $params = array())
+	public static function uploadFile($id, $picture, $ext = false, array $params = array())
 	{
 		static $internal = true;
+		static $mixedParams = ['picture'];
 
 		$result = new PublicActionResult();
 		$result->setResult(false);
 		$error = new \Bitrix\Landing\Error;
+		$id = (int)$id;
 
 		$res = SiteCore::getList(array(
 			'filter' => array(

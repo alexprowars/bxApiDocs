@@ -67,11 +67,12 @@ class Runtime
 
 			$documentType = $this->getTarget()->getDocumentType();
 			$documentId = $this->getTarget()->getDocumentId();
+			$documentComplexId = [$documentType[0], $documentType[1], $documentId];
 
 			$this->setStarted($documentType[2], $documentId, $documentStatus);
 			$workflowId = \CBPDocument::startWorkflow(
 				$template->getId(),
-				[$documentType[0], $documentType[1], $documentId],
+				$documentComplexId,
 				array(
 					\CBPDocument::PARAM_TAGRET_USER => null, //Started by System
 					\CBPDocument::PARAM_USE_FORCED_TRACKING => !$template->isExternalModified(),
@@ -82,9 +83,15 @@ class Runtime
 				$errors
 			);
 
-			if (!$errors && $trigger && $workflowId)
+			if (!$errors && $workflowId)
 			{
-				$this->writeTriggerTracking($workflowId, $trigger);
+				if ($trigger)
+				{
+					$this->writeTriggerTracking($workflowId, $trigger);
+				}
+
+				//not today
+				//$this->writeAnalytics($documentComplexId, $documentStatus, $trigger);
 			}
 		}
 		return true;
@@ -92,11 +99,7 @@ class Runtime
 
 	protected function writeTriggerTracking($workflowId, $trigger)
 	{
-		$runtime = \CBPRuntime::getRuntime();
-		$runtime->startRuntime();
-
-		/** @var \CBPTrackingService $trackingService */
-		$trackingService = $runtime->getService('TrackingService');
+		$trackingService = \CBPRuntime::getRuntime(true)->getTrackingService();
 
 		$trackingService->write(
 			$workflowId,
@@ -184,5 +187,20 @@ class Runtime
 			isset(static::$startedTemplates[$key])
 			&& (string) $status === static::$startedTemplates[$key]
 		);
+	}
+
+	private function writeAnalytics($documentComplexId, $documentStatus, $trigger)
+	{
+		$analytics = \CBPRuntime::getRuntime(true)->getAnalyticsService();
+
+		if ($analytics && $analytics->isEnabled())
+		{
+			$analytics->write($documentComplexId, 'automation_run', $documentStatus);
+
+			if ($trigger)
+			{
+				$analytics->write($documentComplexId, 'trigger_applied', $trigger['CODE']);
+			}
+		}
 	}
 }

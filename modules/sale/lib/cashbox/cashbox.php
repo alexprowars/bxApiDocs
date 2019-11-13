@@ -51,6 +51,7 @@ abstract class Cashbox
 
 			if (!IsModuleInstalled('bitrix24'))
 			{
+				$handlerList['\Bitrix\Sale\Cashbox\CashboxBitrixV2'] = '/bitrix/modules/sale/lib/cashbox/cashboxbitrixv2.php';
 				$handlerList['\Bitrix\Sale\Cashbox\CashboxBitrix'] = '/bitrix/modules/sale/lib/cashbox/cashboxbitrix.php';
 				$handlerList['\Bitrix\Sale\Cashbox\Cashbox1C'] = '/bitrix/modules/sale/lib/cashbox/cashbox1c.php';
 			}

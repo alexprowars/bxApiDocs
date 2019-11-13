@@ -930,6 +930,7 @@ class Automatic extends Base
 				"DESCRIPTION" => isset($params["DESCRIPTION"]) ? $params["DESCRIPTION"] : "",
 				"CLASS_NAME" => '\Bitrix\Sale\Delivery\Services\AutomaticProfile',
 				"CURRENCY" => $this->currency,
+				"XML_ID" => Manager::generateXmlId(),
 				"CONFIG" => array(
 					"MAIN" => array(
 						"PROFILE_ID" => $profId,

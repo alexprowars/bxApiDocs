@@ -35,6 +35,7 @@ class ExcludeLocation extends ByLocation
 
 	/**
 	 * This function should accept only location CODE, not ID, being a part of modern API
+	 * @inheritdoc
 	 */
 	public static function check($locationCode, array $restrictionParams, $deliveryId = 0)
 	{

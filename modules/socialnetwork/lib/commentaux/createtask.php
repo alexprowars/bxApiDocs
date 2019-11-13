@@ -24,6 +24,8 @@ final class CreateTask extends Base
 	const SOURCE_TYPE_PHOTO_PHOTO = 'PHOTO_PHOTO';
 	const SOURCE_TYPE_WIKI = 'WIKI';
 	const SOURCE_TYPE_LISTS_NEW_ELEMENT = 'LISTS_NEW_ELEMENT';
+	const SOURCE_TYPE_INTRANET_NEW_USER = 'INTRANET_NEW_USER';
+	const SOURCE_TYPE_BITRIX24_NEW_USER = 'BITRIX24_NEW_USER';
 
 	const SOURCE_TYPE_BLOG_COMMENT = 'BLOG_COMMENT';
 	const SOURCE_TYPE_FORUM_POST = 'FORUM_POST';
@@ -40,31 +42,106 @@ final class CreateTask extends Base
 		self::SOURCE_TYPE_PHOTO_ALBUM,
 		self::SOURCE_TYPE_PHOTO_PHOTO,
 		self::SOURCE_TYPE_WIKI,
-		self::SOURCE_TYPE_LISTS_NEW_ELEMENT
+		self::SOURCE_TYPE_LISTS_NEW_ELEMENT,
+		self::SOURCE_TYPE_INTRANET_NEW_USER,
+		self::SOURCE_TYPE_BITRIX24_NEW_USER
 	);
 	private $commentTypeList = array(
 		self::SOURCE_TYPE_BLOG_COMMENT,
 		self::SOURCE_TYPE_FORUM_POST,
 		self::SOURCE_TYPE_LOG_COMMENT
 	);
+	private $postTypeListInited = false;
+	private $commentTypeListInited = false;
 
-	private $sourceTypeList = array(
-		self::SOURCE_TYPE_BLOG_POST,
-		self::SOURCE_TYPE_TASK,
-		self::SOURCE_TYPE_FORUM_TOPIC,
-		self::SOURCE_TYPE_CALENDAR_EVENT,
-		self::SOURCE_TYPE_TIMEMAN_ENTRY,
-		self::SOURCE_TYPE_TIMEMAN_REPORT,
-		self::SOURCE_TYPE_LOG_ENTRY,
-		self::SOURCE_TYPE_PHOTO_ALBUM,
-		self::SOURCE_TYPE_PHOTO_PHOTO,
-		self::SOURCE_TYPE_WIKI,
-		self::SOURCE_TYPE_LISTS_NEW_ELEMENT,
+	public function addPostTypeList($type)
+	{
+		$this->postTypeList[] = $type;
+	}
 
-		self::SOURCE_TYPE_BLOG_COMMENT,
-		self::SOURCE_TYPE_FORUM_POST,
-		self::SOURCE_TYPE_LOG_COMMENT
-	);
+	public function addCommentTypeList($type)
+	{
+		$this->commentTypeList[] = $type;
+	}
+
+	public function getPostTypeList()
+	{
+		if ($this->postTypeListInited === false)
+		{
+			$moduleEvent = new \Bitrix\Main\Event(
+				'socialnetwork',
+				'onCommentAuxGetPostTypeList',
+				array()
+			);
+			$moduleEvent->send();
+
+			foreach ($moduleEvent->getResults() as $moduleEventResult)
+			{
+				if ($moduleEventResult->getType() == \Bitrix\Main\EventResult::SUCCESS)
+				{
+					$moduleEventParams = $moduleEventResult->getParameters();
+
+					if (
+						is_array($moduleEventParams)
+						&& !empty($moduleEventParams['typeList'])
+						&& is_array($moduleEventParams['typeList'])
+					)
+					{
+						foreach($moduleEventParams['typeList'] as $type)
+						{
+							$this->addPostTypeList($type);
+						}
+					}
+				}
+			}
+
+			$this->postTypeListInited = true;
+		}
+
+		return $this->postTypeList;
+	}
+
+	public function getCommentTypeList()
+	{
+		if ($this->commentTypeListInited === false)
+		{
+			$moduleEvent = new \Bitrix\Main\Event(
+				'socialnetwork',
+				'onCommentAuxGetCommentTypeList',
+				array()
+			);
+			$moduleEvent->send();
+
+			foreach ($moduleEvent->getResults() as $moduleEventResult)
+			{
+				if ($moduleEventResult->getType() == \Bitrix\Main\EventResult::SUCCESS)
+				{
+					$moduleEventParams = $moduleEventResult->getParameters();
+
+					if (
+						is_array($moduleEventParams)
+						&& !empty($moduleEventParams['typeList'])
+						&& is_array($moduleEventParams['typeList'])
+					)
+					{
+						foreach($moduleEventParams['typeList'] as $type)
+						{
+							$this->addCommentTypeList($type);
+						}
+					}
+				}
+			}
+
+			$this->commentTypeListInited = true;
+		}
+
+		return $this->commentTypeList;
+	}
+
+	public function getSourceTypeList()
+	{
+		return array_merge($this->getPostTypeList(), $this->getCommentTypeList());
+	}
 
 	public function getParamsFromFields($fields = array())
 	{
@@ -102,7 +179,7 @@ final class CreateTask extends Base
 
 		if (
 			isset($params['sourcetype'])
-			&& in_array($params['sourcetype'], $this->sourceTypeList)
+			&& in_array($params['sourcetype'], $this->getSourceTypeList())
 			&& isset($params['sourceid'])
 			&& intval($params['sourceid']) > 0
 			&& isset($params['taskid'])
@@ -137,8 +214,10 @@ final class CreateTask extends Base
 				$taskTitle = Loc::getMessage('SONET_COMMENTAUX_CREATETASK_NOT_FOUND');
 			}
 
-			if (in_array($params['sourcetype'], $this->commentTypeList))
+			if (in_array($params['sourcetype'], $this->getCommentTypeList()))
 			{
+				$commentPath = '';
+
 				if (
 					$params['sourcetype'] == self::SOURCE_TYPE_BLOG_COMMENT
 					&& Loader::includeModule('blog')
@@ -154,24 +233,9 @@ final class CreateTask extends Base
 							: ''
 					);
 				}
-				elseif (
-					$params['sourcetype'] == self::SOURCE_TYPE_FORUM_POST
-					|| $params['sourcetype'] == self::SOURCE_TYPE_LOG_COMMENT
-				)
+				else
 				{
-					switch($params['sourcetype'])
-					{
-						case self::SOURCE_TYPE_FORUM_POST:
-							$commentProvider = new \Bitrix\Socialnetwork\Livefeed\ForumPost();
-							break;
-						case self::SOURCE_TYPE_LOG_COMMENT:
-							$commentProvider = new \Bitrix\Socialnetwork\Livefeed\LogComment();
-							break;
-						default:
-							$commentProvider = false;
-					}
-
-					$commentPath = '';
+					$commentProvider = \Bitrix\Socialnetwork\Livefeed\Provider::getProvider($params['sourcetype']);
 
 					if (
 						$commentProvider
@@ -189,21 +253,15 @@ final class CreateTask extends Base
 						$commentPath = $commentProvider->getLiveFeedUrl();
 					}
 				}
-				else
-				{
-					$commentPath = '';
-				}
 
 				$suffix = (isset($options['suffix']) ? $options['suffix'] : '');
-
 				$result = Loc::getMessage('SONET_COMMENTAUX_CREATETASK_COMMENT_'.$params['sourcetype'].(!empty($suffix) ? '_'.$suffix : ''), array(
 					'#TASK_NAME#' => (!empty($taskPath) ? '[URL='.$taskPath.']'.$taskTitle.'[/URL]' : $taskTitle),
 					'#A_BEGIN#' => (!empty($commentPath) ? '[URL='.$commentPath.']' : ''),
 					'#A_END#' => (!empty($commentPath) ? '[/URL]' : '')
 				));
-
 			}
-			elseif (in_array($params['sourcetype'], $this->postTypeList))
+			elseif (in_array($params['sourcetype'], $this->getPostTypeList()))
 			{
 				$result = Loc::getMessage('SONET_COMMENTAUX_CREATETASK_POST_'.$params['sourcetype'], array(
 					'#TASK_NAME#' => (!empty($taskPath) ? '[URL='.$taskPath.']'.$taskTitle.'[/URL]' : $taskTitle),

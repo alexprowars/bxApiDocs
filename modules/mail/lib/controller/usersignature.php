@@ -3,6 +3,7 @@
 namespace Bitrix\Mail\Controller;
 
 use Bitrix\Mail\Internals\UserSignatureTable;
+use Bitrix\Main;
 use Bitrix\Main\Engine\CurrentUser;
 use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
@@ -17,21 +18,30 @@ class UserSignature extends Base
 	 */
 	public function addAction(array $fields)
 	{
-		$count = UserSignatureTable::getCount();
-		if($count > static::USER_SIGNATURES_LIMIT)
+		$unsafeFields = (array) $this->getRequest()->getPostList()->getRaw('fields');
+		\CUtil::decodeUriComponent($unsafeFields);
+
+		if (($limit = Main\Config\Option::get('mail', 'user_signatures_limit', static::USER_SIGNATURES_LIMIT)) > 0)
 		{
-			Loc::loadMessages(__FILE__);
-			$this->errorCollection[] = new Error(Loc::getMessage('MAIL_USER_SIGNATURE_LIMIT'));
-			return false;
+			$count = UserSignatureTable::getCount(array(
+				'USER_ID' => CurrentUser::get()->getId(),
+			));
+			if ($count >= $limit)
+			{
+				Loc::loadMessages(__FILE__);
+				$this->errorCollection[] = new Error(Loc::getMessage('MAIL_USER_SIGNATURE_LIMIT'));
+				return false;
+			}
 		}
-		$fields['userId'] = CurrentUser::get()->getId();
-		$fields = $this->convertArrayKeysToUpper($fields, 1);
+
 		$userSignature = new \Bitrix\Mail\Internals\Entity\UserSignature;
-		foreach($fields as $name => $value)
-		{
-			$userSignature->set($name, $value);
-		}
+
+		$userSignature->set('USER_ID', CurrentUser::get()->getId());
+		$userSignature->set('SENDER', $fields['sender']);
+		$userSignature->set('SIGNATURE', $this->sanitize($unsafeFields['signature']));
+
 		$result = $userSignature->save();
+
 		if($result->isSuccess())
 		{
 			$userSignature = UserSignatureTable::getById($result->getId())->fetchObject();
@@ -66,11 +76,12 @@ class UserSignature extends Base
 	 */
 	public function updateAction(\Bitrix\Mail\Internals\Entity\UserSignature $userSignature, array $fields)
 	{
-		$fields = $this->convertArrayKeysToUpper($fields, 1);
-		foreach($fields as $name => $value)
-		{
-			$userSignature->set($name, $value);
-		}
+		$unsafeFields = (array) $this->getRequest()->getPostList()->getRaw('fields');
+		\CUtil::decodeUriComponent($unsafeFields);
+
+		$userSignature->set('SENDER', $fields['sender']);
+		$userSignature->set('SIGNATURE', $this->sanitize($unsafeFields['signature']));
+
 		$result = $userSignature->save();
 		if($result->isSuccess())
 		{

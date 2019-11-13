@@ -9,6 +9,11 @@ use Bitrix\Mail;
 class Storage
 {
 
+	/**
+	 * Returns attachments disk storage
+	 *
+	 * @return \Bitrix\Disk\Storage|false
+	 */
 	public static function getStorage()
 	{
 		static $storage;
@@ -59,6 +64,11 @@ class Storage
 		return $storage;
 	}
 
+	/**
+	 * Returns disk url manager
+	 *
+	 * @return \Bitrix\Disk\UrlManager|false
+	 */
 	public static function getUrlManager()
 	{
 		static $urlManager;
@@ -80,26 +90,42 @@ class Storage
 		return $urlManager;
 	}
 
-	public static function getObjectByAttachment(array $attachment, $create = false)
+	/**
+	 * Returns disk objects by file ID
+	 *
+	 * @param int $fileId File ID.
+	 * @param int $limit Limit.
+	 * @return array
+	 */
+	public static function getObjectsByFileId($fileId, $limit = 0)
 	{
-		if (!Main\Loader::includeModule('disk'))
-		{
-			return false;
-		}
-
 		$storage = static::getStorage();
 
-		$object = \Bitrix\Disk\File::getModelList(array(
+		if (!$storage)
+		{
+			return array();
+		}
+
+		return \Bitrix\Disk\File::getModelList(array(
 			'filter' => array(
 				'=STORAGE_ID' => $storage->getId(),
 				'=TYPE' => \Bitrix\Disk\Internals\ObjectTable::TYPE_FILE,
-				'=FILE_ID' => $attachment['FILE_ID'],
+				'=FILE_ID' => $fileId,
 			),
-			'order' => array(
-				'ID' => 'DESC',
-			),
-			'limit' => 1,
-		))[0];
+			'limit' => $limit,
+		));
+	}
+
+	/**
+	 * Returns disk object by attachment file data (creates one if not exists)
+	 *
+	 * @param array $attachment Attachment file data.
+	 * @param boolean $create Create object if not exists.
+	 * @return \Bitrix\Disk\File|false|null
+	 */
+	public static function getObjectByAttachment(array $attachment, $create = false)
+	{
+		$object = reset(static::getObjectsByFileId($attachment['FILE_ID'], 1));
 
 		if (empty($object) && $create)
 		{
@@ -109,16 +135,40 @@ class Storage
 		return $object;
 	}
 
+	/**
+	 * Creates disk object for attachment file
+	 *
+	 * @param array $attachment Attachment file data.
+	 * @return \Bitrix\Disk\File|false|null
+	 */
 	public static function registerAttachment(array $attachment)
 	{
-		if (!Main\Loader::includeModule('disk'))
+		$storage = static::getStorage();
+
+		if (!$storage)
 		{
 			return false;
 		}
 
-		$storage = static::getStorage();
+		$folder = $storage->getChild(array(
+			'=NAME' => date('Y-m'),
+			'=TYPE' => \Bitrix\Disk\Internals\FolderTable::TYPE,
+		));
 
-		return $storage->addFile(
+		if (!$folder)
+		{
+			$folder = $storage->addFolder(array(
+				'NAME' => date('Y-m'),
+				'CREATED_BY' => 1, // @TODO
+			));
+		}
+
+		if (!$folder)
+		{
+			$folder = $storage;
+		}
+
+		return $folder->addFile(
 			array(
 				'NAME' => \Bitrix\Disk\Ui\Text::correctFilename($attachment['FILE_NAME']) ?: sprintf('%x', rand(0, 0xffffff)),
 				'FILE_ID' => $attachment['FILE_ID'],
@@ -128,6 +178,20 @@ class Storage
 			array(),
 			true
 		);
+	}
+
+	/**
+	 * Deletes disk objects by file ID
+	 *
+	 * @param int $fileId File ID.
+	 * @return void
+	 */
+	public static function unregisterAttachment($fileId)
+	{
+		foreach (static::getObjectsByFileId($fileId) as $item)
+		{
+			$item->delete(1); // @TODO
+		}
 	}
 
 }

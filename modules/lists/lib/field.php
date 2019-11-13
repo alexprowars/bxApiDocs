@@ -89,6 +89,15 @@ class Field
 				$result = call_user_func_array(
 					$field['PROPERTY_USER_TYPE']['GetPublicViewHTML'], array($field, $field, $controlSettings));
 			}
+
+			if ($field['TYPE'] == 'S:DiskFile' && $field['READ'] == 'Y')
+			{
+				$field['VALUE'] = array_filter((is_array($field['VALUE']) ? $field['VALUE'] : array($field['VALUE'])));
+				foreach ($field['VALUE'] as $key => $value)
+				{
+					$result .= '<input type="hidden" name="'.$field['FIELD_ID'].'[n'.$key.'][VALUE][]" value="'.HtmlFilter::encode($value).'">';
+				}
+			}
 		}
 		elseif($field['PROPERTY_TYPE'] != '')
 		{
@@ -263,7 +272,7 @@ class Field
 					}
 					else
 					{
-						if($field['ELEMENT_ID'] > 0 && $field['TYPE'] == 'S:DiskFile')
+						if ($field['TYPE'] == 'S:DiskFile')
 						{
 							$html .= call_user_func_array($field['PROPERTY_USER_TYPE']['GetPublicViewHTML'],
 								array($field, $value, array()));
@@ -370,7 +379,7 @@ class Field
 		elseif($field['TYPE'] == 'L')
 		{
 			$items = array();
-			$queryObject = \CIBlockProperty::getPropertyEnum($field['ID']);
+			$queryObject = \CIBlockProperty::getPropertyEnum($field['ID'], array('SORT' => 'ASC', 'NAME' => 'ASC'));
 			while($queryResult = $queryObject->fetch())
 				$items[$queryResult['ID']] = $queryResult['VALUE'];
 
@@ -401,7 +410,7 @@ class Field
 				array('IBLOCK_ID' => $field['LINK_IBLOCK_ID']),
 				false,
 				false,
-				array('ID', 'NAME')
+				array('ID', 'NAME', 'SORT')
 			);
 			while($queryResult = $queryObject->fetch())
 				$items[$queryResult['ID']] = $queryResult['NAME'];
@@ -419,8 +428,10 @@ class Field
 		{
 			$items = array();
 			$queryObject = \CIBlockSection::getList(
-				array('left_margin' => 'asc'),
-				array('IBLOCK_ID' => $field['LINK_IBLOCK_ID'])
+				array('LEFT_MARGIN' => 'ASC'),
+				array('IBLOCK_ID' => $field['LINK_IBLOCK_ID']),
+				false,
+				array('ID', 'IBLOCK_ID', 'NAME', 'DEPTH_LEVEL', 'LEFT_MARGIN')
 			);
 			while($queryResult = $queryObject->fetch())
 				$items[$queryResult['ID']] = str_repeat('. ', $queryResult['DEPTH_LEVEL'] - 1).$queryResult['NAME'];
@@ -593,6 +604,10 @@ class Field
 				{
 					$items[$listElement['ID']] = HtmlFilter::encode($listElement['VALUE']);
 				}
+				if ($listElement['DEF'] == 'Y')
+				{
+					$field['DEFAULT_VALUE'] = HtmlFilter::encode($listElement['VALUE']);
+				}
 			}
 
 			self::$cache[$field['ID']] = $items;
@@ -614,7 +629,7 @@ class Field
 			$result = $items[$field['VALUE']];
 		}
 
-		return $result;
+		return ($result ? $result : $field['DEFAULT_VALUE']);
 	}
 
 	protected static function renderFieldByTypeF(array $field)
@@ -797,9 +812,7 @@ class Field
 			$pathToUser = str_replace(array('#user_id#'), $userId,
 				Option::get('main', 'TOOLTIP_PATH_TO_USER', false, SITE_ID));
 
-			$anchorId = randString(6);
-			$result = '<a id="'.$anchorId.'" href="'.$pathToUser.'" target="_blank">'.$formattedUsersName.'</a>';
-			$result .= '<script>BX.tooltip("'.$userId.'", "'.$anchorId.'", "");</script>';
+			$result = '<a href="'.$pathToUser.'" target="_blank" bx-tooltip-user-id="'.$userId.'">'.$formattedUsersName.'</a>';
 
 			self::$cache[$field['TYPE']][$userId] = $result;
 		}
@@ -866,11 +879,11 @@ class Field
 		$urlTemplate = $field['LIST_ELEMENT_URL'];
 
 		$url = str_replace(
-			array('#list_id#', '#section_id#', '#element_id#', '#group_id#'),
-			array($iblockId, $sectionId, $elementId, $socnetGroupId),
+			['#list_id#', '#section_id#', '#element_id#', '#group_id#'],
+			[$iblockId, $sectionId, $elementId, $socnetGroupId],
 			$urlTemplate
 		);
-		$url = \CHTTP::urlAddParams($url, array("list_section_id" => ""));
+		$url = \CHTTP::urlAddParams($url, ['list_section_id' => ($sectionId ? $sectionId : '')]);
 
 		$result = '<a href="'.\CHTTP::URN2URI(HtmlFilter::encode($url)).'">'.HtmlFilter::encode($field['VALUE']).'</a>';
 		return $result;
@@ -921,7 +934,6 @@ class Field
 		if(!$urlTemplate && !empty($field["LIST_ELEMENT_URL"]))
 			$urlTemplate = $field["LIST_ELEMENT_URL"];
 		$filter['ACTIVE'] = 'Y';
-		$filter['ACTIVE_DATE'] = 'Y';
 		$filter['CHECK_PERMISSIONS'] = 'Y';
 		if ($field['LINK_IBLOCK_ID'] > 0)
 			$filter['IBLOCK_ID'] = $field['LINK_IBLOCK_ID'];
@@ -984,7 +996,13 @@ class Field
 		$items = array('' => Loc::getMessage('LISTS_FIELD_NO_VALUE'));
 		$queryObject = \CIBlockProperty::getPropertyEnum($field['ID']);
 		while($enum = $queryObject->fetch())
+		{
+			if ($enum['DEF'] == 'Y')
+			{
+				$field['DEFAULT_VALUE'] = $enum['ID'];
+			}
 			$items[$enum['ID']] = $enum['VALUE'];
+		}
 
 		$inputName = $field['FIELD_ID'];
 		if($field['MULTIPLE'] == 'Y')
@@ -997,8 +1015,15 @@ class Field
 			$params = array();
 		}
 
-		if(!is_array($field['VALUE']))
-			$field['VALUE'] = array($field['VALUE']);
+		if (!is_array($field['VALUE']))
+		{
+			$field['VALUE'] = ($field['VALUE'] ? array($field['VALUE']) : array());
+		}
+
+		if (empty($field['VALUE']))
+		{
+			$field['VALUE'][] = $field['DEFAULT_VALUE'];
+		}
 
 		$result = array(
 			'id' => $inputName,
@@ -1158,7 +1183,7 @@ class Field
 			foreach($field['VALUE'] as $key => $value)
 			{
 				$html .= '<input '.$disabled.' type="text" name="'.$field['FIELD_ID'].
-					'['.$key.'][VALUE]" value="'.$value["VALUE"].'">';
+					'['.$key.'][VALUE]" value="'.HtmlFilter::encode($value["VALUE"]).'">';
 				if($field['READ'] == 'Y')
 				{
 					if(empty($value['VALUE'])) continue;

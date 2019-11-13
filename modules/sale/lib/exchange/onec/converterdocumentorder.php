@@ -107,7 +107,7 @@ class ConverterDocumentOrder extends Converter
 		}
 
 		$result['TRAITS'] = isset($fields)? $fields:array();
-		$result['ITEMS'] = isset($params['ITEMS'])? $params['ITEMS']:array();
+		$result['ITEMS'] = isset($params['ITEMS'])? $this->modifyItemIdByItemName($params['ITEMS']):array();
 		$result['TAXES'] = isset($params['TAXES'])? $params['TAXES']:array();
 
 		return $result;
@@ -310,6 +310,7 @@ class ConverterDocumentOrder extends Converter
 			foreach($info['FIELDS'] as $name=>$fieldInfo)
 			{
 				$value='';
+				$fieldValues = [];
 				switch ($name)
 				{
 					case 'ID':
@@ -348,7 +349,7 @@ class ConverterDocumentOrder extends Converter
 									break;
 							}
 							$this->externalizeField($unitValue, $unitFieldInfo);
-							$value[$unitFieldName] = $unitValue;
+							$fieldValues[$unitFieldName] = $unitValue;
 						}
 						break;
 					case 'DISCOUNTS':
@@ -371,14 +372,14 @@ class ConverterDocumentOrder extends Converter
 										break;
 								}
 								$this->externalizeField($discountValue, $discountFieldInfo);
-								$value[$discountFieldName] = $discountValue;
+								$fieldValues[$discountFieldName] = $discountValue;
 							}
 						}
 						break;
 					case 'REK_VALUES':
 						foreach($fieldInfo['FIELDS'] as $rekFieldName=>$rekFieldInfo)
 						{
-							$propertyValue = '';
+							$fieldValue = [];
 							switch ($rekFieldName)
 							{
 								case 'TYPE_NOMENKLATURA':
@@ -395,9 +396,9 @@ class ConverterDocumentOrder extends Converter
 												break;
 										}
 										$this->externalizeField($valueProp, $infoProp);
-										$propertyValue[$nameProp] = $valueProp;
+										$fieldValue[$nameProp] = $valueProp;
 									}
-									$value[] = $propertyValue;
+									$fieldValues[] = $fieldValue;
 									break;
 								case 'TYPE_OF_NOMENKLATURA':
 									foreach ($rekFieldInfo['FIELDS'] as $nameProp=>$infoProp)
@@ -413,9 +414,9 @@ class ConverterDocumentOrder extends Converter
 												break;
 										}
 										$this->externalizeField($valueProp, $infoProp);
-										$propertyValue[$nameProp] = $valueProp;
+										$fieldValue[$nameProp] = $valueProp;
 									}
-									$value[] = $propertyValue;
+									$fieldValues[] = $fieldValue;
 									break;
 								case 'BASKET_NUMBER':
 									foreach ($rekFieldInfo['FIELDS'] as $nameProp=>$infoProp)
@@ -431,9 +432,9 @@ class ConverterDocumentOrder extends Converter
 												break;
 										}
 										$this->externalizeField($valueProp, $infoProp);
-										$propertyValue[$nameProp] = $valueProp;
+										$fieldValue[$nameProp] = $valueProp;
 									}
-									$value[] = $propertyValue;
+									$fieldValues[] = $fieldValue;
 									break;
 								case 'PROPERTY_VALUE_BASKET':
 									$attributes = isset($item['ATTRIBUTES'])? $item['ATTRIBUTES']:array();
@@ -454,7 +455,7 @@ class ConverterDocumentOrder extends Converter
 														break;
 												}
 												$this->externalizeField($valueProp, $infoProp);
-												$value[$rowIdAttr][$nameProp] = $valueProp;
+												$fieldValues[$rowIdAttr][$nameProp] = $valueProp;
 											}
 										}
 									}
@@ -479,7 +480,7 @@ class ConverterDocumentOrder extends Converter
 										break;
 								}
 								$this->externalizeField($rekValue, $rateFieldInfo);
-								$value[$rateFieldName] = $rateValue;
+								$fieldValues[$rateFieldName] = $rateValue;
 							}
 						}
 						break;
@@ -503,15 +504,21 @@ class ConverterDocumentOrder extends Converter
 										break;
 								}
 								$this->externalizeField($taxValue, $taxFieldInfo);
-								$value[$taxFieldName] = $taxValue;
+								$fieldValues[$taxFieldName] = $taxValue;
 							}
 						}
 						break;
 				}
 
-				if(!is_array($value))
+				if($value<>'')
+				{
 					$this->externalizeField($value, $fieldInfo);
-				$result[$rowId][$name] = $value;
+					$result[$rowId][$name] = $value;
+				}
+				elseif (is_array($fieldValues))
+				{
+					$result[$rowId][$name] = $fieldValues;
+				}
 			}
 		}
 		return $result;

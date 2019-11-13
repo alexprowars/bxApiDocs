@@ -18,9 +18,8 @@ use Bitrix\Sender\ContactTable;
 use Bitrix\Sender\Message;
 use Bitrix\Sender\Entity;
 use Bitrix\Sender\Dispatch;
-use Bitrix\Sender\PostingTable;
 use Bitrix\Sender\Templates;
-use Bitrix\Sender\Internals\Model\LetterTable;
+use Bitrix\Sender\Internals\Model;
 use Bitrix\Sender\PostingRecipientTable;
 
 Loc::loadMessages(__FILE__);
@@ -355,7 +354,7 @@ class EventHandler
 
 		if (Bitrix24\Service::isCloud() && isset($data['fields']['STATUS']))
 		{
-			$oldRow = LetterTable::getRowById($data['primary']['ID']);
+			$oldRow = Model\LetterTable::getRowById($data['primary']['ID']);
 			if ($oldRow['MESSAGE_CODE'] !== Message\iBase::CODE_MAIL)
 			{
 				return;
@@ -416,14 +415,14 @@ class EventHandler
 			}
 
 			// update recipient status
-			PostingRecipientTable::update(
-				['ID' => $result->getEntityId()],
+			Model\Posting\RecipientTable::update(
+				$result->getEntityId(),
 				['STATUS' => PostingRecipientTable::SEND_RESULT_ERROR]
 			);
 
 			// update posting counters
-			PostingTable::update(
-				['ID' => $row['POSTING_ID']],
+			Model\PostingTable::update(
+				$row['POSTING_ID'],
 				[
 					'COUNT_SEND_ERROR' => new Main\DB\SqlExpression('?# + 1', 'COUNT_SEND_ERROR'),
 					'COUNT_SEND_SUCCESS' => new Main\DB\SqlExpression('?# - 1', 'COUNT_SEND_SUCCESS')

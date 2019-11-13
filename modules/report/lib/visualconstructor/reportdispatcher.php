@@ -46,6 +46,11 @@ class ReportDispatcher implements IErrorable
 		else
 		{
 			$reportHandler = $this->getReport()->getReportHandler();
+			if (!$reportHandler->isEnabled())
+			{
+				return null;
+			}
+
 			$reportHandler->setView($this->getView());
 			if ($reportHandler instanceof Common::$reportImplementationTypesMap[$compatibleDataType]['interface'])
 			{
@@ -76,7 +81,8 @@ class ReportDispatcher implements IErrorable
 			}
 			else
 			{
-				$this->errors[] = new Error('Report handler were not implemented compatible interface');
+				$this->errors[] = new Error('Report handler ' . $reportHandler::getClassName() . ' does not implement a compatible interface');
+				return null;
 			}
 		}
 

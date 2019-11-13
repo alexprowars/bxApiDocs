@@ -2,6 +2,7 @@
 namespace Bitrix\Pull;
 
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Pull\SharedServer\Client;
 
 Loc::loadMessages(__FILE__);
 
@@ -12,13 +13,13 @@ class Config
 		if (!\CPullOptions::GetQueueServerStatus())
 			return false;
 
-		$userId = intval($params['USER_ID']);
-		if ($userId <= 0)
+		$userId = (int)$params['USER_ID'];
+		if ($userId == 0)
 		{
 			global $USER;
-			$userId = $USER->GetID();
+			$userId = (int)$USER->GetID();
 		}
-		if ($userId <= 0)
+		if ($userId == 0)
 		{
 			return false;
 		}
@@ -34,14 +35,34 @@ class Config
 
 		$domain = defined('BX24_HOST_NAME')? BX24_HOST_NAME: $_SERVER['SERVER_NAME'];
 
-		$config['SERVER'] = Array(
+		$isSharedMode = \CPullOptions::IsServerShared();
+		$serverConfig = Array(
 			'VERSION' => \CPullOptions::GetQueueServerVersion(),
 			'SERVER_ENABLED' => \CPullOptions::GetQueueServerStatus(),
-			'LONG_POLLING' => str_replace('#DOMAIN#', $domain, \CPullOptions::GetListenUrl()),
-			'LONG_POOLING_SECURE' => str_replace('#DOMAIN#', $domain, \CPullOptions::GetListenSecureUrl()),
-			'WEBSOCKET' => str_replace('#DOMAIN#', $domain, \CPullOptions::GetWebSocketUrl()),
-			'WEBSOCKET_SECURE' => str_replace('#DOMAIN#', $domain, \CPullOptions::GetWebSocketSecureUrl()),
+			'MODE' => \CPullOptions::GetQueueServerMode(),
+			'LONG_POLLING' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getLongPollingUrl(): \CPullOptions::GetListenUrl(),
+			'LONG_POOLING_SECURE' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getLongPollingUrl() : \CPullOptions::GetListenSecureUrl(),
+			'WEBSOCKET_ENABLED' => $isSharedMode ? true : \CPullOptions::GetWebSocket(),
+			'WEBSOCKET' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getWebSocketUrl() : \CPullOptions::GetWebSocketUrl(),
+			'WEBSOCKET_SECURE' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getWebSocketUrl() : \CPullOptions::GetWebSocketSecureUrl(),
+			'PUBLISH_ENABLED' => $isSharedMode ? true : \CPullOptions::GetPublishWebEnabled(),
+			'PUBLISH' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getWebPublishUrl() : \CPullOptions::GetPublishWebUrl(),
+			'PUBLISH_SECURE' => $isSharedMode ? \Bitrix\Pull\SharedServer\Config::getWebPublishUrl() : \CPullOptions::GetPublishWebSecureUrl(),
+			'CONFIG_TIMESTAMP' => \CPullOptions::GetConfigTimestamp(),
 		);
+		foreach ($serverConfig as $key => $value)
+		{
+			if(is_string($value) && strpos($value, '#DOMAIN#') !== false)
+			{
+				$serverConfig[$key] = str_replace('#DOMAIN#', $domain, $value);
+			}
+		}
+		$config['SERVER'] = $serverConfig;
+		if($isSharedMode)
+		{
+			$config['CLIENT_ID'] = Client::getPublicLicenseCode();
+		}
+
 		$config['API'] = Array(
 			'REVISION_WEB' => PULL_REVISION_WEB,
 			'REVISION_MOBILE' => PULL_REVISION_MOBILE,
@@ -53,15 +74,29 @@ class Config
 			$config['CHANNELS']['SHARED'] = Array(
 				'ID' => \CPullChannel::SignChannel($sharedChannel["CHANNEL_ID"]),
 				'START' => $sharedChannel['CHANNEL_DT'],
-				'END' => $sharedChannel['CHANNEL_DT']+43205,
+				'END' => $sharedChannel['CHANNEL_DT']+\CPullChannel::CHANNEL_TTL,
 			);
 		}
 		if ($privateChannel)
 		{
+			if (\CPullOptions::GetQueueServerVersion() > 3)
+			{
+				$privateId = $privateChannel["CHANNEL_PUBLIC_ID"]? $privateChannel["CHANNEL_ID"].":".$privateChannel["CHANNEL_PUBLIC_ID"]: $privateChannel["CHANNEL_ID"];
+				$privateId = \CPullChannel::SignChannel($privateId);
+
+				$publicId = \CPullChannel::SignPublicChannel($privateChannel["CHANNEL_PUBLIC_ID"]);
+			}
+			else
+			{
+				$privateId = \CPullChannel::SignChannel($privateChannel["CHANNEL_ID"]);
+				$publicId = '';
+			}
+
 			$config['CHANNELS']['PRIVATE'] = Array(
-				'ID' => \CPullChannel::SignChannel($privateChannel["CHANNEL_ID"]),
+				'ID' => $privateId,
+				'PUBLIC_ID' => $publicId,
 				'START' => $privateChannel['CHANNEL_DT'],
-				'END' => $privateChannel['CHANNEL_DT']+43205,
+				'END' => $privateChannel['CHANNEL_DT']+\CPullChannel::CHANNEL_TTL,
 			);
 		}
 
@@ -70,13 +105,18 @@ class Config
 			$result['server'] = array_change_key_case($config['SERVER'], CASE_LOWER);
 			$result['api'] = array_change_key_case($config['API'], CASE_LOWER);
 
-			foreach ($config['CHANNELS'] as $type => $config)
+			foreach ($config['CHANNELS'] as $type => $channel)
 			{
 				$type = strtolower($type);
-				$result['channels'][$type] = array_change_key_case($config, CASE_LOWER);
+				$result['channels'][$type] = array_change_key_case($channel, CASE_LOWER);
 				$result['channels'][$type]['type'] = $type;
-				$result['channels'][$type]['start'] = date('c', $config['START']);
-				$result['channels'][$type]['end'] = date('c', $config['END']);
+				$result['channels'][$type]['start'] = date('c', $channel['START']);
+				$result['channels'][$type]['end'] = date('c', $channel['END']);
+			}
+
+			if($isSharedMode)
+			{
+				$result['clientId'] = $config['CLIENT_ID'];
 			}
 
 			$config = $result;
@@ -85,4 +125,55 @@ class Config
 		return $config;
 
 	}
+
+	/**
+	 * @param string $channelId
+	 * @return bool|string|null
+	 */
+	public static function getPublishUrl($channelId = "")
+	{
+		$params = [];
+		if(\CPullOptions::IsServerShared())
+		{
+			$result = \Bitrix\Pull\SharedServer\Config::getPublishUrl();
+			$params["clientId"] = \Bitrix\Pull\SharedServer\Client::getPublicLicenseCode();
+		}
+		else
+		{
+			$result = \CPullOptions::GetPublishUrl();
+		}
+
+		if($channelId != "")
+		{
+			$params["CHANNEL_ID"] = $channelId;
+		}
+
+		return \CHTTP::urlAddParams($result, $params);
+	}
+
+	public static function getSignatureKey()
+	{
+		if(\CPullOptions::IsServerShared())
+		{
+			return \Bitrix\Pull\SharedServer\Config::getSignatureKey();
+		}
+		else
+		{
+			return \CPullOptions::GetSignatureKey();
+		}
+	}
+
+	public static function isProtobufUsed()
+	{
+		$result =
+			\CPullOptions::IsServerShared() ||
+			(
+				\CPullOptions::GetQueueServerVersion() >= 4 &&
+				\CPullOptions::IsProtobufSupported() &&
+				\CPullOptions::IsProtobufEnabled()
+			);
+
+		return $result;
+	}
+
 }

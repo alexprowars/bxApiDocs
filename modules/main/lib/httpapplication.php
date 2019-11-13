@@ -139,7 +139,19 @@ class HttpApplication extends Application
 				}
 			}
 
+			if ($e instanceof \Exception || $e instanceof \Error)
+			{
+				$exceptionHandler = $this->getExceptionHandler();
+				$exceptionHandler->writeToLog($e);
+			}
+
 			$response = $this->buildResponse($result, $errorCollection);
+			$this->clonePreviousHeadersAndCookies($this->context->getResponse(), $response);
+			if (isset($controller))
+			{
+				$controller->finalizeResponse($response);
+			}
+
 			$this->context->setResponse($response);
 
 			global $APPLICATION;
@@ -197,5 +209,48 @@ class HttpApplication extends Application
 		}
 
 		return new AjaxJson($actionResult);
+	}
+
+	private function clonePreviousHeadersAndCookies(HttpResponse $previousResponse, HttpResponse $response)
+	{
+		$httpHeaders = $response->getHeaders();
+
+		$status = $response->getStatus();
+		$previousStatus = $previousResponse->getStatus();
+		foreach ($previousResponse->getHeaders() as $headerName => $values)
+		{
+			if ($this->shouldIgnoreHeaderToClone($headerName))
+			{
+				continue;
+			}
+
+			if ($status && $headerName === $previousStatus)
+			{
+				continue;
+			}
+
+			if ($httpHeaders->get($headerName))
+			{
+				continue;
+			}
+
+			$httpHeaders->add($headerName, $values);
+		}
+
+		foreach ($previousResponse->getCookies() as $cookie)
+		{
+			$response->addCookie($cookie, false);
+		}
+
+		return $response;
+	}
+
+	private function shouldIgnoreHeaderToClone($headerName)
+	{
+		return in_array(strtolower($headerName), [
+			'content-encoding',
+			'content-length',
+			'content-type',
+		]);
 	}
 }

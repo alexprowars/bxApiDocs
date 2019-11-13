@@ -575,6 +575,51 @@ abstract class DiscountBase
 	/* apply result methods finish */
 
 	/**
+	 * Verifies discounts before order save.
+	 *
+	 * @return Result
+	 * @throws Main\ArgumentException
+	 * @throws Main\NotImplementedException
+	 */
+	public function verify()
+	{
+		$result = new Result();
+
+		$useMode = $this->getUseMode();
+		if ($useMode == self::USE_MODE_APPLY || $useMode == self::USE_MODE_MIXED)
+		{
+			if (!$this->isValidState())
+				return $result;
+		}
+
+		if (empty($this->discountResult['APPLY_BLOCKS'][$this->discountResultCounter]))
+			return $result;
+
+		/** @var DiscountCouponsManager $couponClassName */
+		$couponClassName = $this->getDiscountCouponClassName();
+
+		$checkCoupons = $couponClassName::verifyApplied();
+		if (!$checkCoupons->isSuccess())
+		{
+			$result->addError(new Main\Error(
+				Loc::getMessage('BX_SALE_DISCOUNT_ERR_BAD_COUPONS_USED')
+			));
+			$errors = $checkCoupons->getErrors();
+			$row = reset($errors);
+			foreach ($row->getCustomData() as $coupon => $description)
+			{
+				$result->addError(new Main\Error(
+					$coupon.' : '.$description
+				));
+			}
+			unset($coupon, $description, $row, $errors);
+		}
+		unset($checkCoupons, $couponClassName);
+
+		return $result;
+	}
+
+	/**
 	 * Save discount result.
 	 *
 	 * @return Result
@@ -850,6 +895,7 @@ abstract class DiscountBase
 		$this->orderData = [
 			'ID' => 0,
 			'USER_ID' => $this->context->getUserId(),
+			'USER_GROUPS' => $this->context->getUserGroups(),
 			'SITE_ID' => $siteId,
 			'LID' => $siteId,  // compatibility only
 			'ORDER_PRICE' => $basket->getPrice(),

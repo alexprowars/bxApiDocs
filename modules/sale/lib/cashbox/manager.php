@@ -7,7 +7,6 @@ use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Sale\Cashbox\Internals\CashboxConnectTable;
 use Bitrix\Sale\Cashbox\Internals\CashboxTable;
-use Bitrix\Sale\Cashbox\Internals\CashboxZReportTable;
 use Bitrix\Sale\Internals\CollectableEntity;
 use Bitrix\Sale\Result;
 
@@ -79,124 +78,6 @@ final class Manager
 		}
 
 		return $cashboxObjects[$id];
-	}
-
-	/**
-	 * @param array $cashbox
-	 * @throws Main\ArgumentNullException
-	 * @throws Main\ArgumentOutOfRangeException
-	 * @throws Main\ObjectException
-	 * @throws \Exception
-	 */
-	public static function saveCashbox(array $cashbox)
-	{
-		if (isset($cashbox['ID']) && (int)$cashbox['ID'] > 0)
-		{
-			if ($cashbox['ENABLED'] !== $cashbox['PRESENTLY_ENABLED'])
-			{
-				static::update($cashbox['ID'], array('ENABLED' => $cashbox['PRESENTLY_ENABLED']));
-
-				if ($cashbox['PRESENTLY_ENABLED'] === 'N')
-				{
-					static::showAlarmMessage($cashbox['ID']);
-				}
-			}
-
-			CashboxTable::update($cashbox['ID'], array('DATE_LAST_CHECK' => new DateTime()));
-		}
-		else
-		{
-			$result = static::add(
-				array(
-					'ACTIVE' => 'N',
-					'DATE_CREATE' => new DateTime(),
-					'NAME' => CashboxBitrix::getName(),
-					'NUMBER_KKM' => $cashbox['NUMBER_KKM'],
-					'HANDLER' => $cashbox['HANDLER'],
-					'ENABLED' => $cashbox['PRESENTLY_ENABLED'],
-					'DATE_LAST_CHECK' => new DateTime(),
-					'EMAIL' => self::getCashboxDefaultEmail(),
-				)
-			);
-
-			if ($result->isSuccess())
-			{
-				if ($cashbox['PRESENTLY_ENABLED'] === 'N')
-				{
-					static::showAlarmMessage($result->getId());
-				}
-
-				CashboxZReportTable::add(array(
-					'STATUS' => 'Y',
-					'CASHBOX_ID' => $result->getId(),
-					'DATE_CREATE' => new DateTime(),
-					'DATE_PRINT_START' => new DateTime(),
-					'LINK_PARAMS' => '',
-					'CASH_SUM' => $cashbox['CACHE'],
-					'CASHLESS_SUM' => $cashbox['INCOME']-$cashbox['CACHE'],
-					'CUMULATIVE_SUM' => $cashbox['NZ_SUM'],
-					'RETURNED_SUM' => 0,
-					'CURRENCY' => 'RUB',
-					'DATE_PRINT_END' => new DateTime()
-				));
-			}
-		}
-	}
-
-	/**
-	 * @return string
-	 * @throws Main\ArgumentException
-	 * @throws Main\ArgumentNullException
-	 * @throws Main\ArgumentOutOfRangeException
-	 * @throws Main\ObjectPropertyException
-	 * @throws Main\SystemException
-	 */
-	private static function getCashboxDefaultEmail()
-	{
-		$email = Main\Config\Option::get('main', 'email_from');
-		if (!$email)
-		{
-			$dbRes = Main\UserGroupTable::getList([
-				'select' => ['EMAIL' => 'USER.EMAIL'],
-				'filter' => [
-					'=GROUP_ID' => 1
-				],
-				'order' => [
-					'USER.ID' => 'ASC'
-				]
-			]);
-
-			$data = $dbRes->fetch();
-			if ($data)
-			{
-				$email = $data['EMAIL'];
-			}
-		}
-
-		return $email;
-	}
-
-	/**
-	 * @param $cashboxId
-	 */
-	protected static function showAlarmMessage($cashboxId)
-	{
-		$tag = "CASHBOX_STATUS_ERROR";
-
-		$dbRes = \CAdminNotify::GetList([], ["TAG" => $tag]);
-
-		if ($res = $dbRes->Fetch())
-		{
-			return;
-		}
-
-		\CAdminNotify::Add([
-			"MESSAGE" => Loc::getMessage('SALE_CASHBOX_ACCESS_UNAVAILABLE', ['#CASHBOX_ID#' => $cashboxId]),
-			"TAG" => $tag,
-			"MODULE_ID" => "SALE",
-			"ENABLE_CLOSE" => "Y",
-			"NOTIFY_TYPE" => \CAdminNotify::TYPE_ERROR
-		]);
 	}
 
 	/**

@@ -8,6 +8,7 @@ use Bitrix\Crm\Statistics\InvoiceSumStatisticEntry;
 use Bitrix\Main\Error;
 use Bitrix\Sale\Exchange;
 use Bitrix\Sale\Exchange\Entity\OrderImport;
+use Bitrix\Sale\Exchange\OneC\CRM\ConverterFactory;
 use Bitrix\Sale\Order;
 use Bitrix\Sale\Payment;
 use Bitrix\Sale\Result;
@@ -108,6 +109,14 @@ final class ImportOneCPackageCRM extends ImportOneCPackage
 	}
 
 	/**
+	 * @param $typeId
+	 * @return \Bitrix\Sale\Exchange\OneC\Converter
+	 */
+	protected function converterFactoryCreate($typeId)
+	{
+		return ConverterFactory::create($typeId);
+	}
+	/**
 	 * @param OneC\DocumentBase[] $documents
 	 * @return Result
 	 */
@@ -168,6 +177,54 @@ final class ImportOneCPackageCRM extends ImportOneCPackage
 			}
 
 			$result = parent::convert($documents);
+
+			if($result->isSuccess())
+			{
+				$personTypeId = 0;
+				$paySystemId = 0;
+				$personTypes = \CCrmPaySystem::getPersonTypeIDs();
+
+				/** @var ImportBase[] $entityItems */
+				$entityItems = $result->getData();
+				foreach ($entityItems as $entityItem)
+				{
+					if($entityItem->getOwnerTypeId() == EntityType::USER_PROFILE)
+					{
+						/** @var Exchange\Entity\UserProfileImport $entityItem */
+						$personTypeId = $entityItem->isFiz()? (int)$personTypes['CONTACT']:(int)$personTypes['COMPANY'];
+						break;
+					}
+				}
+
+				if($personTypeId>0)
+				{
+					$billList = \CCrmPaySystem::GetPaySystemsListItems($personTypeId);
+					foreach($billList as $billId => $billName)
+					{
+						$paySystemId = $billId;
+						break;
+					}
+				}
+
+				if($paySystemId>0)
+				{
+					$list = [];
+					foreach ($entityItems as $entityItem)
+					{
+						if(
+							$entityItem->getOwnerTypeId() == EntityType::INVOICE_PAYMENT_CASH ||
+							$entityItem->getOwnerTypeId() == EntityType::INVOICE_PAYMENT_CASH_LESS ||
+							$entityItem->getOwnerTypeId() == EntityType::INVOICE_PAYMENT_CARD_TRANSACTION)
+						{
+							$traits = $entityItem->getFieldValues()['TRAITS'];
+							$traits['PAY_SYSTEM_ID'] = $paySystemId;
+							$entityItem->setField('TRAITS', $traits);
+						}
+						$list[] = $entityItem;
+					}
+					$result->setData($list);
+				}
+			}
 		}
 
 		return $result;

@@ -113,23 +113,12 @@ abstract class BasketBuilder
 
 	public function preliminaryDataPreparation()
 	{
-		$sort = 100;
-
 		foreach($this->formData["PRODUCT"] as $basketCode => $productData)
 		{
-
 			if(!$this->checkProductData($productData))
 			{
 				throw new BuildingException();
 			}
-
-			/*
-			 * Fix collision if price of new product is larger than added earlier have.
-			 * After sorting new product pick basket code from existing products.
-			 * See below.
-			 */
-			$this->formData["PRODUCT"][$basketCode]["SORT"] = $sort;
-			$sort += 100;
 
 			if(self::isBasketItemNew($basketCode))
 			{
@@ -148,59 +137,73 @@ abstract class BasketBuilder
 			}
 		}
 
+		/*
+		 * Because of one of discounts, require that the first product must be the most expencsve.
+		 * If we want to save the sorting of the products we must use field "SORT" - fill it earlier
+		 * and use it during layout.
+		*/
+
 		sortByColumn($this->formData["PRODUCT"], array("BASE_PRICE" => SORT_DESC, "PRICE" => SORT_DESC), '', null, true);
 		return $this;
 	}
 
+	protected function getExistsItem($moduleId, $productId, array $properties = array())
+	{
+		return $this->getBasket()->getExistsItem($moduleId, $productId, $properties);
+	}
+
 	public function removeDeletedItems()
 	{
-		$itemsBasketCodes = [];
-
-		foreach($this->formData["PRODUCT"] as $basketCode => $productData)
+		if($this->builder->getSettingsContainer()->getItemValue('deleteBaketItemsIfNotExists'))
 		{
-			if (!isset($productData["PROPS"]))
+			$itemsBasketCodes = [];
+
+			foreach($this->formData["PRODUCT"] as $basketCode => $productData)
 			{
-				$productData["PROPS"] = array();
-			}
-
-			$item = $this->getBasket()->getExistsItem($productData["MODULE"], $productData["OFFER_ID"], $productData["PROPS"]);
-
-			if ($item == null)
-			{
-				DiscountCouponsManager::useSavedCouponsForApply(false);
-			}
-
-			if($item == null && $basketCode != \Bitrix\Sale\Helpers\Admin\OrderEdit::BASKET_CODE_NEW)
-			{
-				$item = $this->getBasket()->getItemByBasketCode($basketCode);
-			}
-
-			if($item && $item->isBundleChild())
-			{
-				continue;
-			}
-
-			if(!$item)
-			{
-				continue;
-			}
-
-			$itemsBasketCodes[] = $item->getBasketCode();
-		}
-
-		/** @var  \Bitrix\Sale\BasketItem  $item */
-		$basketItems = $this->getBasket()->getBasketItems();
-
-		foreach($basketItems as $item)
-		{
-			if(!in_array($item->getBasketCode(), $itemsBasketCodes))
-			{
-				$res = $item->delete();
-
-				if (!$res->isSuccess())
+				if (!isset($productData["PROPS"]))
 				{
-					$this->builder->getErrorsContainer()->addErrors($res->getErrors());
-					throw new BuildingException();
+					$productData["PROPS"] = array();
+				}
+
+				$item = $this->getExistsItem($productData["MODULE"], $productData["OFFER_ID"], $productData["PROPS"]);
+
+				if ($item == null)
+				{
+					DiscountCouponsManager::useSavedCouponsForApply(false);
+				}
+
+				if($item == null && $basketCode != \Bitrix\Sale\Helpers\Admin\OrderEdit::BASKET_CODE_NEW)
+				{
+					$item = $this->getBasket()->getItemByBasketCode($basketCode);
+				}
+
+				if($item && $item->isBundleChild())
+				{
+					continue;
+				}
+
+				if(!$item)
+				{
+					continue;
+				}
+
+				$itemsBasketCodes[] = $item->getBasketCode();
+			}
+
+			/** @var  \Bitrix\Sale\BasketItem  $item */
+			$basketItems = $this->getBasket()->getBasketItems();
+
+			foreach($basketItems as $item)
+			{
+				if(!in_array($item->getBasketCode(), $itemsBasketCodes))
+				{
+					$res = $item->delete();
+
+					if (!$res->isSuccess())
+					{
+						$this->builder->getErrorsContainer()->addErrors($res->getErrors());
+						throw new BuildingException();
+					}
 				}
 			}
 		}
@@ -246,7 +249,8 @@ abstract class BasketBuilder
 			{
 				/** @var \Bitrix\Sale\BasketPropertiesCollection $property */
 				$property = $item->getPropertyCollection();
-				$property->setProperty($productData["PROPS"]);
+				if(!$property->isPropertyAlreadyExists($productData["PROPS"]))
+					$property->setProperty($productData["PROPS"]);
 			}
 		}
 
@@ -351,7 +355,7 @@ abstract class BasketBuilder
 			return;
 
 		$order = $this->getOrder();
-		$this->catalogProductsIds = array();
+		//$this->catalogProductsIds = array();
 
 		foreach($this->catalogProductsIds as  $id)
 		{
@@ -455,6 +459,9 @@ abstract class BasketBuilder
 			$isProductDataNeedUpdate = in_array($basketCode, $this->needDataUpdate);
 			$productProviderData[$basketCode] = $item->getFieldValues();
 
+			if(empty($productFormData))
+				continue;
+
 			if(!empty($this->providerData[$basketCode]))
 			{
 				if ($this->builder->getSettingsContainer()->getItemValue('isRefreshData') === true)
@@ -520,6 +527,15 @@ abstract class BasketBuilder
 				$needUpdateItemPrice = $this->isNeedUpdateNewProductPrice() && $this->isBasketItemNew($basketCode);
 				$isPriceCustom = isset($productFormData['CUSTOM_PRICE']) && $productFormData['CUSTOM_PRICE'] == 'Y';
 
+				if ($isPriceCustom)
+				{
+					$productFormData['DISCOUNT_PRICE'] = 0;
+					if ($productFormData['BASE_PRICE'] > $productFormData['PRICE'])
+					{
+						$productFormData['DISCOUNT_PRICE'] = $productFormData['BASE_PRICE'] - $productFormData['PRICE'];
+					}
+				}
+
 				if(($order->getId() <= 0 && !$isPriceCustom) || $needUpdateItemPrice)
 					unset($productFormData['PRICE'], $productFormData['PRICE_BASE'], $productFormData['BASE_PRICE']);
 
@@ -540,7 +556,8 @@ abstract class BasketBuilder
 					$product["MEASURE_NAME"] = $measures[$product["MEASURE_CODE"]];
 			}
 
-			$product["CURRENCY"] = $order->getCurrency();
+			if(!isset($product["CURRENCY"]) || strlen($product["CURRENCY"]) <= 0)
+				$product["CURRENCY"] = $order->getCurrency();
 
 			if($productFormData["IS_SET_PARENT"] == "Y")
 				$product["TYPE"] = BasketItem::TYPE_SET;
@@ -551,6 +568,25 @@ abstract class BasketBuilder
 				$order->getSiteId(),
 				array_merge($product, $productFormData)
 			);
+
+			if ($product["CURRENCY"] !== $order->getCurrency())
+			{
+				$product["PRICE"] = \CCurrencyRates::ConvertCurrency($product["PRICE"], $product["CURRENCY"], $order->getCurrency());
+				if ($product["BASE_PRICE"] > 0)
+				{
+					$product["BASE_PRICE"] = \CCurrencyRates::ConvertCurrency($product["BASE_PRICE"], $product["CURRENCY"], $order->getCurrency());
+				}
+				if ($product["DISCOUNT_PRICE"] > 0)
+				{
+					$product["DISCOUNT_PRICE"] = \CCurrencyRates::ConvertCurrency($product["DISCOUNT_PRICE"], $product["CURRENCY"], $order->getCurrency());
+				}
+				if ($product["VAT_RATE"] > 0)
+				{
+					$product["VAT_RATE"] = \CCurrencyRates::ConvertCurrency($product["VAT_RATE"], $product["CURRENCY"], $order->getCurrency());
+				}
+
+				$product["CURRENCY"] = $order->getCurrency();
+			}
 
 			self::setBasketItemFields($item, $product);
 		}
@@ -626,7 +662,7 @@ abstract class BasketBuilder
 		if($basketCode == self::BASKET_CODE_NEW)
 		{
 			//$result->setData(array("NEW_ITEM_BASKET_CODE" => $productData["BASKET_CODE"]));
-			$needDataUpdate[] = $item->getBasketCode();
+			$this->needDataUpdate[] = $item->getBasketCode();
 		}
 
 		if(!empty($productData['REPLACED']) && $productData['REPLACED'] == 'Y')

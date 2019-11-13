@@ -137,6 +137,14 @@ class Component extends \Bitrix\Landing\Node
 			}
 			if (!empty($updateProps))
 			{
+				// !tmp bugfix about set section id to null
+				if (
+					array_key_exists('SECTION_ID', $updateProps) &&
+					!trim($updateProps['SECTION_ID'])
+				)
+				{
+					$updateProps['SECTION_ID'] = '={$sectionId}';
+				}
 				$doc = $block->getDom();
 				$newContent = self::saveComponent(
 					$doc->saveHTML(),
@@ -527,11 +535,20 @@ class Component extends \Bitrix\Landing\Node
 					{
 						if ($value && isset($prop['entityType']))
 						{
-							if ($prop['entityType'] == 'element')
+							// @todo: make this more universal
+							if (
+								$prop['entityType'] == 'element' &&
+								$value != '={$elementCode}' &&
+								$value != '={$elementId}'
+							)
 							{
 								$value = '#catalogElement' . $value;
 							}
-							else if ($prop['entityType'] == 'section')
+							else if (
+								$prop['entityType'] == 'section' &&
+								$value != '={$sectionCode}' &&
+								$value != '={$sectionId}'
+							)
 							{
 								$value = '#catalogSection' . $value;
 							}

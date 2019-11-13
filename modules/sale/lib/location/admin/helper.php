@@ -441,16 +441,16 @@ abstract class Helper
 	public static function getList($parameters = array(), $tableId = false, $navigation = 20, $params = array())
 	{
 		$entityClass = static::getEntityClass();
-
 		$navNum = $GLOBALS['NavNum'] + 1;
 		$unique = md5($GLOBALS['APPLICATION']->GetCurPage());
 		$showAll = $_SESSION[$unique.'SESS_ALL_'.$navNum] || $_GET['SHOWALL_'.$navNum];
+		$isAdminSection = defined('ADMIN_SECTION') && ADMIN_SECTION === true;
 
 		if ($params["uiMode"])
 		{
 			$result = new \CSaleProxyAdminUiResult($parameters, $entityClass, $tableId);
 		}
-		elseif(ADMIN_SECTION === true && strlen($tableId))
+		elseif($isAdminSection && strlen($tableId))
 		{
 			$result = new \CSaleProxyAdminResult($parameters, $entityClass, $tableId); // being in admin and knowing table, do admin result api call
 		}

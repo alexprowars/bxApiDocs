@@ -153,15 +153,15 @@ class Workgroup
 		return $result;
 	}
 
-	public function syncDeptConnection()
+	public function syncDeptConnection($exclude = false)
 	{
+		global $USER;
+
 		if (!ModuleManager::isModuleInstalled('intranet'))
 		{
 			return;
 		}
 
-		$newUserList = $oldUserList = array();
-		$oldRelationList = array();
 		$groupFields = $this->getFields();
 
 		if (
@@ -175,117 +175,22 @@ class Workgroup
 		if (
 			isset($groupFields['UF_SG_DEPT'])
 			&& isset($groupFields['UF_SG_DEPT']['VALUE'])
-			&& !empty($groupFields['UF_SG_DEPT']['VALUE'])
 			&& Loader::includeModule('intranet')
 		)
 		{
-			$newDeptList = array_map('intval', $groupFields['UF_SG_DEPT']['VALUE']);
-			$res = \CIntranetUtils::getDepartmentEmployees($newDeptList, true);
-			while ($departmentMember = $res->fetch())
+			$workgroupsToSync = Option::get('socialnetwork', 'workgroupsToSync', "");
+			$workgroupsToSync = ($workgroupsToSync !== "" ? @unserialize($workgroupsToSync) : []);
+			if (!is_array($workgroupsToSync))
 			{
-				if ($departmentMember["ID"] != $groupFields["OWNER_ID"])
-				{
-					$newUserList[] = $departmentMember["ID"];
-				}
+				$workgroupsToSync = [];
 			}
-
-			foreach($newDeptList as $deptId)
-			{
-				$newUserList[] = \CIntranetUtils::getDepartmentManagerId($deptId);
-			}
-			$newUserList = array_map('intval', array_unique($newUserList));
-		}
-
-		$res = UserToGroupTable::getList(array(
-			'filter' => array(
-				'=GROUP_ID' => intval($groupFields["ID"]),
-				'@ROLE' => array(UserToGroupTable::ROLE_OWNER, UserToGroupTable::ROLE_MODERATOR, UserToGroupTable::ROLE_USER),
-				'AUTO_MEMBER' => 'Y'
-			),
-			'select' => array('ID', 'USER_ID')
-		));
-		while($relation = $res->fetch())
-		{
-			$oldUserList[] = $relation['USER_ID'];
-			$oldRelationList[$relation['USER_ID']] = $relation['ID'];
-		}
-		$oldUserList = array_map('intval', array_unique($oldUserList));
-
-		$userListPlus = array_diff($newUserList, $oldUserList);
-		$userListMinus = array_diff($oldUserList, $newUserList);
-
-		foreach($userListMinus as $userId)
-		{
-			if (isset($oldRelationList[$userId]))
-			{
-				UserToGroup::changeRelationAutoMembership(array(
-					'RELATION_ID' => $oldRelationList[$userId],
-					'VALUE' => 'N'
-				));
-			}
-		}
-
-		$changeList = $addList = array();
-
-		if (!empty($userListPlus))
-		{
-			$memberList = array();
-			$res = UserToGroupTable::getList(array(
-				'filter' => array(
-					'=GROUP_ID' => intval($groupFields["ID"]),
-					'@USER_ID' => $userListPlus,
-					'@ROLE' => array(UserToGroupTable::ROLE_OWNER, UserToGroupTable::ROLE_MODERATOR, UserToGroupTable::ROLE_USER),
-				),
-				'select' => array('ID', 'USER_ID')
-			));
-			while($relation = $res->fetch())
-			{
-				$memberList[] = $relation['USER_ID'];
-			}
-			$userListPlus = array_diff($userListPlus, $memberList);
-			if (!empty($userListPlus))
-			{
-				$res = UserToGroupTable::getList(array(
-					'filter' => array(
-						'=GROUP_ID' => intval($groupFields["ID"]),
-						'@USER_ID' => $userListPlus,
-						'@ROLE' => array(UserToGroupTable::ROLE_REQUEST, UserToGroupTable::ROLE_BAN),
-						'AUTO_MEMBER' => 'N'
-					),
-					'select' => array('ID', 'USER_ID', 'GROUP_ID')
-				));
-				while($relation = $res->fetch())
-				{
-					$changeList[] = intval($relation['USER_ID']);
-					UserToGroup::changeRelationAutoMembership(array(
-						'RELATION_ID' => intval($relation['ID']),
-						'USER_ID' => intval($relation['USER_ID']),
-						'GROUP_ID' => intval($relation['GROUP_ID']),
-						'ROLE' => UserToGroupTable::ROLE_USER,
-						'VALUE' => 'Y'
-					));
-				}
-
-				$addList = array_diff($userListPlus, $changeList);
-
-				foreach($addList as $addUserId)
-				{
-					UserToGroup::addRelationAutoMembership(array(
-						'USER_ID' => $addUserId,
-						'GROUP_ID' => intval($groupFields["ID"]),
-						'ROLE' => UserToGroupTable::ROLE_USER,
-						'VALUE' => 'Y'
-					));
-				}
-			}
-		}
-
-		if (
-			!empty($changeList)
-			|| !empty($addList)
-		)
-		{
-			\CSocNetGroup::setStat($groupFields["ID"]);
+			$workgroupsToSync[] = array(
+				'groupId' => $groupFields["ID"],
+				'initiatorId' => (is_object($USER) ? $USER->getId() : $groupFields['OWNER_ID']),
+				'exclude' => $exclude
+			);
+			Option::set('socialnetwork', 'workgroupsToSync', serialize($workgroupsToSync));
+			\Bitrix\Socialnetwork\Update\WorkgroupDeptSync::bind(1);
 		}
 	}
 
@@ -402,14 +307,15 @@ class Workgroup
 			return true;
 		}
 
-		$groupsToCheck = array();
+		$oldGroupsIdToCheckList = self::$groupsIdToCheckList;
+		$newGroupsIdToCheckList = [];
+
 		if (
 			isset($section['ACTIVE'])
 			&& $section['ACTIVE'] == 'N'
 		)
 		{
 			self::disconnectSection($section['ID']);
-			$groupsToCheck = self::$groupsIdToCheckList;
 		}
 		else
 		{
@@ -425,17 +331,23 @@ class Workgroup
 			if (!empty($rootSectionIdList))
 			{
 				$newGroupsIdToCheckList = UserToGroup::getConnectedGroups($rootSectionIdList);
-				if (!empty($newGroupsIdToCheckList))
-				{
-					$groupsToCheck = array_merge(self::$groupsIdToCheckList, $newGroupsIdToCheckList);
-				}
 			}
 		}
 
-		if (!empty($groupsToCheck))
+		if (!empty($oldGroupsIdToCheckList))
 		{
-			$groupsToCheck = array_unique($groupsToCheck);
-			foreach($groupsToCheck as $groupId)
+			$oldGroupsIdToCheckList = array_unique($oldGroupsIdToCheckList);
+			foreach($oldGroupsIdToCheckList as $groupId)
+			{
+				$groupItem = \Bitrix\Socialnetwork\Item\Workgroup::getById($groupId, false);
+				$groupItem->syncDeptConnection(true);
+			}
+		}
+
+		if (!empty($newGroupsIdToCheckList))
+		{
+			$newGroupsIdToCheckList = array_unique($newGroupsIdToCheckList);
+			foreach($newGroupsIdToCheckList as $groupId)
 			{
 				$groupItem = \Bitrix\Socialnetwork\Item\Workgroup::getById($groupId, false);
 				$groupItem->syncDeptConnection();
@@ -514,7 +426,6 @@ class Workgroup
 		}
 
 		return true;
-
 	}
 
 	private static function disconnectSection($sectionId)
@@ -541,7 +452,7 @@ class Workgroup
 			));
 
 			$groupItem = \Bitrix\Socialnetwork\Item\Workgroup::getById($group['ID'], false);
-			$groupItem->syncDeptConnection();
+			$groupItem->syncDeptConnection(true);
 		}
 	}
 
@@ -549,6 +460,7 @@ class Workgroup
 	{
 		static $intranetInstalled = null;
 		static $extranetInstalled = null;
+		static $landingInstalled = null;
 
 		if ($intranetInstalled === null)
 		{
@@ -561,6 +473,11 @@ class Workgroup
 				ModuleManager::isModuleInstalled('extranet')
 				&& strlen(Option::get("extranet", "extranet_site")) > 0
 			);
+		}
+
+		if ($landingInstalled === null)
+		{
+			$landingInstalled = ModuleManager::isModuleInstalled('landing');
 		}
 
 		$currentExtranetSite = (
@@ -583,7 +500,7 @@ class Workgroup
 			&& $params["fullMode"]
 		);
 
-		$result = array();
+		$result = [];
 
 		if (
 			$intranetInstalled
@@ -714,6 +631,27 @@ class Workgroup
 				'EXTERNAL' => 'Y',
 				'TILE_CLASS' => 'social-group-tile-item-cover-outer social-group-tile-item-icon-group-outer'
 			);
+		}
+
+		if (
+			$landingInstalled
+			&& (
+				empty($categoryList)
+				|| in_array('groups', $categoryList)
+			)
+		)
+		{
+			$result['group-landing'] = array(
+				'SORT' => '50',
+				'NAME' => Loc::getMessage('SOCIALNETWORK_ITEM_WORKGROUP_TYPE_GROUP_LANDING'),
+				'DESCRIPTION' => Loc::getMessage('SOCIALNETWORK_ITEM_WORKGROUP_TYPE_GROUP_LANDING_DESC'),
+				'DESCRIPTION2' => Loc::getMessage('SOCIALNETWORK_ITEM_WORKGROUP_TYPE_GROUP_LANDING_DESC'),
+				'VISIBLE' => 'N',
+				'OPENED' => 'N',
+				'PROJECT' => 'N',
+				'EXTERNAL' => 'N',
+				'LANDING' => 'Y',
+				'TILE_CLASS' => 'social-group-tile-item-cover-public social-group-tile-item-icon-group-public'			);
 		}
 
 		return $result;

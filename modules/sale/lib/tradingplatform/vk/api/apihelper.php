@@ -34,7 +34,9 @@ class ApiHelper
 	public function __construct($exportId)
 	{
 		if (empty($exportId))
+		{
 			throw new ArgumentNullException('exportId');
+		}
 		
 		$this->exportId = $exportId;
 		$this->vk = Vk::getInstance();
@@ -89,12 +91,16 @@ class ApiHelper
 	public static function addResultToData($data = array(), $result = array(), $referenceKey)
 	{
 		if (empty($result) || !isset($referenceKey))
+		{
 			return $data;
+		}
 		
 		foreach ($result as $item)
 		{
 			if (isset($data[$item[$referenceKey]]))
+			{
 				$data[$item[$referenceKey]] += $item;
+			}
 		}
 		
 		return $data;
@@ -131,6 +137,7 @@ class ApiHelper
 	
 	/**
 	 * Check photo size, get upload server, upload photo and save them
+	 * @deprecated use PhotoUploader class
 	 *
 	 * @param $data
 	 * @param $vkGroupId
@@ -210,7 +217,6 @@ class ApiHelper
 				"PHOTOS" => $item["PHOTOS"]	//only for products
 			));
 			$responseHttp = $this->uploadPhotoHttp($item, $uploadServer, $uploadType, $timer);
-			$responseHttp = Json::decode($responseHttp);
 			
 //			SAVE upload result
 			$photoSaveParams = array(
@@ -246,6 +252,7 @@ class ApiHelper
 	
 	/**
 	 * Formatted params and run http-upload process
+	 * @deprecated use PhotoUploader class
 	 *
 	 * @param $data
 	 * @param $uploadServer
@@ -297,6 +304,38 @@ class ApiHelper
 	
 	
 	/**
+	 * Build params for http photo upload
+	 *
+	 * @deprecated use PhotoUploader class
+	 * @param $photoId
+	 * @return array
+	 */
+	private static function setUploadServerMainPhotoParams($photoId)
+	{
+		$result = array();
+		$result["main_photo"] = 1;
+		
+		$photoParams = \CFile::GetFileArray($photoId);
+		$w = $photoParams["WIDTH"];
+		$h = $photoParams["HEIGHT"];
+		
+		if ($w >= $h)
+		{
+			$result["crop_x"] = ceil(($w + $h) / 2);
+			$result["crop_y"] = 0;
+			$result["crop_width"] = $h;
+		}
+		else
+		{
+			$result["crop_x"] = 0;
+			$result["crop_y"] = ceil(($w + $h) / 2);
+			$result["crop_width"] = $w;
+		}
+		
+		return $result;
+	}
+	
+	/**
 	 * Execute http requst
 	 *
 	 * @param $uploadServer
@@ -327,6 +366,8 @@ class ApiHelper
 			'FILE_OK' => $file ? 'Y' : 'N',
 		]);
 		$result = $http->post($uploadServer, $data);
+		
+		$result = Json::decode($result);
 		$this->logger->addLog("Upload photo HTTP response", $result);
 		
 //		check TIMER if set
@@ -501,8 +542,10 @@ class ApiHelper
 			}
 			
 //			check VK_CATEGORY
-			if (!(isset($item["CATEGORY_VK"]) && is_int($item["CATEGORY_VK"])))
-				$item["CATEGORY_VK"] = Vk::VERY_DEFAULT_VK_CATEGORY;    // we need some category
+			if (!(isset($item["CATEGORY_VK"]) && intval($item["CATEGORY_VK"]) > 0))
+			{
+				$item["CATEGORY_VK"] = Vk::VERY_DEFAULT_VK_CATEGORY;
+			}    // we need some category
 			
 			$result[] = $item;
 		}
@@ -511,36 +554,7 @@ class ApiHelper
 	}
 	
 	
-	/**
-	 * Build params for http photo upload
-	 *
-	 * @param $photoId
-	 * @return array
-	 */
-	private static function setUploadServerMainPhotoParams($photoId)
-	{
-		$result = array();
-		$result["main_photo"] = 1;
-		
-		$photoParams = \CFile::GetFileArray($photoId);
-		$w = $photoParams["WIDTH"];
-		$h = $photoParams["HEIGHT"];
-		
-		if ($w >= $h)
-		{
-			$result["crop_x"] = ceil(($w + $h) / 2);
-			$result["crop_y"] = 0;
-			$result["crop_width"] = $h;
-		}
-		else
-		{
-			$result["crop_x"] = 0;
-			$result["crop_y"] = ceil(($w + $h) / 2);
-			$result["crop_width"] = $w;
-		}
-		
-		return $result;
-	}
+
 	
 	
 	/**
@@ -555,9 +569,13 @@ class ApiHelper
 		$vkCats = $this->api->run('market.getCategories', array("count" => $count, "offset" => $offset));
 		
 		if (!empty($vkCats))
+		{
 			return $vkCats["items"];
+		}
 		
 		else
+		{
 			return false;
+		}
 	}
 }

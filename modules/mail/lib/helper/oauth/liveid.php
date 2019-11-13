@@ -72,6 +72,15 @@ if (Main\Loader::includeModule('socialservices'))
 			return false;
 		}
 
+		public function getTokenData()
+		{
+			return array(
+				'access_token' => $this->access_token,
+				'refresh_token' => $this->refresh_token,
+				'expires_in' => time() + $this->accessTokenExpires,
+			);
+		}
+
 		public function getCurrentUser()
 		{
 			if (empty($this->access_token))
@@ -98,9 +107,10 @@ if (Main\Loader::includeModule('socialservices'))
 
 			if (is_array($result))
 			{
-				$result['access_token'] = $this->access_token;
-				$result['refresh_token'] = $this->refresh_token;
-				$result['expires_in'] = time() + $this->accessTokenExpires;
+				$result = array_merge(
+					$result,
+					$this->getTokenData()
+				);
 			}
 
 			return $result;

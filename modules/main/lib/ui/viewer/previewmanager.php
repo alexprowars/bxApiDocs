@@ -11,6 +11,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Main\UI\Viewer\Transformation\TransformerManager;
+use Bitrix\Main\Web\MimeType;
 use Bitrix\Main\Web\Uri;
 use Bitrix\Main\Security;
 use Bitrix\Main\Engine\Response;
@@ -57,7 +58,9 @@ final class PreviewManager
 		$default = [
 			Renderer\Pdf::class,
 			Renderer\Video::class,
+			Renderer\Audio::class,
 			Renderer\Image::class,
+			Renderer\Code::class,
 		];
 
 		$event = new Event('main', 'onPreviewRendererBuildList');
@@ -191,6 +194,12 @@ final class PreviewManager
 
 		if ($response instanceof \Bitrix\Main\Response)
 		{
+			/** @global \CMain $APPLICATION */
+			global $APPLICATION;
+
+			$APPLICATION->RestartBuffer();
+			while(ob_end_clean());
+
 			Application::getInstance()->end(0, $response);
 		}
 	}
@@ -263,8 +272,8 @@ final class PreviewManager
 
 		return [
 			'alt' => [
-				'contentType' => $getContentType->bindTo($this),
-				'sourceUri' => $getSourceUri->bindTo($this),
+				'contentType' => $getContentType->bindTo($this, $this),
+				'sourceUri' => $getSourceUri->bindTo($this, $this),
 			],
 		];
 	}
@@ -321,6 +330,26 @@ final class PreviewManager
 		}
 
 		return Response\AjaxJson::createError();
+	}
+
+	public function setPreviewImageId($fileId, $previewImageId)
+	{
+		$alreadyPreview = $this->getFilePreviewEntryByFileId($fileId);
+		if (isset($alreadyPreview['ID']))
+		{
+			$result = FilePreviewTable::update($fileId, [
+				'PREVIEW_IMAGE_ID' => $previewImageId,
+			]);
+		}
+		else
+		{
+			$result = FilePreviewTable::add([
+				'FILE_ID' => $fileId,
+				'PREVIEW_IMAGE_ID' => $previewImageId,
+			]);
+		}
+
+		return $result;
 	}
 
 	public function generatePreview($fileId)
@@ -435,14 +464,55 @@ final class PreviewManager
 	protected function buildRenderByFile($originalName, $contentType, Uri $sourceUri, array $options = [])
 	{
 		$options['contentType'] = $contentType;
-		$rendererClass = $this->getRenderClassByContentType($contentType);
+		$rendererClass = $this->getRenderClassByFile([
+			'contentType' => $contentType,
+			'originalName' => $originalName,
+		]);
 
 		$reflectionClass = new \ReflectionClass($rendererClass);
 		/** @see \Bitrix\Main\UI\Viewer\Renderer\Renderer::__construct */
 		return $reflectionClass->newInstance($originalName, $sourceUri, $options);
 	}
 
-	public function getRenderClassByContentType($contentType)
+	public function getRenderClassByFile(array $file)
+	{
+		$contentType = $file['contentType'];
+		$originalName = $file['originalName'];
+		$rendererClass = $this->findRenderClassByContentType($contentType);
+		if (!$rendererClass)
+		{
+			$contentTypeByName = MimeType::getByFilename($originalName);
+			$rendererClass = $this->findRenderClassByContentType($contentTypeByName);
+		}
+
+		$rendererClass = $rendererClass? : Renderer\Stub::class;
+
+		if ($this->shouldRestrictBySize($file, $rendererClass))
+		{
+			return Renderer\RestrictedBySize::class;
+		}
+
+		return $rendererClass;
+	}
+
+	private function shouldRestrictBySize(array $file, $rendererClass)
+	{
+		if (!isset($file['size']))
+		{
+			return false;
+		}
+
+		$size = $file['size'];
+		$restriction = $rendererClass::getSizeRestriction();
+		if ($restriction !== null && $size !== null && $size > $restriction)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	private function findRenderClassByContentType($contentType)
 	{
 		foreach ($this->rendererList as $rendererClass)
 		{
@@ -453,7 +523,7 @@ final class PreviewManager
 			}
 		}
 
-		return Renderer\Stub::class;
+		return null;
 	}
 
 	/**

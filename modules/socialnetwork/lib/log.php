@@ -7,6 +7,7 @@
  */
 namespace Bitrix\Socialnetwork;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Entity;
 
 class LogTable extends Entity\DataManager
@@ -76,6 +77,10 @@ class LogTable extends Entity\DataManager
 				'data_type' => 'boolean',
 				'values' => array('N','Y')
 			),
+			'INACTIVE' => array(
+				'data_type' => 'boolean',
+				'values' => array('N','Y')
+			),
 			'RATING_TYPE_ID' => array(
 				'data_type' => 'string',
 			),
@@ -85,5 +90,12 @@ class LogTable extends Entity\DataManager
 		);
 
 		return $fieldsMap;
+	}
+
+	public static function setInactive($id, $status = true)
+	{
+		return self::update($id, array(
+			'INACTIVE' => ($status ? 'Y' : 'N')
+		));
 	}
 }

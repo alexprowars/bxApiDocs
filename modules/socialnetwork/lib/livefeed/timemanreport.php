@@ -80,21 +80,7 @@ final class TimemanReport extends Provider
 
 		return $result;
 	}
-/*
-	public function getLiveFeedUrl()
-	{
-		$pathToTimemanReport = '';
-		if (
-			($timemanReport = $this->getSourceFields())
-			&& !empty($timemanReport)
-		)
-		{
-			$pathToTimemanReport = Option::get("timeman", "WORK_REPORT_PATH", "/timeman/work_report.php");
-		}
 
-		return $pathToTimemanReport;
-	}
-*/
 	public function getLiveFeedUrl()
 	{
 		$pathToLogEntry = '';
@@ -106,7 +92,6 @@ final class TimemanReport extends Provider
 			if (!empty($pathToLogEntry))
 			{
 				$pathToLogEntry = \CComponentEngine::makePathFromTemplate($pathToLogEntry, array("log_id" => $logId));
-//				$pathToLogEntry .= (strpos($pathToLogEntry, '?') === false ? '?' : '&').'commentId='.$this->getEntityId().'#com'.$this->getEntityId();
 			}
 		}
 		return $pathToLogEntry;

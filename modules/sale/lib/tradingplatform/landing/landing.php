@@ -3,7 +3,6 @@
 namespace Bitrix\Sale\TradingPlatform\Landing;
 
 use Bitrix\Main\ArgumentException;
-use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Event;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
@@ -37,6 +36,7 @@ class Landing extends Sale\TradingPlatform\Platform
 			"NAME" => Loc::getMessage('SALE_LANDING_NAME', ['#NAME#' => $data['TITLE']]),
 			"DESCRIPTION" => '',
 			"CLASS" => '\\'.static::class,
+			"XML_ID" => static::generateXmlId(),
 		]);
 
 		if ($result->isSuccess())
@@ -46,6 +46,14 @@ class Landing extends Sale\TradingPlatform\Platform
 		}
 
 		return $result->isSuccess();
+	}
+
+	/**
+	 * @return string
+	 */
+	protected static function generateXmlId()
+	{
+		return uniqid('bx_');
 	}
 
 	/**
@@ -110,6 +118,86 @@ class Landing extends Sale\TradingPlatform\Platform
 	}
 
 	/**
+	 * @param Event $event
+	 * @throws ArgumentException
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 * @return void
+	 */
+	public static function onLandingSiteDelete(Event $event)
+	{
+		$primary = $event->getParameter('primary');
+
+		$landing = Landing::getInstanceByCode(static::getCodeBySiteId($primary['ID']));
+		if ($landing->isInstalled())
+		{
+			$registry = Sale\Registry::getInstance(Sale\Registry::REGISTRY_TYPE_ORDER);
+
+			/** @var Sale\TradeBindingCollection $tradeBindingCollection */
+			$tradeBindingCollection = $registry->get(Sale\Registry::ENTITY_TRADE_BINDING_COLLECTION);
+
+			$dbRes = $tradeBindingCollection::getList([
+				'select' => ['ID'],
+				'filter' => [
+					'=TRADING_PLATFORM_ID' => $landing->getId()
+				]
+			]);
+
+			if ($dbRes->fetch())
+			{
+				$landing->unsetActive();
+			}
+			else
+			{
+				$landing->uninstall();
+			}
+		}
+	}
+
+	/**
+	 * @param Event $event
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 * @return void
+	 */
+	public static function onLandingBeforeSiteRecycle(Event $event)
+	{
+		$id = $event->getParameter('id');
+		$delete = $event->getParameter('delete');
+
+		$res = \Bitrix\Landing\Site::getList([
+		    'select' => [
+		        'ID'
+		    ],
+		    'filter' => [
+		        '=ID' => $id,
+		        'CHECK_PERMISSIONS' => 'N',
+		        '=TYPE' => 'STORE'
+		    ]
+		]);
+
+		if (!$res->fetch())
+		{
+		    return;
+		}
+
+		$landing = Landing::getInstanceByCode(static::getCodeBySiteId($id));
+		if ($landing)
+		{
+			return;
+		}
+
+		if ($delete)
+		{
+			$landing->unsetActive();
+		}
+		else
+		{
+			$landing->setActive();
+		}
+	}
+
+	/**
 	 * @param $id
 	 * @return string
 	 */
@@ -137,7 +225,8 @@ class Landing extends Sale\TradingPlatform\Platform
 		/** @var DB\Result $dbRes */
 		$dbRes = \Bitrix\Landing\Site::getList([
 			'filter' => [
-				'=ID' => $this->getSiteId()
+				'=ID' => $this->getSiteId(),
+				'CHECK_PERMISSIONS' => 'N'
 			]
 		]);
 
@@ -163,25 +252,13 @@ class Landing extends Sale\TradingPlatform\Platform
 		{
 			if (Loader::includeModule('landing'))
 			{
-				$sysPages = \Bitrix\Landing\Syspage::get($this->getSiteId());
-				if (isset($sysPages['personal']))
-				{
-					$landing = \Bitrix\Landing\Landing::createInstance(
-						$sysPages['personal']['LANDING_ID'],
-						[
-							'blocks_limit' => 1
-						]
-					);
-					if ($landing->exist())
-					{
-						$url = $landing->getPublicUrl(
-							$sysPages['personal']['LANDING_ID']
-						);
-						$url .= '?SECTION=orders&ID=' . $order->getId();
+				$url = \Bitrix\Landing\Syspage::getSpecialPage(
+					$this->getSiteId(),
+					'personal',
+					['SECTION' => 'orders', 'ID' => $order->getId()]
+				);
 
-						return \Bitrix\Main\Engine\UrlManager::getInstance()->getHostUrl().$url;
-					}
-				}
+				return $url;
 			}
 
 			return '';

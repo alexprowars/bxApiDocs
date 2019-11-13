@@ -10,19 +10,19 @@ class Agent
 	 */
 	public static function clearRecycle($days = null)
 	{
-		return __CLASS__ . '::' . __FUNCTION__ . '();'; 
-
+		Rights::setOff();
 		$days = !is_null($days)
 				? (int) $days
 				: (int) Manager::getOption('deleted_lifetime_days');
 
 		$date = new \Bitrix\Main\Type\DateTime;
 		$date->add('-' . $days . ' days');
+		$folders = [];
 
 		// first delete landings
 		$res = Landing::getList([
 			'select' => [
-				'ID'
+				'ID', 'FOLDER'
 			],
 			'filter' => [
 				[
@@ -37,7 +37,8 @@ class Agent
 					]
 				],
 				'=DELETED' => ['Y', 'N'],
-				'=SITE.DELETED' => ['Y', 'N']
+				'=SITE.DELETED' => ['Y', 'N'],
+				'CHECK_PERMISSIONS' => 'N'
 			],
 			'order' => [
 				'DATE_MODIFY' => 'desc'
@@ -45,8 +46,41 @@ class Agent
 		]);
 		while ($row = $res->fetch())
 		{
+			if ($row['FOLDER'] == 'Y')
+			{
+				$folders[] = $row['ID'];
+				continue;
+			}
 			$resDel = Landing::delete($row['ID'], true);
 			$resDel->isSuccess();// for trigger
+		}
+
+		// delete from folders
+		if ($folders)
+		{
+			$res = Landing::getList([
+				'select' => [
+					'ID'
+				],
+				'filter' => [
+					'FOLDER_ID' => $folders,
+					'=DELETED' => ['Y', 'N'],
+					'=SITE.DELETED' => ['Y', 'N'],
+					'CHECK_PERMISSIONS' => 'N'
+				],
+				'order' => [
+					'DATE_MODIFY' => 'desc'
+				]
+			]);
+			while ($row = $res->fetch())
+			{
+				array_unshift($folders, $row['ID']);
+			}
+			foreach ($folders as $folderId)
+			{
+				$resDel = Landing::delete($folderId, true);
+				$resDel->isSuccess();// for trigger
+			}
 		}
 
 		// then delete sites
@@ -56,7 +90,8 @@ class Agent
 			],
 			'filter' => [
 				'=DELETED' => 'Y',
-				'<DATE_MODIFY' => $date
+				'<DATE_MODIFY' => $date,
+				'CHECK_PERMISSIONS' => 'N'
 			],
 			'order' => [
 				'DATE_MODIFY' => 'desc'
@@ -67,6 +102,8 @@ class Agent
 			$resDel = Site::delete($row['ID']);
 			$resDel->isSuccess();// for trigger
 		}
+
+		Rights::setOn();
 
 		return __CLASS__ . '::' . __FUNCTION__ . '();';
 	}

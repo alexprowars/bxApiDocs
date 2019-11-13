@@ -49,4 +49,11 @@ class Pdf extends Renderer
 
 		return ob_get_clean();
 	}
+
+	public function getData()
+	{
+		return [
+			'src' => $this->sourceUri,
+		];
+	}
 }

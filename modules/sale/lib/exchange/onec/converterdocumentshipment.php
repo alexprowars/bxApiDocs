@@ -127,7 +127,7 @@ class ConverterDocumentShipment extends Converter
 		}
 
 		$result['TRAITS'] = isset($fields)? $fields:array();
-		$result['ITEMS'] = isset($params['ITEMS'])? $params['ITEMS']:array();
+		$result['ITEMS'] = isset($params['ITEMS'])? $this->modifyItemIdByItemName($params['ITEMS']):array();
 		$result['TAXES'] = isset($params['TAXES'])? $params['TAXES']:array();
 
 		return $result;

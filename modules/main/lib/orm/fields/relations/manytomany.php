@@ -11,9 +11,11 @@ namespace Bitrix\Main\ORM\Fields\Relations;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ORM\Entity;
 use Bitrix\Main\ORM\Fields\FieldTypeMask;
+use Bitrix\Main\ORM\Query\Join;
 use Bitrix\Main\ORM\Query\Query;
 use Bitrix\Main\ORM\Fields\Relations\Reference;
 use Bitrix\Main\SystemException;
+use Bitrix\Main\Text\StringHelper;
 
 /**
  * Performs many to many relation through mediator entity
@@ -42,6 +44,14 @@ class ManyToMany extends Relation
 
 	/** @var string Name of reference from mediator to target entity */
 	protected $remoteReferenceName;
+
+	/** @var string */
+	protected $joinType = Join::TYPE_LEFT;
+
+	/** @var int */
+	protected $cascadeSavePolicy = CascadePolicy::NO_ACTION;
+
+	protected $cascadeDeletePolicy = CascadePolicy::NO_ACTION; // follow_orphans | no_action
 
 	/**
 	 * @param string        $name
@@ -196,7 +206,7 @@ class ManyToMany extends Relation
 	{
 		if ($this->mediatorEntity === null)
 		{
-			if (!empty($this->mediatorEntityName) && class_exists($this->mediatorEntityName))
+			if (!empty($this->mediatorEntityName) && Entity::has($this->mediatorEntityName))
 			{
 				$this->mediatorEntity = Entity::getInstance($this->mediatorEntityName);
 			}
@@ -217,7 +227,7 @@ class ManyToMany extends Relation
 				{
 					$localEntityName = $this->getEntity()->getName();
 					$remoteEntityName = $this->getRefEntity()->getName();
-					$fieldToClassName = Entity::snake2camel($this->name);
+					$fieldToClassName = StringHelper::snake2camel($this->name);
 
 					// each field has its own entity in case of ManyToMany definitions will be different
 					$this->mediatorEntityName = "MediatorFrom{$localEntityName}To{$remoteEntityName}Via{$fieldToClassName}Table";
@@ -254,7 +264,7 @@ class ManyToMany extends Relation
 
 				// local reference
 				$localReference = (new Reference($this->getLocalReferenceName(), $this->getEntity(), $localReferenceConditions))
-					->configureJoinType('inner');
+					->configureJoinType($this->joinType);
 				$fields[] = $localReference;
 
 				// remote entity primary
@@ -285,7 +295,7 @@ class ManyToMany extends Relation
 
 				// remote reference
 				$remoteReference = (new Reference($this->getRemoteReferenceName(), $this->getRefEntity(), $remoteReferenceConditions))
-					->configureJoinType('inner');
+					->configureJoinType($this->joinType);
 				$fields[] = $remoteReference;
 
 				// set table name
@@ -306,7 +316,7 @@ class ManyToMany extends Relation
 	{
 		if (empty($this->localReferenceName))
 		{
-			$this->localReferenceName = strtoupper(Entity::camel2snake($this->getEntity()->getName()));
+			$this->localReferenceName = strtoupper(StringHelper::camel2snake($this->getEntity()->getName()));
 		}
 
 		return $this->localReferenceName;
@@ -333,7 +343,7 @@ class ManyToMany extends Relation
 	{
 		if (empty($this->remoteReferenceName))
 		{
-			$this->remoteReferenceName = strtoupper(Entity::camel2snake($this->getRefEntity()->getName()));
+			$this->remoteReferenceName = strtoupper(StringHelper::camel2snake($this->getRefEntity()->getName()));
 		}
 
 		return $this->remoteReferenceName;

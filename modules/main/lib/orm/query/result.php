@@ -84,6 +84,8 @@ class Result extends BaseResult
 		// TODO when join, add primary and hide it in ARRAY result, but use for OBJECT fetch
 		// e.g. when first fetchObject, remove data modifier that cuts 'unexpected' primary fields
 
+		// TODO wakeup reference objects with only primary if there are enough data in result
+
 		// base object initialization
 		$this->initializeFetchObject();
 
@@ -150,6 +152,11 @@ class Result extends BaseResult
 			// dive deep from the start to the end of chain
 			foreach ($iterableElements as $element)
 			{
+				if ($currentObject === null)
+				{
+					continue;
+				}
+
 				/** @var $element ChainElement $field */
 				$field = $element->getValue();
 
@@ -169,6 +176,12 @@ class Result extends BaseResult
 
 				if ($field instanceof IReadable)
 				{
+					// for remote objects all values have been already set during compose
+					if ($currentObject !== $object)
+					{
+						continue;
+					}
+
 					// normalize value
 					$value = $field->cast($row[$selectChain->getAlias()]);
 
@@ -182,7 +195,7 @@ class Result extends BaseResult
 					// define remote entity definition
 					// check if this reference has already been woken up
 					// main part of current chain (w/o last element) should be the same
-					if (!empty($relEntityCache[$currentDefinition]))
+					if (array_key_exists($currentDefinition, $relEntityCache))
 					{
 						$currentObject = $relEntityCache[$currentDefinition];
 						continue;
@@ -201,14 +214,14 @@ class Result extends BaseResult
 					{
 						/** @var ScalarField|ExpressionField $remoteField */
 						$remoteField = $remoteChain->getLastElement()->getValue();
-						$remoteValue = $remoteField->cast($row[$remoteChain->getAlias()]);
+						$remoteValue = $row[$remoteChain->getAlias()];
 
 						$remoteObjectValues[$remoteField->getName()] = $remoteValue;
 					}
 
 					foreach ($remotePrimary as $primaryName)
 					{
-						if (!isset($remoteObjectValues[$primaryName]))
+						if (!array_key_exists($primaryName, $remoteObjectValues))
 						{
 							throw new SystemException(sprintf(
 								'Primary of %s was not found in database result', $remoteEntity->getDataClass()
@@ -237,6 +250,7 @@ class Result extends BaseResult
 							if (empty($currentObject->sysGetRuntime($field->getName())))
 							{
 								// create new collection and set as value for current object
+								/** @var Collection $collection */
 								$collection = $remoteEntity->createCollection();
 								$currentObject->sysSetRuntime($field->getName(), $collection);
 							}
@@ -250,6 +264,7 @@ class Result extends BaseResult
 							if (empty($currentObject->sysGetValue($field->getName())))
 							{
 								// create new collection and set as value for current object
+								/** @var Collection $collection */
 								$collection = $remoteEntity->createCollection();
 								$currentObject->sysSetActual($field->getName(), $collection);
 							}
@@ -260,13 +275,16 @@ class Result extends BaseResult
 						}
 
 						// define remote object
-						if (!$collection->hasByPrimary($remotePrimaryValues))
+						if (current($remotePrimaryValues) === null || !$collection->hasByPrimary($remotePrimaryValues))
 						{
 							// get object via identity map
 							$remoteObject = $this->composeRemoteObject($remoteEntity, $remotePrimaryValues, $remoteObjectValues);
 
 							// add to collection
-							$collection->sysAddActual($remoteObject);
+							if ($remoteObject !== null)
+							{
+								$collection->sysAddActual($remoteObject);
+							}
 						}
 						else
 						{
@@ -357,7 +375,21 @@ class Result extends BaseResult
 			{
 				/** @var Collection $collection */
 				$collection = $this->fetchCollection();
+
+				// remember original result
+				$originalResult = $this->result;
+
 				$this->result = new ArrayResult($collection->getAll());
+
+				// recover count total
+				try
+				{
+					if ($originalResult->getCount())
+					{
+						$this->result->setCount($originalResult->getCount());
+					}
+				}
+				catch (\Bitrix\Main\ObjectPropertyException $e) {}
 			}
 		}
 	}
@@ -435,6 +467,12 @@ class Result extends BaseResult
 	 */
 	protected function composeRemoteObject($entity, $primaryValues, $objectValues)
 	{
+		// if null primary then return null
+		if (current($primaryValues) === null)
+		{
+			return null;
+		}
+
 		// try to get remote object from identity map
 		/** @var $remoteObject EntityObject */
 		$objectClass = $entity->getObjectClass();
@@ -458,7 +496,11 @@ class Result extends BaseResult
 		// set all values of remote object
 		foreach ($objectValues as $fieldName => $objectValue)
 		{
-			$remoteObject->sysSetActual($fieldName, $objectValue);
+			/** @var ScalarField $field */
+			$field = $entity->getField($fieldName);
+			$castValue = $field->cast($objectValue);
+
+			$remoteObject->sysSetActual($fieldName, $castValue);
 		}
 
 		// save to identityMap

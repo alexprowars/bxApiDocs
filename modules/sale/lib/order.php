@@ -1,15 +1,11 @@
 <?php
-/**
- * Bitrix Framework
- * @package bitrix
- * @subpackage sale
- * @copyright 2001-2012 Bitrix
- */
+
 namespace Bitrix\Sale;
 
 use Bitrix\Main\Entity;
 use Bitrix\Main;
 use Bitrix\Main\Type;
+use Bitrix\Sale\Cashbox;
 use Bitrix\Sale\Internals;
 use Bitrix\Main\Localization\Loc;
 
@@ -30,6 +26,9 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	/** @var TradeBindingCollection */
 	protected $tradeBindingCollection;
 
+	/** @var array $printedChecks */
+	protected $printedChecks = array();
+
 
 	const SALE_ORDER_LOCK_STATUS_RED = 'red';
 	const SALE_ORDER_LOCK_STATUS_GREEN = 'green';
@@ -42,9 +41,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	{
 		return Registry::REGISTRY_TYPE_ORDER;
 	}
-
-	/** @var array $printedChecks */
-	protected $printedChecks = array();
 
 
 	/**
@@ -67,11 +63,42 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	 * Return printed check list
 	 *
 	 * @return array
+	 * @throws Main\ArgumentException
 	 */
 	public function getPrintedChecks()
 	{
+		if (!$this->printedChecks
+			&& !$this->isNew()
+		)
+		{
+			$this->printedChecks = $this->loadPrintedChecks();
+		}
+
 		return $this->printedChecks;
 	}
+
+	/**
+	 * @return array
+	 * @throws Main\ArgumentException
+	 */
+	protected function loadPrintedChecks()
+	{
+		$result = [];
+
+		$dbRes = Cashbox\CheckManager::getList([
+			'filter' => [
+				'=ORDER_ID' => $this->getId()
+			]
+		]);
+
+		while ($data = $dbRes->fetch())
+		{
+			$result[] = Cashbox\CheckManager::create($data);
+		}
+
+		return $result;
+	}
+
 
 	/**
 	 * Add printed check to order
@@ -124,11 +151,8 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				$foundShipment = false;
 
 				/** @var Shipment $entityShipment */
-				foreach ($shipmentCollection as $entityShipment)
+				foreach ($shipmentCollection->getNotSystemItems() as $entityShipment)
 				{
-					if ($entityShipment->isSystem())
-						continue;
-
 					if (intval($entityShipment->getField('DELIVERY_ID')) > 0)
 					{
 						$foundShipment = true;
@@ -145,6 +169,13 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 						$this->setFieldNoDemand('DELIVERY_ID', $systemShipment->getField('DELIVERY_ID'));
 					}
 				}
+			}
+		}
+		elseif ($action === EventActions::ADD)
+		{
+			if ((int)$shipment->getId() === 0)
+			{
+				$this->getPropertyCollection()->refreshRelated();
 			}
 		}
 
@@ -557,10 +588,13 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			}
 
 			$this->setFieldNoDemand('DELIVERY_ID', $shipment->getField('DELIVERY_ID'));
+
+			$this->getPropertyCollection()->refreshRelated();
+
 		}
 		elseif ($name == "TRACKING_NUMBER")
 		{
-			if ($shipment->isSystem() || ($shipment->getField('TRACKING_NUMBER') == $this->getField('TRACKING_NUMBER')))
+			if ($shipment->isSystem())
 			{
 				return $result;
 			}
@@ -578,6 +612,19 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @param array $select
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	public function resetData($select = array('PRICE'))
+	{
+		$this->getShipmentCollection()->resetData();
+
+		parent::resetData($select);
 	}
 
 	/**
@@ -748,6 +795,7 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 		{
 			$this->paymentCollection = $this->loadPaymentCollection();
 		}
+
 		return $this->paymentCollection;
 	}
 
@@ -799,14 +847,14 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	}
 
 	/**
-	 * @param $oderId
+	 * @param $orderId
 	 * @return Result
 	 * @throws Main\ArgumentException
 	 * @throws Main\ObjectNotFoundException
 	 */
-	protected static function deleteEntitiesNoDemand($oderId)
+	protected static function deleteEntitiesNoDemand($orderId)
 	{
-		$r = parent::deleteEntitiesNoDemand($oderId);
+		$r = parent::deleteEntitiesNoDemand($orderId);
 		if (!$r->isSuccess())
 			return $r;
 
@@ -814,13 +862,13 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 
 		/** @var Shipment $shipmentClassName */
 		$shipmentClassName = $registry->getShipmentClassName();
-		$shipmentClassName::deleteNoDemand($oderId);
+		$shipmentClassName::deleteNoDemand($orderId);
 		if (!$r->isSuccess())
 			return $r;
 
 		/** @var Payment $paymentClassName */
 		$paymentClassName = $registry->getPaymentClassName();
-		$paymentClassName::deleteNoDemand($oderId);
+		$paymentClassName::deleteNoDemand($orderId);
 		if (!$r->isSuccess())
 			return $r;
 
@@ -913,6 +961,13 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				}
 			}
 		}
+		elseif ($action === EventActions::ADD)
+		{
+			if ((int)$payment->getId() === 0)
+			{
+				$this->getPropertyCollection()->refreshRelated();
+			}
+		}
 
 		if ($action != EventActions::UPDATE)
 		{
@@ -951,32 +1006,25 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 		}
 		elseif ($name == "PAY_SYSTEM_ID")
 		{
-			if ($payment->getField('PAY_SYSTEM_ID') != $this->getField('PAY_SYSTEM_ID'))
-			{
-				$this->setFieldNoDemand('PAY_SYSTEM_ID', $payment->getField('PAY_SYSTEM_ID'));
-			}
+			$this->setFieldNoDemand('PAY_SYSTEM_ID', $payment->getField('PAY_SYSTEM_ID'));
 
+			$this->getPropertyCollection()->refreshRelated();
 		}
 		elseif ($name == "DATE_PAID")
 		{
-			if ($payment->getField('DATE_PAID') != $this->getField('DATE_PAID'))
-			{
-				$this->setFieldNoDemand('DATE_PAYED', $payment->getField('DATE_PAID'));
-			}
+			$this->setFieldNoDemand('DATE_PAYED', $payment->getField('DATE_PAID'));
 		}
 		elseif ($name == "PAY_VOUCHER_NUM")
 		{
-			if ($payment->getField('PAY_VOUCHER_NUM') != $this->getField('PAY_VOUCHER_NUM'))
-			{
-				$this->setFieldNoDemand('PAY_VOUCHER_NUM', $payment->getField('PAY_VOUCHER_NUM'));
-			}
+			$this->setFieldNoDemand('PAY_VOUCHER_NUM', $payment->getField('PAY_VOUCHER_NUM'));
 		}
 		elseif ($name == "PAY_VOUCHER_DATE")
 		{
-			if ($payment->getField('PAY_VOUCHER_DATE') != $this->getField('PAY_VOUCHER_DATE'))
-			{
-				$this->setFieldNoDemand('PAY_VOUCHER_DATE', $payment->getField('PAY_VOUCHER_DATE'));
-			}
+			$this->setFieldNoDemand('PAY_VOUCHER_DATE', $payment->getField('PAY_VOUCHER_DATE'));
+		}
+		elseif ($name == "EMP_PAID_ID")
+		{
+			$this->setFieldNoDemand('EMP_PAYED_ID', $payment->getField('EMP_PAID_ID'));
 		}
 		elseif ($name == "MARKED")
 		{
@@ -1123,6 +1171,39 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	}
 
 	/**
+	 * @internal
+	 *
+	 * @param BasketItem $basketItem
+	 * @return Result
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\NotSupportedException
+	 * @throws Main\ObjectNotFoundException
+	 * @throws Main\SystemException
+	 */
+	public function onBeforeBasketItemDelete(BasketItem $basketItem)
+	{
+		$result = new Result();
+
+		/** @var ShipmentCollection $shipmentCollection */
+		if (!$shipmentCollection = $this->getShipmentCollection())
+		{
+			throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
+		}
+
+		$r = $shipmentCollection->onBeforeBasketItemDelete($basketItem);
+		if (!$r->isSuccess())
+		{
+			$result->addErrors($r->getErrors());
+			return $result;
+		}
+
+
+		return $result;
+	}
+
+	/**
 	 * Modify basket.
 	 *
 	 * @param string $action
@@ -1145,20 +1226,7 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 
 		if ($action === EventActions::DELETE)
 		{
-			/** @var ShipmentCollection $shipmentCollection */
-			if (!$shipmentCollection = $this->getShipmentCollection())
-			{
-				throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-			}
-
 			$r = parent::onBasketModify($action, $basketItem, $name, $oldValue, $value);
-			if (!$r->isSuccess())
-			{
-				$result->addErrors($r->getErrors());
-				return $result;
-			}
-
-			$r = $shipmentCollection->onBasketModify($action, $basketItem, $name, $oldValue, $value);
 			if (!$r->isSuccess())
 			{
 				$result->addErrors($r->getErrors());
@@ -1181,20 +1249,16 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			return $result;
 		}
 
-		if ($name == "QUANTITY")
+		if ($name === "QUANTITY")
 		{
-			/** @var ShipmentCollection $shipmentCollection */
-			if (!$shipmentCollection = $this->getShipmentCollection())
-			{
-				throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-			}
-
 			$r = parent::onBasketModify($action, $basketItem, $name, $oldValue, $value);
 			if (!$r->isSuccess())
 			{
 				$result->addErrors($r->getErrors());
 				return $result;
 			}
+
+			$shipmentCollection = $this->getShipmentCollection();
 
 			$r = $shipmentCollection->onBasketModify($action, $basketItem, $name, $oldValue, $value);
 			if (!$r->isSuccess())
@@ -1202,10 +1266,14 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				$result->addErrors($r->getErrors());
 				return $result;
 			}
+			elseif ($r->hasWarnings())
+			{
+				$result->addWarnings($r->getWarnings());
+			}
 
 			return $result;
 		}
-		elseif ($name == "PRICE")
+		elseif ($name === "PRICE")
 		{
 			$r = parent::onBasketModify($action, $basketItem, $name, $oldValue, $value);
 			if (!$r->isSuccess())
@@ -1214,28 +1282,18 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				return $result;
 			}
 
-			/** @var ShipmentCollection $shipmentCollection */
-			if (!$shipmentCollection = $this->getShipmentCollection())
-			{
-				throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-			}
-
 			if ($this->getId() == 0 && !$this->isMathActionOnly())
 			{
+				$shipmentCollection = $this->getShipmentCollection();
+
 				$r = $shipmentCollection->refreshData();
 				if (!$r->isSuccess())
 					$result->addErrors($r->getErrors());
 			}
 		}
-		elseif ($name == "DIMENSIONS")
+		elseif ($name === 'WEIGHT')
 		{
-			/** @var ShipmentCollection $shipmentCollection */
-			if (!$shipmentCollection = $this->getShipmentCollection())
-			{
-				throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-			}
-
-			return $shipmentCollection->onBasketModify($action, $basketItem, $name, $oldValue, $value);
+			return $this->getShipmentCollection()->onBasketModify($action, $basketItem, $name, $oldValue, $value);
 		}
 		else
 		{
@@ -1300,14 +1358,17 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	/**
 	 * Sync.
 	 *
-	 * @param Payment $payment			Payment.
+	 * @param Payment|null $payment
 	 * @return Result
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\NotImplementedException
+	 * @throws Main\NotSupportedException
 	 * @throws Main\ObjectNotFoundException
 	 */
 	private function syncOrderAndPayments(Payment $payment = null)
 	{
-		global $USER;
-
 		$result = new Result();
 
 		$oldPaid = $this->getField('PAYED');
@@ -1327,7 +1388,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			}
 			else
 			{
-
 				$r = $this->syncOrderPaymentPaid($payment);
 				if ($r->isSuccess())
 				{
@@ -1342,7 +1402,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 					$result->addErrors($r->getErrors());
 					return $result;
 				}
-
 			}
 		}
 		else
@@ -1350,18 +1409,16 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			$finalSumPaid = $this->getSumPaid();
 
 			$r = $this->syncOrderPaid();
-			if ($r->isSuccess())
-			{
-				$paidResult = $r->getData();
-				if (isset($paidResult['SUM_PAID']))
-				{
-					$finalSumPaid = $paidResult['SUM_PAID'];
-				}
-			}
-			else
+			if (!$r->isSuccess())
 			{
 				$result->addErrors($r->getErrors());
 				return $result;
+			}
+
+			$paidResult = $r->getData();
+			if (isset($paidResult['SUM_PAID']))
+			{
+				$finalSumPaid = $paidResult['SUM_PAID'];
 			}
 		}
 
@@ -1374,28 +1431,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 		}
 
 		$this->setFieldNoDemand('PAYED', $paid ? "Y" : "N");
-
-		if ($paid && $oldPaid == "N")
-		{
-			if ($payment !== null)
-				$payment->setFieldNoDemand('IS_RETURN', 'N');
-
-			if ($USER->isAuthorized())
-				$this->setFieldNoDemand('EMP_PAYED_ID', $USER->getID());
-
-			if ($paymentCollection->isPaid() && $payment !== null)
-			{
-				if (strval($payment->getField('PAY_VOUCHER_NUM')) != '')
-				{
-					$this->setFieldNoDemand('PAY_VOUCHER_NUM', $payment->getField('PAY_VOUCHER_NUM'));
-				}
-
-				if (strval($payment->getField('PAY_VOUCHER_DATE')) != '')
-				{
-					$this->setFieldNoDemand('PAY_VOUCHER_DATE', $payment->getField('PAY_VOUCHER_DATE'));
-				}
-			}
-		}
 
 		if ($finalSumPaid > 0 && $finalSumPaid > $this->getPrice())
 		{
@@ -1503,12 +1538,9 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				Internals\UserBudgetPool::addPoolItem($this, ($debitSum * -1), Internals\UserBudgetPool::BUDGET_TYPE_ORDER_PAY);
 
 				$finalSumPaid = $this->getSumPaid() + $debitSum;
-				$result->setData(array(
-									 'SUM_PAID' => $finalSumPaid
-								 ));
+				$result->setData(['SUM_PAID' => $finalSumPaid]);
 			}
 		}
-
 
 		return $result;
 	}
@@ -1548,7 +1580,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	 */
 	private function onAfterSyncPaid($oldPaid = null)
 	{
-
 		$result = new Result();
 		/** @var PaymentCollection $paymentCollection */
 		if (!$paymentCollection = $this->getPaymentCollection())
@@ -1562,12 +1593,7 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
 		}
 
-		$oldPaidBool = null;
-
-		if ($oldPaid !== null)
-			$oldPaidBool = ($oldPaid == "Y");
-
-		if ($oldPaid !== null && $this->isPaid() != $oldPaidBool)
+		if ($this->getFields()->isChanged('PAYED') && $this->isPaid())
 		{
 			Internals\EventsPool::addEvent($this->getInternalId(), EventActions::EVENT_ON_ORDER_PAID, array(
 				'ENTITY' => $this,
@@ -1777,13 +1803,15 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				{
 					if (!$shipment->isCustomPrice())
 					{
-						if (floatval($data['PRICE_DELIVERY']) >= 0)
+						$data['PRICE_DELIVERY'] = (float)$data['PRICE_DELIVERY'];
+						$data['DISCOUNT_PRICE'] = (float)$data['DISCOUNT_PRICE'];
+						if ($data['PRICE_DELIVERY'] >= 0 && $data['PRICE_DELIVERY'] != $shipment->getPrice())
 						{
 							$data['PRICE_DELIVERY'] = PriceMaths::roundPrecision(floatval($data['PRICE_DELIVERY']));
 							$shipment->setField('PRICE_DELIVERY', $data['PRICE_DELIVERY']);
 						}
 
-						if (floatval($data['DISCOUNT_PRICE']) != 0)
+						if ($data['DISCOUNT_PRICE'] != $shipment->getField('DISCOUNT_PRICE'))
 						{
 							$data['DISCOUNT_PRICE'] = PriceMaths::roundPrecision(floatval($data['DISCOUNT_PRICE']));
 							$shipment->setField('DISCOUNT_PRICE', $data['DISCOUNT_PRICE']);
@@ -1919,6 +1947,11 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 
 	/**
 	 * @return Result
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\NotSupportedException
+	 * @throws Main\ObjectNotFoundException
 	 */
 	public function verify()
 	{
@@ -1941,23 +1974,6 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 			if (!$r->isSuccess())
 			{
 				$result->addErrors($r->getErrors());
-			}
-		}
-
-		if (!$result->isSuccess())
-		{
-			if ($this->getId() > 0)
-			{
-				$registry = Registry::getInstance(static::getRegistryType());
-
-				/** @var EntityMarker $entityMarker */
-				$entityMarker = $registry->getEntityMarkerClassName();
-				$entityMarker::saveMarkers($this);
-				if ($entityMarker::hasErrors($this))
-				{
-					$entityMarker::saveMarkers($this);
-					static::updateInternal($this->getId(), array("MARKED" => "Y"));
-				}
 			}
 		}
 
@@ -2090,22 +2106,23 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 
 	/**
 	 * @return array
-	 * @throws Main\ObjectNotFoundException
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
 	 */
 	public function getDeliveryIdList()
 	{
 		$result = array();
 
-		/** @var ShipmentCollection $shipmentCollection */
-		if (!$shipmentCollection = $this->getShipmentCollection())
-		{
-			throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-		}
+		/** @var ShipmentCollection $collection */
+		$collection = $this->getShipmentCollection();
 
 		/** @var Shipment $shipment */
-		foreach ($shipmentCollection as $shipment)
+		foreach ($collection->getNotSystemItems() as $shipment)
 		{
-			$result[] = $shipment->getDeliveryId();
+			if ($shipment->getDeliveryId() > 0)
+			{
+				$result[] = $shipment->getDeliveryId();
+			}
 		}
 
 		return $result;
@@ -2127,7 +2144,10 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 		/** @var Payment $payment */
 		foreach ($paymentCollection as $payment)
 		{
-			$result[] = $payment->getPaymentSystemId();
+			if ($payment->getPaymentSystemId() > 0)
+			{
+				$result[] = $payment->getPaymentSystemId();
+			}
 		}
 
 		return $result;
@@ -2140,7 +2160,7 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 	{
 		$vatInfo = parent::calculateVat();
 
-		$shipmentCollection = $this->shipmentCollection;
+		$shipmentCollection = $this->getShipmentCollection();
 		if ($shipmentCollection)
 		{
 			/** @var Shipment $shipment */

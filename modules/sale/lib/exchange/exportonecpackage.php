@@ -3,6 +3,7 @@ namespace Bitrix\Sale\Exchange;
 
 
 use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Error;
 use Bitrix\Sale\BasketItem;
 use Bitrix\Sale\Exchange\Entity\EntityImport;
 use Bitrix\Sale\Exchange\Entity\OrderImport;
@@ -104,20 +105,28 @@ abstract class ExportOneCPackage extends ExportOneCBase
 		/** @var \Bitrix\Sale\Order $order */
 		$order = $orderImport->getEntity();
 
-		$profileImport = $this->entityFactoryCreate(EntityType::USER_PROFILE);
-		ManagerExport::configure($profileImport);
-		static::load($profileImport, array('ID'=>$order->getUserId()));
+		if($order !== null)
+		{
+			$profileImport = $this->entityFactoryCreate(EntityType::USER_PROFILE);
+			ManagerExport::configure($profileImport);
+			static::load($profileImport, array('ID'=>$order->getUserId()));
 
-		$list = array_merge(
-			$this->loadItemsByCollection($order->getPaymentCollection(), $order),
-			$this->loadItemsByCollection($order->getShipmentCollection(), $order));
+			$list = array_merge(
+				$this->loadItemsByCollection($order->getPaymentCollection(), $order),
+				$this->loadItemsByCollection($order->getShipmentCollection(), $order));
 
-		$list[] = $orderImport;
-		$list[] = $profileImport;
+			$list[] = $orderImport;
+			$list[] = $profileImport;
 
-		$this->initLogger($list);
+			$this->initLogger($list);
 
-		$result->setData($list);
+			$result->setData($list);
+		}
+		else
+		{
+			$result->addError(new Error(str_replace('#ID#',$orderId, DocumentBase::getLangByCodeField("ORDER_NOT_FOUND"))));
+		}
+
 		return $result;
 	}
 
@@ -574,7 +583,10 @@ abstract class ExportOneCPackage extends ExportOneCBase
 	{
 		static::load_AliasTrait($item, $fields, $order);
 
-		$item->initFields();
+		if($item->getEntity() !== null)
+		{
+			$item->initFields();
+		}
 	}
 
 	/**

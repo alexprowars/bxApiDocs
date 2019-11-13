@@ -4,6 +4,7 @@ namespace Bitrix\Sale\Helpers\Order\Builder;
 use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Helpers\Admin\OrderEdit;
+use Bitrix\Sale\Order;
 use Bitrix\Sale\Registry;
 use Bitrix\Sale\Shipment;
 
@@ -72,7 +73,8 @@ final class OrderBuilderNew implements IOrderBuilderDelegate
 	{
 		if(is_array($this->builder->getFormData('PRODUCT')))
 		{
-			$this->builder->getBasketBuilder()->initBasket()
+			$this->builder->getBasketBuilder()
+				->initBasket()
 				->preliminaryDataPreparation()
 				->itemsDataPreparation()
 				->basketCodeMap()

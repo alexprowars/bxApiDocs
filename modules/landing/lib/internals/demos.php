@@ -72,6 +72,12 @@ class DemosTable extends Entity\DataManager
 			'MANIFEST' => new Entity\StringField('MANIFEST', array(
 				'title' => Loc::getMessage('LANDING_TABLE_FIELD_MANIFEST')
 			)),
+			'LANG' => new Entity\StringField('LANG', array(
+				'title' => Loc::getMessage('LANDING_TABLE_FIELD_MANIFEST')
+			)),
+			'SITE_TEMPLATE_ID' => new Entity\StringField('SITE_TEMPLATE_ID', array(
+				'title' => Loc::getMessage('LANDING_TABLE_FIELD_SITE_TEMPLATE_ID')
+			)),
 			'CREATED_BY_ID' => new Entity\IntegerField('CREATED_BY_ID', array(
 				'title' => Loc::getMessage('LANDING_TABLE_FIELD_CREATED_BY_ID'),
 				'required' => true

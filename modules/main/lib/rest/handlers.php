@@ -14,6 +14,7 @@ class Handlers
 	const SCOPE_USER = 'user';
 	const SCOPE_USER_CONSENT = 'userconsent';
 	const SCOPE_RATING = 'rating';
+	const SCOPE_SMILE = 'smile';
 
 	public static function onRestServiceBuildDescription()
 	{
@@ -30,6 +31,9 @@ class Handlers
 			static::SCOPE_RATING => array(
 				'like.list' => array(Rating::class, 'getLikeList'),
 				'like.reactions' => array(Rating::class, 'getLikeReactions'),
+			),
+			static::SCOPE_SMILE => array(
+				'smile.get' => array(Smile::class, 'getList'),
 			)
 		);
 	}

@@ -12,6 +12,8 @@ use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Type as MainType;
 
+use Bitrix\Sender\Internals\Model;
+
 Loc::loadMessages(__FILE__);
 
 class MailingTable extends Entity\DataManager
@@ -365,7 +367,7 @@ class MailingTable extends Entity\DataManager
 			{
 				$existChildIdList[] = $chainId;
 
-				$chainUpdateDb = MailingChainTable::update(array('ID' => $chainId), $chainFields);
+				$chainUpdateDb = Model\LetterTable::update($chainId, $chainFields);
 				if($chainUpdateDb->isSuccess())
 				{
 
@@ -402,7 +404,7 @@ class MailingTable extends Entity\DataManager
 		));
 		while($deleteChain = $deleteChainDb->fetch())
 		{
-			MailingChainTable::delete(array('ID' => $deleteChain['ID']));
+			Model\LetterTable::delete($deleteChain['ID']);
 		}
 
 		static::updateChainTrigger($id);
@@ -726,7 +728,6 @@ class MailingSubscriptionTable extends Entity\DataManager
 			),
 			'IS_UNSUB' => array(
 				'data_type' => 'string',
-				'primary' => true,
 			),
 			'MAILING' => array(
 				'data_type' => 'Bitrix\Sender\MailingTable',
@@ -777,18 +778,18 @@ class MailingSubscriptionTable extends Entity\DataManager
 		$row = static::getRowById($primary);
 		if($row)
 		{
-			$result = parent::update($primary, array('IS_UNSUB' => 'N'));
+			$result = static::update($primary, array('IS_UNSUB' => 'N'));
 		}
 		else
 		{
-			$result = parent::add($fields + $parameters);
+			$result = static::add($fields + $parameters);
 		}
 
 		return $result->isSuccess();
 	}
 
 	/**
-	 * Ad subscription row
+	 * Ad subscription row.
 	 *
 	 * @param array $parameters
 	 * @return bool
@@ -800,11 +801,11 @@ class MailingSubscriptionTable extends Entity\DataManager
 		$row = static::getRowById($primary);
 		if($row)
 		{
-			$result = parent::update($primary, $fields);
+			$result = static::update($primary, $fields);
 		}
 		else
 		{
-			$result = parent::add($fields + $parameters);
+			$result = static::add($fields + $parameters);
 		}
 
 		return $result->isSuccess();

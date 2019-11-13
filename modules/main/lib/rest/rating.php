@@ -4,6 +4,8 @@ namespace Bitrix\Main\Rest;
 use Bitrix\Main;
 use Bitrix\Rest;
 
+if(Main\Loader::includeModule("rest")):
+
 class Rating extends \IRestService
 {
 	const LIST_LIMIT = 20;
@@ -147,3 +149,5 @@ class Rating extends \IRestService
 		));
 	}
 }
+
+endif;

@@ -21,6 +21,7 @@ class SyncInternalManager
 	protected $userId;
 	protected $mailbox;
 	protected $mailboxId;
+	protected $mailboxUserId;
 	protected $messagesIds;
 	protected $messages;
 	private $isInit;
@@ -49,9 +50,9 @@ class SyncInternalManager
 		return new Repository($this->mailboxId, $this->messagesIds);
 	}
 
-	protected function getMailClientHelper()
+	protected function getMailClientHelper($throwExceptions = true)
 	{
-		return Mail\Helper\Mailbox::createInstance($this->mailboxId);
+		return Mail\Helper\Mailbox::createInstance($this->mailboxId, $throwExceptions);
 	}
 
 	protected function initData($folderType = null)
@@ -76,7 +77,7 @@ class SyncInternalManager
 				'MAIL_CLIENT_WRONG_PARAMETERS'));
 		}
 
-		$this->mailbox = $this->repository->getMailbox();
+		$this->mailbox = $this->repository->getMailbox($this->mailboxUserId);
 		if (!$this->mailbox)
 		{
 			return $result->addError(new Main\Error(Loc::getMessage('MAIL_CLIENT_MAILBOX_NOT_FOUND'),

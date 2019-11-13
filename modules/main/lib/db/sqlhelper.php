@@ -10,6 +10,8 @@ abstract class SqlHelper
 	/** @var Connection $connection */
 	protected $connection;
 
+	protected $idCache;
+
 	/**
 	 * @param Connection $connection Database connection.
 	 */
@@ -61,17 +63,22 @@ abstract class SqlHelper
 	 */
 	public function quote($identifier)
 	{
-		// security unshielding
-		$identifier = str_replace(array($this->getLeftQuote(), $this->getRightQuote()), '', $identifier);
-
-		// shield [[database.]tablename.]columnname
-		if (strpos($identifier, '.') !== false)
+		if (empty($this->idCache[$identifier]))
 		{
-			$identifier = str_replace('.', $this->getRightQuote() . '.' . $this->getLeftQuote(), $identifier);
+			// security unshielding
+			$quotedIdentifier = str_replace([$this->getLeftQuote(), $this->getRightQuote()], '', $identifier);
+
+			// shield [[database.]tablename.]columnname
+			if (strpos($quotedIdentifier, '.') !== false)
+			{
+				$quotedIdentifier = str_replace('.', $this->getRightQuote() . '.' . $this->getLeftQuote(), $quotedIdentifier);
+			}
+
+			// shield general borders
+			$this->idCache[$identifier] = $this->getLeftQuote() . $quotedIdentifier . $this->getRightQuote();
 		}
 
-		// shield general borders
-		return $this->getLeftQuote() . $identifier . $this->getRightQuote();
+		return $this->idCache[$identifier];
 	}
 
 	/**
@@ -281,16 +288,24 @@ abstract class SqlHelper
 	 * Builds the strings for the SQL INSERT command for the given table.
 	 *
 	 * @param string $tableName A table name.
-	 * @param array $fields Array("column" => $value)[].
+	 * @param array  $fields    Array("column" => $value)[].
+	 *
+	 * @param bool   $returnAsArray
 	 *
 	 * @return array (columnList, valueList, binds)
+	 * @throws Main\ArgumentTypeException
+	 * @throws SqlQueryException
 	 */
-	public function prepareInsert($tableName, array $fields)
+	public function prepareInsert($tableName, array $fields, $returnAsArray = false)
 	{
 		$columns = array();
 		$values = array();
 
 		$tableFields = $this->connection->getTableFields($tableName);
+
+		// one registry
+		$tableFields = array_change_key_case($tableFields, CASE_UPPER);
+		$fields = array_change_key_case($fields, CASE_UPPER);
 
 		foreach ($fields as $columnName => $value)
 		{
@@ -308,8 +323,8 @@ abstract class SqlHelper
 		$binds = $this->prepareBinds($tableFields, $fields);
 
 		return array(
-			implode(", ", $columns),
-			implode(", ", $values),
+			$returnAsArray ? $columns : implode(", ", $columns),
+			$returnAsArray ? $values : implode(", ", $values),
 			$binds
 		);
 	}
@@ -327,6 +342,10 @@ abstract class SqlHelper
 		$update = array();
 
 		$tableFields = $this->connection->getTableFields($tableName);
+
+		// one registry
+		$tableFields = array_change_key_case($tableFields, CASE_UPPER);
+		$fields = array_change_key_case($fields, CASE_UPPER);
 
 		foreach ($fields as $columnName => $value)
 		{

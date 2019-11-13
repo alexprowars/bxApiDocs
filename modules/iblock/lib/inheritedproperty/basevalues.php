@@ -188,7 +188,7 @@ abstract class BaseValues
 			DELETE FROM b_iblock_element_iprop
 			WHERE IPROP_ID = ".$ipropertyId."
 		");
-		ValuesQueue::deleteAll($this->iblockId);
+		ValuesQueue::deleteAll();
 	}
 
 	/**

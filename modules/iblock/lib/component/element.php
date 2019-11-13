@@ -48,6 +48,7 @@ abstract class Element extends Base
 			$params['FROM_SECTION'] = trim($this->request->get($params['SECTION_ID_VARIABLE']));
 		}
 
+		$params['SECTIONS_CHAIN_START_FROM'] = isset($params['SECTIONS_CHAIN_START_FROM']) ? (int)$params['SECTIONS_CHAIN_START_FROM'] : 0;
 		$params['META_KEYWORDS'] = trim($params['META_KEYWORDS']);
 		$params['META_DESCRIPTION'] = trim($params['META_DESCRIPTION']);
 		$params['BROWSER_TITLE'] = trim($params['BROWSER_TITLE']);
@@ -704,6 +705,11 @@ abstract class Element extends Base
 					}
 
 					$this->storage['SECTION']['PATH'][] = $path;
+				}
+
+				if ($this->arParams['SECTIONS_CHAIN_START_FROM'] > 0)
+				{
+					$this->storage['SECTION']['PATH'] = array_slice($this->storage['SECTION']['PATH'], $this->arParams['SECTIONS_CHAIN_START_FROM']);
 				}
 
 				$element['SECTION'] = $this->storage['SECTION'];
@@ -1391,7 +1397,7 @@ abstract class Element extends Base
 				'MEASURE' => $offer['ITEM_MEASURE']['TITLE'],
 				'OFFER_GROUP' => (isset($offerSet[$offer['ID']]) && $offerSet[$offer['ID']]),
 				'CAN_BUY' => $offer['CAN_BUY'],
-				'CATALOG_SUBSCRIBE' => $offer['CATALOG_SUBSCRIBE'],
+				'CATALOG_SUBSCRIBE' => $offer['PRODUCT']['SUBSCRIBE'],
 				'SLIDER' => $offer['MORE_PHOTO'],
 				'SLIDER_COUNT' => $offer['MORE_PHOTO_COUNT'],
 			);

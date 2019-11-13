@@ -4,6 +4,8 @@ namespace Bitrix\Main\Rest;
 use Bitrix\Main;
 use Bitrix\Rest;
 
+if(Main\Loader::includeModule("rest")):
+
 class User extends \IRestService
 {
 	public static function getHistoryList($query, $nav = 0, \CRestServer $server)
@@ -139,3 +141,5 @@ class User extends \IRestService
 		return $result;
 	}
 }
+
+endif;

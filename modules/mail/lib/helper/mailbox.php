@@ -3,6 +3,7 @@
 namespace Bitrix\Mail\Helper;
 
 use Bitrix\Main;
+use Bitrix\Main\ORM;
 use Bitrix\Mail;
 
 abstract class Mailbox
@@ -12,41 +13,40 @@ abstract class Mailbox
 	const SYNC_TIME_QUOTA = 280;
 
 	protected $mailbox;
+	protected $filters;
 	protected $session;
-	protected $startTime, $timeQuotaExceeded;
+	protected $startTime, $syncTimeout, $checkpoint;
+	protected $syncParams = array();
 	protected $errors, $warnings;
 
+	/**
+	 * Creates active mailbox helper instance by ID
+	 *
+	 * @param int $id Mailbox ID.
+	 * @param bool $throw Throw exception on error.
+	 * @return \Bitrix\Mail\Helper\Mailbox|false
+	 * @throws \Exception
+	 */
 	public static function createInstance($id, $throw = true)
 	{
-		$id = (int) $id;
+		return static::rawInstance(array('=ID' => (int) $id, '=ACTIVE' => 'Y'), $throw);
+	}
 
+	/**
+	 * Creates mailbox helper instance
+	 *
+	 * @param mixed $filter Filter.
+	 * @param bool $throw Throw exception on error.
+	 * @return \Bitrix\Mail\Helper\Mailbox|false
+	 * @throws \Exception
+	 */
+	public static function rawInstance($filter, $throw = true)
+	{
 		try
 		{
-			$mailbox = Mail\MailboxTable::getList(array(
-				'filter' => array('ID' => $id, 'ACTIVE' => 'Y'),
-				'select' => array('*', 'LANG_CHARSET' => 'SITE.CULTURE.CHARSET')
-			))->fetch();
+			$mailbox = static::prepareMailbox($filter);
 
-			if (empty($mailbox))
-			{
-				throw new Main\ObjectException('no mailbox');
-			}
-
-			if (!in_array($mailbox['SERVER_TYPE'], array('imap', 'controller', 'domain', 'crdomain')))
-			{
-				throw new Main\ObjectException('unsupported mailbox type');
-			}
-
-			if (in_array($mailbox['SERVER_TYPE'], array('controller', 'crdomain', 'domain')))
-			{
-				$result = \CMailDomain2::getImapData(); // @TODO: request controller for 'controller' and 'crdomain'
-
-				$mailbox['SERVER']  = $result['server'];
-				$mailbox['PORT']    = $result['port'];
-				$mailbox['USE_TLS'] = $result['secure'];
-			}
-
-			return new Mailbox\Imap($mailbox); // @TODO: other SERVER_TYPE
+			return static::instance($mailbox);
 		}
 		catch (\Exception $e)
 		{
@@ -61,6 +61,64 @@ abstract class Mailbox
 		}
 	}
 
+	protected static function instance(array $mailbox)
+	{
+		// @TODO: other SERVER_TYPE
+		$types = array(
+			'imap' => 'Bitrix\Mail\Helper\Mailbox\Imap',
+			'controller' => 'Bitrix\Mail\Helper\Mailbox\Imap',
+			'domain' => 'Bitrix\Mail\Helper\Mailbox\Imap',
+			'crdomain' => 'Bitrix\Mail\Helper\Mailbox\Imap',
+		);
+
+		if (empty($mailbox))
+		{
+			throw new Main\ObjectException('no mailbox');
+		}
+
+		if (empty($mailbox['SERVER_TYPE']) || !array_key_exists($mailbox['SERVER_TYPE'], $types))
+		{
+			throw new Main\ObjectException('unsupported mailbox type');
+		}
+
+		return new $types[$mailbox['SERVER_TYPE']]($mailbox);
+	}
+
+	protected static function prepareMailbox($filter)
+	{
+		if (is_scalar($filter))
+		{
+			$filter = array('=ID' => (int) $filter);
+		}
+
+		$mailbox = Mail\MailboxTable::getList(array(
+			'filter' => $filter,
+			'select' => array('*', 'LANG_CHARSET' => 'SITE.CULTURE.CHARSET'),
+			'limit' => 1,
+		))->fetch() ?: array();
+
+		if (!empty($mailbox))
+		{
+			if (in_array($mailbox['SERVER_TYPE'], array('controller', 'crdomain', 'domain')))
+			{
+				$result = \CMailDomain2::getImapData(); // @TODO: request controller for 'controller' and 'crdomain'
+
+				$mailbox['SERVER']  = $result['server'];
+				$mailbox['PORT']    = $result['port'];
+				$mailbox['USE_TLS'] = $result['secure'];
+			}
+
+			Mail\MailboxTable::normalizeEmail($mailbox);
+		}
+
+		return $mailbox;
+	}
+
+	public function setSyncParams(array $params = array())
+	{
+		$this->syncParams = $params;
+	}
+
 	protected function __construct($mailbox)
 	{
 		$this->startTime = time();
@@ -73,15 +131,36 @@ abstract class Mailbox
 			}
 		}
 
+		$this->syncTimeout = min(max(0, ini_get('max_execution_time')) ?: static::SYNC_TIMEOUT, static::SYNC_TIMEOUT);
+
 		$this->mailbox = $mailbox;
 
+		$this->normalizeMailboxOptions();
+
+		$this->setCheckpoint();
+
+		$this->session = md5(uniqid(''));
+		$this->warnings = new Main\ErrorCollection();
+	}
+
+	protected function reloadMailboxOptions()
+	{
+		$mailbox = static::prepareMailbox(array('=ID' => $this->mailbox['ID']));
+
+		if (!empty($mailbox['OPTIONS']) && is_array($mailbox['OPTIONS']))
+		{
+			$this->mailbox['OPTIONS'] = $mailbox['OPTIONS'];
+		}
+
+		$this->normalizeMailboxOptions();
+	}
+
+	protected function normalizeMailboxOptions()
+	{
 		if (empty($this->mailbox['OPTIONS']) || !is_array($this->mailbox['OPTIONS']))
 		{
 			$this->mailbox['OPTIONS'] = array();
 		}
-
-		$this->session = md5(uniqid(''));
-		$this->warnings = new Main\ErrorCollection();
 	}
 
 	public function getMailbox()
@@ -91,14 +170,26 @@ abstract class Mailbox
 
 	protected function isTimeQuotaExceeded()
 	{
-		return time() - $this->startTime > static::SYNC_TIME_QUOTA;
+		return time() - $this->startTime > ceil($this->syncTimeout * 0.9);
+	}
+
+	public function setCheckpoint()
+	{
+		$this->checkpoint = time();
 	}
 
 	public function sync()
 	{
 		global $DB;
 
-		if (time() - $this->mailbox['SYNC_LOCK'] < static::SYNC_TIMEOUT)
+		if (!LicenseManager::isSyncAvailable())
+		{
+			$this->mailbox['OPTIONS']['next_sync'] = time() + 3600 * 24;
+
+			return 0;
+		}
+
+		if (time() - $this->mailbox['SYNC_LOCK'] < $this->syncTimeout)
 		{
 			return 0;
 		}
@@ -114,14 +205,14 @@ abstract class Mailbox
 
 		$lockSql = sprintf(
 			'UPDATE b_mail_mailbox SET SYNC_LOCK = %u WHERE ID = %u AND (SYNC_LOCK IS NULL OR SYNC_LOCK < %u)',
-			$this->mailbox['SYNC_LOCK'], $this->mailbox['ID'], $this->mailbox['SYNC_LOCK'] - static::SYNC_TIMEOUT
+			$this->mailbox['SYNC_LOCK'], $this->mailbox['ID'], $this->mailbox['SYNC_LOCK'] - $this->syncTimeout
 		);
 		if (!$DB->query($lockSql)->affectedRowsCount())
 		{
 			return 0;
 		}
-		$mailboxSyncManager = new Mailbox\MailboxSyncManager($this->mailbox['USER_ID']);
 
+		$mailboxSyncManager = new Mailbox\MailboxSyncManager($this->mailbox['USER_ID']);
 		if ($this->mailbox['USER_ID'] > 0)
 		{
 			$mailboxSyncManager->setSyncStartedData($this->mailbox['ID']);
@@ -179,6 +270,17 @@ abstract class Mailbox
 			$mailboxSyncManager->setSyncStatus($this->mailbox['ID'], $success, time());
 		}
 
+		$usersWithAccessToMailbox = Mailbox\SharedMailboxesManager::getUserIdsWithAccessToMailbox($this->mailbox['ID']);
+		foreach ($usersWithAccessToMailbox as $userId)
+		{
+			\CUserCounter::set(
+				$userId,
+				'mail_unseen',
+				Message::getTotalUnseenCount($userId),
+				$this->mailbox['LID']
+			);
+		}
+
 		return $count;
 	}
 
@@ -215,6 +317,158 @@ abstract class Mailbox
 		}
 	}
 
+	public function dismissOldMessages()
+	{
+		global $DB;
+
+		if (!Mail\Helper\LicenseManager::isCleanupOldEnabled())
+		{
+			return true;
+		}
+
+		$startTime = time();
+
+		if (time() - $this->mailbox['SYNC_LOCK'] < $this->syncTimeout)
+		{
+			return false;
+		}
+
+		if ($this->isTimeQuotaExceeded())
+		{
+			return false;
+		}
+
+		$syncUnlock = $this->mailbox['SYNC_LOCK'];
+
+		$lockSql = sprintf(
+			'UPDATE b_mail_mailbox SET SYNC_LOCK = %u WHERE ID = %u AND (SYNC_LOCK IS NULL OR SYNC_LOCK < %u)',
+			$startTime, $this->mailbox['ID'], $startTime - $this->syncTimeout
+		);
+		if ($DB->query($lockSql)->affectedRowsCount())
+		{
+			$this->mailbox['SYNC_LOCK'] = $startTime;
+		}
+		else
+		{
+			return false;
+		}
+
+		$result = true;
+
+		$entity = Mail\MailMessageUidTable::getEntity();
+		$connection = $entity->getConnection();
+
+		$where = sprintf(
+			' (%s) AND NOT EXISTS (SELECT 1 FROM %s WHERE (%s) AND (%s)) ',
+			ORM\Query\Query::buildFilterSql(
+				$entity,
+				array(
+					'=MAILBOX_ID' => $this->mailbox['ID'],
+					'>MESSAGE_ID' => 0,
+					'<INTERNALDATE' => Main\Type\DateTime::createFromTimestamp(strtotime(sprintf('-%u days', Mail\Helper\LicenseManager::getSyncOldLimit()))),
+				)
+			),
+			$connection->getSqlHelper()->quote(Mail\Internals\MessageAccessTable::getTableName()),
+			ORM\Query\Query::buildFilterSql(
+				$entity,
+				array(
+					'=MAILBOX_ID' => new Main\DB\SqlExpression('?#', 'MAILBOX_ID'),
+					'=MESSAGE_ID' => new Main\DB\SqlExpression('?#', 'MESSAGE_ID'),
+				)
+			),
+			ORM\Query\Query::buildFilterSql(
+				Mail\Internals\MessageAccessTable::getEntity(),
+				array(
+					'=ENTITY_TYPE' => Mail\Internals\MessageAccessTable::ENTITY_TYPE_TASKS_TASK,
+				)
+			)
+		);
+
+		do
+		{
+			$connection->query(sprintf(
+				'INSERT IGNORE INTO %s (ID, MAILBOX_ID, MESSAGE_ID)
+				(SELECT ID, MAILBOX_ID, MESSAGE_ID FROM %s WHERE %s ORDER BY ID LIMIT 1000)',
+				$connection->getSqlHelper()->quote(Mail\Internals\MessageDeleteQueueTable::getTableName()),
+				$connection->getSqlHelper()->quote($entity->getDbTableName()),
+				$where
+			));
+
+			$connection->query(sprintf(
+				'UPDATE %s SET MESSAGE_ID = 0 WHERE %s ORDER BY ID LIMIT 1000',
+				$connection->getSqlHelper()->quote($entity->getDbTableName()),
+				$where
+			));
+
+			if ($this->isTimeQuotaExceeded() || time() - $this->checkpoint > 20)
+			{
+				$result = false;
+
+				break;
+			}
+		}
+		while ($connection->getAffectedRowsCount() >= 1000);
+
+		$unlockSql = sprintf(
+			"UPDATE b_mail_mailbox SET SYNC_LOCK = %d WHERE ID = %u AND SYNC_LOCK = %u",
+			$syncUnlock, $this->mailbox['ID'], $this->mailbox['SYNC_LOCK']
+		);
+		if ($DB->query($unlockSql)->affectedRowsCount())
+		{
+			$this->mailbox['SYNC_LOCK'] = $syncUnlock;
+		}
+
+		return $result;
+	}
+
+	public function cleanup()
+	{
+		do
+		{
+			$res = Mail\Internals\MessageDeleteQueueTable::getList(array(
+				'runtime' => array(
+					new ORM\Fields\Relations\Reference(
+						'MESSAGE_UID',
+						'Bitrix\Mail\MailMessageUidTable',
+						array(
+							'=this.MAILBOX_ID' => 'ref.MAILBOX_ID',
+							'=this.MESSAGE_ID' => 'ref.MESSAGE_ID',
+						)
+					),
+				),
+				'select' => array('MESSAGE_ID', 'UID' => 'MESSAGE_UID.ID'),
+				'filter' => array(
+					'=MAILBOX_ID' => $this->mailbox['ID'],
+				),
+				'limit' => 100,
+			));
+
+			$count = 0;
+			while ($item = $res->fetch())
+			{
+				$count++;
+
+				if (empty($item['UID']))
+				{
+					\CMailMessage::delete($item['MESSAGE_ID']);
+				}
+
+				Mail\Internals\MessageDeleteQueueTable::deleteList(array(
+					'=MAILBOX_ID' => $this->mailbox['ID'],
+					'=MESSAGE_ID' => $item['MESSAGE_ID'],
+				));
+
+				if ($this->isTimeQuotaExceeded() || time() - $this->checkpoint > 60)
+				{
+					return false;
+				}
+			}
+		}
+		while ($count > 0);
+
+		return true;
+	}
+
 	protected function listMessages($params = array(), $fetch = true)
 	{
 		$filter = array(
@@ -233,19 +487,26 @@ abstract class Mailbox
 		return $fetch ? $result->fetchAll() : $result;
 	}
 
-	protected function registerMessage(&$fields, $id = null)
+	protected function registerMessage(&$fields, $replaces = null)
 	{
 		$now = new Main\Type\DateTime();
 
-		if (!empty($id))
+		if (!empty($replaces))
 		{
+			if (!is_array($replaces))
+			{
+				$replaces = array(
+					'=ID' => $replaces,
+				);
+			}
+
 			$exists = Mail\MailMessageUidTable::getList(array(
 				'select' => array(
 					'ID',
 					'MESSAGE_ID',
 				),
 				'filter' => array(
-					'=ID' => $id,
+					$replaces,
 					'=MAILBOX_ID' => $this->mailbox['ID'],
 				),
 			))->fetch();
@@ -255,15 +516,21 @@ abstract class Mailbox
 		{
 			$fields['MESSAGE_ID'] = $exists['MESSAGE_ID'];
 
-			$result = Mail\MailMessageUidTable::update(
+			$result = (bool) Mail\MailMessageUidTable::updateList(
 				array(
-					'ID' => $exists['ID'],
-					'MAILBOX_ID' => $this->mailbox['ID'],
+					'=ID' => $exists['ID'],
+					'=MAILBOX_ID' => $this->mailbox['ID'],
 				),
 				array_merge(
 					$fields,
 					array(
 						'TIMESTAMP_X' => $now,
+					)
+				),
+				array_merge(
+					$exists,
+					array(
+						'MAILBOX_USER_ID' => $this->mailbox['USER_ID'],
 					)
 				)
 			);
@@ -281,10 +548,10 @@ abstract class Mailbox
 					'TIMESTAMP_X' => $now,
 					'DATE_INSERT' => $now,
 				)
-			));
+			))->isSuccess();
 		}
 
-		return $result->isSuccess();
+		return $result;
 	}
 
 	protected function updateMessagesRegistry(array $filter, array $fields, $mailData = array())
@@ -301,7 +568,7 @@ abstract class Mailbox
 		);
 	}
 
-	protected function unregisterMessages($filter)
+	protected function unregisterMessages($filter, $eventData = [])
 	{
 		return Mail\MailMessageUidTable::deleteList(
 			array_merge(
@@ -309,6 +576,14 @@ abstract class Mailbox
 				array(
 					'=MAILBOX_ID' => $this->mailbox['ID'],
 				)
+			),
+			array_map(
+				function ($item)
+				{
+					$item['MAILBOX_ID'] = $this->mailbox['ID'];
+					return $item;
+				},
+				$eventData
 			)
 		);
 	}
@@ -330,6 +605,22 @@ abstract class Mailbox
 
 	protected function cacheMessage(&$body, $params = array())
 	{
+		if (empty($params['origin']) && empty($params['replaces']))
+		{
+			$params['lazy_attachments'] = true;
+
+			foreach ($this->getFilters() as $filter)
+			{
+				foreach ($filter['__actions'] as $action)
+				{
+					if (empty($action['LAZY_ATTACHMENTS']))
+					{
+						$params['lazy_attachments'] = false;
+					}
+				}
+			}
+		}
+
 		return \CMailMessage::addMessage(
 			$this->mailbox['ID'],
 			$body,
@@ -373,8 +664,11 @@ abstract class Mailbox
 			),
 			array(
 				'outcome' => true,
-				'seen'    => true,
+				'trash' => false,
+				'spam' => false,
+				'seen' => true,
 				'trackable' => true,
+				'origin' => true,
 			)
 		);
 
@@ -417,7 +711,7 @@ abstract class Mailbox
 				),
 				'filter' => array(
 					'>=UPLOAD_QUEUE.SYNC_STAGE' => 0,
-					'<UPLOAD_QUEUE.SYNC_LOCK' => time() - static::SYNC_TIMEOUT,
+					'<UPLOAD_QUEUE.SYNC_LOCK' => time() - $this->syncTimeout,
 				),
 			),
 			false
@@ -445,7 +739,7 @@ abstract class Mailbox
 			max(1, $excerpt['UPLOAD_STAGE']),
 			$DB->forSql($excerpt['ID']),
 			$excerpt['MAILBOX_ID'],
-			$syncLock - static::SYNC_TIMEOUT
+			$syncLock - $this->syncTimeout
 		);
 		if (!$DB->query($lockSql)->affectedRowsCount())
 		{
@@ -504,6 +798,20 @@ abstract class Mailbox
 		foreach (array('FROM', 'REPLY_TO', 'TO', 'CC', 'BCC') as $field)
 		{
 			$field = sprintf('__FIELD_%s', $field);
+
+			if (strlen($excerpt[$field]) == 255 && '' != $excerpt['__HEADER'] && empty($parsedHeader))
+			{
+				$parsedHeader = \CMailMessage::parseHeader($excerpt['__HEADER'], LANG_CHARSET);
+
+				$excerpt['__FIELD_FROM'] = $parsedHeader->getHeader('FROM');
+				$excerpt['__FIELD_REPLY_TO'] = $parsedHeader->getHeader('REPLY-TO');
+				$excerpt['__FIELD_TO'] = $parsedHeader->getHeader('TO');
+				$excerpt['__FIELD_CC'] = $parsedHeader->getHeader('CC');
+				$excerpt['__FIELD_BCC'] = join(', ', array_merge(
+					(array) $parsedHeader->getHeader('X-Original-Rcpt-to'),
+					(array) $parsedHeader->getHeader('BCC')
+				));
+			}
 
 			$excerpt[$field] = explode(',', $excerpt[$field]);
 
@@ -586,7 +894,7 @@ abstract class Mailbox
 		$needUpload = empty($this->mailbox['OPTIONS']['deny_upload_outcome']);
 
 		// @TODO: use option
-		if ($context->getSmtp() && strtolower($context->getSmtp()->getHost()) == 'smtp.gmail.com')
+		if ($context->getSmtp() && in_array(strtolower($context->getSmtp()->getHost()), array('smtp.gmail.com', 'smtp.office365.com')))
 		{
 			$needUpload = false;
 		}
@@ -641,6 +949,55 @@ abstract class Mailbox
 		}
 
 		return;
+	}
+
+	public function resyncMessage(array &$excerpt)
+	{
+		$body = $this->downloadMessage($excerpt);
+		if (!empty($body))
+		{
+			return $this->cacheMessage(
+				$body,
+				array(
+					'replaces' => $excerpt['ID'],
+				)
+			);
+		}
+
+		return false;
+	}
+
+	public function getFilters($force = false)
+	{
+		if (is_null($this->filters) || $force)
+		{
+			$this->filters = Mail\MailFilterTable::getList(array(
+				'filter' => ORM\Query\Query::filter()
+					->where('ACTIVE', 'Y')
+					->where(
+						ORM\Query\Query::filter()->logic('or')
+							->where('MAILBOX_ID', $this->mailbox['ID'])
+							->where('MAILBOX_ID', null)
+					),
+				'order' => array(
+					'SORT' => 'ASC',
+					'ID' => 'ASC',
+				),
+			))->fetchAll();
+
+			foreach ($this->filters as $k => $item)
+			{
+				$this->filters[$k]['__actions'] = array();
+
+				$res = \CMailFilter::getFilterList($item['ACTION_TYPE']);
+				while ($row = $res->fetch())
+				{
+					$this->filters[$k]['__actions'][] = $row;
+				}
+			}
+		}
+
+		return $this->filters;
 	}
 
 	/**
@@ -840,6 +1197,7 @@ abstract class Mailbox
 
 	abstract protected function syncInternal();
 	abstract protected function uploadMessage(Main\Mail\Mail $message, array $excerpt);
+	abstract protected function downloadMessage(array &$excerpt);
 
 	public function getErrors()
 	{

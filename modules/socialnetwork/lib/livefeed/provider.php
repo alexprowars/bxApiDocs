@@ -33,6 +33,8 @@ abstract class Provider
 	const DATA_ENTITY_TYPE_WIKI = 'WIKI';
 	const DATA_ENTITY_TYPE_TIMEMAN_ENTRY = 'TIMEMAN_ENTRY';
 	const DATA_ENTITY_TYPE_TIMEMAN_REPORT = 'TIMEMAN_REPORT';
+	const DATA_ENTITY_TYPE_INTRANET_NEW_USER = 'INTRANET_NEW_USER';
+	const DATA_ENTITY_TYPE_BITRIX24_NEW_USER = 'BITRIX24_NEW_USER';
 
 	const PERMISSION_DENY = 'D';
 	const PERMISSION_READ = 'I';
@@ -107,55 +109,92 @@ abstract class Provider
 
 	final public static function getProvider($entityType)
 	{
-		switch ($entityType)
+		$provider = false;
+
+		$moduleEvent = new Main\Event(
+			'socialnetwork',
+			'onLogProviderGetProvider',
+			array(
+				'entityType' => $entityType
+			)
+		);
+		$moduleEvent->send();
+
+		foreach ($moduleEvent->getResults() as $moduleEventResult)
 		{
-			case self::DATA_ENTITY_TYPE_BLOG_POST:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\BlogPost();
+			if ($moduleEventResult->getType() == \Bitrix\Main\EventResult::SUCCESS)
+			{
+				$moduleEventParams = $moduleEventResult->getParameters();
+
+				if (
+					is_array($moduleEventParams)
+					&& !empty($moduleEventParams['provider'])
+				)
+				{
+					$provider = $moduleEventParams['provider'];
+				}
 				break;
-			case self::DATA_ENTITY_TYPE_BLOG_COMMENT:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\BlogComment();
+			}
+		}
+
+		if (!$provider)
+		{
+			switch ($entityType)
+			{
+				case self::DATA_ENTITY_TYPE_BLOG_POST:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\BlogPost();
+					break;
+				case self::DATA_ENTITY_TYPE_BLOG_COMMENT:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\BlogComment();
+					break;
+				case self::DATA_ENTITY_TYPE_TASKS_TASK:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\TasksTask();
+					break;
+				case self::DATA_ENTITY_TYPE_FORUM_TOPIC:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\ForumTopic();
+					break;
+				case self::DATA_ENTITY_TYPE_FORUM_POST:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\ForumPost();
+					break;
+				case self::DATA_ENTITY_TYPE_CALENDAR_EVENT:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\CalendarEvent();
+					break;
+				case self::DATA_ENTITY_TYPE_LOG_ENTRY:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\LogEvent();
+					break;
+				case self::DATA_ENTITY_TYPE_LOG_COMMENT:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\LogComment();
+					break;
+				case self::DATA_ENTITY_TYPE_RATING_LIST:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\RatingVoteList();
+					break;
+				case self::DATA_ENTITY_TYPE_PHOTOGALLERY_ALBUM:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\PhotogalleryAlbum();
+					break;
+				case self::DATA_ENTITY_TYPE_PHOTOGALLERY_PHOTO:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\PhotogalleryPhoto();
+					break;
+				case self::DATA_ENTITY_TYPE_LISTS_ITEM:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\ListsItem();
+					break;
+				case self::DATA_ENTITY_TYPE_WIKI:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\Wiki();
+					break;
+				case self::DATA_ENTITY_TYPE_TIMEMAN_ENTRY:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\TimemanEntry();
+					break;
+				case self::DATA_ENTITY_TYPE_TIMEMAN_REPORT:
+					$provider = new \Bitrix\Socialnetwork\Livefeed\TimemanReport();
+					break;
+			case self::DATA_ENTITY_TYPE_INTRANET_NEW_USER:
+				$provider = new \Bitrix\Socialnetwork\Livefeed\IntranetNewUser();
 				break;
-			case self::DATA_ENTITY_TYPE_TASKS_TASK:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\TasksTask();
+			case self::DATA_ENTITY_TYPE_BITRIX24_NEW_USER:
+				$provider = new \Bitrix\Socialnetwork\Livefeed\Bitrix24NewUser();
 				break;
-			case self::DATA_ENTITY_TYPE_FORUM_TOPIC:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\ForumTopic();
-				break;
-			case self::DATA_ENTITY_TYPE_FORUM_POST:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\ForumPost();
-				break;
-			case self::DATA_ENTITY_TYPE_CALENDAR_EVENT:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\CalendarEvent();
-				break;
-			case self::DATA_ENTITY_TYPE_LOG_ENTRY:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\LogEvent();
-				break;
-			case self::DATA_ENTITY_TYPE_LOG_COMMENT:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\LogComment();
-				break;
-			case self::DATA_ENTITY_TYPE_RATING_LIST:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\RatingVoteList();
-				break;
-			case self::DATA_ENTITY_TYPE_PHOTOGALLERY_ALBUM:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\PhotogalleryAlbum();
-				break;
-			case self::DATA_ENTITY_TYPE_PHOTOGALLERY_PHOTO:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\PhotogalleryPhoto();
-				break;
-			case self::DATA_ENTITY_TYPE_LISTS_ITEM:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\ListsItem();
-				break;
-			case self::DATA_ENTITY_TYPE_WIKI:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\Wiki();
-				break;
-			case self::DATA_ENTITY_TYPE_TIMEMAN_ENTRY:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\TimemanEntry();
-				break;
-			case self::DATA_ENTITY_TYPE_TIMEMAN_REPORT:
-				$provider = new \Bitrix\Socialnetwork\Livefeed\TimemanReport();
-				break;
-			default:
-				$provider = false;
+				default:
+					$provider = false;
+			}
 		}
 
 		return $provider;
@@ -662,6 +701,47 @@ abstract class Provider
 
 		$contentEntityType = $contentEntityId = false;
 
+		$moduleEvent = new Main\Event(
+			'socialnetwork',
+			'onLogProviderGetContentId',
+			array(
+				'eventFields' => $event
+			)
+		);
+		$moduleEvent->send();
+
+		foreach ($moduleEvent->getResults() as $moduleEventResult)
+		{
+			if ($moduleEventResult->getType() == \Bitrix\Main\EventResult::SUCCESS)
+			{
+				$moduleEventParams = $moduleEventResult->getParameters();
+
+				if (
+					is_array($moduleEventParams)
+					&& !empty($moduleEventParams['contentEntityType'])
+					&& !empty($moduleEventParams['contentEntityId'])
+				)
+				{
+					$contentEntityType = $moduleEventParams['contentEntityType'];
+					$contentEntityId = $moduleEventParams['contentEntityId'];
+				}
+				break;
+			}
+		}
+
+		if (
+			$contentEntityType
+			&& $contentEntityId > 0
+		)
+		{
+			return array(
+				'ENTITY_TYPE' => $contentEntityType,
+				'ENTITY_ID' => $contentEntityId
+			);
+		}
+
+		// getContent
+
 		if (
 			!empty($event["EVENT_ID"])
 			&& $event["EVENT_ID"] == 'photo'
@@ -861,7 +941,7 @@ abstract class Provider
 							array(
 								'module_id' => 'contentview',
 								'command' => 'add',
-								'expiry' => 60,
+								'expiry' => 0,
 								'params' => array(
 									"USER_ID" => $userId,
 									"TYPE_ID" => $contentTypeId,

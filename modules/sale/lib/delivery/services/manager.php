@@ -5,6 +5,7 @@ use Bitrix\Main\Config\Option;
 
 use Bitrix\Main\Error;
 use Bitrix\Main\Event;
+use Bitrix\Main\ORM\Data\AddResult;
 use Bitrix\Sale\Internals\Pool;
 use Bitrix\Sale\Result;
 use Bitrix\Main\IO\File;
@@ -45,7 +46,6 @@ class Manager
 	 * @param int $deliveryId
 	 * @return array Service fields
 	 * @throws SystemException
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	public static function getById($deliveryId)
 	{
@@ -648,7 +648,6 @@ class Manager
 	 * @param string $name Group name
 	 * @return int Group id
 	 * @throws SystemException
-	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Exception
 	 */
 	public static function getGroupId($name)
@@ -715,7 +714,7 @@ class Manager
 	/**
 	 * Adds delivery service
 	 * @param array $fields
-	 * @return \Bitrix\Main\Entity\AddResult
+	 * @return AddResult
 	 * @throws SystemException
 	 * @throws \Exception
 	 */
@@ -734,6 +733,14 @@ class Manager
 		}
 
 		return $res;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function generateXmlId()
+	{
+		return uniqid('bx_');
 	}
 
 	/**
@@ -910,7 +917,6 @@ class Manager
 	/**
 	 * @param string $code
 	 * @return int Service id
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	public static function getIdByCode($code)
 	{
@@ -1015,7 +1021,6 @@ class Manager
 	 * Returns is delivery service is already used in shipments
 	 * @param $deliveryId
 	 * @return bool
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	protected static function isDeliveryInShipments($deliveryId)
 	{
@@ -1212,8 +1217,8 @@ class Manager
 
 		$restriction = new $className;
 
-		if(!($restriction instanceof Restrictions\Base))
-			throw new SystemException('Object must be the instance of Bitrix\Sale\Delivery\Restrictions\Base');
+		if(!is_subclass_of($className, 'Bitrix\Sale\Services\Base\Restriction'))
+			throw new SystemException('Object must be the instance of Bitrix\Sale\Services\Base\Restriction');
 
 		$cache[$className] = $restriction;
 		return  $restriction;

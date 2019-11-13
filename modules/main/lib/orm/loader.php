@@ -65,20 +65,9 @@ class Loader
 
 			if (class_exists($entityClass) && is_subclass_of($entityClass, DataManager::class))
 			{
-				/** @var DataManager $entityClass */
-				$entity = $entityClass::getEntity();
-
-				$realClass = ($needFor == 'object')
-					? $entity->compileObjectClass()
-					: $entity->compileCollectionClass();
-
-				//if (Entity::normalizeName($realClass) !== Entity::normalizeName($class))
-				{
-					// custom class defined, we support compatibility with default classes
-
-					// no need anymore as far as custom class inherits EO_
-					// class_alias($realClass, $class);
-				}
+				($needFor == 'object')
+					? Entity::compileObjectClass($entityClass)
+					: Entity::compileCollectionClass($entityClass);
 			}
 		}
 	}

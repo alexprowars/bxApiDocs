@@ -266,7 +266,7 @@ abstract class StatusBase
 
 			while ($row = $result->fetch())
 			{
-				$statusList[] = $row['ID'];
+				$statusList[$row['ID']] = $row['ID'];
 			}
 		}
 

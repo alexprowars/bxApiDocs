@@ -28,12 +28,36 @@ class Message
 			'__to' => 'FIELD_TO',
 			'__cc' => 'FIELD_CC',
 			'__bcc' => 'FIELD_BCC',
+			'__rcpt' => 'FIELD_RCPT',
 		);
-		foreach ($fieldsMap as $__field => $field)
-		{
-			$isFromField = in_array($__field, array('__from', '__reply_to'));
 
-			$message[$__field] = array();
+		if ('' != $message['HEADER'])
+		{
+			foreach ($fieldsMap as $field)
+			{
+				if (strlen($message[$field]) == 255)
+				{
+					$parsedHeader = \CMailMessage::parseHeader($message['HEADER'], LANG_CHARSET);
+
+					$message['FIELD_FROM'] = $parsedHeader->getHeader('FROM');
+					$message['FIELD_REPLY_TO'] = $parsedHeader->getHeader('REPLY-TO');
+					$message['FIELD_TO'] = $parsedHeader->getHeader('TO');
+					$message['FIELD_CC'] = $parsedHeader->getHeader('CC');
+					$message['FIELD_BCC'] = join(', ', array_merge(
+						(array) $parsedHeader->getHeader('X-Original-Rcpt-to'),
+						(array) $parsedHeader->getHeader('BCC')
+					));
+
+					break;
+				}
+			}
+		}
+
+		foreach ($fieldsMap as $extField => $field)
+		{
+			$isFromField = in_array($extField, array('__from', '__reply_to'));
+
+			$message[$extField] = array();
 			foreach (explode(',', $message[$field]) as $item)
 			{
 				if (trim($item))
@@ -46,14 +70,14 @@ class Message
 							$message['__is_outcome'] = true;
 						}
 
-						$message[$__field][] = array(
+						$message[$extField][] = array(
 							'name'  => $address->getName(),
 							'email' => $address->getEmail(),
 						);
 					}
 					else
 					{
-						$message[$__field][] = array(
+						$message[$extField][] = array(
 							'name'  => $item,
 						);
 					}
@@ -89,6 +113,7 @@ class Message
 						'name'    => $item['FILE_NAME'],
 						'url'     => $urlManager->getUrlForShowFile($diskFile, $urlParams),
 						'size'    => \CFile::formatSize($diskFile->getSize()),
+						'fileId'  => $diskFile->getFileId(),
 					);
 
 					if (\Bitrix\Disk\TypeFile::isImage($diskFile))
@@ -102,9 +127,13 @@ class Message
 						);
 					}
 
+					$inlineParams = array_merge(
+						array('__bxacid' => sprintf('n%u', $diskFile->getId())),
+						$urlParams
+					);
 					$message['BODY_HTML'] = preg_replace(
 						sprintf('/("|\')\s*aid:%u\s*\1/i', $item['ID']),
-						sprintf('\1%s\1', $urlManager->getUrlForShowFile($diskFile, array('__bxacid' => sprintf('n%u', $diskFile->getId())))),
+						sprintf('\1%s\1', $urlManager->getUrlForShowFile($diskFile, $inlineParams)),
 						$message['BODY_HTML']
 					);
 				}
@@ -113,18 +142,26 @@ class Message
 					$file = \CFile::getFileArray($item['FILE_ID']);
 					if (!empty($file) && is_array($file))
 					{
-						$preview = \CFile::resizeImageGet(
-							$file, array('width' => 80, 'height' => 80),
-							BX_RESIZE_IMAGE_EXACT, false
-						);
-
 						$message['__files'][$k] = array(
 							'id'      => $file['ID'],
 							'name'    => $item['FILE_NAME'],
 							'url'     => $file['SRC'],
-							'preview' => !empty($preview['src']) ? $preview['src'] : null,
 							'size'    => \CFile::formatSize($file['FILE_SIZE']),
+							'fileId'  => $file['ID'],
 						);
+
+						if (\CFile::isImage($item['FILE_NAME'], $item['CONTENT_TYPE']))
+						{
+							$preview = \CFile::resizeImageGet(
+								$file, array('width' => 80, 'height' => 80),
+								BX_RESIZE_IMAGE_EXACT, false
+							);
+
+							if (!empty($preview['src']))
+							{
+								$message['__files'][$k]['preview'] = $preview['src'];
+							}
+						}
 
 						$message['BODY_HTML'] = preg_replace(
 							sprintf('/("|\')\s*aid:%u\s*\1/i', $item['ID']),
@@ -247,6 +284,12 @@ class Message
 	public static function getTotalUnseenForMailboxes($userId)
 	{
 		$mailboxes = Mail\MailboxTable::getUserMailboxes($userId);
+
+		if (empty($mailboxes))
+		{
+			return array();
+		}
+
 		$mailboxes = array_combine(
 			array_column($mailboxes, 'ID'),
 			$mailboxes
@@ -296,4 +339,23 @@ class Message
 		}
 		return $result;
 	}
+
+	public static function ensureAttachments(&$message)
+	{
+		if ($message['OPTIONS']['attachments'] > 0 && !($message['ATTACHMENTS'] > 0))
+		{
+			if (Main\Config\Option::get('mail', 'save_attachments', B_MAIL_SAVE_ATTACHMENTS) == 'Y')
+			{
+				return static::resync($message);
+			}
+		}
+	}
+
+	public static function resync(&$message)
+	{
+		$mailboxHelper = Mailbox::createInstance($message['MAILBOX_ID'], false);
+
+		return empty($mailboxHelper) ? false : $mailboxHelper->resyncMessage($message);
+	}
+
 }

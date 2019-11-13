@@ -1,15 +1,14 @@
 <?
 namespace Bitrix\Sale\Helpers\Order\Builder;
 
-use Bitrix\Crm\Order\Payment;
 use Bitrix\Crm\Order\Shipment;
 
 final class Director
 {
-	public function createOrder(OrderBuilder $builder, array $data)
+	public function createOrder(OrderBuilder $builder, array $fields)
 	{
 		try{
-			$builder->build($data);
+			$builder->build($fields);
 		}
 		catch(BuildingException $e)
 		{
@@ -28,12 +27,13 @@ final class Director
 	public function getUpdatedShipment(OrderBuilder $builder, array $shipmentData)
 	{
 		try{
-			$builder->createOrder(
-					array(
-						'ID' => $shipmentData['ORDER_ID'],
-						'SITE_ID' => $shipmentData['SITE_ID'],
-						'SHIPMENT' => array($shipmentData)
-					))
+			$builder->initFields(array(
+				'ID' => $shipmentData['ORDER_ID'],
+				'SITE_ID' => $shipmentData['SITE_ID'],
+				'SHIPMENT' => array($shipmentData)
+			))
+				->delegate()
+				->createOrder()
 				->setDiscounts() //?
 				->buildShipments()
 				->setDiscounts() //?
@@ -68,18 +68,19 @@ final class Director
 	/**
 	 * @param OrderBuilder $builder
 	 * @param array $shipmentData
-	 * @return Payment
+	 * @return \Bitrix\Sale\Payment
 	 * @throws \Bitrix\Main\ArgumentNullException
 	 */
 	public function getUpdatedPayment(OrderBuilder $builder, array $paymentData)
 	{
 		try{
-			$builder->createOrder(
-				array(
-					'ID' => $paymentData['ORDER_ID'],
-					'SITE_ID' => $paymentData['SITE_ID'],
-					'PAYMENT' => array($paymentData)
-				))
+			$builder->initFields(array(
+				'ID' => $paymentData['ORDER_ID'],
+				'SITE_ID' => $paymentData['SITE_ID'],
+				'PAYMENT' => array($paymentData)
+			))
+				->delegate()
+				->createOrder()
 				->setDiscounts()
 				->buildPayments()
 				->setDiscounts()

@@ -137,6 +137,31 @@ class RestManager extends \IRestService
 		return $this->processData($result);
 	}
 
+	/**
+	 * @param Engine\Response\DataType\Page $page
+	 * @see \IRestService::setNavData
+	 *
+	 * @return array
+	 */
+	private function getNavigationData(Engine\Response\DataType\Page $page)
+	{
+		$result = [];
+		$offset = $this->pageNavigation->getOffset();
+		$total = $page->getTotalCount();
+
+		$currentPageSize = count($page->getItems());
+
+		if ($offset + $currentPageSize < $total)
+		{
+			$result['next'] = $offset + $currentPageSize;
+		}
+
+		$result['total'] = $total;
+
+		return $result;
+	}
+
+
 	private function processData($result)
 	{
 		if ($result instanceof DateTime)
@@ -156,10 +181,16 @@ class RestManager extends \IRestService
 
 		if ($result instanceof Engine\Response\DataType\Page)
 		{
-			return self::setNavData($this->processData($result->getIterator()), array(
-				"count" => $result->getTotalCount(),
-				"offset" => $this->pageNavigation->getOffset(),
-			));
+			if (method_exists($result, 'getId'))
+			{
+				$data = [$result->getId() => $this->processData($result->getIterator())];
+			}
+			else
+			{
+				$data = $this->processData($result->getIterator());
+			}
+
+			return array_merge($data, $this->getNavigationData($result));
 		}
 
 		if ($result instanceof Contract\Arrayable)
@@ -240,17 +271,9 @@ class RestManager extends \IRestService
 			return null;
 		}
 
-		$description = array();
-		/** @var Error $lastError */
-		$lastError = array_pop($errors);
-		$description[] = $lastError->getMessage() . " ({$lastError->getCode()}).";
+		$firstError = reset($errors);
 
-		foreach ($errors as $error)
-		{
-			$description[] = $error->getMessage() . " ({$error->getCode()}).";
-		}
-
-		return new RestException(implode(' ', $description), $lastError->getCode());
+		return new RestException($firstError->getMessage(), $firstError->getCode());
 	}
 
 	private function registerAutoWirings(\CRestServer $restServer, $start)

@@ -2,14 +2,18 @@
 
 namespace Bitrix\Main\UI\Viewer;
 
-use Bitrix\Main\Entity\DataManager;
+use Bitrix\Main\ORM\Data\DataManager;
 use Bitrix\Main\Entity;
 use Bitrix\Main\FileTable;
+use Bitrix\Main\ORM\Event;
 use Bitrix\Main\Type\Date;
 use Bitrix\Main\Type\DateTime;
 
 final class FilePreviewTable extends DataManager
 {
+	/** @var array */
+	protected static $alreadyDeleted = [];
+
 	/**
 	 * Returns DB table name for entity
 	 *
@@ -79,10 +83,13 @@ final class FilePreviewTable extends DataManager
 
 		foreach ($files as $file)
 		{
-			\CFile::delete($file['PREVIEW_ID']);
-			\CFile::delete($file['PREVIEW_IMAGE_ID']);
+			$keepImage = isset($file['PREVIEW_IMAGE_ID']);
 
-			self::delete($file['ID']);
+			self::deleteContent($file, $keepImage);
+			if (!$keepImage)
+			{
+				self::delete($file['ID']);
+			}
 		}
 	}
 
@@ -91,5 +98,68 @@ final class FilePreviewTable extends DataManager
 		self::deleteOld($dayToDeath, $portion);
 
 		return "\\Bitrix\\Main\\UI\\Viewer\\FilePreviewTable::deleteOldAgent({$dayToDeath}, {$portion});";
+	}
+
+	public static function onBeforeDelete(Event $event)
+	{
+		$id = $event->getParameter('primary')['ID'];
+		if (isset(self::$alreadyDeleted[$id]))
+		{
+			return;
+		}
+
+		$file = self::getRowById($id);
+		if (!$file)
+		{
+			return;
+		}
+
+		self::deleteContent($file);
+	}
+
+	protected static function deleteContent(array $file, $keepImage = false)
+	{
+		if (isset(self::$alreadyDeleted[$file['ID']]))
+		{
+			return;
+		}
+
+		self::$alreadyDeleted[$file['ID']] = true;
+
+		\CFile::delete($file['PREVIEW_ID']);
+		if (!$keepImage)
+		{
+			\CFile::delete($file['PREVIEW_IMAGE_ID']);
+		}
+	}
+
+	/**
+	 * Event handler which listen to delete entries of b_file to clean preview.
+	 * @param array $bfile
+	 *
+	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 */
+	public static function onFileDelete($bfile)
+	{
+		if (empty($bfile['ID']))
+		{
+			return;
+		}
+
+		$file = self::getRow([
+			'filter' => [
+				'=FILE_ID' => $bfile['ID'],
+			]
+		]);
+
+		if (!$file)
+		{
+			return;
+		}
+
+		self::deleteContent($file);
+		self::delete($file['ID']);
 	}
 }

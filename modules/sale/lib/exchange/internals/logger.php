@@ -12,8 +12,6 @@ class Logger
 	/** @var  Fields */
 	protected $fields;
 
-	const INTERVAL_DAY_OPTION = "SALE_EXCHANGE_DEBUG_INTERVAL_DAY";
-
 	public function __construct()
 	{
 		$this->fields = new Fields();
@@ -43,15 +41,6 @@ class Logger
 	public function getField($name)
 	{
 		return $this->fields->get($name);
-	}
-
-	/**
-	 * @return int
-	 */
-	static public function getInterval()
-	{
-		$interval = Option::get('sale', static::INTERVAL_DAY_OPTION, 1);
-		return intval($interval)>0 ? $interval:1;
 	}
 
 	/**

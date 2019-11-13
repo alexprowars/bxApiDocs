@@ -6,6 +6,7 @@ use Bitrix\Mail\Internals\Entity\UserSignature;
 use Bitrix\Mail\Internals\UserSignatureTable;
 use Bitrix\Main\Engine\Binder;
 use Bitrix\Main\Engine\Controller;
+use Bitrix\Main\Text\StringHelper;
 
 abstract class Base extends Controller
 {
@@ -20,6 +21,20 @@ abstract class Base extends Controller
 				return UserSignatureTable::getById($id)->fetchObject();
 			}
 		);
+	}
+
+	protected function sanitize($text)
+	{
+		$text = preg_replace('/<!--.*?-->/is', '', $text);
+		$text = preg_replace('/<script[^>]*>.*?<\/script>/is', '', $text);
+		$text = preg_replace('/<title[^>]*>.*?<\/title>/is', '', $text);
+
+		$sanitizer = new \CBXSanitizer();
+		$sanitizer->setLevel(\CBXSanitizer::SECURE_LEVEL_LOW);
+		$sanitizer->applyDoubleEncode(false);
+		$sanitizer->addTags(array('style' => array()));
+
+		return $sanitizer->sanitizeHtml($text);
 	}
 
 	/**
@@ -78,8 +93,8 @@ abstract class Base extends Controller
 		{
 			return $string;
 		}
-		$string = str_replace('_', ' ', strtolower($string));
-		return lcfirst(str_replace(' ', '', ucwords($string)));
+
+		return lcfirst(StringHelper::snake2camel($string));
 	}
 
 	/**
@@ -92,6 +107,7 @@ abstract class Base extends Controller
 		{
 			return $string;
 		}
-		return strtoupper(preg_replace('/(.)([A-Z])/', '$1_$2', $string));
+
+		return strtoupper(StringHelper::camel2snake($string));
 	}
 }

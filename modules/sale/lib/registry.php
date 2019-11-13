@@ -3,6 +3,8 @@ namespace Bitrix\Sale;
 
 use Bitrix\Main;
 
+Main\Localization\Loc::loadMessages(__FILE__);
+
 /**
  * Class Registry
  * @package Bitrix\Sale
@@ -87,7 +89,6 @@ final class Registry
 				Registry::ENTITY_NOTIFY => 'Bitrix\Sale\Notify',
 				Registry::ENTITY_TRADE_BINDING_COLLECTION => 'Bitrix\Sale\TradeBindingCollection',
 				Registry::ENTITY_TRADE_BINDING_ENTITY => 'Bitrix\Sale\TradeBindingEntity',
-				Registry::ENTITY_NOTIFY => 'Bitrix\Sale\Notify',
 			),
 			static::REGISTRY_TYPE_ARCHIVE_ORDER => array(
 				Registry::ENTITY_ORDER => '\Bitrix\Sale\Archive\Order',
@@ -207,14 +208,21 @@ final class Registry
 	/**
 	 * @param $code
 	 * @return mixed
-	 * @throws Main\ArgumentException
+	 * @throws Main\SystemException
 	 */
 	public function get($code)
 	{
 		if (isset(static::$registryMap[$this->type][$code]))
+		{
 			return static::$registryMap[$this->type][$code];
+		}
 
-		throw new Main\ArgumentException();
+		throw new Main\SystemException(
+			Main\Localization\Loc::getMessage(
+				'SALE_REGISTRY_CODE_VALUE_NO_EXISTS',
+				['#TYPE#' => $this->getType(), '#CODE#' => $code]
+			)
+		);
 	}
 
 	/**

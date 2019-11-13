@@ -181,7 +181,9 @@ class Segment extends Base
 	}
 
 	/**
-	 * Is hidden.
+	 * Return true if segment is hidden.
+	 *
+	 * @return bool
 	 */
 	public function isHidden()
 	{
@@ -189,7 +191,9 @@ class Segment extends Base
 	}
 
 	/**
-	 * Is hidden.
+	 * Return true if segment is system.
+	 *
+	 * @return bool
 	 */
 	public function isSystem()
 	{
@@ -226,6 +230,11 @@ class Segment extends Base
 	 */
 	public function appendContactSetConnector($contactSetId = null)
 	{
+		if ($this->getFirstContactSetId())
+		{
+			return $this;
+		}
+
 		if (!$contactSetId)
 		{
 			$contactSetId = ListTable::add(['SORT' => 100])->getId();
@@ -247,6 +256,11 @@ class Segment extends Base
 		return $this;
 	}
 
+	/**
+	 * Return fisrt contact set ID from in segment.
+	 *
+	 * @return int|null
+	 */
 	protected function getFirstContactSetId()
 	{
 		foreach ($this->data['ENDPOINTS'] as $endpoint)
@@ -275,6 +289,12 @@ class Segment extends Base
 	 */
 	public function upload(array $list)
 	{
+		$contactSetId = $this->getFirstContactSetId();
+		if (!$contactSetId)
+		{
+			$this->appendContactSetConnector()->save();
+		}
+
 		$contactSetId = $this->getFirstContactSetId();
 		if (!$contactSetId)
 		{
@@ -325,7 +345,7 @@ class Segment extends Base
 			return false;
 		}
 
-		GroupCounterTable::delete(array('GROUP_ID' => $segmentId));
+		GroupCounterTable::deleteByGroupId($segmentId);
 		foreach ($countByType as $typeId => $typeCount)
 		{
 			if (!$typeCount)

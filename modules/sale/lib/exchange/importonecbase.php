@@ -22,11 +22,11 @@ abstract class ImportOneCBase extends ImportPattern
 	use BaseTrait;
 
 	const EVENT_ON_EXCHANGE_CONFIGURE_IMPORTER = 'OnExchangeConfigureImporter';
-
 	const DELIVERY_SERVICE_XMLID = 'ORDER_DELIVERY';
 
 	/** @var  Fields */
 	protected $fields;
+	static protected $config;
 
 	/**
 	 * @param array $values
@@ -90,6 +90,18 @@ abstract class ImportOneCBase extends ImportPattern
 	{
 		$event = new Event('sale', static::EVENT_ON_EXCHANGE_CONFIGURE_IMPORTER);
 		$event->send();
+	}
+
+	static protected function setConfig($option='', $value=true)
+	{
+		if($value)
+		{
+			static::$config |= $option;
+		}
+		else
+		{
+			static::$config &= ~$option;
+		}
 	}
 
 	/**

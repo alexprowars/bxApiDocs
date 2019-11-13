@@ -16,6 +16,14 @@ class TradeBindingEntity extends Internals\CollectableEntity
 	/**
 	 * @return string
 	 */
+	public static function getRegistryEntity()
+	{
+		return Registry::ENTITY_TRADE_BINDING_ENTITY;
+	}
+
+	/**
+	 * @return string
+	 */
 	public static function getRegistryType()
 	{
 		return Registry::REGISTRY_TYPE_ORDER;
@@ -28,14 +36,14 @@ class TradeBindingEntity extends Internals\CollectableEntity
 	{
 		return [
 			'ORDER_ID', 'EXTERNAL_ORDER_ID',
-			'TRADING_PLATFORM_ID','PARAMS'
+			'TRADING_PLATFORM_ID', 'PARAMS', 'XML_ID'
 		];
 	}
 
 	/**
 	 * @return array
 	 */
-	public static function getMeaningfulFields()
+	protected static function getMeaningfulFields()
 	{
 		return array();
 	}
@@ -65,9 +73,18 @@ class TradeBindingEntity extends Internals\CollectableEntity
 		if ($platform !== null)
 		{
 			$entity->setFieldNoDemand('TRADING_PLATFORM_ID', $platform->getId());
+			$entity->setFieldNoDemand('XML_ID', static::generateXmlId());
 		}
 
 		return $entity;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function generateXmlId()
+	{
+		return uniqid('bx_');
 	}
 
 	/**
@@ -221,6 +238,16 @@ class TradeBindingEntity extends Internals\CollectableEntity
 	protected function addInternal(array $data)
 	{
 		return TradingPlatform\OrderTable::add($data);
+	}
+
+	/**
+	 * @return null|string
+	 * @internal
+	 *
+	 */
+	public static function getEntityEventName()
+	{
+		return 'SaleTradeBindingEntity';
 	}
 
 }

@@ -470,7 +470,7 @@ class Subscription
 			else
 			{
 				$mailingPostingDb = PostingRecipientTable::getList(array(
-					'select' => array('RECIPIENT_ID' => 'ID', 'CONTACT_ID' => 'CONTACT.ID', 'POSTING_ID'),
+					'select' => array('RECIPIENT_ID' => 'ID', 'CONTACT_ID', 'POSTING_ID'),
 					'filter' => array(
 						'=POSTING.MAILING_ID' => $mailing['ID'],
 						'=CONTACT.CODE' => $data['EMAIL'],

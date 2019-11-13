@@ -75,13 +75,12 @@ class ByPersonType extends Base
 	/**
 	 * @param $deliveryId
 	 * @return array
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	public static function getParamsStructure($deliveryId = 0)
 	{
 		$personTypeList = array();
 
-		$dbRes = PersonTypeTable::getList();
+		$dbRes = \Bitrix\Sale\PersonType::getList();
 
 		while ($personType = $dbRes->fetch())
 			$personTypeList[$personType["ID"]] = $personType["NAME"]." (".$personType["ID"].")";

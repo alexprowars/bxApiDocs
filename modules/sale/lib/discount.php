@@ -554,13 +554,14 @@ class Discount extends DiscountBase
 	{
 		parent::fillEmptyOrderData();
 		$this->orderData += [
+			'BASE_PRICE_DELIVERY' => 0,
 			'PRICE_DELIVERY' => 0,
 			'PRICE_DELIVERY_DIFF' => 0,
 			'DELIVERY_ID' => 0,
 			'CUSTOM_PRICE_DELIVERY' => 'N',
 			'SHIPMENT_CODE' => 0,
 			'SHIPMENT_ID' => 0,
-			'PAY_SYSTEM_ID' => 0,
+			'PAY_SYSTEM_ID' => 0
 		];
 
 		if ($this->isOrderExists())

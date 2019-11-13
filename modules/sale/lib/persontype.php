@@ -3,7 +3,7 @@
 namespace Bitrix\Sale;
 
 use Bitrix\Main\ArgumentException;
-use Bitrix\Sale\Internals\PersonTypeTable;
+use Bitrix\Sale\Internals;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 
@@ -76,12 +76,10 @@ class PersonType
 			$filter['ID'] = $id;
 		}
 
-		$dbRes = static::getList([
-			'order' => ["SORT" => "ASC", "ID" => "ASC"],
-			'filter' => $filter,
-		]);
+		$personTypeList = static::getList(['order'=>["SORT" => "ASC", "ID"=>"ASC"], 'filter' => $filter])
+			->fetchAll();
 
-		if ($personTypeList = $dbRes->fetchAll())
+		if ($personTypeList)
 		{
 			foreach($personTypeList as $personTypeData)
 			{
@@ -108,7 +106,7 @@ class PersonType
 
 		$parameters['filter']['=ENTITY_REGISTRY_TYPE'] = static::getRegistryType();
 
-		return PersonTypeTable::getList($parameters);
+		return Internals\PersonTypeTable::getList($parameters);
 	}
 
 	/**
@@ -144,4 +142,13 @@ class PersonType
 
 		return $result;
 	}
+
+	/**
+	 * @return array
+	 */
+	public static function generateXmlId()
+	{
+		return uniqid('bx_');
+	}
+
 }

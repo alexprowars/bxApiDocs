@@ -33,8 +33,14 @@ class Result
 	/** @var  bool $isPermanentError Is permanent error. */
 	protected $isPermanentError;
 
+	/** @var  bool $isBlacklistable Is email blacklistable. */
+	protected $isBlacklistable;
+
 	/** @var  string $message Status text. */
 	protected $message;
+
+	/** @var  string $description Status description. */
+	protected $description;
 
 	/**
 	 * Return true if result is belong to module ID and entity type.
@@ -235,6 +241,28 @@ class Result
 	}
 
 	/**
+	 * Return true if email is blacklistable.
+	 *
+	 * @return bool
+	 */
+	public function isBlacklistable()
+	{
+		return $this->isBlacklistable;
+	}
+
+	/**
+	 * Set as blacklistable.
+	 *
+	 * @param bool $isBlacklistable Is blacklistable.
+	 * @return $this
+	 */
+	public function setBlacklistable($isBlacklistable)
+	{
+		$this->isBlacklistable = $isBlacklistable;
+		return $this;
+	}
+
+	/**
 	 * Get message text.
 	 *
 	 * @return string
@@ -253,6 +281,28 @@ class Result
 	public function setMessage($message)
 	{
 		$this->message = $message;
+		return $this;
+	}
+
+	/**
+	 * Get description text.
+	 *
+	 * @return string
+	 */
+	public function getDescription()
+	{
+		return $this->description;
+	}
+
+	/**
+	 * Set description text.
+	 *
+	 * @param string $description Description.
+	 * @return $this
+	 */
+	public function setDescription($description)
+	{
+		$this->description = $description;
 		return $this;
 	}
 

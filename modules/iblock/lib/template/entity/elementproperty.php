@@ -329,10 +329,10 @@ class ElementPropertyUserField extends LazyValueLoader
 	 */
 	protected function getFormatFunction()
 	{
-		static $propertyFormatFunction = null;
-		if (!isset($propertyFormatFunction))
+		static $propertyFormatFunction = array();
+		if (!isset($propertyFormatFunction[$this->property["ID"]]))
 		{
-			$propertyFormatFunction = false;
+			$propertyFormatFunction[$this->property["ID"]] = false;
 			if ($this->property && strlen($this->property["USER_TYPE"]))
 			{
 				$propertyUserType = \CIBlockProperty::getUserType($this->property["USER_TYPE"]);
@@ -341,11 +341,11 @@ class ElementPropertyUserField extends LazyValueLoader
 					&& is_callable($propertyUserType["GetPublicViewHTML"])
 				)
 				{
-					$propertyFormatFunction = $propertyUserType["GetPublicViewHTML"];
+					$propertyFormatFunction[$this->property["ID"]] = $propertyUserType["GetPublicViewHTML"];
 				}
 			}
 		}
-		return $propertyFormatFunction;
+		return $propertyFormatFunction[$this->property["ID"]];
 	}
 }
 

@@ -95,6 +95,7 @@ class Type extends TypeBase
 				'',
 				array(
 					'ID' => $currentPlacementHandler['APP_ID'],
+					'PLACEMENT_ID' => $currentPlacementHandler['ID'],
 					'PLACEMENT' => UserFieldType::PLACEMENT_UF_TYPE,
 					'SHOW_LOADER' => 'N',
 					'SET_TITLE' => 'N',

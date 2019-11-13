@@ -2,6 +2,7 @@
 namespace Bitrix\Iblock;
 
 use Bitrix\Main,
+	Bitrix\Main\ORM,
 	Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
@@ -22,7 +23,7 @@ Loc::loadMessages(__FILE__);
  * @package Bitrix\Iblock
  **/
 
-class PropertyFeatureTable extends Main\Entity\DataManager
+class PropertyFeatureTable extends ORM\Data\DataManager
 {
 	/**
 	 * Returns DB table name for entity.
@@ -42,28 +43,28 @@ class PropertyFeatureTable extends Main\Entity\DataManager
 	public static function getMap()
 	{
 		return [
-			'ID' => new Main\Entity\IntegerField('ID', [
+			'ID' => new ORM\Fields\IntegerField('ID', [
 				'primary' => true,
 				'autocomplete' => true,
 				'title' => Loc::getMessage('PROPERTY_FEATURE_ENTITY_ID_FIELD')
 			]),
-			'PROPERTY_ID' => new Main\Entity\IntegerField('PROPERTY_ID', [
+			'PROPERTY_ID' => new ORM\Fields\IntegerField('PROPERTY_ID', [
 				'title' => Loc::getMessage('PROPERTY_FEATURE_ENTITY_PROPERTY_ID_FIELD')
 			]),
-			'MODULE_ID' => new Main\Entity\StringField('MODULE_ID', [
+			'MODULE_ID' => new ORM\Fields\StringField('MODULE_ID', [
 				'validation' => [__CLASS__, 'validateModuleId'],
 				'title' => Loc::getMessage('PROPERTY_FEATURE_ENTITY_MODULE_ID_FIELD')
 			]),
-			'FEATURE_ID' => new Main\Entity\StringField('FEATURE_ID', [
+			'FEATURE_ID' => new ORM\Fields\StringField('FEATURE_ID', [
 				'validation' => [__CLASS__, 'validateFeatureId'],
 				'title' => Loc::getMessage('PROPERTY_FEATURE_ENTITY_FEATURE_ID_FIELD')
 			]),
-			'IS_ENABLED' => new Main\Entity\BooleanField('IS_ENABLED', [
+			'IS_ENABLED' => new ORM\Fields\BooleanField('IS_ENABLED', [
 				'values' => ['N', 'Y'],
 				'default_value' => 'N',
 				'title' => Loc::getMessage('PROPERTY_FEATURE_ENTITY_IS_ENABLED_FIELD')
 			]),
-			'PROPERTY' => new Main\Entity\ReferenceField(
+			'PROPERTY' => new ORM\Fields\Relations\Reference(
 				'PROPERTY',
 				'\Bitrix\Iblock\Property',
 				['=this.PROPERTY_ID' => 'ref.ID']
@@ -79,7 +80,7 @@ class PropertyFeatureTable extends Main\Entity\DataManager
 	public static function validateModuleId()
 	{
 		return [
-			new Main\Entity\Validator\Length(null, 50),
+			new ORM\Fields\Validators\LengthValidator(null, 50),
 		];
 	}
 
@@ -91,7 +92,7 @@ class PropertyFeatureTable extends Main\Entity\DataManager
 	public static function validateFeatureId()
 	{
 		return [
-			new Main\Entity\Validator\Length(null, 100),
+			new ORM\Fields\Validators\LengthValidator(null, 100),
 		];
 	}
 

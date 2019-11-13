@@ -5,6 +5,7 @@ use Bitrix\Main,
 	Bitrix\Main\Config\Option,
 	Bitrix\Main\Localization\Loc,
 	Bitrix\Main\Application,
+	Bitrix\Sale,
 	Bitrix\Sale\Internals;
 
 Loc::loadMessages(__FILE__);
@@ -169,7 +170,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return use mode.
+	 * Returns use mode.
 	 *
 	 * @return int
 	 */
@@ -179,7 +180,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check client use mode.
+	 * Verifies that the client mode being used.
 	 *
 	 * @return bool
 	 */
@@ -189,7 +190,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check manager use mode.
+	 * Verifies that the manager mode being used.
 	 *
 	 * @return bool
 	 */
@@ -199,7 +200,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check external use mode.
+	 * Verifies that the external order mode being used.
 	 *
 	 * @return bool
 	 */
@@ -209,7 +210,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return user id.
+	 * Returns user id.
 	 *
 	 * @return null|int
 	 */
@@ -224,7 +225,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return order id, if current use mode self::MODE_ORDER.
+	 * Returns order id, if current use mode self::MODE_ORDER.
 	 *
 	 * @return null|int
 	 */
@@ -234,7 +235,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return result operation.
+	 * Returns a sign of success.
 	 *
 	 * @return bool
 	 */
@@ -244,7 +245,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return error list.
+	 * Returns error list.
 	 *
 	 * @return array
 	 */
@@ -264,7 +265,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return coupon status list.
+	 * Returns coupon status list.
 	 *
 	 * @param bool $extendedMode	Get status Ids or Ids with description.
 	 * @return array
@@ -292,7 +293,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return check code list.
+	 * Returns check code list.
 	 *
 	 * @param bool $extendedMode	Get codes or codes with description.
 	 * @return array
@@ -366,7 +367,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return use ordered coupons for apply.
+	 * Returns use ordered coupons for apply.
 	 *
 	 * @return bool
 	 */
@@ -396,7 +397,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return true, if disallow get coupons for calculate discounts.
+	 * Returns true, if disallow get coupons for calculate discounts.
 	 *
 	 * @return bool
 	 */
@@ -484,7 +485,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return existing coupons.
+	 * Returns true, if coupons were are entered.
 	 *
 	 * @return bool
 	 */
@@ -839,7 +840,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return coupons for current order.
+	 * Returns coupons for current order.
 	 *
 	 * @param bool $extMode					Get full information or coupons only.
 	 * @param array $filter					Coupons filter.
@@ -870,6 +871,55 @@ class DiscountCouponsManagerBase
 			static::clearSystemData($result);
 
 		return ($extMode ? $result : array_keys($result));
+	}
+
+	/**
+	 * Verifies the current status of new applied coupons. Used before order save.
+	 *
+	 * @return Result
+	 */
+	public static function verifyApplied()
+	{
+		$result = new Sale\Result();
+
+		if (
+			self::$useMode == self::MODE_SYSTEM
+			||
+			!self::isEntered()
+		)
+			return $result;
+
+		$appliedCoupons = self::filterCoupons(['STATUS' => self::STATUS_APPLYED, 'SAVED' => 'N'], true);
+		if (!empty($appliedCoupons))
+		{
+			$badCoupons = [];
+			$appliedCoupons = array_keys($appliedCoupons);
+			foreach ($appliedCoupons as $coupon)
+			{
+				$row = self::getData($coupon, true);
+				if ($row['STATUS'] == self::STATUS_NOT_FOUND || $row['STATUS'] == self::STATUS_FREEZE)
+					$badCoupons[$coupon] = $row;
+			}
+			unset($row, $coupon);
+			if (!empty($badCoupons))
+			{
+				self::fillCouponHints($badCoupons);
+				$errorData = [];
+				foreach ($badCoupons as $row)
+					$errorData[$row['COUPON']] = implode(', ', $row['CHECK_CODE_TEXT']);
+				unset($row);
+				$result->addError(new Main\Error(
+					Loc::getMessage('BX_SALE_DCM_COUPONS_VERIFY_ERR'),
+					'COUPON',
+					$errorData
+				));
+				unset($errorData);
+			}
+			unset($badCoupons);
+		}
+		unset($appliedCoupons);
+
+		return $result;
 	}
 
 	/**
@@ -957,7 +1007,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Save applied information for product.
+	 * Set applied information for product.
 	 *
 	 * @param array $product		Product description.
 	 * @param array $couponsList	Coupons for product.
@@ -1018,7 +1068,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Save applied information for basket.
+	 * Set applied information for basket.
 	 *
 	 * @param string $coupon		Coupon.
 	 * @param array $data				Apply data (basket, delivery).
@@ -1182,7 +1232,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return information coupon.
+	 * Returns information about coupon.
 	 *
 	 * @param string $coupon			Coupon for search.
 	 * @param bool $checkCoupon			Check coupon data.
@@ -1270,7 +1320,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check existing coupon.
+	 * Checks if a coupon exists.
 	 *
 	 * @param string $coupon		Coupon for check.
 	 * @return array|bool
@@ -1409,7 +1459,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return is coupon used in order.
+	 * Returns true if the coupon was used in the order and saved.
 	 *
 	 * @param array $coupon			Coupon data.
 	 * @return bool
@@ -1437,7 +1487,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check base coupon data.
+	 * Checks the basic coupon fields.
 	 *
 	 * @param array &$data			Coupon data.
 	 * @param int $checkCode		Start status.
@@ -1531,7 +1581,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Check extended coupon data.
+	 * Checks the extended coupon fields.
 	 *
 	 * @param array &$data			Coupon data.
 	 * @param int $mode				Coupon mode (full or simple).
@@ -1786,7 +1836,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Clear unknown coupons.
+	 * Filter for remove unknown coupons.
 	 *
 	 * @param array $coupon		Coupon data.
 	 * @return bool
@@ -1799,7 +1849,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Clear freeze coupons.
+	 * Filter for remove freeze coupons.
 	 *
 	 * @param array $coupon		Coupon data.
 	 * @return bool
@@ -1812,7 +1862,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Clear freeze ordered coupons.
+	 * Filter for remove freeze ordered coupons.
 	 *
 	 * @param array $coupon		Coupon data.
 	 * @return bool
@@ -1859,7 +1909,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return one coupon for one discount.
+	 * Returns one coupon for one discount.
 	 *
 	 * @param array &$coupons		Coupons list.
 	 * @return void
@@ -2262,7 +2312,7 @@ class DiscountCouponsManagerBase
 	}
 
 	/**
-	 * Return empty coupon (default field values).
+	 * Returns empty coupon (default field values).
 	 *
 	 * @internal
 	 * @param string $coupon		Coupon code.

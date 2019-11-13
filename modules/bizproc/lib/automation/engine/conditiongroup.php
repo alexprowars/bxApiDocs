@@ -3,6 +3,7 @@ namespace Bitrix\Bizproc\Automation\Engine;
 
 use Bitrix\Bizproc\Automation\Target\BaseTarget;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Bizproc\Automation\Helper;
 
 Loc::loadMessages(__FILE__);
 
@@ -55,21 +56,19 @@ class ConditionGroup
 		$documentId = $documentType;
 		$documentId[2] = $target->getDocumentId();
 
-		$runtime = \CBPRuntime::getRuntime();
-		$runtime->startRuntime();
-
-		$documentService = $runtime->getService("DocumentService");
+		$documentService = \CBPRuntime::getRuntime(true)->getDocumentService();
 		$document = $documentService->getDocument($documentId, $documentType);
 		$documentFields = $documentService->getDocumentFields($documentType);
 
 		$result = array(0 => true);
 		$i = 0;
+		$joiner = static::JOINER_AND;
+
 		foreach ($this->items as $item)
 		{
 			/** @var Condition $condition */
 			$condition = $item[0];
 			$conditionField = $condition->getField();
-			$joiner = ($item[1] === static::JOINER_OR) ? static::JOINER_OR : static::JOINER_AND;
 
 			$conditionResult = true;
 
@@ -77,6 +76,7 @@ class ConditionGroup
 			{
 				$fld = $document[$conditionField];
 				$type = null;
+				$fieldType = null;
 
 				if (isset($documentFields[$conditionField]))
 				{
@@ -85,9 +85,10 @@ class ConditionGroup
 					{
 						$type = 'bool';
 					}
+					$fieldType = $documentService->getFieldTypeObject($documentType, $documentFields[$conditionField]);
 				}
 
-				if (!$condition->check($fld, $type, $target))
+				if (!$condition->check($fld, $type, $target, $fieldType))
 				{
 					$conditionResult = false;
 				}
@@ -102,6 +103,7 @@ class ConditionGroup
 			{
 				$result[$i] = false;
 			}
+			$joiner = ($item[1] === static::JOINER_OR) ? static::JOINER_OR : static::JOINER_AND;
 		}
 
 		return (count(array_filter($result)) > 0);
@@ -165,21 +167,44 @@ class ConditionGroup
 
 	/**
 	 * @param array $childActivity Child activity array.
+	 * @param array $documentType
 	 * @return array New activity array.
 	 */
-	public function createBizprocActivity(array $childActivity)
+	public function createBizprocActivity(array $childActivity, array $documentType)
 	{
 		$title = Loc::getMessage('BIZPROC_AUTOMATION_CONDITION_TITLE');
 		$fieldCondition = [];
 		$bizprocJoiner = 0;
 
+		$documentService = \CBPRuntime::GetRuntime(true)->getDocumentService();
+		$documentFields = $documentService->GetDocumentFields($documentType);
+
 		/** @var Condition $condition */
 		foreach ($this->getItems() as list($condition, $joiner))
 		{
+			$field = $condition->getField();
+			$value = $condition->getValue();
+			$property = isset($documentFields[$field]) ? $documentFields[$field] : null;
+			if ($property && !in_array($condition->getOperator(), ['empty', '!empty']))
+			{
+				$valueInternal = $documentService->GetFieldInputValue(
+					$documentType,
+					$property,
+					'field',
+					['field' => $value],
+					$errors
+				);
+
+				if (!$errors)
+				{
+					$value = $valueInternal;
+				}
+			}
+
 			$fieldCondition[] = [
-				$condition->getField(),
+				$field,
 				$condition->getOperator(),
-				$condition->getValue(),
+				self::unConvertExpressions($value, $documentType),
 				$bizprocJoiner
 			];
 			$bizprocJoiner = ($joiner === static::JOINER_OR) ? 1 : 0;
@@ -216,11 +241,15 @@ class ConditionGroup
 
 	/**
 	 * @param array &$activity Target activity array.
-	 * @return false|Condition Condition instance of false.
+	 * @param array $documentType
+	 * @return false|ConditionGroup Instance of false.
 	 */
-	public static function convertBizprocActivity(array &$activity)
+	public static function convertBizprocActivity(array &$activity, array $documentType)
 	{
 		$conditionGroup = false;
+		$documentService = \CBPRuntime::GetRuntime(true)->getDocumentService();
+		$documentFields = $documentService->GetDocumentFields($documentType);
+
 		if (
 			count($activity['Children']) === 2
 			&& $activity['Children'][0]['Type'] === 'IfElseBranchActivity'
@@ -236,10 +265,20 @@ class ConditionGroup
 
 			foreach ($bizprocConditions as $index => $fieldCondition)
 			{
+				$property = isset($documentFields[$fieldCondition[0]]) ? $documentFields[$fieldCondition[0]] : null;
+				if ($property && $property['Type'] === 'user')
+				{
+					$fieldCondition[2] = \CBPHelper::UsersArrayToString(
+						$fieldCondition[2],
+						null,
+						$documentType
+					);
+				}
+
 				$conditionItem = new Condition(array(
 					'field' => $fieldCondition[0],
 					'operator' => $fieldCondition[1],
-					'value' => $fieldCondition[2],
+					'value' => self::convertExpressions($fieldCondition[2], $documentType),
 				));
 
 				$nextCondition = isset($bizprocConditions[$index + 1]) ? $bizprocConditions[$index + 1] : null;
@@ -252,5 +291,37 @@ class ConditionGroup
 		}
 
 		return $conditionGroup;
+	}
+
+	private static function convertExpressions($value, array $documentType)
+	{
+		if (is_array($value))
+		{
+			foreach ($value as $k => $v)
+			{
+				$value[$k] = self::convertExpressions($v, $documentType);
+			}
+		}
+		else
+		{
+			$value = Helper::convertExpressions($value, $documentType);
+		}
+		return $value;
+	}
+
+	private static function unConvertExpressions($value, array $documentType)
+	{
+		if (is_array($value))
+		{
+			foreach ($value as $k => $v)
+			{
+				$value[$k] = self::unConvertExpressions($v, $documentType);
+			}
+		}
+		else
+		{
+			$value = Helper::unConvertExpressions($value, $documentType);
+		}
+		return $value;
 	}
 }

@@ -457,6 +457,69 @@ abstract class Connection extends Data\Connection
 	}
 
 	/**
+	 * @param string $tableName
+	 * @param array  $rows
+	 * @param string $identity
+	 *
+	 * @return int
+	 * @throws Main\ArgumentTypeException
+	 * @throws SqlQueryException
+	 */
+	public function addMulti($tableName, $rows, $identity = "ID")
+	{
+		$uniqueColumns = [];
+		$inserts = [];
+
+		// prepare data
+		foreach ($rows as $data)
+		{
+			$insert = $this->getSqlHelper()->prepareInsert($tableName, $data, true);
+			$inserts[] = $insert;
+
+			// and get unique column names
+			foreach ($insert[0] as $column)
+			{
+				$uniqueColumns[$column] = true;
+			}
+		}
+
+		// prepare sql
+		$sqlValues = [];
+
+		foreach ($inserts as $insert)
+		{
+
+			$columns = array_flip($insert[0]);
+			$values = $insert[1];
+
+			$finalValues = [];
+
+			foreach (array_keys($uniqueColumns) as $column)
+			{
+				if (array_key_exists($column, $columns))
+				{
+					// set real value
+					$finalValues[] = $values[$columns[$column]];
+				}
+				else
+				{
+					// set default
+					$finalValues[] = 'DEFAULT';
+				}
+			}
+
+			$sqlValues[] = '('.join(', ', $finalValues).')';
+		}
+
+		$sql = "INSERT INTO {$this->getSqlHelper()->quote($tableName)} (".join(', ', array_keys($uniqueColumns)).") ".
+				"VALUES ".join(', ', $sqlValues);
+
+		$this->queryExecute($sql);
+
+		return $this->getInsertedId();
+	}
+
+	/**
 	 * @return integer
 	 */
 	abstract public function getInsertedId();

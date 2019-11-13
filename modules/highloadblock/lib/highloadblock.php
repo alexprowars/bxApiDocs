@@ -62,7 +62,7 @@ class HighloadBlockTable extends Entity\DataManager
 			'LANG' => new Entity\ReferenceField(
 				'LANG',
 				'Bitrix\Highloadblock\HighloadBlockLangTable',
-				array('=this.ID' => 'ref.ID', 'ref.LID' => new Main\DB\SqlExpression('?', LANG))
+				array('=this.ID' => 'ref.ID', 'ref.LID' => new Main\DB\SqlExpression('?', LANGUAGE_ID))
 			),
 		);
 

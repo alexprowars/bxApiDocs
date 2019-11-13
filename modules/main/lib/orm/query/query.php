@@ -14,6 +14,7 @@ use Bitrix\Main\ORM\Fields\ScalarField;
 use Bitrix\Main\ORM\Fields\TextField;
 use Bitrix\Main\ORM\Query\Filter\ConditionTree as Filter;
 use Bitrix\Main\ORM\Query\Filter\Expressions\ColumnExpression;
+use Bitrix\Main\Text\StringHelper;
 
 /**
  * Query builder for Entities.
@@ -1729,17 +1730,20 @@ class Query
 					// ref to another entity
 					$ref_field = $element->getValue();
 					$dst_entity = $ref_field->getRefEntity();
+					$joinType = $ref_field->getJoinType();
 				}
 				elseif (is_array($element->getValue()))
 				{
 					// link from another entity to this
 					list($dst_entity, $ref_field) = $element->getValue();
+					$joinType = $ref_field->getJoinType();
 				}
 				elseif ($element->getValue() instanceof OneToMany)
 				{
 					// the same as back reference
 					$dst_entity = $element->getValue()->getRefEntity();
 					$ref_field = $element->getValue()->getRefField();
+					$joinType = $element->getValue()->getJoinType() ?: $ref_field->getJoinType();
 				}
 				elseif ($element->getValue() instanceof ManyToMany)
 				{
@@ -1837,7 +1841,7 @@ class Query
 					{
 						if (is_null($table_alias))
 						{
-							$table_alias = Entity::camel2snake($dst_entity->getName()) . '_' . strtolower($ref_field->getName());
+							$table_alias = StringHelper::camel2snake($dst_entity->getName()) . '_' . strtolower($ref_field->getName());
 							$table_alias = $prev_alias.'_'.$table_alias;
 
 							if (strlen($table_alias.$this->table_alias_postfix) > $aliasLength)
@@ -1889,7 +1893,7 @@ class Query
 					if (!isset($this->join_registry[$map_key]))
 					{
 						$join = array(
-							'type' => $ref_field->getJoinType(),
+							'type' => $joinType,
 							'table' => $dst_entity->getDBTableName(),
 							'alias' => $table_alias.$this->table_alias_postfix,
 							'reference' => $csw_reference,
@@ -2187,11 +2191,11 @@ class Query
 			$this->setFilterChains($this->filter);
 			$this->divideFilter();
 
-			if ($this->filterHandler)
-			{
-				$this->setFilterHandlerChains($this->filterHandler);
-				$this->divideFilterHandler();
-			}
+			// unconditional entity scope
+			$this->entity->setDefaultScope($this);
+
+			$this->setFilterHandlerChains($this->filterHandler);
+			$this->divideFilterHandler();
 
 			foreach ($this->group as $value)
 			{
@@ -2205,8 +2209,9 @@ class Query
 
 			$this->buildJoinMap();
 
-			$sqlSelect = $this->buildSelect();
 			$sqlJoin = $this->buildJoin();
+
+			$sqlSelect = $this->buildSelect();
 			$sqlWhere = $this->buildWhere();
 			$sqlGroup = $this->buildGroup();
 			$sqlHaving = $this->buildHaving();
@@ -2531,8 +2536,15 @@ class Query
 				elseif (strpos($field, 'ref.') === 0)
 				{
 					$definition = str_replace(\CSQLWhere::getOperationByCode($operation).'ref.', '', $k);
-					$absDefinition = strlen($refDefinition) ? $refDefinition . '.' . $definition : $definition;
 
+					if (strpos($definition, '.') !== false)
+					{
+						throw new Main\ArgumentException(sprintf(
+							'Reference chain `%s` is not allowed here. First-level definitions only.', $field
+						));
+					}
+
+					$absDefinition = strlen($refDefinition) ? $refDefinition . '.' . $definition : $definition;
 					$chain = $this->getRegisteredChain($absDefinition, true);
 
 					if ($isBackReference)
@@ -2618,8 +2630,15 @@ class Query
 					elseif (strpos($v, 'ref.') === 0)
 					{
 						$definition = str_replace('ref.', '', $v);
-						$absDefinition = strlen($refDefinition) ? $refDefinition . '.' . $definition : $definition;
 
+						if (strpos($definition, '.') !== false)
+						{
+							throw new Main\ArgumentException(sprintf(
+								'Reference chain `%s` is not allowed here. First-level definitions only.', $v
+							));
+						}
+
+						$absDefinition = strlen($refDefinition) ? $refDefinition . '.' . $definition : $definition;
 						$chain = $this->getRegisteredChain($absDefinition, true);
 
 						if ($isBackReference)

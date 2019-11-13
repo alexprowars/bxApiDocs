@@ -141,16 +141,26 @@ class AvatarManager
 		{
 			return [];
 		}
-		return MailContactTable::query()
-			->registerRuntimeField('', new Main\Entity\ReferenceField('ref', Main\UserTable::class, ['=this.EMAIL' => 'ref.EMAIL'], ['join_type' => 'LEFT']))
-			->addSelect('NAME')
-			->addSelect('EMAIL')
-			->addSelect('ICON')
-			->addSelect('FILE_ID')
-			->addSelect('ref.PERSONAL_PHOTO', 'AVATAR_ID')
-			->where('USER_ID', $this->currentUserId)
-			->whereIn('EMAIL', $emails)
-			->exec()
-			->fetchAll();
+
+		return MailContactTable::getList(array(
+			'runtime' => array(
+				new Main\ORM\Fields\Relations\Reference(
+					'USER',
+					Main\UserTable::class,
+					array(
+						'=this.EMAIL' => 'ref.EMAIL',
+						'=ref.ACTIVE' => new Main\DB\SqlExpression('?', 'Y'),
+					)
+				)
+			),
+			'select' => array(
+				'NAME', 'EMAIL', 'ICON', 'FILE_ID',
+				'AVATAR_ID' => 'USER.PERSONAL_PHOTO',
+			),
+			'filter' => array(
+				'=USER_ID' => $this->currentUserId,
+				'@EMAIL' => $emails,
+			),
+		))->fetchAll();
 	}
 }

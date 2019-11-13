@@ -6,6 +6,7 @@ use \Bitrix\Main\SystemException;
 use Bitrix\Sale\TradingPlatform\Vk;
 use Bitrix\Sale\TradingPlatform\TimeIsOverException;
 use Bitrix\Sale\TradingPlatform\Timer;
+use Bitrix\Sale\TradingPlatform\Vk\Api\PhotoUploader;
 
 /**
  * Class AlbumAdd - Processor for adding albums to VK
@@ -63,9 +64,15 @@ class AlbumAdd extends DataProcessor
 //			todo: need a photo mapping check before upload
 //			todo: and maybe we need comments and likes
 			$logger->addLog("Upload album photo");
-			$albumPhotoSaveResults = self::$apiHelper->uploadPhotos($data, $this->vkGroupId, 'ALBUM_PHOTO', $timer);
-			$data = Vk\Api\ApiHelper::addResultToData($data, $albumPhotoSaveResults, "SECTION_ID");
-
+			
+			$photoUploader = new PhotoUploader($this->exportId, PhotoUploader::TYPE_ALBUM_PHOTO, $timer);
+			$albumPhotoSaveResults = $photoUploader->upload($data);
+			
+//			photos UPLOAD may be FAILED on VK side. For albums - do nothing
+			if(!array_key_exists('errors', $albumPhotoSaveResults))
+			{
+				$data = Vk\Api\ApiHelper::addResultToData($data, $albumPhotoSaveResults, "SECTION_ID");
+			}
 
 //			ADD or EDIT albums
 			$logger->addLog("Add or edit albums", $data);

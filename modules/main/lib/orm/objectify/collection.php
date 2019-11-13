@@ -10,11 +10,16 @@ namespace Bitrix\Main\ORM\Objectify;
 
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ORM\Data\DataManager;
+use Bitrix\Main\ORM\Data\Result;
 use Bitrix\Main\ORM\Entity;
+use Bitrix\Main\ORM\Fields\Relations\Relation;
+use Bitrix\Main\ORM\Fields\ScalarField;
 use Bitrix\Main\ORM\Query\Query;
 use Bitrix\Main\NotImplementedException;
 use Bitrix\Main\ORM\Fields\FieldTypeMask;
 use Bitrix\Main\SystemException;
+use Bitrix\Main\Text\StringHelper;
+use Bitrix\Main\Web\Json;
 
 /**
  * Collection of entity objects. Used to hold 1:N and N:M object collections.
@@ -34,6 +39,9 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 
 	/** @var Entity */
 	protected $_entity;
+
+	/** @var EntityObject */
+	protected $_objectClass;
 
 	/** @var  EntityObject[] */
 	protected $_objects = [];
@@ -87,6 +95,7 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 			$this->_entity = $entity;
 		}
 
+		$this->_objectClass = $this->_entity->getObjectClass();
 		$this->_isSinglePrimary = count($this->_entity->getPrimaryArray()) == 1;
 	}
 
@@ -98,7 +107,22 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	 */
 	final public function add(EntityObject $object)
 	{
+		// check object class
+		if (!($object instanceof $this->_objectClass))
+		{
+			throw new ArgumentException(sprintf(
+				'Invalid object class %s for %s collection, expected "%s".',
+				get_class($object), get_class($this), $this->_objectClass
+			));
+		}
+
 		$srPrimary = $this->sysGetPrimaryKey($object);
+
+		if (!$object->sysHasPrimary())
+		{
+			// object is new and there is no primary yet
+			$object->sysAddOnPrimarySetListener([$this, 'sysOnObjectPrimarySet']);
+		}
 
 		if (empty($this->_objects[$srPrimary])
 			&& (!isset($this->_objectsChanges[$srPrimary]) || $this->_objectsChanges[$srPrimary] != static::OBJECT_REMOVED))
@@ -109,6 +133,8 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		elseif (isset($this->_objectsChanges[$srPrimary]) && $this->_objectsChanges[$srPrimary] == static::OBJECT_REMOVED)
 		{
 			// silent add for removed runtime
+			$this->_objects[$srPrimary] = $object;
+
 			unset($this->_objectsChanges[$srPrimary]);
 			unset($this->_objectsRemoved[$srPrimary]);
 		}
@@ -123,6 +149,15 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	 */
 	final public function has(EntityObject $object)
 	{
+		// check object class
+		if (!($object instanceof $this->_objectClass))
+		{
+			throw new ArgumentException(sprintf(
+				'Invalid object class %s for %s collection, expected "%s".',
+				get_class($object), get_class($this), $this->_objectClass
+			));
+		}
+
 		return array_key_exists($this->sysGetPrimaryKey($object), $this->_objects);
 	}
 
@@ -161,12 +196,29 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	/**
 	 * @param EntityObject $object
 	 *
+	 * @return void
 	 * @throws ArgumentException
 	 * @throws SystemException
 	 */
 	final public function remove(EntityObject $object)
 	{
-		return $this->removeByPrimary($object->primary);
+		// check object class
+		if (!($object instanceof $this->_objectClass))
+		{
+			throw new ArgumentException(sprintf(
+				'Invalid object class %s for %s collection, expected "%s".',
+				get_class($object), get_class($this), $this->_objectClass
+			));
+		}
+
+		// ignore deleted objects
+		if ($object->state === State::DELETED)
+		{
+			return;
+		}
+
+		$srPrimary = $this->sysGetPrimaryKey($object);
+		$this->sysRemove($srPrimary);
 	}
 
 	/**
@@ -179,6 +231,11 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		$normalizedPrimary = $this->sysNormalizePrimary($primary);
 		$srPrimary = $this->sysSerializePrimaryKey($normalizedPrimary);
 
+		$this->sysRemove($srPrimary);
+	}
+
+	public function sysRemove($srPrimary)
+	{
 		$object = $this->_objects[$srPrimary];
 		unset($this->_objects[$srPrimary]);
 
@@ -209,77 +266,176 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		$entityPrimary = $this->_entity->getPrimaryArray();
 
 		$primaryValues = [];
-		$fieldsToSelect = $entityPrimary;
+		$fieldsToSelect = [];
 
+		// if field is the only one
 		if (is_scalar($fields) && !is_numeric($fields))
 		{
 			$fields = [$fields];
 		}
 
 		// collect custom fields to select
-		if (is_array($fields))
-		{
-			$fieldsToSelect = array_merge($fieldsToSelect, $fields);
-		}
-
 		foreach ($this->_objects as $object)
 		{
-			// collect primary
-			$objectPrimary = $object->sysRequirePrimary();
+			$idleFields = is_array($fields)
+				? $object->sysGetIdleFields($fields)
+				: $object->sysGetIdleFieldsByMask($fields);
 
-			$primaryValues[] = count($objectPrimary) == 1
-				? current($objectPrimary)
-				: $objectPrimary;
-
-			// collect fields to select if there is a fields flag instead of custom list
-			if (!is_array($fields))
+			if (!empty($idleFields))
 			{
-				$diff = array_diff($object->sysGetIdleFields($fields), $fieldsToSelect);
-				$fieldsToSelect = array_merge($fieldsToSelect, $diff);
+				$fieldsToSelect = array_unique(array_merge($fieldsToSelect, $idleFields));
+
+				// add object to query
+				$objectPrimary = $object->sysRequirePrimary();
+
+				$primaryValues[] = count($objectPrimary) == 1
+					? current($objectPrimary)
+					: $objectPrimary;
 			}
 		}
 
-		// build primary filter
-		$primaryFilter = Query::filter();
-
-		if (count($entityPrimary) == 1)
+		// add primary to select
+		if (!empty($fieldsToSelect))
 		{
-			// IN for single-primary objects
-			$primaryFilter->whereIn($entityPrimary[0], $primaryValues);
-		}
-		else
-		{
-			// OR for multi-primary objects
-			$primaryFilter->logic('or');
+			$fieldsToSelect = array_unique(array_merge($entityPrimary, $fieldsToSelect));
 
-			foreach ($primaryValues as $objectPrimary)
+			// build primary filter
+			$primaryFilter = Query::filter();
+
+			if (count($entityPrimary) == 1)
 			{
-				// add each object as a separate condition
-				$oneObjectFilter = Query::filter();
+				// IN for single-primary objects
+				$primaryFilter->whereIn($entityPrimary[0], $primaryValues);
+			}
+			else
+			{
+				// OR for multi-primary objects
+				$primaryFilter->logic('or');
 
-				foreach ($objectPrimary as $primaryName => $primaryValue)
+				foreach ($primaryValues as $objectPrimary)
 				{
-					$oneObjectFilter->where($primaryName, $primaryValue);
+					// add each object as a separate condition
+					$oneObjectFilter = Query::filter();
+
+					foreach ($objectPrimary as $primaryName => $primaryValue)
+					{
+						$oneObjectFilter->where($primaryName, $primaryValue);
+					}
+
+					$primaryFilter->where($oneObjectFilter);
+				}
+			}
+
+			// build query
+			$dataClass = $this->_entity->getDataClass();
+			$result = $dataClass::query()->setSelect($fieldsToSelect)->where($primaryFilter)->exec();
+
+			// set object to identityMap of result, and it will be partially completed by fetch
+			$im = new IdentityMap;
+
+			foreach ($this->_objects as $object)
+			{
+				$im->put($object);
+			}
+
+			$result->setIdentityMap($im);
+			$result->fetchCollection();
+		}
+
+		// return field value it it was only one
+		if (is_array($fields) && count($fields) == 1 && $this->entity->hasField(current($fields)))
+		{
+			$fieldName = current($fields);
+			$field = $this->entity->getField($fieldName);
+
+			return ($field instanceof Relation)
+				? $this->sysGetCollection($fieldName)
+				: $this->sysGetList($fieldName);
+		}
+	}
+
+	final public function save($ignoreEvents = false)
+	{
+		$result = new Result;
+
+		/** @var EntityObject[] $addObjects */
+		$addObjects = [];
+
+		/** @var EntityObject[] $updateObjects */
+		$updateObjects = [];
+
+		foreach ($this->_objects as $object)
+		{
+			if ($object->sysGetState() === State::RAW)
+			{
+				$addObjects[] = ['__object' => $object];
+			}
+			elseif ($object->sysGetState() === State::CHANGED)
+			{
+				$updateObjects[] = $object;
+			}
+		}
+
+		$dataClass = static::$dataClass;
+
+		// multi add
+		if (!empty($addObjects))
+		{
+			$result = $dataClass::addMulti($addObjects, $ignoreEvents);
+		}
+
+		// multi update
+		if (!empty($updateObjects))
+		{
+			$areEqual = true;
+			$primaries = [];
+
+			$dataSample = $updateObjects[0]->collectValues(Values::CURRENT, FieldTypeMask::SCALAR | FieldTypeMask::USERTYPE);
+			asort($dataSample);
+
+			// get only scalar & uf data and check its uniqueness
+			foreach ($updateObjects as $object)
+			{
+				$objectData = $object->collectValues(Values::CURRENT, FieldTypeMask::SCALAR | FieldTypeMask::USERTYPE);
+				asort($objectData);
+
+				if ($dataSample !== $objectData)
+				{
+					$areEqual = false;
+					break;
 				}
 
-				$primaryFilter->where($oneObjectFilter);
+				$primaries[] = $object->primary;
+			}
+
+			if ($areEqual)
+			{
+				// one query
+				$result = $dataClass::updateMulti($primaries, $dataSample, $ignoreEvents);
+
+				// post save
+				foreach ($updateObjects as $object)
+				{
+					$object->sysSaveRelations($result);
+					$object->sysPostSave();
+				}
+			}
+			else
+			{
+				// each object separately
+				foreach ($updateObjects as $object)
+				{
+					$objectResult = $object->save();
+
+					if (!$objectResult->isSuccess())
+					{
+						$result->addErrors($objectResult->getErrors());
+					}
+				}
 			}
 		}
 
-		// build query
-		$dataClass = $this->_entity->getDataClass();
-		$result = $dataClass::query()->setSelect($fieldsToSelect)->where($primaryFilter)->exec();
-
-		// set object to identityMap of result, and it will be partially completed by fetch
-		$im = new IdentityMap;
-
-		foreach ($this->_objects as $object)
-		{
-			$im->put($object);
-		}
-
-		$result->setIdentityMap($im);
-		$result->fetchCollection();
+		return $result;
 	}
 
 	/**
@@ -375,18 +531,55 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		{
 			$fieldName = EntityObject::sysMethodToFieldCase(substr($name, 3, -4));
 
+			if (!strlen($fieldName))
+			{
+				$fieldName = StringHelper::strtoupper($arguments[0]);
+
+				// check if custom method exists
+				$personalMethodName = $first3.EntityObject::sysFieldToMethodCase($fieldName).$last4;
+
+				if (method_exists($this, $personalMethodName))
+				{
+					return $this->$personalMethodName(...array_slice($arguments, 1));
+				}
+
+				// hard field check
+				$this->entity->getField($fieldName);
+			}
+
 			// check if field exists
 			if ($this->_entity->hasField($fieldName))
 			{
-				$values = [];
+				return $this->sysGetList($fieldName);
+			}
+		}
 
-				// collect field values
-				foreach ($this->_objects as $objectPrimary => $object)
+		$last10 = substr($name, -10);
+
+		if ($first3 == 'get' && $last10 == 'Collection')
+		{
+			$fieldName = EntityObject::sysMethodToFieldCase(substr($name, 3, -10));
+
+			if (!strlen($fieldName))
+			{
+				$fieldName = StringHelper::strtoupper($arguments[0]);
+
+				// check if custom method exists
+				$personalMethodName = $first3.EntityObject::sysFieldToMethodCase($fieldName).$last10;
+
+				if (method_exists($this, $personalMethodName))
 				{
-					$values[$objectPrimary] = $object->sysGetValue($fieldName);
+					return $this->$personalMethodName(...array_slice($arguments, 1));
 				}
 
-				return $values;
+				// hard field check
+				$this->entity->getField($fieldName);
+			}
+
+			// check if field exists
+			if ($this->_entity->hasField($fieldName) && $this->_entity->getField($fieldName) instanceof Relation)
+			{
+				return $this->sysGetCollection($fieldName);
 			}
 		}
 
@@ -420,6 +613,38 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	public function sysAddActual(EntityObject $object)
 	{
 		$this->_objects[$this->sysGetPrimaryKey($object)] = $object;
+	}
+
+	/**
+	 * Callback for object event when it gets primary
+	 *
+	 * @param $object
+	 */
+	public function sysOnObjectPrimarySet($object)
+	{
+		$srHash = spl_object_hash($object);
+		$srPrimary = $this->sysSerializePrimaryKey($object->primary);
+
+		if (isset($this->_objects[$srHash]))
+		{
+			// rewrite object
+			unset($this->_objects[$srHash]);
+			$this->_objects[$srPrimary] = $object;
+
+			// rewrite changes
+			if (isset($this->_objectsChanges[$srHash]))
+			{
+				$this->_objectsChanges[$srPrimary] = $this->_objectsChanges[$srHash];
+				unset($this->_objectsChanges[$srHash]);
+			}
+
+			// rewrite removed registry
+			if (isset($this->_objectsRemoved[$srHash]))
+			{
+				$this->_objectsRemoved[$srPrimary] = $this->_objectsRemoved[$srHash];
+				unset($this->_objectsRemoved[$srHash]);
+			}
+		}
 	}
 
 	/**
@@ -507,6 +732,75 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	}
 
 	/**
+	 * @param $fieldName
+	 *
+	 * @return array
+	 * @throws SystemException
+	 */
+	protected function sysGetList($fieldName)
+	{
+		$values = [];
+
+		// collect field values
+		foreach ($this->_objects as $objectPrimary => $object)
+		{
+			$values[] = $object->sysGetValue($fieldName);
+		}
+
+		return $values;
+	}
+
+	/**
+	 * @param $fieldName
+	 *
+	 * @return array|null
+	 * @throws ArgumentException
+	 * @throws SystemException
+	 */
+	protected function sysGetCollection($fieldName)
+	{
+		/** @var Relation $field */
+		$field = $this->_entity->getField($fieldName);
+
+		$values = $field->getRefEntity()->createCollection();
+
+		// collect field values
+		foreach ($this->_objects as $objectPrimary => $object)
+		{
+			$value = $object->sysGetValue($fieldName);
+
+			if ($value instanceof EntityObject)
+			{
+				$values[] = $value;
+			}
+			elseif ($value instanceof Collection)
+			{
+				foreach ($value->getAll() as $remoteObject)
+				{
+					$values[] = $remoteObject;
+				}
+			}
+		}
+
+		return $values;
+	}
+
+	/**
+	 * @internal For internal system usage only.
+	 */
+	public function sysReviseDeletedObjects()
+	{
+		// clear from deleted objects
+		foreach ($this->_objects as $k => $object)
+		{
+			if ($object->state === State::DELETED)
+			{
+				unset($this->_objects[$k]);
+			}
+		}
+	}
+
+	/**
 	 * @internal For internal system usage only.
 	 *
 	 * @param bool $value
@@ -547,7 +841,9 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 
 		foreach ($primaryNames as $primaryName)
 		{
-			$normalizedPrimary[$primaryName] = $primary[$primaryName];
+			/** @var ScalarField $field */
+			$field = $this->_entity->getField($primaryName);
+			$normalizedPrimary[$primaryName] = $field->cast($primary[$primaryName]);
 		}
 
 		return $normalizedPrimary;
@@ -564,7 +860,14 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	 */
 	protected function sysGetPrimaryKey(EntityObject $object)
 	{
-		return $this->sysSerializePrimaryKey($object->primary);
+		if ($object->sysHasPrimary())
+		{
+			return $this->sysSerializePrimaryKey($object->primary);
+		}
+		else
+		{
+			return spl_object_hash($object);
+		}
 	}
 
 	/**
@@ -573,6 +876,7 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	 * @param $primary
 	 *
 	 * @return false|mixed|string
+	 * @throws ArgumentException
 	 */
 	protected function sysSerializePrimaryKey($primary)
 	{
@@ -581,7 +885,7 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 			return current($primary);
 		}
 
-		return json_encode(array_values($primary));
+		return Json::encode(array_values($primary));
 	}
 
 	/**

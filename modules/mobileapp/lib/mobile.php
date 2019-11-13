@@ -85,9 +85,17 @@ class Mobile
 			self::$platform = "android";
 		}
 
+		$userAgent = \Bitrix\Main\Context::getCurrent()->getServer()->get("HTTP_USER_AGENT");
 		if ($_COOKIE["MOBILE_SYSTEM_VERSION"])
 		{
 			self::$systemVersion = $_COOKIE["MOBILE_SYSTEM_VERSION"];
+		}
+		else
+		{
+			//iOS
+			preg_match("/iOS\s(\d+\.\d+)/i",$userAgent, $pregMatch);
+			if(count($pregMatch) == 2)
+				self::$systemVersion = floatval($pregMatch[1]);
 		}
 
 		if (array_key_exists("emulate_platform", $_REQUEST))
@@ -109,7 +117,6 @@ class Mobile
 		}
 		else
 		{
-			$userAgent = \Bitrix\Main\Context::getCurrent()->getServer()->get("HTTP_USER_AGENT");
 			preg_match("/(?<=BitrixMobile\/Version=).*\d/i",$userAgent, $pregMatch);
 
 			if(count($pregMatch) == 1)

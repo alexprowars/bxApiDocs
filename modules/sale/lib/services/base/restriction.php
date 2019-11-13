@@ -39,9 +39,9 @@ abstract class Restriction {
 	}
 
 	/**
-	 * @param $params
-	 * @param array $restrictionParams
-	 * @param int $serviceId
+	 * @param mixed $params Params to check.
+	 * @param array $restrictionParams Restriction params.
+	 * @param int $serviceId Service identifier.
 	 * @return bool
 	 * @throws NotImplementedException
 	 */

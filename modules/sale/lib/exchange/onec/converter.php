@@ -6,6 +6,7 @@ use Bitrix\Main\ArgumentOutOfRangeException;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Sale\Exchange\EntityType;
 use Bitrix\Sale\Exchange\IConverter;
+use Bitrix\Sale\Exchange\ImportOneCBase;
 use Bitrix\Sale\Exchange\ISettings;
 
 /**
@@ -285,5 +286,28 @@ abstract class Converter implements IConverter
 			}
 		}
 		return isset($sites[$lid]) ? $sites[$lid]:'';
+	}
+
+	public function modifyItemIdByItemName($fields)
+	{
+		$result = $fields;
+
+		if(is_array($fields))
+		{
+			foreach($fields as $k=>$items)
+			{
+				foreach($items as $productXML_ID => $item)
+				{
+					if($item['NAME'] == DocumentBase::getLangByCodeField(ImportOneCBase::DELIVERY_SERVICE_XMLID))
+					{
+						unset($result[$k][$productXML_ID]);
+
+						$item['ID'] = ImportOneCBase::DELIVERY_SERVICE_XMLID;
+						$result[$k][ImportOneCBase::DELIVERY_SERVICE_XMLID] = $item;
+					}
+				}
+			}
+		}
+		return $result;
 	}
 }

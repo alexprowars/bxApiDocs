@@ -228,4 +228,31 @@ class TradeBindingCollection extends Internals\EntityCollection
 	{
 		return TradingPlatform\OrderTable::delete($primary);
 	}
+
+	/**
+	 * @internal
+	 * @param \SplObjectStorage $cloneEntity
+	 *
+	 * @return TradeBindingCollection
+	 */
+	public function createClone(\SplObjectStorage $cloneEntity)
+	{
+		if ($this->isClone() && $cloneEntity->contains($this))
+		{
+			return $cloneEntity[$this];
+		}
+
+		/** @var TradeBindingCollection $tradeBindingCollection */
+		$tradeBindingCollection = parent::createClone($cloneEntity);
+
+		if ($this->order)
+		{
+			if ($cloneEntity->contains($this->order))
+			{
+				$tradeBindingCollection->order = $cloneEntity[$this->order];
+			}
+		}
+
+		return $tradeBindingCollection;
+	}
 }

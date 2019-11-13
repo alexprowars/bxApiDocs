@@ -9,6 +9,14 @@ use Bitrix\Main\Type\DateTime;
 
 class MessageEventManager
 {
+	const EVENT_DELETE_MESSAGES = 'onMailMessageDeleted';
+
+	/** Dispatches OnMessageModified event for compatibility
+	 * If event parameters do not have ['HEADER_MD5', 'MAILBOX_USER_ID']
+	 * data will be obtained from database
+	 * @param Event $event
+	 * @return MessageEventManager
+	 */
 	public static function onMailMessageDeleted(Event $event)
 	{
 		$manager = new static();
@@ -24,6 +32,12 @@ class MessageEventManager
 		$this->handleRemovedEvent($fieldsData, $filter);
 	}
 
+	/** Dispatches OnMessageObsolete event for compatibility
+	 * If messages data from event parameters do not have ['HEADER_MD5', 'MAILBOX_USER_ID', 'IS_SEEN']
+	 * data will be obtained from database
+	 * @param Event $event
+	 * @return MessageEventManager
+	 */
 	public static function onMailMessageModified(Event $event)
 	{
 		$manager = new static();
@@ -79,7 +93,6 @@ class MessageEventManager
 
 	private function handleRemovedEvent($fieldsData, $filter)
 	{
-		$fieldsData = $this->getMailsFieldsData($fieldsData, ['HEADER_MD5', 'MAILBOX_USER_ID'], $filter);
 		$this->sendMessageDeletedEvent($fieldsData);
 	}
 
@@ -100,19 +113,23 @@ class MessageEventManager
 
 	private function getMailsFieldsData($eventData, $requiredKeys, $filter)
 	{
-		$fieldsData = array_filter($eventData, function ($item) use ($requiredKeys)
+		$fieldsData = $eventData;
+		$missingKeys = $requiredKeys;
+		$messagesCount = count($eventData);
+		if ($messagesCount)
 		{
-			$hasAllKeys = true;
 			foreach ($requiredKeys as $requiredKey)
 			{
-				$hasAllKeys = $hasAllKeys && isset($item[$requiredKey]);
+				if (count(array_column($eventData, $requiredKey)) === $messagesCount)
+				{
+					$missingKeys = array_diff($missingKeys, [$requiredKey]);
+				}
 			}
-			return $hasAllKeys;
-		});
+		}
 
-		if (empty($fieldsData) && !empty($filter))
+		if (!empty($missingKeys) && !empty($filter))
 		{
-			$fieldsData = $this->getMailMessagesList($filter);
+			$fieldsData = $this->getMailMessagesList($filter, $missingKeys);
 		}
 		$results = [];
 		foreach ($fieldsData as $index => $mailFieldsData)
@@ -122,12 +139,21 @@ class MessageEventManager
 		return $results;
 	}
 
-	protected function getMailMessagesList($filter)
+	protected function getMailMessagesList($filter, $selectingFields)
 	{
 		$dateLastMonth = new DateTime();
 		$dateLastMonth->add('-1 MONTH');
+		foreach ($selectingFields as $index => $selectingField)
+		{
+			if (strncmp('MAILBOX_', $selectingField, 8) === 0)
+			{
+				$selectingFields[$selectingField] = 'MAILBOX.' . substr($selectingField, 8);
+				unset($selectingFields[$index]);
+			}
+		}
+
 		return MailMessageUidTable::getList([
-				'select' => ['HEADER_MD5', 'IS_SEEN', 'MAILBOX_USER_ID' => 'MAILBOX.USER_ID'],
+				'select' => $selectingFields,
 				'filter' => array_merge($filter, [
 					'>=INTERNALDATE' => $dateLastMonth,
 				]),
@@ -184,5 +210,13 @@ class MessageEventManager
 	public static function getPullTagName($messageId)
 	{
 		return 'MAILMESSAGEREADED'.$messageId;
+	}
+
+	public static function getRequiredFieldNamesForEvent($eventName)
+	{
+		if ($eventName === static::EVENT_DELETE_MESSAGES)
+		{
+			return array('HEADER_MD5', 'MESSAGE_ID', 'MAILBOX_USER_ID');
+		}
 	}
 }

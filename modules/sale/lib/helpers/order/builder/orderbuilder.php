@@ -1,14 +1,15 @@
 <?
 namespace Bitrix\Sale\Helpers\Order\Builder;
 
-use Bitrix\Crm\Order\Shipment;
+use Bitrix\Sale\Shipment;
 use Bitrix\Main\ArgumentNullException;
-use Bitrix\Main\Config\Option;
 use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ObjectException;
+use Bitrix\Sale\BasketItem;
 use Bitrix\Sale\Order;
 use Bitrix\Sale\Helpers\Admin\Blocks\OrderBuyer;
+use Bitrix\Sale\Payment;
 use Bitrix\Sale\PaySystem\Manager;
 use Bitrix\Sale\Services\PaySystem;
 use Bitrix\Main\Type\Date;
@@ -17,6 +18,9 @@ use Bitrix\Sale\Registry;
 use \Bitrix\Sale\Delivery;
 use Bitrix\Sale\Result;
 use Bitrix\Sale\Configuration;
+use Bitrix\Sale\ShipmentItem;
+use Bitrix\Sale\TradeBindingEntity;
+use Bitrix\Sale\TradingPlatformTable;
 
 /**
  * Class OrderBuilder
@@ -59,7 +63,9 @@ abstract class OrderBuilder
 
 	public function build($data)
 	{
-		$this->createOrder($data)
+		$this->initFields($data)
+			->delegate()
+			->createOrder()
 			->setDiscounts() //?
 			->setFields()
 			->setProperties()
@@ -67,6 +73,7 @@ abstract class OrderBuilder
 			->buildBasket()
 			->buildPayments()
 			->buildShipments()
+			->buildTradeBindings()
 			->setDiscounts() //?
 			->finalActions();
 	}
@@ -81,12 +88,42 @@ abstract class OrderBuilder
 		return $this->registry;
 	}
 
-	public function createOrder(array $data)
+	protected function prepareFields(array $fields)
+	{
+		$fields["ID"] = (isset($fields["ID"]) ? (int)$fields["ID"] : 0);
+		return $fields;
+	}
+
+	public function initFields(array $data)
+	{
+		$data = $this->prepareFields($data);
+		$this->formData = $data;
+		return $this;
+	}
+
+	/**
+	 * @param array $data
+	 * @return $this
+	 * @deprecated
+	 */
+	public function initOrder(array $data)
 	{
 		$data["ID"] = (isset($data["ID"]) ? (int)$data["ID"] : 0);
 		$this->formData = $data;
+		return $this;
+	}
+
+	public function delegate()
+	{
+		$data = $this->formData;
 		$this->delegate = (int)$data['ID'] > 0 ? new OrderBuilderExist($this) : new OrderBuilderNew($this);
 
+		return $this;
+	}
+
+	public function createOrder()
+	{
+		$data = $this->formData;
 		if($this->order = $this->delegate->createOrder($data))
 		{
 			$this->isStartField = $this->order->isStartField();
@@ -95,9 +132,29 @@ abstract class OrderBuilder
 		return $this;
 	}
 
+	protected function getSettableTradeBindingFields()
+	{
+		return [];
+	}
+
+	protected function getSettableShipmentFields()
+	{
+		return Shipment::getAvailableFields();
+	}
+
+	protected function getSettablePaymentFields()
+	{
+		return Payment::getAvailableFields();
+	}
+
+	protected function getSettableOrderFields()
+	{
+		return ['RESPONSIBLE_ID', 'USER_DESCRIPTION', 'ORDER_TOPIC', 'ACCOUNT_NUMBER'];
+	}
+
 	public function setFields()
 	{
-		$fields = ['RESPONSIBLE_ID', 'USER_DESCRIPTION', 'ORDER_TOPIC', 'ACCOUNT_NUMBER'];
+		$fields = $this->getSettableOrderFields();
 
 		foreach($fields as $field)
 		{
@@ -186,14 +243,79 @@ abstract class OrderBuilder
 		return $this;
 	}
 
+	protected function createEmptyShipment()
+	{
+		$shipments = $this->order->getShipmentCollection();
+		return $shipments->createItem();
+	}
+
+	protected function removeShipments()
+	{
+		if($this->getSettingsContainer()->getItemValue('deleteShipmentIfNotExists'))
+		{
+			$shipmentCollection = $this->order->getShipmentCollection();
+
+			$shipmentIds = [];
+			foreach($this->formData["SHIPMENT"] as $shipmentData)
+			{
+				if(!isset($shipmentData['ID']))
+					continue;
+
+				$shipment = $shipmentCollection->getItemById($shipmentData['ID']);
+
+				if ($shipment == null)
+					continue;
+
+				$shipmentIds[] = $shipment->getId();
+			}
+
+			foreach ($shipmentCollection as $shipment)
+			{
+				if($shipment->isSystem())
+					continue;
+
+				if(!in_array($shipment->getId(), $shipmentIds))
+				{
+					$r = $shipment->delete();
+					if (!$r->isSuccess())
+					{
+						$this->errorsContainer->addErrors($r->getErrors());
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	protected function prepareFieldsStatusId($isNew, $item, $defaultFields)
+	{
+		$statusId = '';
+
+		if($isNew)
+		{
+			$deliveryStatusClassName = $this->registry->getDeliveryStatusClassName();
+			$statusId = $deliveryStatusClassName::getInitialStatus();
+		}
+		elseif (isset($item['STATUS_ID']) && $item['STATUS_ID'] !== $defaultFields['STATUS_ID'])
+		{
+			$statusId = $item['STATUS_ID'];
+		}
+
+		return $statusId;
+	}
+
 	public function buildShipments()
 	{
 		if(!isset($this->formData["SHIPMENT"]) || !is_array($this->formData["SHIPMENT"]))
 		{
-			$shipments = $this->order->getShipmentCollection();
-			$shipments->createItem();
-
+			$this->createEmptyShipment();
 			return $this;
+		}
+
+		if(!$this->removeShipments())
+		{
+			throw new BuildingException();
 		}
 
 		global $USER;
@@ -206,6 +328,16 @@ abstract class OrderBuilder
 			$isNew = ($shipmentId <= 0);
 			$deliveryService = null;
 
+			$settableShipmentFields = $this->getSettableShipmentFields();
+			if(count($settableShipmentFields)>0)
+			{
+				//for backward compatibility
+				$product = $item['PRODUCT'];
+				$storeId = $item['DELIVERY_STORE_ID'];
+				$item = array_intersect_key($item, array_flip($settableShipmentFields));
+				$item['PRODUCT'] = $product;
+			}
+
 			if($isNew)
 			{
 				$shipment = $shipmentCollection->createItem();
@@ -216,7 +348,7 @@ abstract class OrderBuilder
 
 				if(!$shipment)
 				{
-					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_SHIPMENT_NOT_FOUND")));
+					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_SHIPMENT_NOT_FOUND")." - ".$shipmentId));
 					continue;
 				}
 			}
@@ -277,19 +409,18 @@ abstract class OrderBuilder
 				'DELIVERY_DOC_NUM' => $item['DELIVERY_DOC_NUM'],
 				'TRACKING_NUMBER' => $item['TRACKING_NUMBER'],
 				'CURRENCY' => $this->order->getCurrency(),
-				'COMMENTS' => $item['COMMENTS'],
-				'ACCOUNT_NUMBER' => $item['ACCOUNT_NUMBER']
+				'COMMENTS' => $item['COMMENTS']
 			);
 
-			if($isNew)
-			{
-				$deliveryStatusClassName = $this->registry->getDeliveryStatusClassName();
-				$shipmentFields['STATUS_ID'] = $deliveryStatusClassName::getInitialStatus();
-			}
-			elseif (isset($item['STATUS_ID']) && $item['STATUS_ID'] !== $defaultFields['STATUS_ID'])
-			{
-				$shipmentFields['STATUS_ID'] = $item['STATUS_ID'];
-			}
+			if(isset($item['ACCOUNT_NUMBER']) && $item['ACCOUNT_NUMBER']<>'')
+				$shipmentFields['ACCOUNT_NUMBER'] = $item['ACCOUNT_NUMBER'];
+
+			if(isset($item['XML_ID']) && $item['XML_ID']<>'')
+				$shipmentFields['XML_ID'] = $item['XML_ID'];
+
+			$statusId = $this->prepareFieldsStatusId($isNew, $item, $defaultFields);
+			if($statusId <> '')
+				$shipmentFields['STATUS_ID'] = $statusId;
 
 			if(empty($item['COMPANY_ID']))
 			{
@@ -299,22 +430,33 @@ abstract class OrderBuilder
 			{
 				$shipmentFields['RESPONSIBLE_ID'] = $this->order->getField('RESPONSIBLE_ID');
 				$shipmentFields['EMP_RESPONSIBLE_ID'] = $USER->GetID();
-				$shipmentFields['DATE_RESPONSIBLE_ID'] = new DateTime();
-			}
-
-			if($item['DELIVERY_DOC_DATE'])
-			{
-				try
-				{
-					$shipmentFields['DELIVERY_DOC_DATE'] = new Date($item['DELIVERY_DOC_DATE']);
-				}
-				catch (ObjectException $exception)
-				{
-					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_DATE_FORMAT_ERROR")));
-				}
 			}
 
 			$shipmentFields['DELIVERY_ID'] = ((int)$item['PROFILE_ID'] > 0) ? (int)$item['PROFILE_ID'] : (int)$item['DELIVERY_ID'];
+
+			$dateFields = ['DELIVERY_DOC_DATE', 'DATE_DEDUCTED', 'DATE_MARKED', 'DATE_CANCELED', 'DATE_RESPONSIBLE_ID'];
+
+			foreach($dateFields as $fieldName)
+			{
+				if(isset($item[$fieldName]))
+				{
+					if (is_string($item[$fieldName]))
+					{
+						try
+						{
+							$shipmentFields[$fieldName] = new Date($item[$fieldName]);
+						}
+						catch (ObjectException $exception)
+						{
+							$this->errorsContainer->addError(new Error('Wrong field "'.$fieldName.'"'));
+						}
+					}
+					elseif ($item[$fieldName] instanceof Date)
+					{
+						$shipmentFields[$fieldName] = $item[$fieldName];
+					}
+				}
+			}
 
 			try
 			{
@@ -352,7 +494,6 @@ abstract class OrderBuilder
 				if(!empty($shipmentFields['RESPONSIBLE_ID']))
 				{
 					$shipmentFields['EMP_RESPONSIBLE_ID'] = $USER->getID();
-					$shipmentFields['DATE_RESPONSIBLE_ID'] = new DateTime();
 				}
 			}
 
@@ -368,7 +509,7 @@ abstract class OrderBuilder
 				$this->errorsContainer->addErrors($setFieldsResult->getErrors());
 			}
 
-			$shipment->setStoreId($item['DELIVERY_STORE_ID']);
+			$shipment->setStoreId((int)$storeId);
 
 			if($item['DEDUCTED'] == 'N' && $products !== null)
 			{
@@ -406,6 +547,41 @@ abstract class OrderBuilder
 		return $this;
 	}
 
+	protected function removeShipmentItems(\Bitrix\Sale\Shipment $shipment, $products, $idsFromForm)
+	{
+		$result = new Result();
+
+		$shipmentItemCollection = $shipment->getShipmentItemCollection();
+
+		/** @var \Bitrix\Sale\ShipmentItem $shipmentItem */
+		foreach ($shipmentItemCollection as $shipmentItem)
+		{
+			if (!array_key_exists($shipmentItem->getBasketCode(), $idsFromForm))
+			{
+				/** @var Result $r */
+				$r = $shipmentItem->delete();
+				if (!$r->isSuccess())
+					$result->addErrors($r->getErrors());
+			}
+
+			$shipmentItemStoreCollection = $shipmentItem->getShipmentItemStoreCollection();
+
+			/** @var \Bitrix\Sale\ShipmentItemStore $shipmentItemStore */
+			foreach ($shipmentItemStoreCollection as $shipmentItemStore)
+			{
+				$shipmentItemId = $shipmentItemStore->getId();
+				if (!isset($idsFromForm[$shipmentItem->getBasketCode()]['BARCODE_IDS'][$shipmentItemId]))
+				{
+					$delResult = $shipmentItemStore->delete();
+					if (!$delResult->isSuccess())
+						$result->addErrors($delResult->getErrors());
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	/**
 	 * @param Shipment $shipment
 	 * @param array $shipmentBasket
@@ -435,6 +611,18 @@ abstract class OrderBuilder
 			{
 				$items['QUANTITY'] = floatval(str_replace(',', '.', $items['QUANTITY']));
 				$items['AMOUNT'] = floatval(str_replace(',', '.', $items['AMOUNT']));
+
+				$r = $this->prepareDataForSetFields($shipment, $items);
+				if($r->isSuccess())
+				{
+					$items = $r->getData()[0];
+				}
+				else
+				{
+					$result->addErrors($r->getErrors());
+					return $result;
+				}
+
 				if (isset($items['BASKET_ID']) && $items['BASKET_ID'] > 0)
 				{
 					if (!$basketItem = $basket->getItemById($items['BASKET_ID']))
@@ -468,11 +656,13 @@ abstract class OrderBuilder
 				$tmp = array(
 					'BASKET_CODE' => $basketCode,
 					'AMOUNT' => $items['AMOUNT'],
-					'ORDER_DELIVERY_BASKET_ID' => $items['ORDER_DELIVERY_BASKET_ID']
+					'ORDER_DELIVERY_BASKET_ID' => isset($items['ORDER_DELIVERY_BASKET_ID']) ? $items['ORDER_DELIVERY_BASKET_ID']:0,
+					'XML_ID' => $items['XML_ID'],
+					'IS_SUPPORTED_MARKING_CODE' => $items['IS_SUPPORTED_MARKING_CODE']
 				);
 				$idsFromForm[$basketCode] = array();
 
-				if ($items['BARCODE_INFO'] && $useStoreControl)
+				if ($items['BARCODE_INFO'] && ($useStoreControl || $items['IS_SUPPORTED_MARKING_CODE'] == 'Y'))
 				{
 					foreach ($items['BARCODE_INFO'] as $item)
 					{
@@ -485,7 +675,7 @@ abstract class OrderBuilder
 						$tmp['BARCODE'] = array(
 							'ORDER_DELIVERY_BASKET_ID' => $items['ORDER_DELIVERY_BASKET_ID'],
 							'STORE_ID' => $item['STORE_ID'],
-							'QUANTITY' => ($basketItem->isBarcodeMulti()) ? 1 : $item['QUANTITY']
+							'QUANTITY' => ($basketItem->isBarcodeMulti() || $basketItem->isSupportedMarkingCode()) ? 1 : $item['QUANTITY']
 						);
 
 						$barcodeCount = 0;
@@ -494,28 +684,36 @@ abstract class OrderBuilder
 							foreach ($item['BARCODE'] as $barcode)
 							{
 								$idsFromForm[$basketCode]['BARCODE_IDS'][$barcode['ID']] = true;
+
 								if ($barcode['ID'] > 0)
-									$tmp['BARCODE']['ID'] = $barcode['ID'];
+								{
+									$tmp['BARCODE']['ID'] = (int)$barcode['ID'];
+								}
 								else
+								{
 									unset($tmp['BARCODE']['ID']);
-								$tmp['BARCODE']['BARCODE'] = $barcode['VALUE'];
+								}
+
+								$tmp['BARCODE']['BARCODE'] = (string)$barcode['VALUE'];
+								$tmp['BARCODE']['MARKING_CODE'] = (string)$barcode['MARKING_CODE'];
 								$shippingItems[] = $tmp;
 								$barcodeCount++;
 							}
 						}
-						elseif (!$basketItem->isBarcodeMulti())
+						elseif (!$basketItem->isBarcodeMulti() && !$basketItem->isSupportedMarkingCode())
 						{
 							$shippingItems[] = $tmp;
 							continue;
 						}
 
 
-						if ($basketItem->isBarcodeMulti())
+						if ($basketItem->isBarcodeMulti() || $basketItem->isSupportedMarkingCode())
 						{
 							while ($barcodeCount < $item['QUANTITY'])
 							{
 								unset($tmp['BARCODE']['ID']);
 								$tmp['BARCODE']['BARCODE'] = '';
+								$tmp['BARCODE']['MARKING_CODE'] = '';
 								$shippingItems[] = $tmp;
 								$barcodeCount++;
 							}
@@ -527,35 +725,13 @@ abstract class OrderBuilder
 					$shippingItems[] = $tmp;
 				}
 			}
-		}
 
+		}
 
 		// DELETE FROM COLLECTION
-		/** @var \Bitrix\Sale\ShipmentItem $shipmentItem */
-		foreach ($shipmentItemCollection as $shipmentItem)
-		{
-			if (!array_key_exists($shipmentItem->getBasketCode(), $idsFromForm))
-			{
-				/** @var Result $r */
-				$r = $shipmentItem->delete();
-				if (!$r->isSuccess())
-					$result->addErrors($r->getErrors());
-			}
-
-			$shipmentItemStoreCollection = $shipmentItem->getShipmentItemStoreCollection();
-
-			/** @var \Bitrix\Sale\ShipmentItemStore $shipmentItemStore */
-			foreach ($shipmentItemStoreCollection as $shipmentItemStore)
-			{
-				$shipmentItemId = $shipmentItemStore->getId();
-				if (!isset($idsFromForm[$shipmentItem->getBasketCode()]['BARCODE_IDS'][$shipmentItemId]))
-				{
-					$delResult = $shipmentItemStore->delete();
-					if (!$delResult->isSuccess())
-						$result->addErrors($delResult->getErrors());
-				}
-			}
-		}
+		$r = $this->removeShipmentItems($shipment, $shipmentBasket, $idsFromForm);
+		if(!$r->isSuccess())
+			$result->addErrors($r->getErrors());
 
 		$isStartField = $shipmentItemCollection->isStartField();
 
@@ -632,56 +808,11 @@ abstract class OrderBuilder
 				continue;
 			}
 
+			$r = $this->modifyQuantityShipmentItem($shipmentItem, $shippingItem);
+			if(!$r->isSuccess())
+				$result->addErrors($r->getErrors());
 
-
-			if ($shipmentItem->getQuantity() < $shippingItem['AMOUNT'])
-			{
-				$this->order->setMathActionOnly(true);
-				$setFieldResult = $shipmentItem->setField('QUANTITY', $shippingItem['AMOUNT']);
-				$this->order->setMathActionOnly(false);
-
-				if (!$setFieldResult->isSuccess())
-					$result->addErrors($setFieldResult->getErrors());
-			}
-
-			if (!empty($shippingItem['BARCODE']) && $useStoreControl)
-			{
-				$barcode = $shippingItem['BARCODE'];
-
-				/** @var \Bitrix\Sale\ShipmentItemStoreCollection $shipmentItemStoreCollection */
-				$shipmentItemStoreCollection = $shipmentItem->getShipmentItemStoreCollection();
-				if (!$basketItem->isBarcodeMulti())
-				{
-					/** @var Result $r */
-					$r = $shipmentItemStoreCollection->setBarcodeQuantityFromArray($shipmentBasket[$basketItem->getId()]);
-					if(!$r->isSuccess())
-					{
-						$result->addErrors($r->getErrors());
-					}
-				}
-
-				if (isset($barcode['ID']) && intval($barcode['ID']) > 0)
-				{
-					/** @var \Bitrix\Sale\ShipmentItemStore $shipmentItemStore */
-					if ($shipmentItemStore = $shipmentItemStoreCollection->getItemById($barcode['ID']))
-					{
-						unset($barcode['ID']);
-						$setFieldResult = $shipmentItemStore->setFields($barcode);
-
-						if (!$setFieldResult->isSuccess())
-							$result->addErrors($setFieldResult->getErrors());
-					}
-				}
-				else
-				{
-					$shipmentItemStore = $shipmentItemStoreCollection->createItem($basketItem);
-					$setFieldResult = $shipmentItemStore->setFields($barcode);
-					if (!$setFieldResult->isSuccess())
-						$result->addErrors($setFieldResult->getErrors());
-				}
-			}
-
-			$setFieldResult = $shipmentItem->setField('QUANTITY', $shippingItem['AMOUNT']);
+			$setFieldResult = $shipmentItem->setField('XML_ID', $shippingItem['XML_ID']);
 			if (!$setFieldResult->isSuccess())
 				$result->addErrors($setFieldResult->getErrors());
 		}
@@ -701,16 +832,146 @@ abstract class OrderBuilder
 		return $result;
 	}
 
+	protected function prepareDataForSetFields(\Bitrix\Sale\Shipment $shipment, $items)
+	{
+		$result = new Result();
+		return $result->setData([$items]);
+	}
+
+	protected function modifyQuantityShipmentItem(ShipmentItem $shipmentItem, array $params)
+	{
+		$result = new Result();
+		if ($shipmentItem->getQuantity() < $params['AMOUNT'])
+		{
+			$this->order->setMathActionOnly(true);
+			$setFieldResult = $shipmentItem->setField('QUANTITY', $params['AMOUNT']);
+			$this->order->setMathActionOnly(false);
+
+			if (!$setFieldResult->isSuccess())
+			{
+				$result->addErrors($setFieldResult->getErrors());
+			}
+		}
+
+		$r = $this->setBarcodeShipmentItem($shipmentItem, $params);
+
+		if($r->isSuccess() == false)
+		{
+			$result->addErrors($r->getErrors());
+		}
+
+		$setFieldResult = $shipmentItem->setField('QUANTITY', $params['AMOUNT']);
+
+		if (!$setFieldResult->isSuccess())
+		{
+			$result->addErrors($setFieldResult->getErrors());
+		}
+
+		return $result;
+	}
+
+	protected function setBarcodeShipmentItem(ShipmentItem $shipmentItem, array $params)
+	{
+		$result = new Result();
+		$basketItem = $shipmentItem->getBasketItem();
+
+		$useStoreControl = Configuration::useStoreControl();
+
+		if (!empty($params['BARCODE']) && ($useStoreControl || $params['IS_SUPPORTED_MARKING_CODE'] == 'Y' ))
+		{
+			$barcode = $params['BARCODE'];
+
+			/** @var \Bitrix\Sale\ShipmentItemStoreCollection $shipmentItemStoreCollection */
+			$shipmentItemStoreCollection = $shipmentItem->getShipmentItemStoreCollection();
+			if (!$basketItem->isBarcodeMulti() && !$basketItem->isSupportedMarkingCode())
+			{
+				/** @var Result $r */
+				$r = $shipmentItemStoreCollection->setBarcodeQuantityFromArray($params);
+				if(!$r->isSuccess())
+				{
+					$result->addErrors($r->getErrors());
+				}
+			}
+
+			if (isset($barcode['ID']) && intval($barcode['ID']) > 0)
+			{
+				/** @var \Bitrix\Sale\ShipmentItemStore $shipmentItemStore */
+				if ($shipmentItemStore = $shipmentItemStoreCollection->getItemById($barcode['ID']))
+				{
+					unset($barcode['ID']);
+					$setFieldResult = $shipmentItemStore->setFields($barcode);
+
+					if (!$setFieldResult->isSuccess())
+						$result->addErrors($setFieldResult->getErrors());
+				}
+			}
+			else
+			{
+				$shipmentItemStore = $shipmentItemStoreCollection->createItem($basketItem);
+				$setFieldResult = $shipmentItemStore->setFields($barcode);
+				if (!$setFieldResult->isSuccess())
+					$result->addErrors($setFieldResult->getErrors());
+			}
+		}
+		return $result;
+	}
+
+	protected function createEmptyPayment()
+	{
+		$payments = $this->order->getPaymentCollection();
+		return $payments->createItem();
+	}
+
+	protected function removePayments()
+	{
+		if($this->getSettingsContainer()->getItemValue('deletePaymentIfNotExists'))
+		{
+			$paymentCollection = $this->order->getPaymentCollection();
+
+			$paymentIds = [];
+			foreach($this->formData["PAYMENT"] as $paymentData)
+			{
+				if(!isset($paymentData['ID']))
+					continue;
+
+				$payment = $paymentCollection->getItemById($paymentData['ID']);
+
+				if ($payment == null)
+					continue;
+
+				$paymentIds[] = $payment->getId();
+			}
+
+			foreach ($paymentCollection as $payment)
+			{
+				if(!in_array($payment->getId(), $paymentIds))
+				{
+					$r = $payment->delete();
+					if (!$r->isSuccess())
+					{
+						$this->errorsContainer->addErrors($r->getErrors());
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
 	public function buildPayments()
 	{
 		global $USER;
 
-		if(!is_array($this->formData["PAYMENT"]))
+		if(!isset($this->formData["PAYMENT"]) || !is_array($this->formData["PAYMENT"]))
 		{
-			$payments = $this->order->getPaymentCollection();
-			$payments->createItem();
-
+			$this->createEmptyPayment();
 			return $this;
+		}
+
+		if(!$this->removePayments())
+		{
+			$this->errorsContainer->addError(new Error('Payments remove - error'));
+			throw new BuildingException();
 		}
 
 		$paymentCollection = $this->order->getPaymentCollection();
@@ -721,10 +982,20 @@ abstract class OrderBuilder
 			$isNew = ($paymentId <= 0);
 			$hasError = false;
 
+			$settablePaymentFields = $this->getSettablePaymentFields();
+
+			if(count($settablePaymentFields)>0)//for backward compatibility
+				$paymentData = array_intersect_key($paymentData, array_flip($settablePaymentFields));
+
 			/** @var \Bitrix\Sale\Payment $paymentItem */
 			if($isNew)
 			{
 				$paymentItem = $paymentCollection->createItem();
+				if (isset($paymentData['CURRENCY']) && !empty($paymentData['CURRENCY']) && $paymentData['CURRENCY'] !== $this->order->getCurrency())
+				{
+					$paymentData["SUM"] = \CCurrencyRates::ConvertCurrency($paymentData["SUM"], $paymentData["CURRENCY"], $this->order->getCurrency());
+					$paymentData['CURRENCY'] = $this->order->getCurrency();
+				}
 			}
 			else
 			{
@@ -732,7 +1003,7 @@ abstract class OrderBuilder
 
 				if(!$paymentItem)
 				{
-					$this->errorsContainer->addError(new Error('Can\'t find payment with id:"'.$paymentId.'"'));
+					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_PAYMENT_NOT_FOUND")." - ".$paymentId));
 					continue;
 				}
 			}
@@ -745,34 +1016,47 @@ abstract class OrderBuilder
 				$psService = Manager::getObjectById((int)$paymentData['PAY_SYSTEM_ID']);
 			}
 
-			$paymentFields = array(
-				'PAY_SYSTEM_ID' => $paymentData['PAY_SYSTEM_ID'],
-				'COMPANY_ID' => (isset($paymentData['COMPANY_ID']) && intval($paymentData['COMPANY_ID']) > 0) ? intval($paymentData['COMPANY_ID']) : 0,
-				'PAY_VOUCHER_NUM' => $paymentData['PAY_VOUCHER_NUM'],
-				'PAY_RETURN_NUM' => $paymentData['PAY_RETURN_NUM'],
-				'PAY_RETURN_COMMENT' => $paymentData['PAY_RETURN_COMMENT'],
-				'COMMENTS' => $paymentData['COMMENTS'],
-				'PAY_SYSTEM_NAME' => ($psService) ? $psService->getField('NAME') : ''
-			);
+			$paymentData['COMPANY_ID'] = (isset($paymentData['COMPANY_ID']) && intval($paymentData['COMPANY_ID']) > 0) ? intval($paymentData['COMPANY_ID']) : 0;
+			$paymentData['PAY_SYSTEM_NAME'] = ($psService) ? $psService->getField('NAME') : '';
+
+			$paymentFields['PAID'] = $paymentData['PAID'];
+			unset($paymentData['PAID']);
 
 			if($isNew)
 			{
 				if(empty($paymentData['COMPANY_ID']))
 				{
-					$paymentFields['COMPANY_ID'] = $this->order->getField('COMPANY_ID');
+					$paymentData['COMPANY_ID'] = $this->order->getField('COMPANY_ID');
 				}
 
 				if(empty($paymentData['RESPONSIBLE_ID']))
 				{
-					$paymentFields['RESPONSIBLE_ID'] = $this->order->getField('RESPONSIBLE_ID');
-					$paymentFields['EMP_RESPONSIBLE_ID'] = $USER->GetID();
-					$paymentFields['DATE_RESPONSIBLE_ID'] = new DateTime();
+					$paymentData['RESPONSIBLE_ID'] = $this->order->getField('RESPONSIBLE_ID');
+					$paymentData['EMP_RESPONSIBLE_ID'] = $USER->GetID();
+				}
+			}
+
+			$dateFields = ['DATE_PAID', 'DATE_PAY_BEFORE', 'DATE_BILL', 'PAY_RETURN_DATE', 'PAY_VOUCHER_DATE', 'DATE_RESPONSIBLE_ID'];
+
+			foreach($dateFields as $fieldName)
+			{
+				if(isset($paymentData[$fieldName]) && is_string($paymentData[$fieldName]))
+				{
+					try
+					{
+						$paymentData[$fieldName] = new Date($paymentData[$fieldName]);
+					}
+					catch (ObjectException $exception)
+					{
+						$this->errorsContainer->addError(new Error('Wrong field "'.$fieldName.'"'));
+						$hasError = true;
+					}
 				}
 			}
 
 			if($paymentItem->isPaid()
-				&& isset($paymentFields['SUM'])
-				&& abs(floatval($paymentFields['SUM']) - floatval($paymentItem->getSum())) > 0.001)
+				&& isset($paymentData['SUM'])
+				&& abs(floatval($paymentData['SUM']) - floatval($paymentItem->getSum())) > 0.001)
 			{
 				$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_ERROR_PAYMENT_SUM")));
 				$hasError = true;
@@ -785,68 +1069,36 @@ abstract class OrderBuilder
 			 */
 			if(isset($paymentData['SUM']))
 			{
-				$paymentFields['SUM'] = (float)str_replace(',', '.', $paymentData['SUM']);
+				$paymentData['SUM'] = (float)str_replace(',', '.', $paymentData['SUM']);
 			}
 
 			if($paymentData['PRICE_COD'])
 			{
-				$paymentFields['PRICE_COD'] = $paymentData['PRICE_COD'];
+				$paymentData['PRICE_COD'] = $paymentData['PRICE_COD'];
 			}
 
-			if($isNew)
-			{
-				$paymentFields['DATE_BILL'] = new DateTime();
-			}
-
-			if(!empty($paymentData['PAY_RETURN_DATE']))
-			{
-				try
-				{
-					$paymentFields['PAY_RETURN_DATE'] = new \Bitrix\Main\Type\Date($paymentData['PAY_RETURN_DATE']);
-				}
-				catch (ObjectException $exception)
-				{
-					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_DATE_FORMAT_RES_ERROR")));
-					$hasError = true;
-				}
-			}
-
-			if(!empty($paymentData['PAY_VOUCHER_DATE']))
-			{
-				try
-				{
-					$paymentFields['PAY_VOUCHER_DATE'] = new Date($paymentData['PAY_VOUCHER_DATE']);
-				}
-				catch (ObjectException $exception)
-				{
-					$this->errorsContainer->addError(new Error(Loc::getMessage("SALE_HLP_ORDERBUILDER_DATE_FORMAT_VOU_ERROR")));
-					$hasError = true;
-				}
-			}
 
 			if(isset($paymentData['RESPONSIBLE_ID']))
 			{
-				$paymentFields['RESPONSIBLE_ID'] = !empty($paymentData['RESPONSIBLE_ID']) ? $paymentData['RESPONSIBLE_ID'] : $USER->GetID();
+				$paymentData['RESPONSIBLE_ID'] = !empty($paymentData['RESPONSIBLE_ID']) ? $paymentData['RESPONSIBLE_ID'] : $USER->GetID();
 
 				if($paymentData['RESPONSIBLE_ID'] != $paymentItem->getField('RESPONSIBLE_ID'))
 				{
-					$paymentFields['DATE_RESPONSIBLE_ID'] = new DateTime();
-
 					if(!$isNew)
 					{
-						$paymentFields['EMP_RESPONSIBLE_ID'] = $USER->GetID();
+						$paymentData['EMP_RESPONSIBLE_ID'] = $USER->GetID();
 					}
 				}
 			}
 
 			if(!$hasError)
 			{
-				if($paymentItem->isInner() && isset($paymentFields['SUM']) && $paymentFields['SUM'] === 0)
+				if($paymentItem->isInner() && isset($paymentData['SUM']) && $paymentData['SUM'] === 0)
 				{
-					unset($paymentFields['SUM']);
+					unset($paymentData['SUM']);
 				}
 
-				$setResult = $paymentItem->setFields($paymentFields);
+				$setResult = $paymentItem->setFields($paymentData);
 
 				if(!$setResult->isSuccess())
 				{
@@ -863,19 +1115,121 @@ abstract class OrderBuilder
 					}
 				}
 
-				if(!empty($paymentData['PAID']))
+				if(!empty($paymentFields['PAID']))
 				{
-					$setResult = $paymentItem->setPaid($paymentData['PAID']);
-				}
+					$setResult = $paymentItem->setPaid($paymentFields['PAID']);
 
-				if(!$setResult->isSuccess())
-				{
-					$this->errorsContainer->addErrors($setResult->getErrors());
+					if(!$setResult->isSuccess())
+					{
+						$this->errorsContainer->addErrors($setResult->getErrors());
+					}
 				}
 			}
 		}
 
 		return $this;
+	}
+
+	public function buildTradeBindings()
+	{
+		if(!isset($this->formData["TRADE_BINDINGS"]))
+		{
+			return $this;
+		}
+
+		if(!$this->removeTradeBindings())
+		{
+			return $this;
+		}
+
+		if(isset($this->formData["TRADE_BINDINGS"]) && count($this->formData["TRADE_BINDINGS"])>0)
+		{
+			$tradeBindingCollection = $this->order->getTradeBindingCollection();
+
+			foreach($this->formData["TRADE_BINDINGS"] as $fields)
+			{
+				$r = $this->tradingPlatformExists($fields['TRADING_PLATFORM_ID']);
+
+				if($r->isSuccess())
+				{
+					$id = intval($fields['ID']);
+					$isNew = ($id <= 0);
+
+					if($isNew)
+					{
+						$binding = $tradeBindingCollection->createItem();
+					}
+					else
+					{
+						$binding = $tradeBindingCollection->getItemById($id);
+
+						if(!$binding)
+						{
+							$this->errorsContainer->addError(new Error('Can\'t find Trade Binding with id:"'.$id.'"', 'TRADE_BINDING_NOT_EXISTS'));
+							continue;
+						}
+					}
+
+					$fields = array_intersect_key($fields, array_flip(TradeBindingEntity::getAvailableFields()));
+
+					$r = $binding->setFields($fields);
+				}
+
+				if(!$r->isSuccess())
+					$this->errorsContainer->addErrors($r->getErrors());
+			}
+		}
+
+		return $this;
+	}
+
+	protected function tradingPlatformExists($id)
+	{
+		$r = new Result();
+
+		$platformFields = TradingPlatformTable::getById($id)->fetchAll();
+
+		if(isset($platformFields[0]) == false)
+			$r->addError(new Error('tradingPlatform is not exists'));
+
+		return $r;
+	}
+
+	protected function removeTradeBindings()
+	{
+		if($this->getSettingsContainer()->getItemValue('deleteTradeBindingIfNotExists'))
+		{
+			$tradeBindingCollection = $this->order->getTradeBindingCollection();
+
+			$internalIx = [];
+			foreach($this->formData["TRADE_BINDINGS"] as $tradeBinding)
+			{
+				if(!isset($tradeBinding['ID']))
+					continue;
+
+				$binding = $tradeBindingCollection->getItemById($tradeBinding['ID']);
+
+				if ($binding == null)
+					continue;
+
+				$internalIx[] = $binding->getId();
+			}
+
+			foreach ($tradeBindingCollection as $binding)
+			{
+				if(!in_array($binding->getId(), $internalIx))
+				{
+					$r = $binding->delete();
+					if (!$r->isSuccess())
+					{
+						$this->errorsContainer->addErrors($r->getErrors());
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
 	}
 
 	public function finalActions()
@@ -913,7 +1267,7 @@ abstract class OrderBuilder
 	{
 		if(strlen($fieldName) > 0)
 		{
-			$result = $this->formData[$fieldName];
+			$result = isset($this->formData[$fieldName]) ? $this->formData[$fieldName]:null;
 		}
 		else
 		{

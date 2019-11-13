@@ -27,7 +27,7 @@ class Logger
 	public function __construct($exportId)
 	{
 		$this->exportId = $exportId;
-		$this->ritchLog = Vk::getInstance()->getRichLog($this->exportId);;
+		$this->ritchLog = Vk::getInstance()->getRichLog($this->exportId);
 	}
 	
 	/**
@@ -389,11 +389,15 @@ class Logger
 		$errorsDescriptions = $this->getErrorsDescriptions();
 		
 		if (array_key_exists($errCode, $errorsDescriptions) && array_key_exists('ITEMS_TYPE', $errorsDescriptions[$errCode]))
+		{
 			return self::createItemErrorStringByType($item, $errorsDescriptions[$errCode]['ITEMS_TYPE']);
+		}
 
 //		if error have format without items - just item ID - for unknown errors
 		else
+		{
 			return $item;
+		}
 	}
 	
 	
@@ -406,33 +410,43 @@ class Logger
 	 */
 	private static function createItemErrorStringByType($item, $type)
 	{
+		$result = $item;
+		
 		switch ($type)
 		{
 			case 'PRODUCT':
+
 //				get iblock id fore create link to edit
-				$resItem = \CIBlockElement::GetList(
-					array(),
-					array("ID" => $item),
-					false,
-					false,
-					array('IBLOCK_ID', 'NAME')
+				$resProduct = \CIBlockElement::GetList(array(), array("ID" => $item), false, false, array('IBLOCK_ID', 'NAME'));
+				$resProduct = $resProduct->Fetch();
+				$query = array(
+					"IBLOCK_ID" => $resProduct["IBLOCK_ID"],
+					"type" => "catalog",
+					"ID" => $item,
+					"lang" => LANGUAGE_ID,
 				);
-				$resItem = $resItem->Fetch();
 				$href = "/bitrix/admin/cat_product_edit.php";
-				
+				$result = '<a href="' . $href . '?' . http_build_query($query) . '">' . $resProduct['NAME'] . '</a>';
 				break;
 			
 			case 'ALBUM':
+//				todo: use link create method from ZZ
 //				get iblock id fore create link to edit
-				$resItem = \CIBlockSection::GetList(
-					array(),
-					array("ID" => $item),
-					false,
-					array('IBLOCK_ID', 'NAME')
+				$resSection = \CIBlockSection::GetList( array(), array("ID" => $item), false, array('IBLOCK_ID', 'NAME'));
+				$resSection = $resSection->Fetch();
+				$query = array(
+					"IBLOCK_ID" => $resSection["IBLOCK_ID"],
+					"type" => "catalog",
+					"ID" => $item,
+					"lang" => LANGUAGE_ID,
 				);
-				$resItem = $resItem->Fetch();
 				$href = "/bitrix/admin/cat_section_edit.php";
-				
+				$result = '<a href="' . $href . '?' . http_build_query($query) . '">' . $resSection['NAME'] . '</a>';
+				break;
+			
+			case 'PHOTO':
+				$resFile = \CFile::GetFileArray($item);
+				$result = '<a href="' . $resFile['SRC'] . '">' . $resFile['ORIGINAL_NAME'] . '</a>';
 				break;
 			
 			case 'METHODS':
@@ -448,25 +462,9 @@ class Logger
 				$href = '';
 				break;
 		}
+		
+		return $result;
 
-//		create RESULTING string
-		if (isset($resItem) && $resItem)
-		{
-			$query = array(
-				"IBLOCK_ID" => $resItem["IBLOCK_ID"],
-				"type" => "catalog",
-				"ID" => $item,
-				"lang" => LANGUAGE_ID,
-			);
-			
-			return '<a href="' . $href . '?' . http_build_query($query) . '">' . $resItem['NAME'] . '</a>';
-		}
-
-//		if we have't IBLOCK ID - return only item ID
-		else
-		{
-			return $item;
-		}
 	}
 	
 	
@@ -659,28 +657,28 @@ class Logger
 				"CODE" => "ALBUM_EMPTY_PHOTOS",
 				"ITEMS_TYPE" => 'ALBUM',
 			),
-			"ALBUM_PHOTOS_RESIZE_UP" => array(
+			"ALBUM_PHOTOS_10" => array(
 				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ALBUM_PHOTOS_RESIZE_UP"),
 				"CRITICAL" => false,
-				"CODE" => "ALBUM_PHOTOS_RESIZE_UP",
+				"CODE" => "ALBUM_PHOTOS_10",
 				"ITEMS_TYPE" => 'ALBUM',
 			),
-			"ALBUM_PHOTOS_RESIZE_DOWN" => array(
+			"ALBUM_PHOTOS_30" => array(
 				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ALBUM_PHOTOS_RESIZE_DOWN"),
 				"CRITICAL" => false,
-				"CODE" => "ALBUM_PHOTOS_RESIZE_DOWN",
+				"CODE" => "ALBUM_PHOTOS_30",
 				"ITEMS_TYPE" => 'ALBUM',
 			),
-			"ALBUM_PHOTOS_RESIZE_UP_CROP" => array(
+			"ALBUM_PHOTOS_20" => array(
 				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ALBUM_PHOTOS_RESIZE_CROP"),
 				"CRITICAL" => false,
-				"CODE" => "ALBUM_PHOTOS_RESIZE_UP_CROP",
+				"CODE" => "ALBUM_PHOTOS_20",
 				"ITEMS_TYPE" => 'ALBUM',
 			),
-			"ALBUM_PHOTOS_RESIZE_DOWN_CROP" => array(
+			"ALBUM_PHOTOS_40" => array(
 				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ALBUM_PHOTOS_RESIZE_CROP"),
 				"CRITICAL" => false,
-				"CODE" => "ALBUM_PHOTOS_RESIZE_DOWN_CROP",
+				"CODE" => "ALBUM_PHOTOS_40",
 				"ITEMS_TYPE" => 'ALBUM',
 			),
 			
@@ -708,6 +706,25 @@ class Logger
 				"CODE" => "TOO_MANY_PRODUCTS_TO_EXPORT",
 				"ITEMS_TYPE" => 'NONE',
 			),
+//			it is not true bad size! Just VK load error
+			"ERR_UPLOAD_BAD_IMAGE_SIZE_ALBUM_PHOTO" => [
+				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ERR_UPLOAD_BAD_IMAGE_SIZE_ALBUM_PHOTO"),
+				"CRITICAL" => false,
+				"CODE" => "ERR_UPLOAD_BAD_IMAGE_SIZE_ALBUM_PHOTO",
+				"ITEMS_TYPE" => 'ALBUM',
+			],
+			"ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_MAIN_PHOTO" => [
+				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_MAIN_PHOTO"),
+				"CRITICAL" => false,
+				"CODE" => "ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_MAIN_PHOTO",
+				"ITEMS_TYPE" => 'PRODUCT',
+			],
+			"ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_PHOTOS" => [
+				"MESSAGE" => Loc::getMessage("SALE_VK_ERRORS__ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_PHOTOS"),
+				"CRITICAL" => false,
+				"CODE" => "ERR_UPLOAD_BAD_IMAGE_SIZE_PRODUCT_PHOTOS",
+				"ITEMS_TYPE" => 'PHOTO',
+			],
 		);
 
 //		if set key - return one element, else return all array

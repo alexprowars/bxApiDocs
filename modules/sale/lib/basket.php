@@ -330,4 +330,31 @@ class Basket extends BasketBase
 			));
 		}
 	}
+
+	/**
+	 * @internal
+	 *
+	 * @param $index
+	 * @return BasketItemBase
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\NotSupportedException
+	 * @throws Main\ObjectNotFoundException
+	 * @throws Main\SystemException
+	 */
+	public function deleteItem($index)
+	{
+		/** @var Order $order */
+		if ($order = $this->getOrder())
+		{
+			/** @var BasketItem $item */
+			$item = $this->getItemByIndex($index);
+
+			$order->onBeforeBasketItemDelete($item);
+		}
+
+		return parent::deleteItem($index);
+	}
+
 }

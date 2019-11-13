@@ -58,7 +58,10 @@ class MessageAccessTable extends Entity\DataManager
 			new Entity\ReferenceField(
 				'CRM_ACTIVITY',
 				'\Bitrix\Crm\ActivityTable',
-				array('=this.ENTITY_ID' => 'ref.ID')
+				array(
+					'=this.ENTITY_TYPE' => array('?s', 'CRM_ACTIVITY'),
+					'=this.ENTITY_ID' => 'ref.ID',
+				)
 			)
 		);
 	}

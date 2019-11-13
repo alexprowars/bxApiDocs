@@ -34,6 +34,11 @@ class Syspage
 			return;
 		}
 
+		if (!Rights::hasAccessForSite($id, Rights::ACCESS_TYPES['sett']))
+		{
+			return;
+		}
+
 		$res = SyspageTable::getList(array(
 			'select' => array(
 				'ID'
@@ -58,11 +63,22 @@ class Syspage
 		}
 		else if ($lid !== false)
 		{
-			SyspageTable::add(array(
-				'SITE_ID' => $id,
-				'TYPE' => $type,
-				'LANDING_ID' => $lid
-			));
+			$check = Site::getList([
+				'select' => [
+					'ID'
+				],
+				'filter' => [
+					'ID' => $id
+				]
+			])->fetch();
+			if ($check)
+			{
+				SyspageTable::add(array(
+					'SITE_ID' => $id,
+					'TYPE' => $type,
+					'LANDING_ID' => $lid
+				));
+			}
 		}
 	}
 
@@ -164,5 +180,44 @@ class Syspage
 		{
 			SyspageTable::delete($row['ID']);
 		}
+	}
+
+	/**
+	 * Get url of special page of site.
+	 * @param int $siteId Site id.
+	 * @param string $type Type of special page.
+	 * @param array $additional Additional params for uri.
+	 *
+	 * @return string
+	 */
+	public static function getSpecialPage($siteId, $type, array $additional = [])
+	{
+		$url = '';
+		$siteId = (int)$siteId;
+
+		$res = SyspageTable::getList([
+			'select' => [
+				'LANDING_ID'
+			],
+			'filter' => [
+				'SITE_ID' => $siteId,
+				'=TYPE' => $type
+			]
+		]);
+		if ($row = $res->fetch())
+		{
+			$landing = Landing::createInstance(0);
+			$url = $landing->getPublicUrl($row['LANDING_ID']);
+			if ($additional)
+			{
+				$uri = new \Bitrix\Main\Web\Uri($url);
+				$uri->addParams($additional);
+				$url = $uri->getUri();
+				unset($uri);
+			}
+		}
+		unset($row, $res);
+
+		return $url;
 	}
 }

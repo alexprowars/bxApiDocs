@@ -20,7 +20,7 @@ use Bitrix\Sender\PostingRecipientTable;
 use Bitrix\Sender\PostingTable;
 use Bitrix\Sender\Entity\Letter;
 use Bitrix\Sender\Integration;
-use Bitrix\Sender\Internals\Model\LetterTable;
+use Bitrix\Sender\Internals\Model;
 use Bitrix\Sender\Recipient;
 use Bitrix\Sender\Message\Adapter;
 
@@ -90,6 +90,7 @@ class Sender
 		$this->checkStatusStep = (int) Option::get('sender', 'send_check_status_step', $this->checkStatusStep);
 
 		$this->message = $letter->getMessage();
+		$this->message->getConfiguration()->set('LETTER_ID', $this->letter->getId());
 	}
 
 	/**
@@ -114,8 +115,8 @@ class Sender
 				'=ID' => $postingId,
 				'=MAILING.ACTIVE' => 'Y',
 				'=MAILING_CHAIN.STATUS' => array(
-					LetterTable::STATUS_SEND,
-					LetterTable::STATUS_PLAN
+					Model\LetterTable::STATUS_SEND,
+					Model\LetterTable::STATUS_PLAN
 				),
 			)
 		));
@@ -336,6 +337,35 @@ class Sender
 	{
 		self::applyRecipientToMessage($this->message, $recipient);
 
+		// event before sending
+		$eventSendParams = [
+			'FIELDS' => $this->message->getFields(),
+			'TRACK_READ' => $this->message->getReadTracker()->getArray(),
+			'TRACK_CLICK' => $this->message->getClickTracker()->getArray(),
+			'MAILING_CHAIN_ID' => $this->letter->getId()
+		];
+		$event = new Main\Event('sender', 'OnBeforePostingSendRecipient', [$eventSendParams]);
+		$event->send();
+		foreach ($event->getResults() as $eventResult)
+		{
+			if($eventResult->getType() == Main\EventResult::ERROR)
+			{
+				return false;
+			}
+
+			if(is_array($eventResult->getParameters()))
+			{
+				$eventSendParams = array_merge($eventSendParams, $eventResult->getParameters());
+			}
+		}
+		if (count($event->getResults()) > 0)
+		{
+			$this->message->setFields($eventSendParams['FIELDS']);
+			$this->message->getReadTracker()->setArray($eventSendParams['TRACK_READ']);
+			$this->message->getReadTracker()->setArray($eventSendParams['TRACK_CLICK']);
+		}
+
+
 		try
 		{
 			$sendResult = $this->message->send();
@@ -390,7 +420,7 @@ class Sender
 		}
 
 		$this->status = PostingTable::STATUS_PART;
-		PostingTable::update(array('ID' => $this->postingId), array('STATUS' => $this->status));
+		Model\PostingTable::update($this->postingId, ['STATUS' => $this->status]);
 	}
 
 	/**
@@ -485,12 +515,12 @@ class Sender
 			}
 
 			$sendResultStatus = $sendResult ? PostingRecipientTable::SEND_RESULT_SUCCESS : PostingRecipientTable::SEND_RESULT_ERROR;
-			PostingRecipientTable::update(
-				array('ID' => $recipient["ID"]),
-				array(
+			Model\Posting\RecipientTable::update(
+				$recipient["ID"],
+				[
 					'STATUS' => $sendResultStatus,
 					'DATE_SENT' => new Type\DateTime()
-				)
+				]
 			);
 
 			// send event
@@ -539,7 +569,7 @@ class Sender
 			return;
 		}
 
-		PostingTable::update(array('ID' => $this->postingId), array('DATE_SEND' => new Type\DateTime()));
+		Model\PostingTable::update($this->postingId, ['DATE_SEND' => new Type\DateTime()]);
 	}
 
 	/**
@@ -590,7 +620,7 @@ class Sender
 			$postingUpdateFields[$postingFieldName] = $postingCountFieldValue;
 		}
 
-		PostingTable::update(array('ID' => $postingId), $postingUpdateFields);
+		Model\PostingTable::update($postingId, $postingUpdateFields);
 
 		return $status;
 	}
@@ -645,13 +675,15 @@ class Sender
 			$recipient["NAME"] = Recipient\Field::getDefaultName();
 		}
 
+		$senderChainId = (int)$recipient["MAILING_CHAIN_ID"] > 0 ? (int)$recipient["MAILING_CHAIN_ID"] : (int)$recipient['CAMPAIGN_ID'];
+
 		// prepare params for send
 		$fields = array(
 			'EMAIL_TO' => $recipient['CONTACT_CODE'],
 			'NAME' => $recipient['NAME'],
 			'USER_ID' => $recipient["USER_ID"],
-			'SENDER_CHAIN_ID' => $recipient["MAILING_CHAIN_ID"],
-			'SENDER_CHAIN_CODE' => 'sender_chain_item_' . $recipient["MAILING_CHAIN_ID"]
+			'SENDER_CHAIN_ID' => $senderChainId,
+			'SENDER_CHAIN_CODE' => 'sender_chain_item_' . $senderChainId
 		);
 
 		if(is_array($recipient['FIELDS']) && count($recipient) > 0)
@@ -680,11 +712,11 @@ class Sender
 			return false;
 		}
 
-		$checkStatusDb = LetterTable::getList(array(
+		$checkStatusDb = Model\LetterTable::getList(array(
 			'select' => array('ID'),
 			'filter' => array(
 				'=ID' => $this->letterId,
-				'=STATUS' => LetterTable::STATUS_SEND
+				'=STATUS' => Model\LetterTable::STATUS_SEND
 			)
 		));
 		if(!$checkStatusDb->fetch())

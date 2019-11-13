@@ -9,6 +9,7 @@ namespace Bitrix\Iblock\InheritedProperty;
 class SectionValues extends BaseValues
 {
 	protected $sectionId = 0;
+	/** @var ValuesQueue */
 	protected $queue = null;
 
 	/**
@@ -188,6 +189,6 @@ class SectionValues extends BaseValues
 				)
 			");
 		}
-		ValuesQueue::deleteAll($this->iblockId);
+		ValuesQueue::deleteAll();
 	}
 }

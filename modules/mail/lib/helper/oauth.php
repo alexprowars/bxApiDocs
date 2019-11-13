@@ -12,6 +12,11 @@ abstract class OAuth
 
 	protected $service, $storedUid;
 
+	/**
+	 * Returns the list of supported services
+	 *
+	 * @return array
+	 */
 	public static function getKnownServices()
 	{
 		static $knownServices;
@@ -29,6 +34,12 @@ abstract class OAuth
 		return $knownServices;
 	}
 
+	/**
+	 * Returns helper instance
+	 *
+	 * @param string $service Service name.
+	 * @return \Bitrix\Mail\Helper\OAuth|false
+	 */
 	public static function getInstance($service = null)
 	{
 		if (get_called_class() != get_class())
@@ -64,6 +75,12 @@ abstract class OAuth
 		return $instance;
 	}
 
+	/**
+	 * Returns helper instance by packed metadata
+	 *
+	 * @param string $meta Packed metadata.
+	 * @return \Bitrix\Mail\Helper\OAuth|false
+	 */
 	public static function getInstanceByMeta($meta)
 	{
 		if ($meta = static::parseMeta($meta))
@@ -80,6 +97,11 @@ abstract class OAuth
 		}
 	}
 
+	/**
+	 * Returns packed metadata for instance
+	 *
+	 * @return string
+	 */
 	public function buildMeta()
 	{
 		return sprintf(
@@ -89,6 +111,12 @@ abstract class OAuth
 		);
 	}
 
+	/**
+	 * Returns unpacked metadata
+	 *
+	 * @param string $meta Packed metadata.
+	 * @return array
+	 */
 	public static function parseMeta($meta)
 	{
 		$regex = sprintf(
@@ -120,6 +148,13 @@ abstract class OAuth
 		);
 	}
 
+	/**
+	 * Returns token from socialservices
+	 *
+	 * @param string $service Service name.
+	 * @param string $key User ID.
+	 * @return string|null
+	 */
 	private static function getSocservToken($service, $key)
 	{
 		if (Main\Loader::includeModule('socialservices'))
@@ -145,6 +180,12 @@ abstract class OAuth
 		return null;
 	}
 
+	/**
+	 * Returns token by packed metadata
+	 *
+	 * @param string $meta Packed metadata.
+	 * @return string|null
+	 */
 	public static function getTokenByMeta($meta)
 	{
 		if ($meta = static::parseMeta($meta))
@@ -163,6 +204,13 @@ abstract class OAuth
 		}
 	}
 
+	/**
+	 * Returns user data by packed metadata
+	 *
+	 * @param string $meta Packed metadata.
+	 * @param boolean $secure Strip raw data (includes tokens).
+	 * @return array|null
+	 */
 	public static function getUserDataByMeta($meta, $secure = true)
 	{
 		if ($meta = static::parseMeta($meta))
@@ -188,23 +236,58 @@ abstract class OAuth
 		return null;
 	}
 
+	/**
+	 * Returns service interface entity
+	 *
+	 * @return mixed
+	 */
 	public function getOAuthEntity()
 	{
 		return $this->oauthEntity;
 	}
 
+	/**
+	 * Returns instance UID
+	 *
+	 * @return string
+	 */
 	public function getStoredUid()
 	{
 		return $this->storedUid;
 	}
 
+	/**
+	 * Returns server OAuth handler URI
+	 *
+	 * @param boolean $final Skip Bitrix24 proxy.
+	 * @return string
+	 */
 	public function getRedirect($final = true)
 	{
 		return isModuleInstalled('bitrix24') && !$final
 			? $this->getControllerUrl() . '/redirect.php'
-			: \CHttp::urn2uri('/bitrix/tools/mail_oauth.php');
+			: $this->getHostUrl() . '/bitrix/tools/mail_oauth.php';
 	}
 
+	public function getHostUrl()
+	{
+		$request = Main\Context::getCurrent()->getRequest();
+
+		$uri = new Main\Web\Uri(sprintf(
+			'%s://%s:%u',
+			$request->isHttps() ? 'https' : 'http',
+			$request->getHttpHost(),
+			Main\Context::getCurrent()->getServer()->getServerPort() // $request->getServerPort()
+		));
+
+		return rtrim($uri->getLocator(), '/');
+	}
+
+	/**
+	 * Returns service OAuth endpoint URI
+	 *
+	 * @return string
+	 */
 	public function getUrl()
 	{
 		global $APPLICATION;
@@ -238,6 +321,29 @@ abstract class OAuth
 		return $this->oauthEntity->getAuthUrl($this->getRedirect(false), $state);
 	}
 
+	/**
+	 * Fetches token by instance UID from DB
+	 *
+	 * @return array|false
+	 */
+	protected function fetchStoredToken()
+	{
+		return Mail\Internals\OAuthTable::getList(array(
+			'filter' => array(
+				'=UID' => $this->storedUid,
+			),
+			'order' => array(
+				'ID' => 'DESC',
+			),
+		))->fetch();
+	}
+
+	/**
+	 * Returns token by instance UID
+	 *
+	 * @param string $uid Instance UID.
+	 * @return string|null
+	 */
 	public function getStoredToken($uid = null)
 	{
 		$token = null;
@@ -247,18 +353,12 @@ abstract class OAuth
 			$this->storedUid = $uid;
 		}
 
-		$item = Mail\Internals\OAuthTable::getList(array(
-			'filter' => array(
-				'=UID' => $this->storedUid,
-			),
-			'order' => array(
-				'ID' => 'DESC',
-			),
-		))->fetch();
+		$item = $this->fetchStoredToken();
 
 		if (!empty($item))
 		{
 			$this->oauthEntity->setToken($token = $item['TOKEN']);
+			$this->oauthEntity->setRefreshToken($item['REFRESH_TOKEN']);
 
 			if (empty($token) || $item['TOKEN_EXPIRES'] > 0 && $item['TOKEN_EXPIRES'] < time())
 			{
@@ -266,7 +366,19 @@ abstract class OAuth
 
 				if (!empty($item['REFRESH_TOKEN']))
 				{
-					$this->oauthEntity->getNewAccessToken($item['REFRESH_TOKEN']);
+					if ($this->oauthEntity->getNewAccessToken($item['REFRESH_TOKEN']))
+					{
+						$tokenData = $this->oauthEntity->getTokenData();
+
+						Mail\Internals\OAuthTable::update(
+							$item['ID'],
+							array(
+								'TOKEN' => $tokenData['access_token'],
+								'REFRESH_TOKEN' => $tokenData['refresh_token'],
+								'TOKEN_EXPIRES' => $tokenData['expires_in'],
+							)
+						);
+					}
 				}
 
 				$token = $this->oauthEntity->getToken();
@@ -276,6 +388,12 @@ abstract class OAuth
 		return $token;
 	}
 
+	/**
+	 * Obtains tokens from service
+	 *
+	 * @param string $code Service authorization code.
+	 * @return boolean
+	 */
 	public function getAccessToken($code = null)
 	{
 		if ($code)
@@ -292,6 +410,12 @@ abstract class OAuth
 		return $result;
 	}
 
+	/**
+	 * Returns user data
+	 *
+	 * @param boolean $secure Strip raw data (includes tokens).
+	 * @return array|null
+	 */
 	public function getUserData($secure = true)
 	{
 		try
@@ -311,16 +435,39 @@ abstract class OAuth
 		}
 	}
 
+	/**
+	 * Returns unified user data
+	 *
+	 * @param array $userData User data.
+	 * @return array
+	 */
 	abstract protected function mapUserData(array $userData);
 
+	/**
+	 * Returns service name
+	 *
+	 * @throws \Bitrix\Main\ObjectException
+	 * @return void
+	 */
 	public static function getServiceName()
 	{
 		throw new Main\ObjectException('abstract');
 	}
 
+	/**
+	 * Handles service response
+	 *
+	 * @param string $state Response data.
+	 * @return void
+	 */
 	public function handleResponse($state)
 	{
 		$this->storedUid = $state['uid'];
+
+		if ($item = $this->fetchStoredToken())
+		{
+			$this->oauthEntity->setRefreshToken($item['REFRESH_TOKEN']);
+		}
 
 		if (!empty($_REQUEST['code']) && \CSocServAuthManager::checkUniqueKey())
 		{
@@ -328,12 +475,21 @@ abstract class OAuth
 
 			if ($userData = $this->getUserData(false))
 			{
-				Mail\Internals\OAuthTable::add(array(
+				$fields = array(
 					'UID' => $this->getStoredUid(),
 					'TOKEN' => $userData['__data']['access_token'],
 					'REFRESH_TOKEN' => $userData['__data']['refresh_token'],
 					'TOKEN_EXPIRES' => $userData['__data']['expires_in'],
-				));
+				);
+
+				if (empty($item))
+				{
+					Mail\Internals\OAuthTable::add($fields);
+				}
+				else
+				{
+					Mail\Internals\OAuthTable::update($item['ID'], $fields);
+				}
 
 				unset($userData['__data']);
 

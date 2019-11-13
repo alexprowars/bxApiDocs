@@ -11,7 +11,7 @@ class UrlRewriter
 
 	protected static function loadRules($siteId)
 	{
-		$site = SiteTable::getRow(array("filter" => array("=LID" => $siteId)));
+		$site = SiteTable::getRow(array("filter" => array("=LID" => $siteId), "cache" => array("ttl" => 3600)));
 		$docRoot = $site["DOC_ROOT"];
 
 		if (!empty($docRoot))
@@ -35,7 +35,7 @@ class UrlRewriter
 
 	protected static function saveRules($siteId, array $arUrlRewrite)
 	{
-		$site = SiteTable::getRow(array("filter" => array("=LID" => $siteId)));
+		$site = SiteTable::getRow(array("filter" => array("=LID" => $siteId), "cache" => array("ttl" => 3600)));
 		$docRoot = $site["DOC_ROOT"];
 
 		if (!empty($docRoot))
@@ -44,6 +44,13 @@ class UrlRewriter
 			$docRoot = Application::getDocumentRoot();
 
 		$data = var_export($arUrlRewrite, true);
+
+		$event = new Event("main", "onUrlRewriteSaveRules", [
+			$siteId,
+			$docRoot,
+			$arUrlRewrite
+		]);
+		$event->send();
 
 		IO\File::putFileContents($docRoot."/urlrewrite.php", "<"."?php\n\$arUrlRewrite=".$data.";\n");
 		Application::resetAccelerator();
@@ -334,13 +341,9 @@ class UrlRewriter
 		return $ns["CNT"];
 	}
 
-	protected static function recursiveReindex($rootPath, $path, $arSites, $maxExecutionTime = 0, &$ns)
+	protected static function recursiveReindex($rootPath, $path, $arSites, $maxExecutionTime, &$ns)
 	{
 		$pathAbs = IO\Path::combine($rootPath, $path);
-
-		$dir = new IO\Directory($pathAbs);
-		if (!$dir->isExists())
-			return 0;
 
 		$siteId = "";
 		foreach ($arSites as $site)
@@ -352,6 +355,10 @@ class UrlRewriter
 			}
 		}
 		if (empty($siteId))
+			return 0;
+
+		$dir = new IO\Directory($pathAbs, $siteId);
+		if (!$dir->isExists())
 			return 0;
 
 		$arChildren = $dir->getChildren();

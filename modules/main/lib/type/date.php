@@ -3,7 +3,6 @@ namespace Bitrix\Main\Type;
 
 use Bitrix\Main;
 use Bitrix\Main\Context;
-use Bitrix\Main\DB;
 
 class Date
 {
@@ -172,6 +171,17 @@ class Date
 	}
 
 	/**
+	 * Returns difference between dates.
+	 *
+	 * @param DateTime $time
+	 * @return \DateInterval
+	 */
+	public function getDiff(DateTime $time)
+	{
+		return $this->value->diff($time->value);
+	}
+
+	/**
 	 * Converts a date to the string.
 	 *
 	 * @param Context\Culture $culture Culture contains date format.
@@ -321,7 +331,7 @@ class Date
 	{
 		/** @var Date $d */
 		$d = new static();
-		$d->value = $datetime;
+		$d->value = clone $datetime;
 		$d->value->setTime(0, 0, 0);
 		return $d;
 	}
@@ -351,7 +361,7 @@ class Date
 	 */
 	public static function createFromText($text)
 	{
-		$result = \Bitrix\Main\Text\DateConverter::decode($text);
+		$result = Main\Text\DateConverter::decode($text);
 		if (empty($result))
 		{
 			return null;

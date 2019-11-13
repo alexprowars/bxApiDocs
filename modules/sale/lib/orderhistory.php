@@ -235,10 +235,9 @@ class OrderHistory
 						array_key_exists($key, $oldFields)
 						&& strlen($val) > 0 && $val != $oldFields[$key]
 					)
-					&& !in_array($key, $oldFields)
 				)
 				{
-					$arRecord = \CSaleOrderChange::MakeRecordFromField($key, $fields, $entityName, $entity);
+					$arRecord = \CSaleOrderChange::MakeRecordFromField($key, $dataFields, $entityName, $entity);
 					if ($arRecord)
 					{
 						$result = $arRecord["DATA"];
@@ -581,7 +580,7 @@ class OrderHistory
 	 */
 	public static function deleteOldAgent($days, $hitLimit = null)
 	{
-		$calledClass = static::class;
+		$calledClass = '\\'.static::class;
 
 		$days = (int)$days;
 
@@ -624,6 +623,9 @@ class OrderHistory
 	public static function getManagerLogItems()
 	{
 		return array(
+			"ORDER_SYNCHRONIZATION_IMPORT",
+			"ORDER_SYNCHRONIZATION_EXPORT",
+			"ORDER_SYNCHRONIZATION_EXPORT_ERROR",
 			"ORDER_ADDED",
 			"ORDER_DEDUCTED",
 			"ORDER_MARKED",

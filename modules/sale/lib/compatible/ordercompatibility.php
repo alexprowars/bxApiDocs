@@ -750,7 +750,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 		$paySystemId = null;
 		$paySystemName = null;
-		$paidFull = false;
 
 		$userId = $order->getUserId();
 		$currency = $order->getCurrency();
@@ -934,10 +933,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 							$userBudget = Sale\Internals\UserBudgetPool::getUserBudget($userId, $currency);
 
 							$setSum = $userBudget;
-							if ($userBudget >= $sum)
-							{
-								$paidFull = true;
-							}
 
 							/** @var Sale\Result $r */
 							$r = static::payFromBudget($order, false);
@@ -1031,7 +1026,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 					if ($result->isSuccess() && intval($paySystemId) > 0)
 					{
-						$order = $paymentCollection->getOrder();
 						$order->setFieldNoDemand('PAY_SYSTEM_ID', $paySystemId);
 					}
 				}
@@ -1136,7 +1130,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 		if (array_key_exists('SUM_PAID', $fields))
 		{
-
 			if ($orderPaid)
 			{
 				if ($fields['SUM_PAID'] == 0)
@@ -1153,7 +1146,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 				if ($deltaSumPaid > 0)
 				{
-
 					$paidPayment = false;
 
 					/** @var Sale\Payment $payment */
@@ -1218,16 +1210,9 @@ class OrderCompatibility extends Internals\EntityCompatibility
 						}
 					}
 				}
-				elseif ($deltaSumPaid < 0)
-				{
-					throw new Main\NotSupportedException('Sum paid of reduction is not supported');
-				}
-			}
-			else
-			{
-				throw new Main\NotSupportedException('Sum paid of reduction is not supported');
 			}
 		}
+
 		return $result;
 	}
 
@@ -1249,9 +1234,9 @@ class OrderCompatibility extends Internals\EntityCompatibility
 				array(
 					'select' => array("ID"),
 					'filter' => array(
-						'ACTIVE' => 'Y',
-						'PERSON_TYPE_ID' => $personTypeId,
-						'ENTITY_REGISTRY_TYPE' => static::getRegistryType()
+						'=ACTIVE' => 'Y',
+						'=PERSON_TYPE_ID' => $personTypeId,
+						'=ENTITY_REGISTRY_TYPE' => static::getRegistryType()
 					),
 					'order' => array('SORT'),
 					'limit' => 1
@@ -1268,8 +1253,8 @@ class OrderCompatibility extends Internals\EntityCompatibility
 			array(
 				'select' => array("ID"),
 				'filter' => array(
-					'ACTIVE' => 'Y',
-					'ENTITY_REGISTRY_TYPE' => static::getRegistryType()
+					'=ACTIVE' => 'Y',
+					'=ENTITY_REGISTRY_TYPE' => static::getRegistryType()
 				),
 				'order' => array('SORT'),
 				'limit' => 1
@@ -1549,7 +1534,7 @@ class OrderCompatibility extends Internals\EntityCompatibility
 						);
 
 						/** @var Sale\ShipmentItemStore $shipmentItemStore */
-						$shipmentItemStore = $shipmentItemStoreCollection->getItemByBarcode($saveBarcodeData['BARCODE'],$basketItem->getBasketCode(), $barcodeData['STORE_ID']);
+						$shipmentItemStore = $shipmentItemStoreCollection->getItemByBarcode($saveBarcodeData['BARCODE']);
 
 						if (!$shipmentItemStore)
 						{
@@ -1760,7 +1745,7 @@ class OrderCompatibility extends Internals\EntityCompatibility
 					if (intval($fUserId) > 0 && intval($fUserIdByUserId) > 0
 						&& intval($fUserId) != intval($fUserIdByUserId))
 					{
-						// TODO: ... [SALE_BASKET_001] - вызов старого метода переноса корзины
+						// TODO: ... [SALE_BASKET_001] - the call of old method of the basket
 						\CSaleBasket::TransferBasket($fUserId, $fUserIdByUserId);
 					}
 
@@ -3250,6 +3235,8 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 				$fields['BASKET_ITEMS'][] = $basketCompatibilityClassName::convertBasketItemToArray($basketItem);
 			}
+
+			$fields['ORDER_WEIGHT'] = $basket->getWeight();
 		}
 
 		/** @var Sale\PropertyValueCollection $basket */
@@ -3281,12 +3268,6 @@ class OrderCompatibility extends Internals\EntityCompatibility
 
 		if ($propTaxLocation = $propertyCollection->getTaxLocation())
 			$fields['TAX_LOCATION'] = $propTaxLocation->getValue();
-
-		/** @var Sale\ShipmentCollection $shipmentCollection */
-		if ($shipmentCollection = $order->getShipmentCollection())
-		{
-			$fields['ORDER_WEIGHT'] = $shipmentCollection->getWeight();
-		}
 
 		$fields['DISCOUNT_LIST'] = DiscountCompatibility::getOldDiscountResult();
 

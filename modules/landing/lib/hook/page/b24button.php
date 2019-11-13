@@ -3,21 +3,12 @@ namespace Bitrix\Landing\Hook\Page;
 
 use \Bitrix\Landing\Field;
 use \Bitrix\Main\Localization\Loc;
+use Bitrix\Crm\SiteButton\Preset;
 
 Loc::loadMessages(__FILE__);
 
 class B24button extends \Bitrix\Landing\Hook\Page
 {
-	/**
-	 * Exec or not hook in edit mode.
-	 * @return true
-	 */
-	public function enabledInEditMode()
-	{
-		$request = \Bitrix\Main\Application::getInstance()->getContext()->getRequest();
-		return $request->get('landing_mode') == 'preview';
-	}
-	
 	/**
 	 * Get script url fromscript-code.
 	 * @param string $script Script code.
@@ -51,6 +42,13 @@ class B24button extends \Bitrix\Landing\Hook\Page
 		// b24 crm
 		if (\Bitrix\Main\Loader::includeModule('crm'))
 		{
+			// if buttons not exist (new portal) - create before
+			if (Preset::checkVersion())
+			{
+				$preset = new Preset();
+				$preset->install();
+			}
+			
 			$buttonList = \Bitrix\Crm\SiteButton\Manager::getList(array(
 				'select' => array(
 					'ID', 'SECURITY_CODE', 'NAME'
@@ -62,7 +60,10 @@ class B24button extends \Bitrix\Landing\Hook\Page
 			foreach ($buttonList as $button)
 			{
 				$key = self::getScriptUrl($button['SCRIPT']);
-				$items[$key] = $button['NAME'];
+				if ($key)
+				{
+					$items[$key] = $button['NAME'];
+				}
 			}
 		}
 		// site manager
@@ -132,7 +133,21 @@ class B24button extends \Bitrix\Landing\Hook\Page
 	 */
 	public function enabled()
 	{
+		if ($this->issetCustomExec())
+		{
+			return true;
+		}
+
 		return trim($this->fields['CODE']) != '';
+	}
+
+	/**
+	 * Exec or not hook in edit mode.
+	 * @return boolean
+	 */
+	public function enabledInEditMode()
+	{
+		return false;
 	}
 
 	/**
@@ -141,10 +156,16 @@ class B24button extends \Bitrix\Landing\Hook\Page
 	 */
 	public function exec()
 	{
+		if ($this->execCustom())
+		{
+			return;
+		}
+
 		$code = \htmlspecialcharsbx(trim($this->fields['CODE']));
 		if ($code != 'N')
 		{
-			\Bitrix\Main\Page\Asset::getInstance()->addString(
+			\Bitrix\Landing\Manager::setPageView(
+				'BeforeBodyClose',
 				'<script data-skip-moving="true">
 					(function(w,d,u,b){ \'use strict\';
 					var s=d.createElement(\'script\');var r=(Date.now()/1000|0);s.async=1;s.src=u+\'?\'+r;
@@ -154,9 +175,9 @@ class B24button extends \Bitrix\Landing\Hook\Page
 			);
 			if ($this->fields['COLOR'] != 'button')
 			{
-				\Bitrix\Landing\Manager::setPageClass(
-					"BodyClass",
-					"landing-b24button-use-style"
+				\Bitrix\Landing\Manager::setPageView(
+					'BodyClass',
+					'landing-b24button-use-style'
 				);
 			}
 		}

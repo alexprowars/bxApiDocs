@@ -86,7 +86,8 @@ class TriggerOrderStatusChange extends \Bitrix\Sender\TriggerConnector
 		$eventData = $this->getParam('EVENT');
 		if($eventData['ENTITY'] instanceof \Bitrix\Sale\Order)
 		{
-			$result['ORDER_ID'] = $eventData['ENTITY']->getId();
+			$result['ORDER_ID'] = $eventData['ENTITY']->getField('ACCOUNT_NUMBER');
+			$result['ORDER_REAL_ID'] = $eventData['ENTITY']->getId();
 		}
 
 		return $result;

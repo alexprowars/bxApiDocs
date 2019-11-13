@@ -70,6 +70,8 @@ class Repo extends \Bitrix\Landing\Internals\BaseTable
 	public static function getRepository()
 	{
 		$items = array();
+		$siteId = Manager::getMainSiteId();
+		$siteTemplateId = Manager::getTemplateId($siteId);
 
 		$res = self::getList(array(
 			'select' => array(
@@ -81,7 +83,16 @@ class Repo extends \Bitrix\Landing\Internals\BaseTable
 				)
 			),
 			'filter' => array(
-				'=ACTIVE' => 'Y'
+				'=ACTIVE' => 'Y',
+				Manager::isTemplateIdSystem($siteTemplateId)
+					? array(
+						'LOGIC' => 'OR',
+						['=SITE_TEMPLATE_ID' => $siteTemplateId],
+						['=SITE_TEMPLATE_ID' => false]
+					)
+					: array(
+						['=SITE_TEMPLATE_ID' => $siteTemplateId]
+					)
 			),
 			'order' => array(
 				'ID' => 'DESC'
@@ -92,7 +103,7 @@ class Repo extends \Bitrix\Landing\Internals\BaseTable
 			$items['repo_'. $row['ID']] = array(
 				'name' => $row['NAME'],
 				'namespace' => $row['APP_CODE'],
-				'new' => (time() - $row['DATE_CREATE_TIMESTAMP']) < \Bitrix\Landing\Block::NEW_BLOCK_LT,
+				'new' => (time() - $row['DATE_CREATE_TIMESTAMP']) < Block::NEW_BLOCK_LT,
 				'section' => explode(',', $row['SECTIONS']),
 				'description' => $row['DESCRIPTION'],
 				'preview' => $row['PREVIEW'],
@@ -147,6 +158,7 @@ class Repo extends \Bitrix\Landing\Internals\BaseTable
 					$manifestLocal['block']['subtype'] = $blockDesc['subtype'];
 				}
 				$manifest[$id] = $manifestLocal;
+				$manifest[$id]['timestamp'] = $block['DATE_MODIFY']->getTimeStamp();
 			}
 		}
 

@@ -88,6 +88,9 @@ class PersonTypeTable extends Main\Entity\DataManager
 				'data_type' => 'boolean',
 				'values' => array('N','Y')
 			),
+			'XML_ID' => array(
+				'data_type' => 'string',
+			),
 			'ENTITY_REGISTRY_TYPE' => array(
 				'data_type' => 'string',
 			),

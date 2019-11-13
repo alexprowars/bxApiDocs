@@ -11,8 +11,29 @@ final class SettingsContainer
 	const SET_ANONYMOUS_USER = 2;
 
 	private $settings = [
+		//Delete clients which is not in the parameters
+		'deleteClientsIfNotExists' => false,
+
 		//Allow creation new user if it doesn't exist yet.
 		'createUserIfNeed' => self::ALLOW_NEW_USER_CREATION,
+
+		//Delete tradeBindings which is not in the parameters
+		'deleteTradeBindingIfNotExists' => false,
+		//Delete basketItems which is not in the parameters
+		'deleteBaketItemsIfNotExists' => true,
+		//Delete payment which is not in the parameters
+		'deletePaymentIfNotExists' => false,
+		//Delete shipment which is not in the parameters
+		'deleteShipmentIfNotExists' => false,
+		//Delete shipmentItem which is not in the parameters
+		'deleteShipmentItemIfNotExists' => false,
+		//Delete propertyValues which is not in the parameters
+		'deletePropertyValuesIfNotExists' => false,
+		//Do we need to create a new payment by default, if payments empty?
+		'createDefaultPaymentIfNeed' => true,
+		//Do we need to create a new shipment by default, if shipments empty?
+		'createDefaultShipmentIfNeed' => true,
+
 		//Do we need update the price of just added products.
 		//Now it is used only after the buyerId was changed.
 		'needUpdateNewProductPrice' => false,

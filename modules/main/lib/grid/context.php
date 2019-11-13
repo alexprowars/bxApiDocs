@@ -9,7 +9,6 @@ namespace Bitrix\Main\Grid;
  */
 class Context
 {
-
 	/**
 	 * @return \Bitrix\Main\HttpRequest
 	 */
@@ -17,7 +16,6 @@ class Context
 	{
 		return \Bitrix\Main\Context::getCurrent()->getRequest();
 	}
-
 
 	/**
 	 * Checks whether the request from grid
@@ -40,5 +38,16 @@ class Context
 	{
 		return static::isInternalRequest() &&
 			self::getRequest()->get("grid_action") === "validate";
+	}
+
+	/**
+	 * Checks that this is edit action request
+	 *
+	 * @return bool
+	 */
+	public static function isShowpageRequest()
+	{
+		return static::isInternalRequest() &&
+			self::getRequest()->get("grid_action") === "showpage";
 	}
 }

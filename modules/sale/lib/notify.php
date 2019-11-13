@@ -1014,7 +1014,10 @@ class Notify
 		foreach ($collection as $tradeBinding)
 		{
 			$platform = $tradeBinding->getTradePlatform();
-			return $platform->getInfo();
+			if ($platform !== null)
+			{
+				return $platform->getInfo();
+			}
 		}
 
 		return [];
@@ -1042,6 +1045,11 @@ class Notify
 		foreach ($collection as $tradeBinding)
 		{
 			$platform = $tradeBinding->getTradePlatform();
+			if ($platform === null)
+			{
+				continue;
+			}
+
 			$link = $platform->getExternalLink(Platform::LINK_TYPE_PUBLIC_DETAIL_ORDER, $order);
 			if ($link)
 			{
@@ -1368,6 +1376,8 @@ class Notify
 			{
 				$fields['BASKET_ITEMS'][] = static::getBasketItemFields($basketItem);
 			}
+
+			$fields['ORDER_WEIGHT'] = $basket->getWeight();
 		}
 
 		/** @var PropertyValueCollection $basket */
@@ -1409,12 +1419,6 @@ class Notify
 		if ($propTaxLocation = $propertyCollection->getTaxLocation())
 		{
 			$fields['TAX_LOCATION'] = $propTaxLocation->getValue();
-		}
-
-		/** @var ShipmentCollection $shipmentCollection */
-		if ($shipmentCollection = $order->getShipmentCollection())
-		{
-			$fields['ORDER_WEIGHT'] = $shipmentCollection->getWeight();
 		}
 
 		$fields['DISCOUNT_LIST'] = Compatible\DiscountCompatibility::getOldDiscountResult();

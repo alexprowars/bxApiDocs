@@ -59,5 +59,14 @@ if (Main\Loader::includeModule('socialservices'))
 			return false;
 		}
 
+		public function getTokenData()
+		{
+			return array(
+				'access_token' => $this->access_token,
+				'refresh_token' => $this->refresh_token,
+				'expires_in' => $this->accessTokenExpires,
+			);
+		}
+
 	}
 }

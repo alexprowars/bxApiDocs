@@ -16,9 +16,9 @@ class Repository
 		$this->messagesIds = $messagesIds;
 	}
 
-	public function getMailbox()
+	public function getMailbox($mailboxUserId = null)
 	{
-		return Mail\MailboxTable::getUserMailbox($this->mailboxId);
+		return Mail\MailboxTable::getUserMailbox($this->mailboxId, $mailboxUserId);
 	}
 
 	public function deleteOldMessages($folderCurrentName)
@@ -66,7 +66,7 @@ class Repository
 		}
 		Mail\MailMessageUidTable::updateList(
 			[
-				'MAILBOX_ID' => intval($this->mailboxId),
+				'=MAILBOX_ID' => intval($this->mailboxId),
 				'@ID' => $messagesIds,
 			],
 			[
@@ -98,7 +98,7 @@ class Repository
 		}
 		Mail\MailMessageUidTable::updateList(
 			[
-				'MAILBOX_ID' => intval($this->mailboxId),
+				'=MAILBOX_ID' => intval($this->mailboxId),
 				'@ID' => $messagesIds,
 			],
 			[
@@ -116,7 +116,7 @@ class Repository
 		return $result;
 	}
 
-	public function deleteMailsCompletely($messagesToDelete)
+	public function deleteMailsCompletely($messagesToDelete, $mailboxUserId)
 	{
 		$ids = array_map(
 			function ($mail)
@@ -129,12 +129,25 @@ class Repository
 		{
 			return;
 		}
+		$mailFieldsForEvent = [];
 
+		foreach ($messagesToDelete as $index => $item)
+		{
+			$mailFieldsForEvent[] = [
+				'HEADER_MD5' => $item['HEADER_MD5'],
+				'MESSAGE_ID' => $item['MESSAGE_ID'],
+				'MAILBOX_USER_ID' => $mailboxUserId,
+			];
+		}
 		Mail\MailMessageUidTable::deleteList(
 			[
+				'=MAILBOX_ID' => $this->mailboxId,
 				'@MESSAGE_ID' => $ids,
-			]
+			],
+			$mailFieldsForEvent
 		);
+
+		// @TODO: use API
 		$connection = Main\Application::getInstance()->getConnection();
 		$connection->query(
 			'DELETE from ' . Mail\MailMessageTable::getTableName() .

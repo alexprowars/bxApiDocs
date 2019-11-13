@@ -87,6 +87,13 @@ class BasketPropertyTable
 					'=this.BASKET_ID' => 'ref.ID'
 				)
 			),
+
+			new Main\Entity\StringField(
+				'XML_ID',
+				array(
+					'size' => 255,
+				)
+			),
 		);
 	}
 	/**

@@ -20,6 +20,10 @@ class Controller
 	const STATUS_BOUNCED = 'bounced';
 	const STATUS_DELIVERED = 'delivered';
 
+	const DESC_AUTH = 'AUTH_ERROR';
+	const DESC_UNKNOWN_USER = 'UNKNOWN_USER';
+	const DESC_UNROUTEABLE = 'UNROUTEABLE';
+
 	/** @var  string $id ID of mail. */
 	protected $id;
 
@@ -54,8 +58,6 @@ class Controller
 	 * @param string $data Data.
 	 * @param array $parameters Parameters.
 	 * @return void
-	 * @throws ArgumentException
-	 * @throws SystemException
 	 */
 	public static function run($data = null, array $parameters = [])
 	{
@@ -229,7 +231,7 @@ class Controller
 			}
 		}
 
-		//Internal\BlacklistTable::insertBatch($this->blacklist);
+		Internal\BlacklistTable::insertBatch($this->blacklist);
 	}
 
 	/**
@@ -268,9 +270,11 @@ class Controller
 			->setDateSent((int) $item['completedAt'])
 			->setError(self::isStatusError($item['status']))
 			->setPermanentError(self::isStatusPermanentError($item['status']))
+			->setBlacklistable(self::isBlacklistable($item['statusDescription']))
+			->setDescription($item['statusDescription'])
 			->setMessage($item['message']);
 
-		if ($this->result->isPermanentError())
+		if ($this->result->isPermanentError() && $this->result->isBlacklistable())
 		{
 			$this->blacklist[] = $this->result->getEmail();
 		}
@@ -314,5 +318,16 @@ class Controller
 	public static function isStatusPermanentError($status)
 	{
 		return $status === self::STATUS_BOUNCED;
+	}
+
+	/**
+	 * Return true if status descriptions is blacklistable.
+	 *
+	 * @param string $description Description.
+	 * @return bool
+	 */
+	public static function isBlacklistable($description)
+	{
+		return $description && in_array($description, [self::DESC_UNKNOWN_USER, self::DESC_UNROUTEABLE]);
 	}
 }

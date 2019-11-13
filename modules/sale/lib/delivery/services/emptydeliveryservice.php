@@ -69,7 +69,6 @@ class EmptyDeliveryService extends Configurable
 
 	/**
 	 * @return int
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	private static function create()
 	{

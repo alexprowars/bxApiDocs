@@ -19,7 +19,7 @@ class Sku
 	const OFFERS_AVAILABLE = 0x0004;
 
 	protected static $allowUpdateAvailable = 0;
-	protected static $allowPropertyHandler = true;
+	protected static $allowPropertyHandler = 0;
 
 	protected static $productIds = array();
 	protected static $offers = array();
@@ -561,18 +561,20 @@ class Sku
 
 			if (isset(self::$offers[$elementId]))
 			{
-				if (self::$offers[$elementId]['CURRENT_PRODUCT'] > 0)
+				$offerDescr = self::$offers[$elementId];
+
+				if ($offerDescr['CURRENT_PRODUCT'] > 0)
 				{
 					if ($modifyActive || $modifyProperty)
 					{
 						self::calculateComplete(
-							self::$offers[$elementId]['CURRENT_PRODUCT'],
+							$offerDescr['CURRENT_PRODUCT'],
 							$iblockData['PRODUCT_IBLOCK_ID'],
 							Catalog\ProductTable::TYPE_SKU
 						);
 					}
 				}
-				if (self::$offers[$elementId]['NEW_PRODUCT'] > 0)
+				if ($offerDescr['NEW_PRODUCT'] > 0)
 				{
 					$elementActive = (
 						$modifyActive
@@ -582,16 +584,17 @@ class Sku
 					if ($modifyProperty && $elementActive == 'Y')
 					{
 						self::calculateComplete(
-							self::$offers[$elementId]['NEW_PRODUCT'],
+							$offerDescr['NEW_PRODUCT'],
 							$iblockData['PRODUCT_IBLOCK_ID'],
 							Catalog\ProductTable::TYPE_SKU
 						);
 					}
 				}
-				if (self::$offers[$elementId]['CURRENT_PRODUCT'] == 0 || self::$offers[$elementId]['NEW_PRODUCT'] == 0)
+
+				if ($offerDescr['CURRENT_PRODUCT'] == 0 || $offerDescr['NEW_PRODUCT'] == 0)
 				{
 					$type = (
-						self::$offers[$elementId]['NEW_PRODUCT'] > 0
+						$offerDescr['NEW_PRODUCT'] > 0
 						? Catalog\ProductTable::TYPE_OFFER
 						: Catalog\ProductTable::TYPE_FREE_OFFER
 					);
@@ -601,6 +604,8 @@ class Sku
 					self::enableUpdateAvailable();
 					unset($type);
 				}
+
+				unset($offerDescr);
 			}
 			else
 			{
@@ -665,7 +670,8 @@ class Sku
 			Catalog\ProductTable::TYPE_SKU
 		);
 
-		unset(self::$offers[$elementId]);
+		if (isset(self::$offers[$elementId]))
+			unset(self::$offers[$elementId]);
 	}
 
 	/**
@@ -697,6 +703,8 @@ class Sku
 		if (!isset($propertyList[$skuPropertyId]))
 			return;
 		$skuPropertyCode = (string)$propertyList[$skuPropertyId]['CODE'];
+		if ($skuPropertyCode === '')
+			$skuPropertyCode = (string)$skuPropertyId;
 
 		$foundValue = false;
 		$skuValue = null;
@@ -828,6 +836,8 @@ class Sku
 		if (!isset($propertyList[$skuPropertyId]))
 			return;
 		$skuPropertyCode = (string)$propertyList[$skuPropertyId]['CODE'];
+		if ($skuPropertyCode === '')
+			$skuPropertyCode = (string)$skuPropertyId;
 
 		$foundValue = false;
 		$skuValue = null;
@@ -1442,12 +1452,11 @@ class Sku
 			self::$skuExist[$row['ID']] = true;
 		}
 		unset($row, $iterator);
-		//TODO: change CATALOG_AVAILABLE to PRODUCT.AVAILABLE
 		$offers = \CCatalogSku::getOffersList(
 			$listIds,
 			0,
 			array(),
-			array('ID', 'ACTIVE', 'CATALOG_AVAILABLE')
+			array('ID', 'ACTIVE', 'AVAILABLE')
 		);
 		foreach ($listIds as $id)
 		{
@@ -1461,8 +1470,7 @@ class Sku
 			foreach ($offers[$id] as $offerId => $row)
 			{
 				$allOffers[] = $offerId;
-				//TODO: change CATALOG_AVAILABLE to PRODUCT.AVAILABLE
-				if ($row['ACTIVE'] != 'Y' || $row['CATALOG_AVAILABLE'] != 'Y')
+				if ($row['ACTIVE'] != 'Y' || $row['AVAILABLE'] != 'Y')
 					continue;
 				self::$skuAvailable[$id] = self::OFFERS_AVAILABLE;
 				$availableOffers[] = $offerId;
@@ -1752,20 +1760,21 @@ class Sku
 		$iblockData = \CCatalogSku::GetInfoByOfferIBlock($iblockId);
 		if (!empty($iblockData))
 		{
-			$existCurrentProduct = (self::$offers[$elementId]['CURRENT_PRODUCT'] > 0);
-			$existNewProduct = (self::$offers[$elementId]['NEW_PRODUCT'] > 0);
-			if ($existCurrentProduct > 0)
+			$offerDescr = self::$offers[$elementId];
+			$existCurrentProduct = ($offerDescr['CURRENT_PRODUCT'] > 0);
+			$existNewProduct = ($offerDescr['NEW_PRODUCT'] > 0);
+			if ($existCurrentProduct)
 			{
 				self::calculateComplete(
-					self::$offers[$elementId]['CURRENT_PRODUCT'],
+					$offerDescr['CURRENT_PRODUCT'],
 					$iblockData['PRODUCT_IBLOCK_ID'],
 					Catalog\ProductTable::TYPE_SKU
 				);
 			}
-			if ($existNewProduct > 0)
+			if ($existNewProduct)
 			{
 				self::calculateComplete(
-					self::$offers[$elementId]['NEW_PRODUCT'],
+					$offerDescr['NEW_PRODUCT'],
 					$iblockData['PRODUCT_IBLOCK_ID'],
 					Catalog\ProductTable::TYPE_SKU
 				);
@@ -1783,6 +1792,7 @@ class Sku
 				self::enableUpdateAvailable();
 			}
 			unset($existNewProduct, $existCurrentProduct);
+			unset($offerDescr);
 		}
 		unset(self::$offers[$elementId]);
 	}

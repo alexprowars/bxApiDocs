@@ -236,18 +236,13 @@ abstract class PropertyBase
 	 */
 	public static function getMeaningfulValues($personTypeId, $request)
 	{
-		$personTypeId = intval($personTypeId);
-		if ($personTypeId <= 0)
-		{
-			throw new Main\ArgumentNullException("personTypeId");
-		}
-
-		if (!is_array($request))
-		{
-			throw new Main\ArgumentNullException("request");
-		}
-
 		$result = [];
+
+		$personTypeId = intval($personTypeId);
+		if ($personTypeId <= 0 || !is_array($request))
+		{
+			return [];
+		}
 
 		$dbRes = static::getList([
 			'select' => [
@@ -385,12 +380,15 @@ abstract class PropertyBase
 	}
 
 	/**
-	 * @param $value
-	 * @param null $oldValue
-	 * @return array|mixed|null
+	 * @param PropertyValueBase $propertyValue
+	 * @return array|mixed|string|null
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\NotImplementedException
 	 */
-	public function prepareValueBeforeSave($value, $oldValue = null)
+	public function getPreparedValueForSave(PropertyValueBase $propertyValue)
 	{
+		$value = $propertyValue->getField('VALUE');
+
 		if ($this->getType() == 'FILE')
 		{
 			$value = Input\File::asMultiple($value);
@@ -417,11 +415,13 @@ abstract class PropertyBase
 			}
 
 			$property = $this->getFields();
+			$propertyValue->setField('VALUE', $value);
 			$value = Input\File::getValue($property, $value);
 
+			$originalFields = $propertyValue->getFields()->getOriginalValues();
 			foreach (
 				array_diff(
-					Input\File::asMultiple(Input\File::getValue($property, $oldValue)),
+					Input\File::asMultiple(Input\File::getValue($property, $originalFields['VALUE'])),
 					Input\File::asMultiple($value),
 					Input\File::asMultiple(Input\File::getValue($property, $property['DEFAULT_VALUE']))
 				)
@@ -452,7 +452,7 @@ abstract class PropertyBase
 	 */
 	public function getEditHtml(array $values)
 	{
-		$key = isset($this->property["ID"]) ? $this->getId() : "n".$values['ID'];
+		$key = isset($this->property["ID"]) ? $this->getId() : "n".$values['ORDER_PROPS_ID'];
 		return Input\Manager::getEditHtml("PROPERTIES[".$key."]", $this->fields, $values['VALUE']);
 	}
 

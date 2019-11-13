@@ -20,6 +20,7 @@ class AssetLocation
 	const AFTER_CSS = 'AFTER_CSS';
 	const AFTER_JS_KERNEL = 'AFTER_JS_KERNEL';
 	const AFTER_JS = 'AFTER_JS';
+	const BODY_END = 'BODY_END';
 }
 
 class AssetShowTargetType
@@ -62,7 +63,7 @@ class Asset
 	private $mode = AssetMode::STANDARD;
 
 	private $ajax;
-	private $xhtmlStyle = true;
+	private $xhtmlStyle = '/';
 
 	private $optimizeCss = true;
 	private $optimizeJs = true;
@@ -75,7 +76,7 @@ class Asset
 	private $siteTemplateID = '';
 	private $templatePath = '';
 	private $documentRoot = '';
-	private $dbType = '';
+	private $dbType = 'MYSQL';
 	private $assetCSSCnt = 0;
 	private $assetJSCnt = 0;
 
@@ -118,7 +119,6 @@ class Asset
 
 		$this->target = &$this->targetList['TEMPLATE'];
 		$this->documentRoot = Main\Loader::getDocumentRoot();
-		$this->dbType = ToUpper(\Bitrix\Main\Application::getInstance()->getConnection()->getType());
 	}
 
 	/**
@@ -217,7 +217,7 @@ class Asset
 	 */
 	public function setXhtml($value)
 	{
-		$this->xhtmlStyle = ($value === true);
+		$this->xhtmlStyle = ($value === true ? '/':'');
 	}
 
 	/**
@@ -316,12 +316,12 @@ class Asset
 	public function startTarget($id = '', $mode = AssetMode::ALL)
 	{
 		$id = ToUpper(trim($id));
-		if(strlen($id) <= 0)
+		if (strlen($id) <= 0)
 		{
 			return false;
 		}
 
-		if(
+		if (
 			($this->target['NAME'] == 'TEMPLATE' || $this->target['NAME'] == 'PAGE')
 			&& ($id == 'TEMPLATE' || $id == 'PAGE')
 		)
@@ -330,9 +330,9 @@ class Asset
 			$this->targetList[$id]['START'] = true;
 			$this->target = &$this->targetList[$id];
 		}
-		elseif(!($id == 'TEMPLATE' || $id == 'PAGE'))
+		elseif (!($id == 'TEMPLATE' || $id == 'PAGE'))
 		{
-			if(isset($this->targetList[$id]))
+			if (isset($this->targetList[$id]))
 			{
 				return false;
 			}
@@ -363,7 +363,7 @@ class Asset
 	public function stopTarget($id = '')
 	{
 		$id = ToUpper(trim($id));
-		if($id == 'TEMPLATE')
+		if ($id == 'TEMPLATE')
 		{
 			if($this->target['NAME'] == 'TEMPLATE')
 			{
@@ -377,11 +377,11 @@ class Asset
 		}
 		else
 		{
-			if($this->target['NAME'] == 'TEMPLATE')
+			if ($this->target['NAME'] == 'TEMPLATE')
 			{
 				return false;
 			}
-			elseif($this->targetList['TEMPLATE']['START'])
+			elseif ($this->targetList['TEMPLATE']['START'])
 			{
 				$this->target['START'] = false;
 				$this->target = &$this->targetList['TEMPLATE'];
@@ -577,12 +577,12 @@ class Asset
 	 */
 	function addString($str, $unique = false, $location = AssetLocation::AFTER_JS_KERNEL, $mode = null)
 	{
-		if($str == '')
+		if ($str == '')
 		{
 			return false;
 		}
 
-		if($unique)
+		if ($unique)
 		{
 			$chkSum = md5($str);
 			$this->strings[$location][$chkSum]['CONTENT'] = $str;
@@ -604,23 +604,23 @@ class Asset
 	public function getStrings($location = AssetLocation::AFTER_JS_KERNEL)
 	{
 		static $firstExec = true;
-		if($firstExec)
+		if ($firstExec)
 		{
 			$this->prepareString();
 			$firstExec = false;
 		}
 
 		$res = '';
-		if($location == AssetLocation::AFTER_CSS && \CJSCore::IsCoreLoaded())
+		if ($location == AssetLocation::AFTER_CSS && \CJSCore::IsCoreLoaded())
 		{
 			$res = "<script type=\"text/javascript\">if(!window.BX)window.BX={};if(!window.BX.message)window.BX.message=function(mess){if(typeof mess=='object') for(var i in mess) BX.message[i]=mess[i]; return true;};</script>\n";
 		}
 
-		if(isset($this->strings[$location]))
+		if (isset($this->strings[$location]))
 		{
-			foreach($this->strings[$location] as $item)
+			foreach ($this->strings[$location] as $item)
 			{
-				if($this->mode & $item['MODE'])
+				if ($this->mode & $item['MODE'])
 				{
 					$res .= $item['CONTENT']."\n";
 				}
@@ -638,7 +638,7 @@ class Asset
 	 */
 	public function addCss($path, $additional = false)
 	{
-		if(strlen($path) <= 0)
+		if (strlen($path) <= 0)
 		{
 			return false;
 		}
@@ -657,7 +657,7 @@ class Asset
 	 */
 	public function addJs($path, $additional = false)
 	{
-		if(strlen($path) <= 0)
+		if (strlen($path) <= 0)
 		{
 			return false;
 		}
@@ -679,13 +679,19 @@ class Asset
 		$path = IO\Path::getDirectory($path);
 		$content = preg_replace_callback(
 			'#([;\s:]*(?:url|@import)\s*\(\s*)(\'|"|)(.+?)(\2)\s*\)#si',
-			create_function('$matches', 'return $matches[1].Bitrix\Main\Page\Asset::replaceUrlCSS($matches[3], $matches[2], "'.addslashes($path).'").")";'),
+			function ($matches) use ($path)
+			{
+				return $matches[1].Asset::replaceUrlCSS($matches[3], $matches[2], addslashes($path)).")";
+			},
 			$content
 		);
 
 		$content = preg_replace_callback(
 			'#(\s*@import\s*)([\'"])([^\'"]+)(\2)#si',
-			create_function('$matches', 'return $matches[1].Bitrix\Main\Page\Asset::replaceUrlCSS($matches[3], $matches[2],"'.addslashes($path).'");'),
+			function ($matches) use ($path)
+			{
+				return $matches[1].Asset::replaceUrlCSS($matches[3], $matches[2], addslashes($path));
+			},
 			$content
 		);
 
@@ -700,13 +706,13 @@ class Asset
 	 */
 	public function groupJs($from = '', $to = '')
 	{
-		if(empty($from) || empty($to))
+		if (empty($from) || empty($to))
 		{
 			return;
 		}
 
 		$to = $this->movedJsTo($to);
-		if(array_key_exists($from, $this->moduleInfo['JS']))
+		if (array_key_exists($from, $this->moduleInfo['JS']))
 		{
 			$this->moduleInfo['JS'][$from]['MODULE_ID'] = $to;
 		}
@@ -715,9 +721,9 @@ class Asset
 			$this->moduleInfo['JS'][$from] = array('MODULE_ID' => $to, 'FILES_INFO' => false, 'BODY' => false);
 		}
 
-		foreach($this->moduleInfo['JS'] as $moduleID => $moduleInfo)
+		foreach ($this->moduleInfo['JS'] as $moduleID => $moduleInfo)
 		{
-			if($moduleInfo['MODULE_ID'] == $from)
+			if ($moduleInfo['MODULE_ID'] == $from)
 			{
 				$this->moduleInfo['JS'][$moduleID]["MODULE_ID"] = $to;
 			}
@@ -732,13 +738,13 @@ class Asset
 	 */
 	public function groupCss($from = '', $to = '')
 	{
-		if(empty($from) || empty($to))
+		if (empty($from) || empty($to))
 		{
 			return;
 		}
 
 		$to = $this->movedCssTo($to);
-		if(array_key_exists($from, $this->moduleInfo['CSS']))
+		if (array_key_exists($from, $this->moduleInfo['CSS']))
 		{
 			$this->moduleInfo['CSS'][$from]['MODULE_ID'] = $to;
 		}
@@ -747,7 +753,7 @@ class Asset
 			$this->moduleInfo['CSS'][$from] = array('MODULE_ID' => $to, 'FILES_INFO' => false);
 		}
 
-		foreach($this->moduleInfo['CSS'] as $moduleID => $moduleInfo)
+		foreach ($this->moduleInfo['CSS'] as $moduleID => $moduleInfo)
 		{
 			if($moduleInfo['MODULE_ID'] == $from)
 			{
@@ -762,10 +768,11 @@ class Asset
 	 */
 	private function movedJsTo($to)
 	{
-		if(isset($this->moduleInfo['JS'][$to]['MODULE_ID']) && $this->moduleInfo['JS'][$to]['MODULE_ID'] != $to)
+		if (isset($this->moduleInfo['JS'][$to]['MODULE_ID']) && $this->moduleInfo['JS'][$to]['MODULE_ID'] != $to)
 		{
 			$to = $this->movedJsTo($this->moduleInfo['JS'][$to]['MODULE_ID']);
 		}
+
 		return $to;
 	}
 
@@ -775,10 +782,11 @@ class Asset
 	 */
 	private function movedCssTo($to)
 	{
-		if(isset($this->moduleInfo['CSS'][$to]['MODULE_ID']) && $this->moduleInfo['CSS'][$to]['MODULE_ID'] != $to)
+		if (isset($this->moduleInfo['CSS'][$to]['MODULE_ID']) && $this->moduleInfo['CSS'][$to]['MODULE_ID'] != $to)
 		{
 			$to = $this->movedCssTo($this->moduleInfo['JS'][$to]['MODULE_ID']);
 		}
+
 		return $to;
 	}
 
@@ -821,7 +829,7 @@ class Asset
 	 */
 	protected function getJsToBody()
 	{
-		if($this->moveJsToBody === null)
+		if ($this->moveJsToBody === null)
 		{
 			$this->moveJsToBody = Option::get("main", "move_js_to_body") === "Y" && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true);
 		}
@@ -971,13 +979,17 @@ class Asset
 	 */
 	public static function replaceUrlCss($url, $quote, $path)
 	{
-		if(strpos($url, "://") !== false || strpos($url, "data:") !== false)
+		if (
+			strpos($url, "://") !== false
+			|| strpos($url, "data:") !== false
+			|| substr($url, 0, 1) == "#"
+		)
 		{
 			return $quote.$url.$quote;
 		}
 
 		$url = trim(stripslashes($url), "'\" \r\n\t");
-		if(substr($url, 0, 1) == "/")
+		if (substr($url, 0, 1) == "/")
 		{
 			return $quote.$url.$quote;
 		}
@@ -992,7 +1004,7 @@ class Asset
 	 */
 	public static function getAssetPath($src)
 	{
-		if(($p = strpos($src, "?")) > 0 && !\CMain::IsExternalLink($src))
+		if (($p = strpos($src, "?")) > 0 && !\CMain::IsExternalLink($src))
 		{
 			$src = substr($src, 0, $p);
 		}
@@ -1071,13 +1083,13 @@ class Asset
 			$label = '';
 		}
 
-		if($inline)
+		if ($inline)
 		{
-			return '<style type="text/css"'.$label.'>'."\n".$css."\n</style>\n";
+			return "<style type=\"text/css\" {$label}>\n{$css}\n</style>\n";
 		}
 		else
 		{
-			return '<link href="'.$css.'" type="text/css" '.$label.' rel="stylesheet"'.($this->xhtmlStyle ? ' /':'').'>'."\n";
+			return "<link href=\"{$css}\" type=\"text/css\" {$label} rel=\"stylesheet\" {$this->xhtmlStyle}>\n";
 		}
 	}
 
@@ -1090,13 +1102,13 @@ class Asset
 	 */
 	public function insertJs($js, $label = '', $inline = false)
 	{
-		if($inline)
+		if ($inline)
 		{
-			return '<script type="text/javascript"'.$label.'>'."\n".$js."\n</script>\n";
+			return "<script type=\"text/javascript\" {$label}>\n{$js}\n</script>\n";
 		}
 		else
 		{
-			return '<script type="text/javascript" '.$label.' src="'.$js.'"></script>'."\n";
+			return "<script type=\"text/javascript\" {$label} src=\"$js\"></script>\n";
 		}
 	}
 
@@ -1107,13 +1119,13 @@ class Asset
 	private function setTemplateID()
 	{
 		static $firstExec = true;
-		if($firstExec && !$this->ajax && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true))
+		if ($firstExec && !$this->ajax && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true))
 		{
-			if(defined("SITE_TEMPLATE_PREVIEW_MODE"))
+			if (defined("SITE_TEMPLATE_PREVIEW_MODE"))
 			{
 				$this->templatePath = BX_PERSONAL_ROOT.'/tmp/templates/__bx_preview';
 			}
-			elseif(defined('SITE_TEMPLATE_ID'))
+			elseif (defined('SITE_TEMPLATE_ID'))
 			{
 				$this->siteTemplateID = SITE_TEMPLATE_ID;
 				$this->templatePath = SITE_TEMPLATE_PATH;
@@ -1133,7 +1145,7 @@ class Asset
 	 */
 	private function addTemplateCss()
 	{
-		if(!$this->ajax && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true))
+		if (!$this->ajax && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true))
 		{
 			$this->css[$this->templatePath.'/styles.css']['TARGET'][] = 'TEMPLATE';
 			$this->css[$this->templatePath.'/styles.css']['ADDITIONAL'] = false;
@@ -1149,9 +1161,9 @@ class Asset
 	 */
 	private function prepareString()
 	{
-		foreach($this->strings as $location => $stringLocation)
+		foreach ($this->strings as $location => $stringLocation)
 		{
-			foreach($stringLocation as $key => $item)
+			foreach ($stringLocation as $key => $item)
 			{
 				/** @var  $assetTID - get first target where added asset */
 				$this->strings[$location][$key]['MODE'] = ($item['MODE'] === null ? $this->targetList[$item['TARGET'][0]]['MODE'] : $item['MODE']);
@@ -1194,6 +1206,31 @@ class Asset
 	}
 
 	/**
+	 * Gets asset path.
+	 * if allowed use minified assets
+	 * @param $sourcePath
+	 * @return string|null
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	public function getFullAssetPath($sourcePath)
+	{
+		$result = $this->getAssetPaths($sourcePath);
+
+		if (is_array($result))
+		{
+			return $result["FULL_PATH"];
+		}
+
+		if (\CMain::IsExternalLink($sourcePath))
+		{
+			return $sourcePath;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Prepare css asset to optimize.
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
@@ -1203,7 +1240,7 @@ class Asset
 	{
 		$additional = array();
 
-		foreach($this->css as $css => $set)
+		foreach ($this->css as $css => $set)
 		{
 			/** @var  $assetTID - get first target where added asset */
 			$assetTID = $set['ADDITIONAL'] ? 'TEMPLATE' : $set['TARGET'][0];
@@ -1217,9 +1254,9 @@ class Asset
 				'ADDITIONAL' => $set['ADDITIONAL']
 			];
 
-			if($cssInfo['EXTERNAL'])
+			if ($cssInfo['EXTERNAL'])
 			{
-				if($set['ADDITIONAL'])
+				if ($set['ADDITIONAL'])
 				{
 					$tmpKey = 'TEMPLATE';
 					$tmpPrefix = 'template';
@@ -1278,7 +1315,7 @@ class Asset
 						$this->assetCSSCnt++;
 					}
 
-					if(isset($this->targetList['KERNEL']['CSS_LIST'][$cssInfo['TARGET']]['MODE']))
+					if (isset($this->targetList['KERNEL']['CSS_LIST'][$cssInfo['TARGET']]['MODE']))
 					{
 						$this->targetList['KERNEL']['CSS_LIST'][$cssInfo['TARGET']]['MODE'] |= $this->targetList[$assetTID]['MODE'];
 					}
@@ -1296,7 +1333,7 @@ class Asset
 					$this->targetList['KERNEL']['CSS_LIST'][$cssInfo['TARGET']]['MODULE_NAME'] = $moduleInfo['MODULE_ID'];
 
 					// Add information about sets where used
-					foreach($set['TARGET'] as $setID)
+					foreach ($set['TARGET'] as $setID)
 					{
 						$this->targetList['KERNEL']['CSS_LIST'][$cssInfo['TARGET']]['WHERE_USED'][$setID] = true;
 					}
@@ -1311,7 +1348,7 @@ class Asset
 				}
 			}
 
-			if($cssInfo['ADDITIONAL'])
+			if ($cssInfo['ADDITIONAL'])
 			{
 				$additional[] = $cssInfo;
 			}
@@ -1323,7 +1360,7 @@ class Asset
 			unset($this->css[$css]);
 		}
 
-		foreach($additional as $cssInfo)
+		foreach ($additional as $cssInfo)
 		{
 			$this->css[$cssInfo['TARGET']][] = $cssInfo;
 		}
@@ -1338,7 +1375,7 @@ class Asset
 	private function prepareJs()
 	{
 		$additional = array();
-		foreach($this->js as $js => $set)
+		foreach ($this->js as $js => $set)
 		{
 			/** @var  $assetTID - get first target where added asset */
 			$assetTID = $set['ADDITIONAL'] ? 'TEMPLATE' : $set['TARGET'][0];
@@ -1353,9 +1390,9 @@ class Asset
 				'ADDITIONAL' => $set['ADDITIONAL']
 			];
 
-			if($jsInfo['EXTERNAL'])
+			if ($jsInfo['EXTERNAL'])
 			{
-				if($set['ADDITIONAL'])
+				if ($set['ADDITIONAL'])
 				{
 					$tmpKey = 'TEMPLATE';
 					$tmpPrefix = 'template';
@@ -1398,7 +1435,7 @@ class Asset
 				if ($moduleInfo = $this->isKernelJS($jsInfo['PATH']))
 				{
 					$jsInfo['TARGET'] = 'KERNEL';
-					if($this->sliceKernel() && $this->optimizeJs())
+					if ($this->sliceKernel() && $this->optimizeJs())
 					{
 						$jsInfo['MODULE_ID'] = $moduleInfo['MODULE_ID'];
 						$jsInfo['TARGET'] = 'KERNEL_'.$moduleInfo['MODULE_ID'];
@@ -1415,7 +1452,7 @@ class Asset
 						$this->assetJSCnt++;
 					}
 
-					if($jsInfo['BODY'])
+					if ($jsInfo['BODY'])
 					{
 						$this->targetList['BODY']['JS_LIST'][$jsInfo['TARGET']] = [
 							'TARGET' => $jsInfo['TARGET'],
@@ -1427,7 +1464,7 @@ class Asset
 					}
 					else
 					{
-						if(isset($this->targetList['KERNEL']['JS_LIST'][$jsInfo['TARGET']]['MODE']))
+						if (isset($this->targetList['KERNEL']['JS_LIST'][$jsInfo['TARGET']]['MODE']))
 						{
 							$this->targetList['KERNEL']['JS_LIST'][$jsInfo['TARGET']]['MODE'] |= $this->targetList[$assetTID]['MODE'];
 						}
@@ -1444,7 +1481,7 @@ class Asset
 					}
 
 					// Add information about sets where used
-					foreach($set['TARGET'] as $setID)
+					foreach ($set['TARGET'] as $setID)
 					{
 						$this->targetList['KERNEL']['JS_LIST'][$jsInfo['TARGET']]['WHERE_USED'][$setID] = true;
 					}
@@ -1459,7 +1496,7 @@ class Asset
 				}
 			}
 
-			if($jsInfo['ADDITIONAL'])
+			if ($jsInfo['ADDITIONAL'])
 			{
 				$additional[] = $jsInfo;
 			}
@@ -1471,12 +1508,12 @@ class Asset
 		}
 
 		// Clean body scripts
-		foreach($this->targetList['BODY']['JS_LIST'] as $item)
+		foreach ($this->targetList['BODY']['JS_LIST'] as $item)
 		{
 			unset($this->targetList['KERNEL']['JS_LIST'][$item['TARGET']]);
 		}
 
-		foreach($additional as $jsInfo)
+		foreach ($additional as $jsInfo)
 		{
 			$this->js[$jsInfo['TARGET']][] = $jsInfo;
 		}
@@ -1497,7 +1534,7 @@ class Asset
 		static $setList = [];
 		static $ajaxList = [];
 
-		if(empty($setList))
+		if (empty($setList))
 		{
 			$this->setTemplateID();
 			$this->addTemplateCss();
@@ -1505,9 +1542,9 @@ class Asset
 			$setList = $this->getTargetList();
 			$optimizeCss = $this->optimizeCss();
 
-			foreach($setList as $setInfo)
+			foreach ($setList as $setInfo)
 			{
-				if(!isset($this->css[$setInfo['NAME']]))
+				if (!isset($this->css[$setInfo['NAME']]))
 				{
 					continue;
 				}
@@ -1528,23 +1565,23 @@ class Asset
 				$listAsset = array();
 				$showLabel = ($setInfo['NAME'] == 'TEMPLATE');
 
-				foreach($this->css[$setInfo['NAME']] as $cssFile)
+				foreach ($this->css[$setInfo['NAME']] as $cssFile)
 				{
 					$css = $cssFile['FULL_PATH'];
-					if($this->ajax)
+					if ($this->ajax)
 					{
 						$this->assetList['CSS'][] = $cssFile['PATH'];
 						$ajaxList[] = $css;
 					}
-					elseif($cssFile['EXTERNAL'])
+					elseif ($cssFile['EXTERNAL'])
 					{
 						$resCss .= $this->insertCss($css, $showLabel);
 						$this->fileList['CSS'][$setInfo['NAME']]['FILES'][] = $css;
 						$cnt++;
 					}
-					elseif($optimizeCss)
+					elseif ($optimizeCss)
 					{
-						if($cssFile['SKIP'])
+						if ($cssFile['SKIP'])
 						{
 							$resCss .= $this->insertCss($css, $showLabel);
 							$this->fileList['CSS'][$setInfo['NAME']]['FILES'][] = $css;
@@ -1596,20 +1633,20 @@ class Asset
 			}
 		}
 
-		if($this->ajax && !empty($ajaxList))
+		if ($this->ajax && !empty($ajaxList))
 		{
 			$res .= '<script type="text/javascript">'."BX.loadCSS(['".implode("','", $ajaxList)."']);".'</script>';
 		}
 
-		if($type == AssetShowTargetType::KERNEL)
+		if ($type == AssetShowTargetType::KERNEL)
 		{
 			$res .= $this->showAsset($setList, 'css', 'KERNEL');
 		}
-		elseif($type == AssetShowTargetType::TEMPLATE_PAGE)
+		elseif ($type == AssetShowTargetType::TEMPLATE_PAGE)
 		{
-			foreach($this->targetList as $setName => $set)
+			foreach ($this->targetList as $setName => $set)
 			{
-				if($setName != 'TEMPLATE' && $setName != 'KERNEL')
+				if ($setName != 'TEMPLATE' && $setName != 'KERNEL')
 				{
 					$res .= $this->showAsset($setList, 'css', $setName);
 				}
@@ -1619,9 +1656,9 @@ class Asset
 		}
 		else
 		{
-			foreach($this->targetList as $setName => $set)
+			foreach ($this->targetList as $setName => $set)
 			{
-				if($setName != 'TEMPLATE')
+				if ($setName != 'TEMPLATE')
 				{
 					$res .= $this->showAsset($setList, 'css', $setName);
 				}
@@ -1648,14 +1685,14 @@ class Asset
 		$type = (int) $type;
 		$type = (($type == AssetShowTargetType::KERNEL && $this->headString && !$this->headScript) ? AssetShowTargetType::ALL : $type);
 		$optimize = $this->optimizeJs();
-		if(empty($setList))
+		if (empty($setList))
 		{
 			$this->prepareJs();
 			$setList = $this->getTargetList('JS');
 
-			foreach($setList as $setInfo)
+			foreach ($setList as $setInfo)
 			{
-				if(!isset($this->js[$setInfo['NAME']]))
+				if (!isset($this->js[$setInfo['NAME']]))
 				{
 					continue;
 				}
@@ -1668,15 +1705,15 @@ class Asset
 
 				$resJs = '';
 				$listAsset = array();
-				foreach($this->js[$setInfo['NAME']] as $jsFile)
+				foreach ($this->js[$setInfo['NAME']] as $jsFile)
 				{
 					$js = $jsFile['FULL_PATH'];
-					if($optimize)
+					if ($optimize)
 					{
-						if($jsFile['SKIP'])
+						if ($jsFile['SKIP'])
 						{
 							$this->fileList['JS'][$setInfo['NAME']]['FILES'][] = $js;
-							$resJs .= '<script type="text/javascript" src="'.$js.'"></script>'."\n";
+							$resJs .= "<script type=\"text/javascript\" src=\"{$js}\"></script>\n";
 						}
 						else
 						{
@@ -1686,7 +1723,7 @@ class Asset
 					else
 					{
 						$this->fileList['JS'][$setInfo['NAME']]['FILES'][] = $js;
-						$resJs .= '<script type="text/javascript" src="'.$js.'"></script>'."\n";
+						$resJs .= "<script type=\"text/javascript\" src=\"{$js}\"></script>\n";
 					}
 				}
 				$optAsset = $this->optimizeAsset($listAsset, $setInfo['UNIQUE'], $setInfo['PREFIX'], $setInfo['NAME'], 'js', $data);
@@ -1697,19 +1734,25 @@ class Asset
 			unset($optAsset);
 		}
 
-		if($type == AssetShowTargetType::KERNEL && ($this->mode & $this->targetList['KERNEL']['MODE']))
+		if ($type == AssetShowTargetType::KERNEL && ($this->mode & $this->targetList['KERNEL']['MODE']))
 		{
 			$setName = 'KERNEL';
 			$res .= $this->getStrings(AssetLocation::AFTER_CSS);
 			$res .= $this->showAsset($setList,'js', $setName);
 			$res .= $this->showFilesList();
 			$res .= $this->getStrings(AssetLocation::AFTER_JS_KERNEL);
-		}
-		elseif($type == AssetShowTargetType::TEMPLATE_PAGE)
-		{
-			foreach($this->targetList as $setName => $set)
+
+			if (!$this->bodyScript)
 			{
-				if($setName != 'KERNEL' && $setName != 'BODY')
+				$res .= $this->getStrings(AssetLocation::BODY_END);
+				$res .= $this->showAsset($setList,'js', 'BODY');
+			}
+		}
+		elseif ($type == AssetShowTargetType::TEMPLATE_PAGE)
+		{
+			foreach ($this->targetList as $setName => $set)
+			{
+				if ($setName != 'KERNEL' && $setName != 'BODY')
 				{
 					$setName = $this->fixJsSetOrder($setName);
 					$res .= $this->showAsset($setList,'js', $setName);
@@ -1717,14 +1760,15 @@ class Asset
 			}
 			$res .= $this->getStrings(AssetLocation::AFTER_JS);
 		}
-		elseif($type == AssetShowTargetType::BODY && ($this->mode & $this->targetList['BODY']['MODE']))
+		elseif ($type == AssetShowTargetType::BODY && ($this->mode & $this->targetList['BODY']['MODE']))
 		{
 			$setName = 'BODY';
+			$res .= $this->getStrings(AssetLocation::BODY_END);
 			$res .= $this->showAsset($setList,'js', $setName);
 		}
 		else
 		{
-			foreach($this->targetList as $setName => $set)
+			foreach ($this->targetList as $setName => $set)
 			{
 				if ($this->mode & $set['MODE'])
 				{
@@ -1735,6 +1779,12 @@ class Asset
 						$res .= $this->showAsset($setList, 'js', $setName);
 						$res .= $this->showFilesList();
 						$res .= $this->getStrings(AssetLocation::AFTER_JS_KERNEL);
+
+						if (!$this->bodyScript)
+						{
+							$res .= $this->getStrings(AssetLocation::BODY_END);
+							$res .= $this->showAsset($setList,'js', 'BODY');
+						}
 					}
 					elseif ($setName != 'BODY')
 					{
@@ -1756,11 +1806,11 @@ class Asset
 	 */
 	public static function getLocationByName($location)
 	{
-		if($location === false || $location === 'DEFAULT')
+		if ($location === false || $location === 'DEFAULT')
 		{
 			$location = AssetLocation::AFTER_JS_KERNEL;
 		}
-		elseif($location === true)
+		elseif ($location === true)
 		{
 			$location = AssetLocation::AFTER_CSS;
 		}
@@ -1780,13 +1830,13 @@ class Asset
 			return $res;
 		}
 
-		if(!empty($this->assetList['JS']))
+		if (!empty($this->assetList['JS']))
 		{
 			$assetList = array();
 			$setList = $this->getTargetList('JS');
-			foreach($setList as $set)
+			foreach ($setList as $set)
 			{
-				if($this->mode & $set['MODE']
+				if ($this->mode & $set['MODE']
 					&& isset($this->assetList['JS'][$set['PARENT_NAME']][$set['NAME']])
 					&& is_array($this->assetList['JS'][$set['PARENT_NAME']][$set['NAME']]))
 				{
@@ -1794,19 +1844,19 @@ class Asset
 				}
 			}
 
-			if(!empty($assetList))
+			if (!empty($assetList))
 			{
 				$res .= '<script type="text/javascript">'."BX.setJSList(['".implode("','", array_map(array($this, "getAssetPath"), $assetList))."']); </script>\n";
 			}
 		}
 
-		if(!empty($this->assetList['CSS']))
+		if (!empty($this->assetList['CSS']))
 		{
 			$assetList = array();
 			$setList = $this->getTargetList('CSS');
-			foreach($setList as $set)
+			foreach ($setList as $set)
 			{
-				if($this->mode & $set['MODE']
+				if ($this->mode & $set['MODE']
 					&& isset($this->assetList['CSS'][$set['PARENT_NAME']][$set['NAME']])
 					&& is_array($this->assetList['CSS'][$set['PARENT_NAME']][$set['NAME']])
 				)
@@ -1815,7 +1865,7 @@ class Asset
 				}
 			}
 
-			if(!empty($assetList))
+			if (!empty($assetList))
 			{
 				$res .= '<script type="text/javascript">'."BX.setCSSList(['".implode("','", array_map(array($this, "getAssetPath"), $assetList))."']); </script>\n";
 			}
@@ -1832,17 +1882,17 @@ class Asset
 	 */
 	function addCssKernelInfo($module = '', $css = array(), $settings = array())
 	{
-		if(empty($module) || empty($css))
+		if (empty($module) || empty($css))
 		{
 			return;
 		}
 
-		if(!array_key_exists($module, $this->moduleInfo['CSS']))
+		if (!array_key_exists($module, $this->moduleInfo['CSS']))
 		{
 			$this->moduleInfo['CSS'][$module] = array('MODULE_ID' => $module, 'FILES_INFO' => true);
 		}
 
-		foreach($css as $key)
+		foreach ($css as $key)
 		{
 			$key = self::getAssetPath($key);
 			$this->kernelAsset['CSS'][$key] = $module;
@@ -1869,17 +1919,17 @@ class Asset
 	 */
 	function addJsKernelInfo($module = '', $js = array(), $settings = array())
 	{
-		if(empty($module) || empty($js))
+		if (empty($module) || empty($js))
 		{
 			return;
 		}
 
-		if(!array_key_exists($module, $this->moduleInfo['JS']))
+		if (!array_key_exists($module, $this->moduleInfo['JS']))
 		{
 			$this->moduleInfo['JS'][$module] = array('MODULE_ID' => $module, 'FILES_INFO' => true, 'BODY' => false);
 		}
 
-		foreach($js as $key)
+		foreach ($js as $key)
 		{
 			$key = self::getAssetPath($key);
 			$this->kernelAsset['JS'][$key] = $module;
@@ -1918,7 +1968,7 @@ class Asset
 			$moduleID = $tmp['3'];
 			unset($tmp);
 
-			if(empty($moduleID))
+			if (empty($moduleID))
 			{
 				return false;
 			}
@@ -1952,7 +2002,7 @@ class Asset
 		}
 
 		/** If optimization on */
-		if(array_key_exists($js, $this->kernelAsset['JS']))
+		if (array_key_exists($js, $this->kernelAsset['JS']))
 		{
 			return $this->moduleInfo['JS'][$this->kernelAsset['JS'][$js]];
 		}
@@ -1962,7 +2012,7 @@ class Asset
 			$moduleID = $tmp['3'];
 			unset($tmp);
 
-			if(empty($moduleID))
+			if (empty($moduleID))
 			{
 				return false;
 			}
@@ -1990,7 +2040,7 @@ class Asset
 	{
 		$setID = preg_replace('#[^a-z0-9_]#i', '', $setID);
 		$uniqueID = preg_replace('#[^a-z0-9_]#i', '', $uniqueID);
-		if(!(empty($setID) || empty($uniqueID)) && isset($this->targetList[$setID]))
+		if (!(empty($setID) || empty($uniqueID)) && isset($this->targetList[$setID]))
 		{
 			$this->targetList[$setID]['UNIQUE'] = true;
 			$this->targetList[$setID]['PREFIX'] .= ''.($uniqueID == '' ? '' : '_'.$uniqueID);
@@ -2012,9 +2062,9 @@ class Asset
 		$type = ($type == 'css' ? 'CSS_RES' : 'JS_RES');
 		$skipCheck = ($setName == '');
 
-		foreach($setList as $setInfo)
+		foreach ($setList as $setInfo)
 		{
-			if(
+			if (
 				($skipCheck || $setName == $setInfo['PARENT_NAME'])
 				&& $this->mode & $setInfo['MODE']
 				&& isset($this->targetList[$setInfo['PARENT_NAME']][$type][$setInfo['NAME']]))
@@ -2033,14 +2083,15 @@ class Asset
 	 */
 	private function fixJsSetOrder($setName = '')
 	{
-		if($setName == 'PAGE')
+		if ($setName == 'PAGE')
 		{
 			$setName = 'TEMPLATE';
 		}
-		elseif($setName == 'TEMPLATE')
+		elseif ($setName == 'TEMPLATE')
 		{
 			$setName = 'PAGE';
 		}
+
 		return $setName;
 	}
 
@@ -2052,11 +2103,12 @@ class Asset
 	public static function getAssetTime($file = '')
 	{
 		$qpos = strpos($file, '?');
-		if($qpos === false)
+		if ($qpos === false)
 		{
 			return false;
 		}
 		$qpos++;
+
 		return substr($file, $qpos);
 	}
 
@@ -2068,11 +2120,12 @@ class Asset
 	private function getAssetChecksum($assetList = array())
 	{
 		$result = array();
-		foreach($assetList as $asset)
+		foreach ($assetList as $asset)
 		{
 			$result[$asset['PATH']] = $asset['FULL_PATH'];
 		}
 		ksort($result);
+
 		return md5(implode('_', $result));
 	}
 
@@ -2189,16 +2242,16 @@ class Asset
 		$writeResult = ($action == 'NEW' ? false : true);
 		$currentFileList = &$this->fileList[ToUpper($type)][$setName];
 
-		if($action != 'NO')
+		if ($action != 'NO')
 		{
 			foreach ($tmpInfo['FILE'] as $newFile)
 			{
 				$currentFileList['UP_NEW_FILES'][] = $newFile['FULL_PATH'];
 			}
 
-			if($action == 'UP')
+			if ($action == 'UP')
 			{
-				if($noCheckOnly)
+				if ($noCheckOnly)
 				{
 					$contents .= file_get_contents($optimFName);
 				}
@@ -2209,14 +2262,14 @@ class Asset
 			}
 
 			$needWrite = false;
-			if($noCheckOnly)
+			if ($noCheckOnly)
 			{
 				$newContent = '';
 				$mapNeeded = false;
-				foreach($files as $file)
+				foreach ($files as $file)
 				{
 					$assetContent = file_get_contents($file['FILE_PATH']);
-					if($type == 'css')
+					if ($type == 'css')
 					{
 						$comments .= "/* ".$file['FULL_PATH']." */\n";
 						$assetContent = $this->fixCSSIncludes($assetContent, $file['PATH']);
@@ -2252,7 +2305,7 @@ class Asset
 					$needWrite = true;
 				}
 
-				if($needWrite)
+				if ($needWrite)
 				{
 					$sourceMap = self::cutSourceMap($contents);
 					$mapNeeded = $mapNeeded || strlen($sourceMap) > 0;
@@ -2264,11 +2317,11 @@ class Asset
 						$contents .= self::SOURCE_MAP_TAG.$prefix.".map.js";
 					}
 
-					if($writeResult = $this->write($optimFName, $contents))
+					if ($writeResult = $this->write($optimFName, $contents))
 					{
-						$cacheInfo = '<? $filesInfo = array(';
+						$cacheInfo = '<?php $filesInfo = array(';
 
-						foreach($filesInfo as $key => $time)
+						foreach ($filesInfo as $key => $time)
 						{
 							$cacheInfo .= '"'.EscapePHPString($key).'" => "'.$time.'",';
 						}
@@ -2282,7 +2335,7 @@ class Asset
 						}
 					}
 				}
-				elseif($optimFileExist)
+				elseif ($optimFileExist)
 				{
 					$writeResult = true;
 				}
@@ -2296,7 +2349,7 @@ class Asset
 		$extendData = ($data != '' ? ' '.trim($data) : '');
 		$extendData .= ($label != '' ? ' '.trim($label) : '');
 
-		if($writeResult || !$writeResult && $unique && $action == 'UP')
+		if ($writeResult || !$writeResult && $unique && $action == 'UP')
 		{
 			$bundleFile = \CUtil::GetAdditionalFileURL($optimFile);
 			$currentFileList['FILES'][] = $bundleFile;
@@ -2311,9 +2364,9 @@ class Asset
 			}
 		}
 
-		if(!$writeResult)
+		if (!$writeResult)
 		{
-			foreach($files as $file)
+			foreach ($files as $file)
 			{
 				$currentFileList['FILES'][] = $file['FULL_PATH'];
 				if ($type == 'css')
@@ -2470,7 +2523,7 @@ class Asset
 		$result = false;
 		$fnTmp = $filePath.'.tmp';
 
-		if(!CheckDirPath($filePath) || !$fh = fopen($fnTmp, "wb"))
+		if (!CheckDirPath($filePath) || !$fh = fopen($fnTmp, "wb"))
 		{
 			return $result;
 		}
@@ -2480,22 +2533,22 @@ class Asset
 		fclose($fh);
 
 		self::unlink($filePath);
-		if($written === $len)
+		if ($written === $len)
 		{
 			$result = true;
 			rename($fnTmp, $filePath);
-			if($gzip && self::gzipEnabled())
+			if ($gzip && self::gzipEnabled())
 			{
 				$fnTmpGz = $filePath.'.tmp.gz';
 				$fnGz = $filePath.'.gz';
 
-				if($gz = gzopen($fnTmpGz, 'wb9f'))
+				if ($gz = gzopen($fnTmpGz, 'wb9f'))
 				{
 					$writtenGz = @gzwrite ($gz, $content);
 					gzclose($gz);
 
 					self::unlink($fnGz);
-					if($writtenGz === $len)
+					if ($writtenGz === $len)
 					{
 						rename($fnTmpGz, $fnGz);
 					}
@@ -2514,22 +2567,12 @@ class Asset
 	 */
 	private static function unlink($fileName)
 	{
-		//This checks for Zend Server CE in order to suppress warnings
-		if (function_exists('accelerator_reset'))
+		@chmod($fileName, BX_FILE_PERMISSIONS);
+		if (@unlink($fileName))
 		{
-			@chmod($fileName, BX_FILE_PERMISSIONS);
-			if (@unlink($fileName))
-				return true;
+			return true;
 		}
-		else
-		{
-			if (file_exists($fileName))
-			{
-				@chmod($fileName, BX_FILE_PERMISSIONS);
-				if (unlink($fileName))
-					return true;
-			}
-		}
+
 		return false;
 	}
 }

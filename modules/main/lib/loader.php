@@ -22,6 +22,9 @@ final class Loader
 	private static $arLoadedModulesHolders = array("main" => self::BITRIX_HOLDER);
 	private static $arSharewareModules = array();
 
+	/** @var array Additional autoload handlers */
+	private static $additionalHandlers = [];
+
 	/**
 	 * Custom autoload paths.
 	 * @var array [namespace => path]
@@ -48,6 +51,11 @@ final class Loader
 	private static $arAutoLoadClasses = array();
 
 	private static $isAutoLoadOn = true;
+
+	/**
+	 * @var bool Controls throwing exception by requireModule method
+	 */
+	private static $requireThrowException = true;
 
 	const ALPHA_LOWER = "qwertyuioplkjhgfdsazxcvbnm";
 	const ALPHA_UPPER = "QWERTYUIOPLKJHGFDSAZXCVBNM";
@@ -106,6 +114,26 @@ final class Loader
 			return self::$arLoadedModules[$moduleName] = false;
 
 		return self::$arLoadedModules[$moduleName] = true;
+	}
+
+	/**
+	 * Includes module by its name, throws an exception in case of failure
+	 *
+	 * @param $moduleName
+	 *
+	 * @return bool
+	 * @throws LoaderException
+	 */
+	public static function requireModule($moduleName)
+	{
+		$included = static::includeModule($moduleName);
+
+		if (!$included && static::$requireThrowException)
+		{
+			throw new LoaderException("Required module `{$moduleName}` was not found");
+		}
+
+		return $included;
 	}
 
 	private static function includeModuleInternal($path)
@@ -254,6 +282,11 @@ final class Loader
 		static::$customNamespaces[$namespace] = $path;
 	}
 
+	public static function registerHandler(callable $handler)
+	{
+		static::$additionalHandlers[] = $handler;
+	}
+
 	public static function isAutoLoadClassRegistered($className)
 	{
 		$className = trim(ltrim($className, "\\"));
@@ -381,12 +414,19 @@ final class Loader
 			}
 		}
 
-		// still not found, check for auto-generated entity classes
-		if (!class_exists($className))
+		// still not found, check additional handlers
+		if (!class_exists($className) && !empty(static::$additionalHandlers))
 		{
-			\Bitrix\Main\ORM\Loader::autoLoad($className);
-		}
+			foreach (static::$additionalHandlers as $handler)
+			{
+				call_user_func($handler, $className);
 
+				if (class_exists($className))
+				{
+					break;
+				}
+			}
+		}
 	}
 
 	/**
@@ -425,6 +465,16 @@ final class Loader
 			return $root.$personal."/".$path;
 
 		return self::getLocal($path, $root);
+	}
+
+	/**
+	 * Changes requireModule behavior
+	 *
+	 * @param bool $requireThrowException
+	 */
+	public static function setRequireThrowException($requireThrowException)
+	{
+		self::$requireThrowException = (bool) $requireThrowException;
 	}
 }
 

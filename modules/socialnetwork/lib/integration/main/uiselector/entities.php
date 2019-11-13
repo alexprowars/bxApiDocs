@@ -23,7 +23,8 @@ class Entities
 		$result = array(
 			'ITEMS' => array(),
 			'ITEMS_LAST' => array(),
-			'DEST_SORT' => array()
+			'DEST_SORT' => array(),
+			'ADDITIONAL_INFO' => array()
 		);
 
 		$filterParams = array(
@@ -205,6 +206,10 @@ class Entities
 			$structure = \CSocNetLogDestination::getStucture(array("LAZY_LOAD" => true));
 			$items['DEPARTMENT'] = $structure['department'];
 			$items['DEPARTMENT_RELATION'] = $structure['department_relation'];
+			$result['ADDITIONAL_INFO']['DEPARTMENT'] = array(
+				'PREFIX' => 'DR',
+				'TYPE' => 'tree'
+			);
 		}
 
 		$result["ITEMS"] = $items;
@@ -333,6 +338,7 @@ class Entities
 					"NAME_TEMPLATE" => Handler::getNameTemplate($requestFields)
 				)
 			),
+			'leafEntityType' => 'USERS',
 			'dataOnly' => true
 		);
 	}

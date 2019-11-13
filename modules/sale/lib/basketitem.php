@@ -31,31 +31,6 @@ class BasketItem extends BasketItemBase
 	private $bundleCollection = null;
 
 	/**
-	 * @param BasketItemCollection $basketItemCollection
-	 * @param $moduleId
-	 * @param $productId
-	 * @param null $basketCode
-	 * @return BasketItemBase
-	 * @throws ArgumentException
-	 * @throws ArgumentOutOfRangeException
-	 * @throws Main\NotImplementedException
-	 * @throws Main\ObjectException
-	 * @throws \Exception
-	 */
-	public static function create(BasketItemCollection $basketItemCollection, $moduleId, $productId, $basketCode = null)
-	{
-		$basketItem = parent::create($basketItemCollection, $moduleId, $productId, $basketCode);
-
-		$basket = $basketItemCollection->getBasket();
-		if ($basket instanceof Basket)
-		{
-			$basketItem->setField('LID', $basket->getSiteId());
-		}
-
-		return $basketItem;
-	}
-
-	/**
 	 * @return string
 	 */
 	public static function getRegistryType()
@@ -892,10 +867,6 @@ class BasketItem extends BasketItemBase
 
 		/** @var BasketItem $basketItemClone */
 		$basketItemClone = parent::createClone($cloneEntity);
-		if ($this->isClone() && $cloneEntity->contains($this))
-		{
-			return $cloneEntity[$this];
-		}
 
 		/** @var Internals\Fields $calculatedFields */
 		if ($calculatedFields = $this->calculatedFields)
@@ -964,6 +935,10 @@ class BasketItem extends BasketItemBase
 		{
 			$result->addErrors($r->getErrors());
 			return $result;
+		}
+		elseif ($r->hasWarnings())
+		{
+			$result->addWarnings($r->getWarnings());
 		}
 
 		if (!$this->isBundleParent())

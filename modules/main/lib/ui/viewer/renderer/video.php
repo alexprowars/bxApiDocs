@@ -3,6 +3,7 @@
 namespace Bitrix\Main\UI\Viewer\Renderer;
 
 use Bitrix\Main\Loader;
+use Bitrix\Main\Web\Uri;
 
 class Video extends Renderer
 {
@@ -59,6 +60,7 @@ class Video extends Renderer
 				'type' => $this->getOption('contentType'),
 			]
 		];
+		$sources = $this->modifySourcesByDirtyHacks($sources);
 
 		$altSrc = $this->getOption('alt.sourceUri');
 		if ($altSrc)
@@ -71,5 +73,27 @@ class Video extends Renderer
 		$data['sources'] = $sources;
 
 		return $data;
+	}
+
+	protected function modifySourcesByDirtyHacks(array $sources)
+	{
+		$updatedSources = $sources;
+		foreach ($sources as $source)
+		{
+			if ($source['type'] === 'video/quicktime')
+			{
+				//some browser can work with quicktime :)
+				/** @var Uri $src */
+				$src = clone $source['src'];
+				$src->addParams(['fakeUnique' => 'qt',]);
+
+				$updatedSources[] = [
+					'src' => $src,
+					'type' => 'video/mp4',
+				];
+			}
+		}
+
+		return $updatedSources;
 	}
 }

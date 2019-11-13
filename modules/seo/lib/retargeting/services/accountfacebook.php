@@ -2,6 +2,11 @@
 
 namespace Bitrix\Seo\Retargeting\Services;
 
+use Bitrix\Main\Engine\Response\Converter;
+use Bitrix\Main\Error;
+use Bitrix\Main\Result;
+use Bitrix\Main\Type\Date;
+use Bitrix\Main\Web\Json;
 use \Bitrix\Seo\Retargeting\Account;
 
 class AccountFacebook extends Account
@@ -16,24 +21,17 @@ class AccountFacebook extends Account
 	public function getList()
 	{
 		return $this->getRequest()->send(array(
-			'method' => 'GET',
-			'endpoint' => 'me/adaccounts',
-			'fields' => array(
-				'fields' => 'account_id,id,name'
-			)
+			'methodName' => 'retargeting.account.list',
+			'parameters' => array()
 		));
 	}
 
 	public function getProfile()
 	{
 		$response = $this->getRequest()->send(array(
-			'method' => 'GET',
-			'endpoint' => 'me/',
-			'fields' => array(
-				'fields' => 'id,name,picture,link'
-			)
+			'methodName' => 'retargeting.profile',
+			'parameters' => array()
 		));
-
 
 		if ($response->isSuccess())
 		{
@@ -45,9 +43,7 @@ class AccountFacebook extends Account
 				'PICTURE' => $data['PICTURE'] ? $data['PICTURE']['data']['url'] : null,
 			);
 		}
-		else
-		{
-			return null;
-		}
+
+		return null;
 	}
 }

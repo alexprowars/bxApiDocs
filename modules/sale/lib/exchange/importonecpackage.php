@@ -23,6 +23,8 @@ class ImportOneCPackage extends ImportOneCBase
 	use PackageTrait;
 	use LoggerTrait;
 
+	const DELETE_IF_NOT_FOUND_RELATED_PAYMENT_DOCUMENT 	= 0x0001;
+
 	private static $instance = null;
 	private static $settings = null;
 
@@ -232,6 +234,8 @@ class ImportOneCPackage extends ImportOneCBase
     public static function configuration()
     {
 		parent::configuration();
+
+		static::setConfig(static::DELETE_IF_NOT_FOUND_RELATED_PAYMENT_DOCUMENT);
 
     	ManagerImport::registerInstance(static::getParentEntityTypeId(), OneC\ImportSettings::getCurrent(), new OneC\CollisionOrder(), new OneC\CriterionOrder());
 		ManagerImport::registerInstance(static::getShipmentEntityTypeId(), OneC\ImportSettings::getCurrent(), new OneC\CollisionShipment(), new OneC\CriterionShipment());
@@ -663,31 +667,44 @@ class ImportOneCPackage extends ImportOneCBase
         {
             foreach($paymentList as $id=>$payment)
             {
-				$typeId = $this->resolveEntityTypeId($payment);
-
-                /** @var Exchange\Entity\PaymentImport $item */
-				$item = $this->entityFactoryCreate($typeId);
-                ManagerImport::configure($item);
-                static::load($item, array('ID'=>$id), $order);
-				$collision = $item->getLoadedCollision();
-
-				$collision->resolve($item);
-				if(!$item->hasCollisionErrors())
-                {
-                    $result = $item->delete();
-                }
-                else
-                {
-					$item->setCollisions(Exchange\EntityCollisionType::BeforeUpdatePaymentDeletedError, $item->getParentEntity());
-                }
-
-                $collisions = $item->getCollisions();
-                $item->markedEntityCollisions($collisions);
+				$result = $this->paymentDelete($payment);
+				if(!$result->isSuccess())
+					break;
             }
         }
 
         return $result;
     }
+
+    protected function paymentDelete(Payment $payment)
+	{
+		$result = new Result();
+
+		$typeId = $this->resolveEntityTypeId($payment);
+		/** @var Order $order */
+		$order = $payment->getCollection()->getOrder();
+
+		/** @var Exchange\Entity\PaymentImport $item */
+		$item = $this->entityFactoryCreate($typeId);
+		ManagerImport::configure($item);
+		static::load($item, array('ID'=>$payment->getId()), $order);
+		$collision = $item->getLoadedCollision();
+
+		$collision->resolve($item);
+		if(!$item->hasCollisionErrors())
+		{
+			$result = $item->delete();
+		}
+		else
+		{
+			$item->setCollisions(Exchange\EntityCollisionType::BeforeUpdatePaymentDeletedError, $item->getParentEntity());
+		}
+
+		$collisions = $item->getCollisions();
+		$item->markedEntityCollisions($collisions);
+
+		return $result;
+	}
 
     /**
      * Modify the order and all dependent entities before import
@@ -737,6 +754,7 @@ class ImportOneCPackage extends ImportOneCBase
     protected function onBeforeEntityModify(Exchange\Entity\OrderImport $orderImport, array $items)
     {
         $result = new Result();
+		$paymentResult = new Result();
 
         /**
 		 * @var Result $basketResult
@@ -744,11 +762,15 @@ class ImportOneCPackage extends ImportOneCBase
 		 * @var Result $shipmentResult
 		 * */
 		$basketItemsResult = $this->onBeforeBasketModify($orderImport, $items);
-		$paymentResult = $this->onBeforePaymentCollectionModify($orderImport, $items);
-		$shipmentResult = $this->onBeforeShipmentCollectionModify($orderImport, $items);
 
-		if(!$paymentResult->isSuccess())
-			$result->addWarnings($paymentResult->getErrors());
+		if(static::$config & static::DELETE_IF_NOT_FOUND_RELATED_PAYMENT_DOCUMENT)
+		{
+			$paymentResult = $this->onBeforePaymentCollectionModify($orderImport, $items);
+			if(!$paymentResult->isSuccess())
+				$result->addWarnings($paymentResult->getErrors());
+		}
+
+		$shipmentResult = $this->onBeforeShipmentCollectionModify($orderImport, $items);
 
 		if(!$shipmentResult->isSuccess())
 			$result->addWarnings($shipmentResult->getErrors());

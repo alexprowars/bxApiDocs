@@ -9,10 +9,10 @@ Loc::loadMessages(__FILE__);
 
 class PropertyFeature
 {
-	const EVENT_ID_FEATURE_LIST = 'OnPropertyFeatureBuildList';
+	const EVENT_ID_FEATURE_LIST = 'OnPropertyFeatureBuildList'; // event name for build feature list
 
-	const FEATURE_ID_LIST_PAGE_SHOW = 'LIST_PAGE_SHOW';
-	const FEATURE_ID_DETAIL_PAGE_SHOW = 'DETAIL_PAGE_SHOW';
+	const FEATURE_ID_LIST_PAGE_SHOW = 'LIST_PAGE_SHOW'; // show property in element list
+	const FEATURE_ID_DETAIL_PAGE_SHOW = 'DETAIL_PAGE_SHOW'; // detail page show property
 
 	/**
 	 * Add features for new property. Do not check features in database.
@@ -175,6 +175,12 @@ class PropertyFeature
 		return $result;
 	}
 
+	/**
+	 * Returns verified list of features for add, update or set.
+	 *
+	 * @param array $list	Raw features.
+	 * @return array|null
+	 */
 	protected static function checkFeatureList(array $list)
 	{
 		if (empty($list))
@@ -193,6 +199,12 @@ class PropertyFeature
 		return $result;
 	}
 
+	/**
+	 * Checks feature parameters. Returns normalized data or null.
+	 *
+	 * @param array $feature	Raw feature parameters.
+	 * @return array|null
+	 */
 	protected static function checkFeature(array $feature)
 	{
 		if (empty($feature))
@@ -220,14 +232,22 @@ class PropertyFeature
 		];
 	}
 
+	/**
+	 * Returns unique feature index for search.
+	 *
+	 * @param array $feature	Normalize feature parameters.
+	 * @return string
+	 */
 	public static function getIndex(array $feature)
 	{
 		return $feature['MODULE_ID'].':'.$feature['FEATURE_ID'];
 	}
 
 	/**
-	 * @param array $property
-	 * @param array $description
+	 * Build a list of available features for a property.
+	 *
+	 * @param array $property		Property description.
+	 * @param array $description	Additional description.
 	 * @return array
 	 */
 	public static function getPropertyFeatureList(array $property, array $description = [])
@@ -263,6 +283,17 @@ class PropertyFeature
 		return $result;
 	}
 
+	/**
+	 * Returns iblock properties identifiers (ID or CODE), showed in element list.
+	 *
+	 * @param int $iblockId			Iblock identifier.
+	 * @param array $parameters		Options.
+	 * 	keys are case sensitive:
+	 *		<ul>
+	 * 		<li>CODE	Return symbolic code as identifier (Y/N, default N).
+	 *		</ul>
+	 * @return array|null
+	 */
 	public static function getListPageShowPropertyCodes($iblockId, array $parameters = [])
 	{
 		$iblockId = (int)$iblockId;
@@ -279,6 +310,17 @@ class PropertyFeature
 		);
 	}
 
+	/**
+	 * Returns iblock properties identifiers (ID or CODE), showed on detail element page.
+	 *
+	 * @param int $iblockId			Iblock identifier.
+	 * @param array $parameters		Options.
+	 * 	keys are case sensitive:
+	 *		<ul>
+	 * 		<li>CODE	Return symbolic code as identifier (Y/N, default N).
+	 *		</ul>
+	 * @return array|null
+	 */
 	public static function getDetailPageShowProperties($iblockId, array $parameters = [])
 	{
 		$iblockId = (int)$iblockId;
@@ -295,6 +337,23 @@ class PropertyFeature
 		);
 	}
 
+	/**
+	 * Internal method for getting the list of features by filter (within one information block).
+	 *
+	 * @param int $iblockId			Iblock identifier.
+	 * @param array $filter			Feature filter.
+	 * @param array $parameters		Options.
+	 * 	keys are case sensitive:
+	 *		<ul>
+	 * 		<li>CODE	Return symbolic code as identifier (Y/N, default N).
+	 *		</ul>
+	 * @return array|null
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	protected static function getFilteredPropertyCodes($iblockId, array $filter, array $parameters = [])
 	{
 		if ((string)Main\Config\Option::get('iblock', 'property_features_enabled') !== 'Y')
@@ -335,6 +394,13 @@ class PropertyFeature
 		return (!empty($result) ? array_values($result) : null);
 	}
 
+	/**
+	 * Returns property identifier. Internal method.
+	 *
+	 * @param array $property	Property description (the ID and CODE fields are definitely needed)
+	 * @param bool $getCode		if true, returns property code or ID (if CODE is empty). Other - returns ID.
+	 * @return int|string
+	 */
 	protected static function getPropertyCode(array $property, $getCode = false)
 	{
 		if ($getCode)
@@ -348,6 +414,12 @@ class PropertyFeature
 		}
 	}
 
+	/**
+	 * Check and normalize feature description. Internal method.
+	 *
+	 * @param array $row	Feature description.
+	 * @return array
+	 */
 	private static function prepareFeatureDescription(array $row)
 	{
 		if (empty($row))
@@ -366,6 +438,12 @@ class PropertyFeature
 		];
 	}
 
+	/**
+	 * Returns a list of features available to any information block.
+	 * Used when building a list of features for an information block property.
+	 *
+	 * @return array
+	 */
 	private static function getIblockFeatureList()
 	{
 		return [
@@ -382,6 +460,13 @@ class PropertyFeature
 		];
 	}
 
+	/**
+	 * Returns three if the feature engine is enabled.
+	 *
+	 * @return bool
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
 	public static function isEnabledFeatures()
 	{
 		return ((string)Main\Config\Option::get('iblock', 'property_features_enabled') == 'Y');

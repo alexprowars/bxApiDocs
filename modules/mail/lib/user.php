@@ -291,29 +291,7 @@ class User
 			return false;
 		}
 
-		$attachments = array();
-		if (is_array($message['files']))
-		{
-			$tmpDir = \CTempFile::getDirectoryName(6);
-			checkDirPath($tmpDir);
-
-			foreach($message['files'] as $key => $file)
-			{
-				if(
-					!is_uploaded_file($file['tmp_name'])
-					|| $file['size'] <= 0
-				)
-				{
-					continue;
-				}
-
-				$uploadFile = $tmpDir.basename($file['name']);
-				if(move_uploaded_file($file['tmp_name'], $uploadFile))
-				{
-					$attachments[$key] = $uploadFile;
-				}
-			}
-		}
+		$attachments = array_filter(array_column((array) $message['files'], 'tmp_name'));
 
 		$addResult = User\MessageTable::add(array(
 			'TYPE' => $type,
@@ -408,7 +386,14 @@ class User
 					{
 						foreach($tmpAttachments as $key => $uploadFile)
 						{
-							$attachments[$key] = \CFile::makeFileArray($uploadFile);
+							$file = \CFile::makeFileArray($uploadFile);
+							if (
+								is_array($file)
+								&& !empty($file)
+							)
+							{
+								$attachments[$key] = $file;
+							}
 						}
 					}
 				}
@@ -431,6 +416,9 @@ class User
 					if ($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
 					{
 						$cnt++;
+
+						global $pPERIOD;
+						$pPERIOD = 10 + (60 * $cnt);
 						return "\\Bitrix\\Mail\\User::sendEventAgent(".$messageId.", ".$cnt.");";
 					}
 				}

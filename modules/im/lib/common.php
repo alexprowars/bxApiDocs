@@ -5,17 +5,37 @@ class Common
 {
 	public static function getPublicDomain()
 	{
-		return (\Bitrix\Main\Context::getCurrent()->getRequest()->isHttps() ? "https" : "http")."://".((defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME) > 0) ? SITE_SERVER_NAME : \Bitrix\Main\Config\Option::get("main", "server_name", $_SERVER['SERVER_NAME']));
+		$schema = \Bitrix\Main\Context::getCurrent()->getRequest()->isHttps()? "https" : "http";
+
+		if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME) > 0)
+		{
+			$domain = SITE_SERVER_NAME;
+		}
+		else
+		{
+			$domain = \Bitrix\Main\Config\Option::get("main", "server_name", '');
+			if (!$domain)
+			{
+				$domain = $_SERVER['SERVER_NAME'].(in_array($_SERVER['SERVER_PORT'], Array(80, 443))?'':':'.$_SERVER['SERVER_PORT']);
+			}
+		}
+
+		return $schema."://".$domain;
 	}
 
 	public static function objectEncode($params)
 	{
 		if (is_array($params))
 		{
-			array_walk_recursive($params, function(&$item, $key){
-				if ($item instanceof \Bitrix\Main\Type\DateTime)
+			array_walk_recursive($params, function(&$value, $key)
+			{
+				if ($value instanceof \Bitrix\Main\Type\DateTime)
 				{
-					$item = date('c', $item->getTimestamp());
+					$value = date('c', $value->getTimestamp());
+				}
+				else if (is_string($key) && in_array($key, ['AVATAR', 'AVATAR_HR']) && is_string($value) && $value && strpos($value, 'http') !== 0)
+				{
+					$value = \Bitrix\Im\Common::getPublicDomain().$value;
 				}
 			});
 		}

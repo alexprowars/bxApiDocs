@@ -41,12 +41,38 @@ class File
 		));
 		if (!$res->fetch())
 		{
-			FileTable::add(array(
+			$res = FileTable::add(array(
 				'FILE_ID' => $fileId,
 				'ENTITY_ID' => $entityId,
 				'ENTITY_TYPE' => $entityType
 			));
+			$res->isSuccess();
 		}
+	}
+
+	/**
+	 * Get all files id from entity.
+	 * @param int $entityId Entity id.
+	 * @param int $entityType Entity type.
+	 * @return array
+	 */
+	protected static function getFiles($entityId, $entityType)
+	{
+		$files = [];
+		$res = FileTable::getList(array(
+			'select' => array(
+				'FILE_ID'
+			),
+			'filter' => array(
+				'ENTITY_ID' => $entityId,
+				'=ENTITY_TYPE' => $entityType
+			)
+		));
+		while ($row = $res->fetch())
+		{
+			$files[] = $row['FILE_ID'];
+		}
+		return $files;
 	}
 
 	/**
@@ -74,12 +100,13 @@ class File
 		));
 		while ($row = $res->fetch())
 		{
-			FileTable::update(
+			$resUpdate = FileTable::update(
 				$row['ID'],
 				array(
 					'FILE_ID' => -1 * abs($row['FILE_ID'])
 				)
 			);
+			$resUpdate->isSuccess();
 		}
 	}
 
@@ -131,15 +158,11 @@ class File
 				if ($fileData)
 				{
 					//@tmp log
-					\CEventLog::add(array(
-						'SEVERITY' => 'NOTICE',
-						'AUDIT_TYPE_ID' => 'LANDING_FILE_DELETE',
-						'MODULE_ID' => 'landing',
-						'ITEM_ID' => $fileData['SRC'],
-						'DESCRIPTION' => print_r(array(
-							'fileId' => $fid
-						), true)
-					));
+					Debug::log(
+						$fileData['SRC'],
+						'fileId: ' . $fid,
+						'LANDING_FILE_DELETE'
+					);
 					\CFile::delete($fid);
 				}
 			}
@@ -158,6 +181,19 @@ class File
 		{
 			self::add($fileId, $id, self::ENTITY_TYPE_SITE);
 		}
+	}
+
+	/**
+	 * Gets files id from site.
+	 * @param int $siteId Site id.
+	 * @return array
+	 */
+	public static function getFilesFromSite($siteId)
+	{
+		return self::getFiles(
+			$siteId,
+			self::ENTITY_TYPE_SITE
+		);
 	}
 
 	/**
@@ -183,6 +219,19 @@ class File
 		{
 			self::add($fileId, $lid, self::ENTITY_TYPE_LANDING);
 		}
+	}
+
+	/**
+	 * Gets files id from landing.
+	 * @param int $landingId Landing id.
+	 * @return array
+	 */
+	public static function getFilesFromLanding($landingId)
+	{
+		return self::getFiles(
+			$landingId,
+			self::ENTITY_TYPE_LANDING
+		);
 	}
 
 	/**
@@ -302,6 +351,19 @@ class File
 			}
 		}
 		return $fileIds;
+	}
+
+	/**
+	 * Gets files id from block.
+	 * @param int $blockId Block id.
+	 * @return array
+	 */
+	public static function getFilesFromBlock($blockId)
+	{
+		return self::getFiles(
+			$blockId,
+			self::ENTITY_TYPE_BLOCK
+		);
 	}
 
 	/**

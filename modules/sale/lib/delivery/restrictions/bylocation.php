@@ -37,6 +37,10 @@ class ByLocation extends Base
 
 	/**
 	 * This function should accept only location CODE, not ID, being a part of modern API
+	 * @param string $locationCode
+	 * @param array $restrictionParams
+	 * @param int $deliveryId
+	 * @return bool
 	 */
 	public static function check($locationCode, array $restrictionParams, $deliveryId = 0)
 	{
@@ -205,7 +209,6 @@ class ByLocation extends Base
 	 * @param $leftMargin
 	 * @param $rightMargin
 	 * @return array
-	 * @throws \Bitrix\Main\ArgumentException
 	 */
 	protected static function getLocationsCompat(array $restrictionFields, $leftMargin, $rightMargin)
 	{

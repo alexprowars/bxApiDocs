@@ -65,7 +65,7 @@ class AccountNumberGenerator
 		$accountNumber = static::getNextNumber($order);
 		if ($accountNumber)
 		{
-			$dbRes = $order::getList(['filter' => ["ACCOUNT_NUMBER" => $accountNumber]]);
+			$dbRes = $order::getList(['filter' => ["=ACCOUNT_NUMBER" => $accountNumber]]);
 			if ($dbRes->fetch())
 			{
 				return null;

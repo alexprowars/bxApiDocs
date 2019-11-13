@@ -7,6 +7,8 @@
  */
 namespace Bitrix\Main;
 
+use Bitrix\Socialnetwork\UserTagTable;
+
 class UserUtils
 {
 	/**
@@ -17,7 +19,7 @@ class UserUtils
 	{
 		$result = array();
 
-		if (UserTable::getEntity()->fullTextIndexEnabled('SEARCH_USER_CONTENT'))
+		if (UserIndexTable::getEntity()->fullTextIndexEnabled('SEARCH_USER_CONTENT'))
 		{
 			$find = '';
 			$findDepartmentOnly = false;
@@ -26,13 +28,13 @@ class UserUtils
 			{
 				$find = trim($fields['FIND']);
 
-				if (\Bitrix\Main\Search\Content::isIntegerToken($find))
+				if (Search\Content::isIntegerToken($find))
 				{
-					$find = \Bitrix\Main\Search\Content::prepareIntegerToken($find);
+					$find = Search\Content::prepareIntegerToken($find);
 				}
 				else
 				{
-					$find = \Bitrix\Main\Search\Content::prepareStringToken($find);
+					$find = Search\Content::prepareStringToken($find);
 				}
 			}
 			else
@@ -42,13 +44,13 @@ class UserUtils
 				{
 					if (isset($validFields[$key]) && $validFields[$key])
 					{
-						if (\Bitrix\Main\Search\Content::isIntegerToken($value))
+						if (Search\Content::isIntegerToken($value))
 						{
-							$find .= ' '.\Bitrix\Main\Search\Content::prepareIntegerToken($value);
+							$find .= ' '.Search\Content::prepareIntegerToken($value);
 						}
 						else
 						{
-							$find .= ' '.\Bitrix\Main\Search\Content::prepareStringToken($value);
+							$find .= ' '.Search\Content::prepareStringToken($value);
 						}
 						$find = trim($find);
 					}
@@ -60,19 +62,19 @@ class UserUtils
 					{
 						$findDepartmentOnly = true;
 					}
-					if (\Bitrix\Main\Search\Content::isIntegerToken($fields['UF_DEPARTMENT_NAME']))
+					if (Search\Content::isIntegerToken($fields['UF_DEPARTMENT_NAME']))
 					{
-						$find .= ' '.\Bitrix\Main\Search\Content::prepareIntegerToken($fields['UF_DEPARTMENT_NAME']);
+						$find .= ' '.Search\Content::prepareIntegerToken($fields['UF_DEPARTMENT_NAME']);
 					}
 					else
 					{
-						$find .= ' '.\Bitrix\Main\Search\Content::prepareStringToken($fields['UF_DEPARTMENT_NAME']);
+						$find .= ' '.Search\Content::prepareStringToken($fields['UF_DEPARTMENT_NAME']);
 					}
 					$find = trim($find);
 				}
 			}
 
-			if (\Bitrix\Main\Search\Content::canUseFulltextSearch($find, \Bitrix\Main\Search\Content::TYPE_MIXED))
+			if (Search\Content::canUseFulltextSearch($find, Search\Content::TYPE_MIXED))
 			{
 				$fiendField = $findDepartmentOnly? '*INDEX.SEARCH_DEPARTMENT_CONTENT': '*INDEX.SEARCH_USER_CONTENT';
 				$result[$fiendField] = $find;
@@ -148,20 +150,20 @@ class UserUtils
 	{
 		$result = array();
 
-		if (UserTable::getEntity()->fullTextIndexEnabled('SEARCH_ADMIN_CONTENT'))
+		if (UserIndexTable::getEntity()->fullTextIndexEnabled('SEARCH_ADMIN_CONTENT'))
 		{
 			$find = '';
 			if (array_key_exists('FIND', $fields))
 			{
 				$find = trim($fields['FIND']);
 
-				if (\Bitrix\Main\Search\Content::isIntegerToken($find))
+				if (Search\Content::isIntegerToken($find))
 				{
-					$find = \Bitrix\Main\Search\Content::prepareIntegerToken($find);
+					$find = Search\Content::prepareIntegerToken($find);
 				}
 				else
 				{
-					$find = \Bitrix\Main\Search\Content::prepareStringToken($find);
+					$find = Search\Content::prepareStringToken($find);
 				}
 			}
 			else
@@ -171,20 +173,20 @@ class UserUtils
 				{
 					if (isset($validFields[$key]) && $validFields[$key])
 					{
-						if (\Bitrix\Main\Search\Content::isIntegerToken($value))
+						if (Search\Content::isIntegerToken($value))
 						{
-							$find .= ' '.\Bitrix\Main\Search\Content::prepareIntegerToken($value);
+							$find .= ' '.Search\Content::prepareIntegerToken($value);
 						}
 						else
 						{
-							$find .= ' '.\Bitrix\Main\Search\Content::prepareStringToken($value);
+							$find .= ' '.Search\Content::prepareStringToken($value);
 						}
 						$find = trim($find);
 					}
 				}
 			}
 
-			if (\Bitrix\Main\Search\Content::canUseFulltextSearch($find, \Bitrix\Main\Search\Content::TYPE_MIXED))
+			if (Search\Content::canUseFulltextSearch($find, Search\Content::TYPE_MIXED))
 			{
 				$result['*INDEX.SEARCH_ADMIN_CONTENT'] = $find;
 			}
@@ -281,7 +283,7 @@ class UserUtils
 	public static function getDepartmentNames($departmentIds)
 	{
 		$result = Array();
-		if (!\Bitrix\Main\ModuleManager::isModuleInstalled('intranet'))
+		if (!ModuleManager::isModuleInstalled('intranet'))
 		{
 			return $result;
 		}
@@ -289,17 +291,17 @@ class UserUtils
 		$cacheTtl = 2592000;
 		$cacheName = 'iblock_structure';
 		$cachePath = '/bx/user/company/structure';
-		$iblockStructureId = \Bitrix\Main\Config\Option::get('intranet', 'iblock_structure', 0);
+		$iblockStructureId = Config\Option::get('intranet', 'iblock_structure', 0);
 
-		$taggedCache = \Bitrix\Main\Application::getInstance()->getTaggedCache();
+		$taggedCache = Application::getInstance()->getTaggedCache();
 
 		$companyStructure = Array();
-		$cache = \Bitrix\Main\Data\Cache::createInstance();
+		$cache = Data\Cache::createInstance();
 		if ($cache->initCache($cacheTtl, $cacheName, $cachePath) && false)
 		{
 			$companyStructure = $cache->getVars();
 		}
-		else if ($iblockStructureId <= 0 || !\Bitrix\Main\Loader::includeModule('iblock'))
+		else if ($iblockStructureId <= 0 || !Loader::includeModule('iblock'))
 		{
 			return $result;
 		}
@@ -332,6 +334,174 @@ class UserUtils
 
 				$result[] = $companyStructure[$id];
 			}
+		}
+
+		return $result;
+	}
+
+	public static function getCountryValue(array $params = [])
+	{
+		static $countriesList = null;
+		$result = '';
+
+		$value = (isset($params['VALUE']) ? intval($params['VALUE']) : 0);
+		if ($value <= 0)
+		{
+			return $result;
+		}
+
+		if ($countriesList === null)
+		{
+			$countriesList = [];
+			$countries = getCountryArray();
+			foreach($countries['reference_id'] as $key => $countryId)
+			{
+				$countriesList[$countryId] = $countries['reference'][$key];
+			}
+		}
+
+		if (isset($countriesList[$value]))
+		{
+			$result = $countriesList[$value];
+		}
+
+		return $result;
+	}
+
+	public static function getUFContent($userId)
+	{
+		global $USER_FIELD_MANAGER;
+
+		static $supportedUserFieldTypeIDs = [
+			'address',
+			'string',
+			'integer',
+			'double',
+			'boolean',
+//			'date',
+//			'datetime',
+			'enumeration',
+			'employee',
+			'file',
+			'url',
+			'crm',
+			'crm_status',
+			'iblock_element',
+			'iblock_section'
+		];
+
+		$ufList = $USER_FIELD_MANAGER->getUserFields(UserTable::getUfId(), $userId, LANGUAGE_ID, false);
+
+		$userTypeMap = array_fill_keys($supportedUserFieldTypeIDs, true);
+		foreach($ufList as $key => $userField)
+		{
+			if(
+				!isset($userTypeMap[$userField['USER_TYPE_ID']])
+				|| $userField['EDIT_IN_LIST'] === "N"
+			)
+			{
+				unset($ufList[$key]);
+			}
+		}
+		$ufList = self::postFilterFields($ufList);
+
+		$ufValuesList = [];
+		foreach($ufList as $userField)
+		{
+			$ufValuesList[] = self::getUserFieldValue($userField);
+		}
+
+		return implode(' ', $ufValuesList);
+	}
+
+	private static function postFilterFields(array $fields)
+	{
+		static $ufReserved = [
+			'UF_DEPARTMENT',
+			'UF_USER_CRM_ENTITY',
+			'UF_PUBLIC',
+			'UF_TIMEMAN',
+			'UF_TM_REPORT_REQ',
+			'UF_TM_FREE',
+			'UF_REPORT_PERIOD',
+			'UF_1C',
+			'UF_TM_ALLOWED_DELTA',
+			'UF_SETTING_DATE',
+			'UF_LAST_REPORT_DATE',
+			'UF_DELAY_TIME',
+			'UF_TM_REPORT_DATE',
+			'UF_TM_DAY',
+			'UF_TM_TIME',
+			'UF_TM_REPORT_TPL',
+			'UF_TM_MIN_DURATION',
+			'UF_TM_MIN_FINISH',
+			'UF_TM_MAX_START',
+			'UF_CONNECTOR_MD5',
+			'UF_WORK_BINDING',
+			'UF_IM_SEARCH',
+			'UF_BXDAVEX_CALSYNC',
+			'UF_BXDAVEX_MLSYNC',
+			'UF_UNREAD_MAIL_COUNT',
+			'UF_BXDAVEX_CNTSYNC',
+			'UF_BXDAVEX_MAILBOX',
+			'UF_VI_PASSWORD',
+			'UF_VI_BACKPHONE',
+			'UF_VI_PHONE',
+			'UF_VI_PHONE_PASSWORD'
+		];
+
+		foreach ($ufReserved as $ufId)
+		{
+			if (isset($fields[$ufId]))
+			{
+				unset($fields[$ufId]);
+			}
+		}
+
+		return $fields;
+	}
+
+	private static function getUserFieldValue(array $userField)
+	{
+		global $USER_FIELD_MANAGER;
+
+		$userTypeID = isset($userField['USER_TYPE_ID']) ? $userField['USER_TYPE_ID'] : '';
+		if($userTypeID === 'boolean')
+		{
+			$values = [];
+			if(isset($userField['VALUE']) && (bool)$userField['VALUE'] && isset($userField['EDIT_FORM_LABEL']))
+			{
+				$values[] = $userField['EDIT_FORM_LABEL'];
+			}
+		}
+		else
+		{
+			$values = explode(',', $USER_FIELD_MANAGER->getPublicText($userField));
+		}
+
+		return implode(' ', $values);
+	}
+
+	public static function getTagsContent($userId)
+	{
+		$result = '';
+
+		if (Loader::includeModule('socialnetwork'))
+		{
+			$tagsList = [];
+
+			$res = UserTagTable::getList([
+				'filter' => [
+					'USER_ID' => $userId
+				],
+				'select' => [ 'NAME' ]
+			]);
+			while($tagFields = $res->fetch())
+			{
+				$tagsList[] = $tagFields['NAME'];
+			}
+
+			$result = implode(' ', $tagsList);
 		}
 
 		return $result;

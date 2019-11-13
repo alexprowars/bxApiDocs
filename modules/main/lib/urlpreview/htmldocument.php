@@ -281,7 +281,7 @@ class HtmlDocument
 		{
 			if(isset($metaElement['http-equiv']) && strtolower($metaElement['http-equiv']) == 'content-type')
 			{
-				if(preg_match('/charset=([\w-]+)/', $metaElement['content'], $matches))
+				if(preg_match('/charset=([\w\-]+)/', $metaElement['content'], $matches))
 				{
 					$result = $matches[1];
 					break;
@@ -310,7 +310,7 @@ class HtmlDocument
 
 		foreach($elements[0] as $element)
 		{
-			preg_match_all('/(?:([\w-_]+)=([\'"])(.*?)\g{-2}\s*)/mis', $element, $matches);
+			preg_match_all('/(?:([\w\-_]+)=([\'"])(.*?)\g{-2}\s*)/mis', $element, $matches);
 
 			$elementAttributes = array();
 			foreach($matches[1] as $k => $attributeName)

@@ -1,5 +1,6 @@
 <?php
 namespace Bitrix\Main\Numerator\Service;
+
 use Bitrix\Main\Entity\ReferenceField;
 use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
@@ -44,7 +45,7 @@ class NumeratorRequestManager
 			$result = $this->updateNextSequentialNumber($id);
 			if ($result->isSuccess())
 			{
-				$result =Numerator::update($id, $this->request->getPostList()->toArray());
+				$result = Numerator::update($id, $this->request->getPostList()->toArray());
 			}
 		}
 		else
@@ -93,15 +94,10 @@ class NumeratorRequestManager
 
 				if ($sequence && count($sequence) == 1)
 				{
-					$dbNextNumber = $sequence[0]['NEXT_NUMBER'];
-					if ((int)$nextNumber <= (int)$dbNextNumber)
-					{
-						return $result->addError(new Error(Loc::getMessage('MAIN_NUMERATOR_EDIT_ERROR_NUMBER_LESS')));
-					}
 					$numerator = Numerator::load($id);
 					if ($numerator)
 					{
-						$res = $numerator->setNextSequentialNumber($nextNumber, $dbNextNumber, $sequence[0]['TEXT_KEY']);
+						$res = $numerator->setNextSequentialNumber($nextNumber, $sequence[0]['NEXT_NUMBER'], $sequence[0]['TEXT_KEY']);
 						if (!$res->isSuccess())
 						{
 							$errors = $res->getErrors();

@@ -15,7 +15,7 @@ class UpdateResult extends Result
 	/** @var int */
 	protected $affectedRowsCount;
 
-	/** @var array|int */
+	/** @var array */
 	protected $primary;
 
 	public function __construct()
@@ -51,7 +51,7 @@ class UpdateResult extends Result
 
 	/**
 	 * Returns id of updated record
-	 * @return int
+	 * @return array|int|string
 	 */
 	public function getId()
 	{

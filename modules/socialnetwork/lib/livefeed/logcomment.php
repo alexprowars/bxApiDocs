@@ -157,6 +157,27 @@ final class LogComment extends Provider
 		return $result;
 	}
 
+	public function getSuffix()
+	{
+		$logEventId = $this->getLogEventId();
+
+		if (!empty($logEventId))
+		{
+			$providerIntranetNewUser = new IntranetNewUser();
+			if (in_array($logEventId, $providerIntranetNewUser->getEventId()))
+			{
+				return 'INTRANET_NEW_USER';
+			}
+
+			$providerBitrix24NewUser = new Bitrix24NewUser();
+			if (in_array($logEventId, $providerBitrix24NewUser->getEventId()))
+			{
+				return 'BITRIX24_NEW_USER';
+			}
+		}
+		return '';
+	}
+
 	public function add($params = array())
 	{
 		global $USER, $DB;
@@ -196,10 +217,41 @@ final class LogComment extends Provider
 			$parser = new \CTextParser();
 		}
 
+		$commentEventId = false;
+
+		$providerIntranetNewUser = new IntranetNewUser();
+		if (in_array($this->getLogEventId(), $providerIntranetNewUser->getEventId()))
+		{
+			$commentEventId = 'intranet_new_user_comment';
+		}
+
+		if (!$commentEventId)
+		{
+			$providerBitrix24NewUser = new Bitrix24NewUser();
+			if (in_array($this->getLogEventId(), $providerBitrix24NewUser->getEventId()))
+			{
+				$commentEventId = 'bitrix24_new_user_comment';
+			}
+		}
+
+		if (!$commentEventId)
+		{
+			$providerPhotogalleryAlbum = new PhotogalleryAlbum();
+			if (in_array($this->getLogEventId(), $providerPhotogalleryAlbum->getEventId()))
+			{
+				$commentEventId = 'photoalbum_comment';
+			}
+		}
+
+		if (!$commentEventId)
+		{
+			$commentEventId = 'data_comment';
+		}
+
 		$sonetCommentFields = array(
 			"ENTITY_TYPE" => $this->getLogEntityType(),
 			"ENTITY_ID" => $this->getLogEntityId(),
-			"EVENT_ID" => $this->getEventId()[0],
+			"EVENT_ID" => $commentEventId,
 			"MESSAGE" => $message,
 			"TEXT_MESSAGE" => $parser->convert4mail($message),
 			"MODULE_ID" => "tasks",

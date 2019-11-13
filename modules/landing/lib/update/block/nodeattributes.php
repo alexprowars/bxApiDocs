@@ -1,5 +1,4 @@
-<?
-
+<?php
 namespace Bitrix\Landing\Update\Block;
 
 
@@ -50,6 +49,12 @@ final class NodeAttributes extends Stepper
 				if (strpos($key, self::OPTION_NAME) === 0 && $key != self::OPTION_STATUS_NAME)
 				{
 					$option = ($option !== '' ? @unserialize($option) : array());
+					
+					if(!isset($option['BLOCKS']))
+					{
+						Option::delete('landing', array('name' => $key));
+						continue;
+					}
 
 //					save params
 					$params[$key] = $option['PARAMS'];
@@ -87,7 +92,7 @@ final class NodeAttributes extends Stepper
 			$this->status['UPDATER_ID'] = '';
 			$this->status['PARAMS'] = $params;
 			
-			Option::set('landing', self::OPTION_STATUS_NAME, $this->status);
+			Option::set('landing', self::OPTION_STATUS_NAME, serialize($this->status));
 		}
 	}
 	
@@ -317,7 +322,6 @@ final class NodeAttributes extends Stepper
 		
 		$code = $block->getCode();
 		$doc = $block->getDom();
-		$wrapper = Block::getAnchor($block->getId());
 
 //		save to journal
 		$eventLog = new \CEventLog;
@@ -331,17 +335,7 @@ final class NodeAttributes extends Stepper
 		
 		foreach ($this->dataToUpdate['BLOCKS'][$code]['NODES'] as $selector => $rules)
 		{
-//			apply to the all block or by selector
-			if ($selector == $wrapper)
-			{
-				$resultList = array(
-					array_pop($doc->getChildNodesArray()),
-				);
-			}
-			else
-			{
-				$resultList = $doc->querySelectorAll($selector);
-			}
+			$resultList = $doc->querySelectorAll($selector);
 
 //			prepare ATTRS
 			$nodeAttrs = array();
@@ -401,11 +395,31 @@ final class NodeAttributes extends Stepper
 					$nodeClasses = array_diff($nodeClasses, $rules['CLASSES_REMOVE']);
 					$classesChange = true;
 				}
+				
 				if (is_array($rules['CLASSES_ADD']) && !empty($rules['CLASSES_ADD']))
 				{
 					$nodeClasses = array_merge($nodeClasses, $rules['CLASSES_ADD']);
 					$classesChange = true;
 				}
+				
+				if (is_array($rules['CLASSES_REPLACE']) &&
+					array_key_exists('PATTERN', $rules['CLASSES_REPLACE']) &&
+					array_key_exists('REPLACE', $rules['CLASSES_REPLACE']))
+				{
+					$nodeClassesStr = implode(' ', $nodeClasses);
+					$nodeClassesReplace = preg_replace(
+						'/' . $rules['CLASSES_REPLACE']['PATTERN'] . '/i',
+						$rules['CLASSES_REPLACE']['REPLACE'],
+						$nodeClassesStr
+					);
+					if ($nodeClassesReplace !== null)
+					{
+						$nodeClasses = explode(' ', $nodeClassesReplace);
+						$classesChange = true;
+					}
+				}
+				
+//				APPLY changes
 				$nodeClasses = array_unique($nodeClasses);
 				if ($classesChange)
 				{
@@ -473,35 +487,33 @@ final class NodeAttributes extends Stepper
 				$firstNode = $resultList[0];
 				$parentNode = $firstNode->getParentNode();
 				$parentClasses = $parentNode->getClassList();
-				if (empty(array_diff($rules['CONTAINER_ADD']['CLASSES'], $parentClasses)))
+				if (!empty(array_diff($rules['CONTAINER_ADD']['CLASSES'], $parentClasses)))
 				{
-					break;
-				}
-
-//				param TO_EACH - add container to each element. Default (false) - add container once to all nodes
-				if (!isset($rules['CONTAINER_ADD']['TO_EACH']) || $rules['CONTAINER_ADD']['TO_EACH'] !== true)
-				{
-					$containerNode = new Element($rules['CONTAINER_ADD']['TAG'] ? $rules['CONTAINER_ADD']['TAG'] : 'div');
-					$containerNode->setOwnerDocument($doc);
-					$containerNode->setClassName(implode(' ', $rules['CONTAINER_ADD']['CLASSES']));
-					$parentNode->insertBefore($containerNode, $firstNode);
-					foreach ($resultList as $resultNode)
-					{
-						$parentNode->removeChild($resultNode);
-						$containerNode->appendChild($resultNode);
-					}
-				}
-				else
-				{
-					foreach ($resultList as $resultNode)
+//					param TO_EACH - add container to each element. Default (false) - add container once to all nodes
+					if (!isset($rules['CONTAINER_ADD']['TO_EACH']) || $rules['CONTAINER_ADD']['TO_EACH'] !== true)
 					{
 						$containerNode = new Element($rules['CONTAINER_ADD']['TAG'] ? $rules['CONTAINER_ADD']['TAG'] : 'div');
 						$containerNode->setOwnerDocument($doc);
 						$containerNode->setClassName(implode(' ', $rules['CONTAINER_ADD']['CLASSES']));
-						$parentNode->insertBefore($containerNode, $resultNode);
-						
-						$parentNode->removeChild($resultNode);
-						$containerNode->appendChild($resultNode);
+						$parentNode->insertBefore($containerNode, $firstNode);
+						foreach ($resultList as $resultNode)
+						{
+							$parentNode->removeChild($resultNode);
+							$containerNode->appendChild($resultNode);
+						}
+					}
+					else
+					{
+						foreach ($resultList as $resultNode)
+						{
+							$containerNode = new Element($rules['CONTAINER_ADD']['TAG'] ? $rules['CONTAINER_ADD']['TAG'] : 'div');
+							$containerNode->setOwnerDocument($doc);
+							$containerNode->setClassName(implode(' ', $rules['CONTAINER_ADD']['CLASSES']));
+							$parentNode->insertBefore($containerNode, $resultNode);
+							
+							$parentNode->removeChild($resultNode);
+							$containerNode->appendChild($resultNode);
+						}
 					}
 				}
 			}
@@ -777,39 +789,24 @@ final class NodeAttributes extends Stepper
 //	}
 	
 	/**
-	 * @param $name
-	 * @param array $data
-	 * @throws \Bitrix\Main\Db\SqlQueryException
-	 *
+	 * Logging some actions.
+	 * @param $name Log item name.
+	 * @param array $data Some data.
 	 * @return void
 	 */
 	private static function log($name, $data = array())
 	{
-//		only for clouds
+		// only for clouds
 		if (!Manager::isB24())
 		{
 			return;
 		}
-		
-		$data = serialize($data);
-		
-		$connection = \Bitrix\Main\Application::getConnection();
-		if (!$connection->isTableExists('b_landing_nodeupdater_log'))
-		{
-			$connection->query("
-				CREATE TABLE `b_landing_nodeupdater_log` (
-				  `ID` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-				  `NAME` varchar(255) NULL,
-				  `DATA` text NULL,
-				  `DATE` timestamp NULL DEFAULT NOW()
-				);
-			");
-			
-		}
-		$name = $connection->getSqlHelper()->forSql($name);
-		$data = $connection->getSqlHelper()->forSql($data);
-		$query = "INSERT INTO `b_landing_nodeupdater_log` (`NAME`, `DATA`) VALUES ('$name', '$data');";
-		$dbRes = $connection->query($query);
+
+		\Bitrix\Landing\Debug::log(
+			$name,
+			$data,
+			'LANDING_UPDATER_LOG'
+		);
 	}
 	
 	
@@ -817,5 +814,3 @@ final class NodeAttributes extends Stepper
 	 * Code for updater.php see in landing/dev/updater
 	 */
 }
-
-?>
