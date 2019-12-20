@@ -1255,9 +1255,6 @@ abstract class BasketItemBase extends Internals\CollectableEntity
 			}
 		}
 
-		$controller = Internals\CustomFieldsController::getInstance();
-		$controller->save($this);
-
 		if (!$r->isSuccess())
 		{
 			return $r;
@@ -1266,6 +1263,9 @@ abstract class BasketItemBase extends Internals\CollectableEntity
 		if ($id > 0)
 		{
 			$result->setId($id);
+
+			$controller = Internals\CustomFieldsController::getInstance();
+			$controller->save($this);
 		}
 
 		$r = $this->callEventSaleBasketItemSaved($isNew);

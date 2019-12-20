@@ -107,6 +107,7 @@ class TransportBase implements Transport\iBase
 	public function send(Message\Adapter $message)
 	{
 		$config = $message->getConfiguration();
+		$clientId = $config->get('CLIENT_ID');
 		$audienceId = $config->get('AUDIENCE_ID');
 		$audiencePhoneId = $config->get('AUDIENCE_PHONE_ID');
 		$audienceEmailId = $config->get('AUDIENCE_EMAIL_ID');
@@ -175,6 +176,8 @@ class TransportBase implements Transport\iBase
 			$contacts[$adsContactType] = array($message->getRecipientCode());
 
 
+			$service = Retargeting\AdsAudience::getService();
+			$service->setClientId($clientId);
 			Retargeting\AdsAudience::useQueue();
 			$isSuccess = Retargeting\AdsAudience::addToAudience($this->adsConfig, $contacts);
 		}

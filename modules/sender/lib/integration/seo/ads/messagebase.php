@@ -72,6 +72,12 @@ abstract class MessageBase implements Message\iBase, Message\iAds
 		$this->configuration->setArrayOptions(array(
 			array(
 				'type' => 'string',
+				'code' => 'CLIENT_ID',
+				'name' => Loc::getMessage('SENDER_INTEGRATION_SEO_MESSAGE_CONFIG_CLIENT_ID'),
+				'required' => true,
+			),
+			array(
+				'type' => 'string',
 				'code' => 'ACCOUNT_ID',
 				'name' => Loc::getMessage('SENDER_INTEGRATION_SEO_MESSAGE_CONFIG_ACCOUNT_ID'),
 				'required' => false,
@@ -148,11 +154,13 @@ abstract class MessageBase implements Message\iBase, Message\iAds
 					array(
 						'INPUT_NAME_PREFIX' => 'CONFIGURATION_',
 						'CONTAINER_NODE_ID' => $containerNodeId,
-						'PROVIDER' => Service::getAdsProvider($self->getAdsType()),
-						'ACCOUNT_ID' => $configuration->get('ACCOUNT_ID'),
+						'PROVIDER' => Service::getAdsProvider($self->getAdsType(), $configuration->getOption('CLIENT_ID')->getValue()),
+						'ACCOUNT_ID' => $configuration->getOption('ACCOUNT_ID')->getValue(),
+						'CLIENT_ID' => $configuration->getOption('CLIENT_ID')->getValue(),
 						'AUDIENCE_ID' => $audienceId,
-						'AUTO_REMOVE_DAY_NUMBER' => $configuration->get('AUTO_REMOVE_DAY_NUMBER'),
+						'AUTO_REMOVE_DAY_NUMBER' => $configuration->getOption('AUTO_REMOVE_DAY_NUMBER')->getValue(),
 						'JS_DESTROY_EVENT_NAME' => '',
+						'TITLE_NODE_SELECTOR' => '[data-role="letter-title"]',
 						'HAS_ACCESS' => true // TODO: check SENDER-module permissions
 					)
 				);
@@ -173,7 +181,18 @@ abstract class MessageBase implements Message\iBase, Message\iAds
 	public function saveConfiguration(Message\Configuration $configuration)
 	{
 		$config = $configuration;
-		if (!$config->get('AUDIENCE_ID') && !$config->get('AUDIENCE_EMAIL_ID') && !$config->get('AUDIENCE_PHONE_ID'))
+		if (!$config->getOption('CLIENT_ID')->getValue())
+		{
+			$result = new Result();
+			$result->addError(new Error(Loc::getMessage('SENDER_INTEGRATION_SEO_MESSAGE_ERROR_NO_CLIENT')));
+
+			return $result;
+		}
+		if (
+			!$config->getOption('AUDIENCE_ID')->getValue() &&
+			!$config->getOption('AUDIENCE_EMAIL_ID')->getValue() &&
+			!$config->getOption('AUDIENCE_PHONE_ID')->getValue()
+		)
 		{
 			$result = new Result();
 			$result->addError(new Error(Loc::getMessage('SENDER_INTEGRATION_SEO_MESSAGE_ERROR_NO_AUDIENCE')));

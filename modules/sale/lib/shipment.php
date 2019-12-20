@@ -1004,10 +1004,12 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		else
 		{
 			$r = $this->add();
-		}
 
-		$controller = Internals\CustomFieldsController::getInstance();
-		$controller->save($this);
+			if ($r->getId() > 0)
+			{
+				$id = $r->getId();
+			}
+		}
 
 		if (!$r->isSuccess())
 		{
@@ -1026,9 +1028,12 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			return $result;
 		}
 
-		if ($r->getId() > 0)
+		if ($id > 0)
 		{
-			$id = $r->getId();
+			$result->setId($id);
+
+			$controller = Internals\CustomFieldsController::getInstance();
+			$controller->save($this);
 		}
 
 		if ($this->fields->isChanged('ALLOW_DELIVERY')
@@ -1051,11 +1056,6 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			/** @var Notify $notifyClassName */
 			$notifyClassName = $registry->getNotifyClassName();
 			$notifyClassName::callNotify($this, EventActions::EVENT_ON_SHIPMENT_DEDUCTED);
-		}
-
-		if ($id > 0)
-		{
-			$result->setId($id);
 		}
 
 		if (!$this->isSystem())
@@ -1175,7 +1175,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		{
 			$result->setData($resultData);
 		}
-
+	
 		$id = $r->getId();
 		$this->setFieldNoDemand('ID', $id);
 		$this->setAccountNumber($id);

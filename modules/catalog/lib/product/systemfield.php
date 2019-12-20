@@ -13,13 +13,17 @@ use Bitrix\Main,
 
 final class SystemField
 {
-	const STORAGE_TABLE_NAME_PREFIX = 'b_hlsys_';
+	public const CODE_MARKING_CODE_GROUP = 'MARKING_CODE_GROUP';
 
-	const STORAGE_NAME_PREFIX = 'PRODUCT_';
+	private const FIELD_PREFIX = 'UF_';
 
-	const FIELD_PREFIX = 'UF_';
+	private const STORAGE_TABLE_NAME_PREFIX = 'b_hlsys_';
 
-	const CODE_MARKING_CODE_GROUP = 'MARKING_CODE_GROUP';
+	private const STORAGE_NAME_PREFIX = 'PRODUCT_';
+
+	private const FIELD_ID_PREFIX = 'product_';
+
+	private const FIELD_NAME_PREFIX = 'PRODUCT_';
 
 	/** @var bool */
 	private static $highloadInclude = null;
@@ -139,6 +143,26 @@ final class SystemField
 			$row['MARKING_CODE_GROUP'] = null;
 		}
 		unset($id);
+	}
+
+	/**
+	 * @return array|null
+	 */
+	public static function getGroupActions()
+	{
+		$result = [];
+
+		$row = self::getMarkingCodeGroupAction();
+		if (!empty($row))
+			$result[] = $row;
+
+		return (!empty($result) ? $result : null);
+	}
+
+	public static function getGroupActionRequest(string $fieldId)
+	{
+		$value = Main\Context::getCurrent()->getRequest()->get(self::getFormRowFieldName($fieldId));
+		return ($value === null ? null : [$fieldId => $value]);
 	}
 
 	/**
@@ -708,5 +732,98 @@ final class SystemField
 		unset($row, $iterator);
 		unset($entityDataClass, $entity);
 		unset($group, $groupList);
+	}
+
+	private static function getMarkingCodeGroupAction()
+	{
+		self::initStorageList();
+
+		if (!self::initHighloadBlock())
+			return null;
+
+		$userField = new \CUserTypeEntity();
+		$iterator = $userField->GetList(
+			[],
+			[
+				'ENTITY_ID' => Catalog\ProductTable::getUfId(),
+				'FIELD_NAME' => self::$storageList[self::CODE_MARKING_CODE_GROUP]['UF_FIELD']
+			]
+		);
+		$row = $iterator->Fetch();
+		unset($iterator);
+		if (empty($row))
+			return null;
+
+		$description = $userField->GetByID($row['ID']);
+
+		$list = [];
+		$list[] = [
+			'VALUE' => '0',
+			'NAME' => Loc::getMessage('BX_CATALOG_PRODUCT_SYSTEMFIELD_MESS_VALUE_EMPTY')
+		];
+		$storage = self::$storageList[self::CODE_MARKING_CODE_GROUP];
+		$entity = Highload\HighloadBlockTable::compileEntity($storage['NAME']);
+		$entityDataClass = $entity->getDataClass();
+		$found = false;
+		$iterator = $entityDataClass::getList([
+			'select' => ['*'],
+			'order' => ['ID' => 'ASC']
+		]);
+		while ($value = $iterator->fetch())
+		{
+			$found = true;
+			$list[] = [
+				'VALUE' => $value['ID'],
+				'NAME' => $value['UF_NAME']
+			];
+		}
+		unset($value, $iterator);
+
+		if (!$found)
+			return null;
+
+		$action = [];
+		$action[] = [
+			'ACTION' => Main\Grid\Panel\Actions::RESET_CONTROLS
+		];
+		$action[] = [
+			'ACTION' => Main\Grid\Panel\Actions::CREATE,
+			'DATA' => [
+				[
+					'TYPE' => Main\Grid\Panel\Types::DROPDOWN,
+					'ID' => self::getFormRowFieldId($storage['UF_FIELD']),
+					'NAME' => self::getFormRowFieldName($storage['UF_FIELD']),
+					'ITEMS' => $list
+				],
+			]
+		];
+
+		$title = (isset($description['EDIT_FORM_LABEL'][LANGUAGE_ID])
+			? $description['EDIT_FORM_LABEL'][LANGUAGE_ID]
+			: $storage['UF_FIELD']
+		);
+
+		$result = [
+			'NAME' => $title,
+			'VALUE' => $storage['UF_FIELD'],
+			'ONCHANGE' => $action
+		];
+		unset($action);
+
+		return $result;
+	}
+
+	private static function getFormRowFieldName(string $field)
+	{
+		return self::FIELD_NAME_PREFIX.strtoupper($field);
+	}
+
+	/**
+	 * @param string $field
+	 * @return string
+	 */
+	private static function getFormRowFieldId(string $field)
+	{
+		return self::FIELD_ID_PREFIX.strtolower($field).'_id';
 	}
 }

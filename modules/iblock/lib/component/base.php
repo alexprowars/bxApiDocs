@@ -309,6 +309,11 @@ abstract class Base extends \CBitrixComponent
 		{
 			$params['PRODUCT_ID_VARIABLE'] = 'id';
 		}
+		$params['ACTION_COMPARE_VARIABLE'] = isset($params['ACTION_COMPARE_VARIABLE']) ? trim($params['ACTION_COMPARE_VARIABLE']) : '';
+		if ($params['ACTION_COMPARE_VARIABLE'] == '' || !preg_match(self::PARAM_TITLE_MASK, $params['ACTION_COMPARE_VARIABLE']))
+		{
+			$params['ACTION_COMPARE_VARIABLE'] = $params['ACTION_VARIABLE'];
+		}
 
 		$params['PRODUCT_QUANTITY_VARIABLE'] = isset($params['PRODUCT_QUANTITY_VARIABLE']) ? trim($params['PRODUCT_QUANTITY_VARIABLE']) : '';
 		if ($params['PRODUCT_QUANTITY_VARIABLE'] == '' || !preg_match(self::PARAM_TITLE_MASK, $params['PRODUCT_QUANTITY_VARIABLE']))
@@ -3308,6 +3313,7 @@ abstract class Base extends \CBitrixComponent
 
 		$actionVar = $this->arParams['ACTION_VARIABLE'];
 		$productIdVar = $this->arParams['PRODUCT_ID_VARIABLE'];
+		$compareActionVar = $this->arParams['ACTION_COMPARE_VARIABLE'];
 
 		if (!empty($this->arParams['CUSTOM_CURRENT_PAGE']))
 		{
@@ -3352,8 +3358,8 @@ abstract class Base extends \CBitrixComponent
 		$urls['~BUY_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_BUY.'&'.$productIdVar.'=#ID#';
 		$urls['~ADD_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_ADD_TO_BASKET.'&'.$productIdVar.'=#ID#';
 		$urls['~SUBSCRIBE_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_SUBSCRIBE.'&'.$productIdVar.'=#ID#';
-		$urls['~COMPARE_URL_TEMPLATE'] = $comparePath.$actionVar.'='.self::ACTION_ADD_TO_COMPARE.'&'.$productIdVar.'=#ID#';
-		$urls['~COMPARE_DELETE_URL_TEMPLATE'] = $comparePath.$actionVar.'='.self::ACTION_DELETE_FROM_COMPARE.'&'.$productIdVar.'=#ID#';
+		$urls['~COMPARE_URL_TEMPLATE'] = $comparePath.$compareActionVar.'='.self::ACTION_ADD_TO_COMPARE.'&'.$productIdVar.'=#ID#';
+		$urls['~COMPARE_DELETE_URL_TEMPLATE'] = $comparePath.$compareActionVar.'='.self::ACTION_DELETE_FROM_COMPARE.'&'.$productIdVar.'=#ID#';
 
 		$urls['BUY_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~BUY_URL_TEMPLATE']);
 		$urls['ADD_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~ADD_URL_TEMPLATE']);
@@ -3756,7 +3762,7 @@ abstract class Base extends \CBitrixComponent
 				$propertyList = $this->getPropertyList($catalog['IBLOCK_ID'], $loadPropertyCodes);
 				unset($loadPropertyCodes);
 
-				if (!empty($propertyList))
+				if (!empty($propertyList) || $this->useDiscountCache)
 				{
 					\CIBlockElement::GetPropertyValuesArray($offers, $catalog['IBLOCK_ID'], $offersFilter);
 					foreach ($offers as &$row)
@@ -3769,22 +3775,25 @@ abstract class Base extends \CBitrixComponent
 								\CCatalogDiscount::SetProductPropertiesCache($row['ID'], $row["PROPERTIES"]);
 						}
 
-						foreach ($propertyList as $pid)
+						if (!empty($propertyList))
 						{
-							if (!isset($row["PROPERTIES"][$pid]))
-								continue;
-							$prop = &$row["PROPERTIES"][$pid];
-							$boolArr = is_array($prop["VALUE"]);
-							if(
-								($boolArr && !empty($prop["VALUE"])) ||
-								(!$boolArr && (string)$prop["VALUE"] !== '')
-							)
+							foreach ($propertyList as $pid)
 							{
-								$row["DISPLAY_PROPERTIES"][$pid] = \CIBlockFormatProperties::GetDisplayValue($row, $prop, "catalog_out");
+								if (!isset($row["PROPERTIES"][$pid]))
+									continue;
+								$prop = &$row["PROPERTIES"][$pid];
+								$boolArr = is_array($prop["VALUE"]);
+								if (
+									($boolArr && !empty($prop["VALUE"])) ||
+									(!$boolArr && (string)$prop["VALUE"] !== '')
+								)
+								{
+									$row["DISPLAY_PROPERTIES"][$pid] = \CIBlockFormatProperties::GetDisplayValue($row, $prop, "catalog_out");
+								}
+								unset($boolArr, $prop);
 							}
-							unset($boolArr, $prop);
+							unset($pid);
 						}
-						unset($pid);
 					}
 					unset($row);
 				}
@@ -4062,7 +4071,6 @@ abstract class Base extends \CBitrixComponent
 
 		if (
 			($action == self::ACTION_ADD_TO_BASKET || $action == self::ACTION_BUY || $action == self::ACTION_SUBSCRIBE)
-			&& $productId > 0
 			&& Loader::includeModule('sale')
 			&& Loader::includeModule('catalog')
 		)
@@ -4193,11 +4201,20 @@ abstract class Base extends \CBitrixComponent
 		$quantity = 0;
 		$productProperties = array();
 
-		$product = $this->getProductInfo($productId);
-		if (empty($product))
+		$productId = (int)$productId;
+		if ($productId <= 0)
 		{
-			$errorMsg = Loc::getMessage('CATALOG_PRODUCT_NOT_FOUND');
+			$errorMsg = Loc::getMessage('CATALOG_PRODUCT_ID_IS_ABSENT');
 			$successfulAdd = false;
+		}
+		if ($successfulAdd)
+		{
+			$product = $this->getProductInfo($productId);
+			if (empty($product))
+			{
+				$errorMsg = Loc::getMessage('CATALOG_PRODUCT_NOT_FOUND');
+				$successfulAdd = false;
+			}
 		}
 		if ($successfulAdd)
 		{

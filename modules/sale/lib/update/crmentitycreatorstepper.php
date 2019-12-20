@@ -60,8 +60,6 @@ final class CrmEntityCreator
 			$this->setResponsible();
 		}
 
-		$this->createDealBinding();
-
 		$saveOrderResult = $this->order->save();
 		if (!$saveOrderResult->isSuccess())
 		{
@@ -171,20 +169,6 @@ final class CrmEntityCreator
 		}
 
 		$this->order->setRequisiteLink($result);
-	}
-
-	/**
-	 * @return void
-	 * @throws Main\ArgumentException
-	 * @throws Main\SystemException
-	 */
-	private function createDealBinding()
-	{
-		$dealBinding = $this->order->getDealBinding();
-		if (!$dealBinding->isExist())
-		{
-			$dealBinding->create();
-		}
 	}
 
 	/**
@@ -725,7 +709,11 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function bindAgent()
 	{
-		if (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
+		if (!defined("SITE_TEMPLATE_ID"))
+		{
+			return;
+		}
+		elseif (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
 		{
 			return;
 		}

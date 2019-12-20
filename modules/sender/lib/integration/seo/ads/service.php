@@ -65,9 +65,11 @@ class Service
 	 * @param string $adsType Ads type.
 	 * @return array
 	 */
-	public static function getAdsProvider($adsType)
+	public static function getAdsProvider($adsType, $clientId = null)
 	{
-		$providers = Retargeting\AdsAudience::getProviders();
+		$service = Retargeting\AdsAudience::getService();
+		$service->setClientId($clientId);
+		$providers = Retargeting\AdsAudience::getProviders([$adsType]);
 		$isFound = false;
 		$provider = array();
 		foreach ($providers as $type => $provider)
