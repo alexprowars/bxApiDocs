@@ -355,6 +355,9 @@ class UserDataProvider extends EntityDataProvider
 			'COMPANY' => [
 				'whiteList' => 'WORK_COMPANY'
 			],
+			'WORK_DEPARTMENT' => [
+				'whiteList' => 'WORK_DEPARTMENT'
+			],
 		];
 
 		foreach($fieldsList as $column => $field)

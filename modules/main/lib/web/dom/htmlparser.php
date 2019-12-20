@@ -392,7 +392,10 @@ class HtmlParser extends Parser
 				}
 				else
 				{
-					$parentNode->getParentNode()->bxNodeFoundCloseTag = true;
+					if ($parentNode->getParentNode())
+					{
+						$parentNode->getParentNode()->bxNodeFoundCloseTag = true;
+					}
 					return $parentNode;
 				}
 			}

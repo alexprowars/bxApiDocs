@@ -327,12 +327,26 @@ abstract class Base extends \CBitrixComponent
 			$params['PRODUCT_PROPS_VARIABLE'] = 'prop';
 		}
 
-		$params['SET_TITLE'] = $params['SET_TITLE'] !== 'N';
-		$params['SET_BROWSER_TITLE'] = isset($params['SET_BROWSER_TITLE']) && $params['SET_BROWSER_TITLE'] === 'N' ? 'N' : 'Y';
-		$params['SET_META_KEYWORDS'] = isset($params['SET_META_KEYWORDS']) && $params['SET_META_KEYWORDS'] === 'N' ? 'N' : 'Y';
-		$params['SET_META_DESCRIPTION'] = isset($params['SET_META_DESCRIPTION']) && $params['SET_META_DESCRIPTION'] === 'N' ? 'N' : 'Y';
-		$params['ADD_SECTIONS_CHAIN'] = isset($params['ADD_SECTIONS_CHAIN']) && $params['ADD_SECTIONS_CHAIN'] === 'Y';
+		// landing mode
+		if (
+			isset($params['ALLOW_SEO_DATA'])
+			&& ($params['ALLOW_SEO_DATA'] === 'Y' || $params['ALLOW_SEO_DATA'] === 'N')
+		)
+		{
+			$params['SET_TITLE'] = $params['ALLOW_SEO_DATA'] === 'Y';
+			$params['SET_BROWSER_TITLE'] = $params['ALLOW_SEO_DATA'];
+			$params['SET_META_KEYWORDS'] = $params['ALLOW_SEO_DATA'];
+			$params['SET_META_DESCRIPTION'] = $params['ALLOW_SEO_DATA'];
+		}
+		else
+		{
+			$params['SET_TITLE'] = $params['SET_TITLE'] !== 'N';
+			$params['SET_BROWSER_TITLE'] = isset($params['SET_BROWSER_TITLE']) && $params['SET_BROWSER_TITLE'] === 'N' ? 'N' : 'Y';
+			$params['SET_META_KEYWORDS'] = isset($params['SET_META_KEYWORDS']) && $params['SET_META_KEYWORDS'] === 'N' ? 'N' : 'Y';
+			$params['SET_META_DESCRIPTION'] = isset($params['SET_META_DESCRIPTION']) && $params['SET_META_DESCRIPTION'] === 'N' ? 'N' : 'Y';
+		}
 		$params['SET_LAST_MODIFIED'] = isset($params['SET_LAST_MODIFIED']) && $params['SET_LAST_MODIFIED'] === 'Y';
+		$params['ADD_SECTIONS_CHAIN'] = isset($params['ADD_SECTIONS_CHAIN']) && $params['ADD_SECTIONS_CHAIN'] === 'Y';
 		$params['DISPLAY_COMPARE'] = isset($params['DISPLAY_COMPARE']) && $params['DISPLAY_COMPARE'] === 'Y';
 		$params['COMPARE_PATH'] = isset($params['COMPARE_PATH']) ? trim($params['COMPARE_PATH']) : '';
 		$params['COMPARE_NAME'] = isset($params['COMPARE_NAME']) ? trim($params['COMPARE_NAME']) : 'CATALOG_COMPARE_LIST';
@@ -3308,12 +3322,15 @@ abstract class Base extends \CBitrixComponent
 	 */
 	protected function initUrlTemplates()
 	{
-		/** @global \CMain $APPLICATION */
-		global $APPLICATION;
-
 		$actionVar = $this->arParams['ACTION_VARIABLE'];
 		$productIdVar = $this->arParams['PRODUCT_ID_VARIABLE'];
 		$compareActionVar = $this->arParams['ACTION_COMPARE_VARIABLE'];
+
+		$clearParams = Main\HttpRequest::getSystemParameters();
+		$clearParams[] = $actionVar;
+		$clearParams[] = $productIdVar;
+		$clearParams[] = $compareActionVar;
+		$clearParams[] = '';
 
 		if (!empty($this->arParams['CUSTOM_CURRENT_PAGE']))
 		{
@@ -3321,51 +3338,47 @@ abstract class Base extends \CBitrixComponent
 		}
 		else
 		{
-			$pageUrl = $this->request->isAjaxRequest()
-				? $this->arParams['CURRENT_BASE_PAGE']
-				: $APPLICATION->GetCurPageParam();
-		}
-
-		$currentPath = \CHTTP::urlDeleteParams(
-			$pageUrl,
-			array($productIdVar, $actionVar, ''),
-			array('delete_system_params' => true)
-		);
-		$currentPath .= (stripos($currentPath, '?') === false ? '?' : '&');
-
-		if ($this->arParams['USE_COMPARE_LIST'] == 'Y')
-		{
-			$comparePath = $currentPath;
-		}
-		else
-		{
-			if ($this->arParams['COMPARE_PATH'] == '')
+			if ($this->request->isAjaxRequest())
 			{
-				$comparePath = $currentPath;
+				$pageUrl = $this->arParams['CURRENT_BASE_PAGE'];
 			}
 			else
 			{
-				$comparePath = \CHTTP::urlDeleteParams(
-					$this->arParams['COMPARE_PATH'],
-					array(''),
-					array('delete_system_params' => true)
-				);
-				$comparePath .= (stripos($comparePath, '?') === false ? '?' : '&');
+				$pageUrl = Main\Application::getInstance()->getContext()->getRequest()->getDecodedUri();
+
 			}
 		}
+		$currentUri = new Main\Web\Uri($pageUrl);
 
-		$urls = array();
-		$urls['~BUY_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_BUY.'&'.$productIdVar.'=#ID#';
-		$urls['~ADD_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_ADD_TO_BASKET.'&'.$productIdVar.'=#ID#';
-		$urls['~SUBSCRIBE_URL_TEMPLATE'] = $currentPath.$actionVar.'='.self::ACTION_SUBSCRIBE.'&'.$productIdVar.'=#ID#';
-		$urls['~COMPARE_URL_TEMPLATE'] = $comparePath.$compareActionVar.'='.self::ACTION_ADD_TO_COMPARE.'&'.$productIdVar.'=#ID#';
-		$urls['~COMPARE_DELETE_URL_TEMPLATE'] = $comparePath.$compareActionVar.'='.self::ACTION_DELETE_FROM_COMPARE.'&'.$productIdVar.'=#ID#';
+		if ($this->arParams['USE_COMPARE_LIST'] == 'N' && $this->arParams['COMPARE_PATH'] != '')
+		{
+			$compareUri = new Main\Web\Uri($this->arParams['COMPARE_PATH']);
+		}
+		else
+		{
+			$compareUri = $currentUri;
+		}
 
-		$urls['BUY_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~BUY_URL_TEMPLATE']);
-		$urls['ADD_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~ADD_URL_TEMPLATE']);
-		$urls['SUBSCRIBE_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~SUBSCRIBE_URL_TEMPLATE']);
-		$urls['COMPARE_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~COMPARE_URL_TEMPLATE']);
-		$urls['COMPARE_DELETE_URL_TEMPLATE'] = Main\Text\HtmlFilter::encode($urls['~COMPARE_DELETE_URL_TEMPLATE']);
+		$currentUri->deleteParams($clearParams);
+		$compareUri->deleteParams($clearParams);
+
+		$urls = [];
+		$urls['BUY_URL_TEMPLATE'] = $currentUri->addParams([$actionVar => self::ACTION_BUY, $productIdVar => '#ID#'])->getUri();
+		$urls['ADD_URL_TEMPLATE'] = $currentUri->addParams([$actionVar => self::ACTION_ADD_TO_BASKET, $productIdVar => '#ID#'])->getUri();
+		$urls['SUBSCRIBE_URL_TEMPLATE'] = $currentUri->addParams([$actionVar => self::ACTION_SUBSCRIBE, $productIdVar => '#ID#'])->getUri();
+
+		$urls['COMPARE_URL_TEMPLATE'] = $compareUri->addParams([$compareActionVar => self::ACTION_ADD_TO_COMPARE, $productIdVar => '#ID#'])->getUri();
+		$urls['COMPARE_DELETE_URL_TEMPLATE'] = $compareUri->addParams([$compareActionVar => self::ACTION_DELETE_FROM_COMPARE, $productIdVar => '#ID#'])->getUri();
+
+		unset($compareUri, $currentUri, $clearParams);
+
+		foreach (array_keys($urls) as $index)
+		{
+			$value = str_replace('%23ID%23', '#ID#', $urls[$index]); // format compatibility
+			$urls['~'.$index] = str_replace('%23ID%23', '#ID#', \CHTTP::urnEncode($value, 'utf-8')); // format compatibility
+			$urls[$index] = Main\Text\HtmlFilter::encode($value, ENT_QUOTES);
+		}
+		unset($index);
 
 		$this->storage['URLS'] = $urls;
 	}

@@ -10,15 +10,16 @@ Loc::loadMessages(__FILE__);
 
 class GroupAction
 {
-	private const ELEMENT_LIST = 'E';
-	private const SECTION_LIST = 'S';
-	private const MIXED_LIST = 'M';
-	private const SUBELEMENT_LIST = 'O';
+	public const GRID_TYPE_UI = 'main.ui.grid';
+	public const GRID_TYPE_LIST = 'adminList';
+	public const GRID_TYPE_SUBLIST = 'subList';
 
 	private const PREFIX_ID = 'iblock_grid_action_';
 
 	/** @var string Grid Id */
 	protected $entityId = '';
+
+	protected $gridType = self::GRID_TYPE_UI;
 
 	/** @var array */
 	protected $options = [];
@@ -45,9 +46,15 @@ class GroupAction
 
 	public function __construct(array $options)
 	{
+		$this->options = $options;
+
 		$this->entityId = $options['ENTITY_ID'];
 		$this->iblockId = $options['IBLOCK_ID'];
-		$this->options = $options;
+
+		if (isset($options['GRID_TYPE']))
+		{
+			$this->setGridType($options['GRID_TYPE']);
+		}
 
 		$this->mainSnippet = new Main\Grid\Panel\Snippet();
 		$this->request = Main\Context::getCurrent()->getRequest();
@@ -158,6 +165,38 @@ class GroupAction
 	protected function initActions()
 	{
 		$this->actionHandlers = $this->getActionHandlers();
+	}
+
+	/**
+	 * @param string $value
+	 * @return void
+	 */
+	protected function setGridType(string $value)
+	{
+		if (
+			$value === self::GRID_TYPE_UI
+			|| $value === self::GRID_TYPE_LIST
+			|| $value === self::GRID_TYPE_SUBLIST
+		)
+		{
+			$this->gridType = $value;
+		}
+	}
+
+	/**
+	 * @return string
+	 */
+	protected function getGridType()
+	{
+		return $this->gridType;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function isUiGrid()
+	{
+		return $this->getGridType() === self::GRID_TYPE_UI;
 	}
 
 	/**
@@ -408,6 +447,7 @@ class GroupAction
 	/**
 	 * @param array $params
 	 * @return true
+	 * @noinspection PhpUnusedParameterInspection
 	 */
 	protected function actionSelectAllPanel(array $params = [])
 	{
@@ -464,19 +504,26 @@ class GroupAction
 		$params['APPLY_BUTTON_ID'] = 'clear_counter_confirm';
 		$params['DEFAULT_CONFIRM_MESSAGE'] = Loc::getMessage('IBLOCK_GRID_PANEL_ACTION_CLEAR_COUNTER_CONFIRM');
 
-		return [
-			'name' => $name,
-			'type' => 'multicontrol',
-			'action' => [
-				[
-					'ACTION' => Main\Grid\Panel\Actions::RESET_CONTROLS
-				],
-				[
-					'ACTION' => Main\Grid\Panel\Actions::CREATE,
-					'DATA' => [ $this->getApplyButtonWithConfirm($params) ]
+		if ($this->isUiGrid())
+		{
+			return [
+				'name' => $name,
+				'type' => 'multicontrol',
+				'action' => [
+					[
+						'ACTION' => Main\Grid\Panel\Actions::RESET_CONTROLS
+					],
+					[
+						'ACTION' => Main\Grid\Panel\Actions::CREATE,
+						'DATA' => [$this->getApplyButtonWithConfirm($params)]
+					]
 				]
-			]
-		];
+			];
+		}
+		else
+		{
+			return $name;
+		}
 	}
 
 	/**
@@ -493,19 +540,26 @@ class GroupAction
 		$params['APPLY_BUTTON_ID'] = 'code_translit_confirm';
 		$params['DEFAULT_CONFIRM_MESSAGE'] = Loc::getMessage('IBLOCK_GRID_PANEL_ACTION_CODE_TRANSLITERATION_CONFIRM');
 
-		return [
-			'name' => $name,
-			'type' => 'multicontrol',
-			'action' => [
-				[
-					'ACTION' => Main\Grid\Panel\Actions::RESET_CONTROLS
-				],
-				[
-					'ACTION' => Main\Grid\Panel\Actions::CREATE,
-					'DATA' => [ $this->getApplyButtonWithConfirm($params) ]
+		if ($this->isUiGrid())
+		{
+			return [
+				'name' => $name,
+				'type' => 'multicontrol',
+				'action' => [
+					[
+						'ACTION' => Main\Grid\Panel\Actions::RESET_CONTROLS
+					],
+					[
+						'ACTION' => Main\Grid\Panel\Actions::CREATE,
+						'DATA' => [$this->getApplyButtonWithConfirm($params)]
+					]
 				]
-			]
-		];
+			];
+		}
+		else
+		{
+			return $name;
+		}
 	}
 
 	/**
@@ -514,6 +568,10 @@ class GroupAction
 	 */
 	protected function actionAdjustSectionPanel(array $params = [])
 	{
+		if (!$this->isUiGrid())
+		{
+			return null;
+		}
 		if ($this->iblockConfig['SECTIONS'] != 'Y')
 		{
 			return null;
@@ -551,6 +609,10 @@ class GroupAction
 	 */
 	protected function actionAddSectionPanel(array $params = [])
 	{
+		if (!$this->isUiGrid())
+		{
+			return null;
+		}
 		if ($this->iblockConfig['SECTIONS'] != 'Y')
 		{
 			return null;
@@ -633,6 +695,18 @@ class GroupAction
 		if (empty($statusList))
 			return null;
 
+		$data = [];
+		$data[] = [
+			'TYPE' => Main\Grid\Panel\Types::DROPDOWN,
+			'ID' => $this->getElementId('workflow_status'),
+			'NAME' => 'wf_status_id',
+			'ITEMS' => $statusList
+		];
+		if ($this->isUiGrid())
+		{
+			$data[] = $this->getApplyButton($params);
+		}
+
 		$params['APPLY_BUTTON_ID'] = 'send_workflow_status';
 		return [
 			'name' => $name,
@@ -643,15 +717,7 @@ class GroupAction
 				],
 				[
 					'ACTION' => Main\Grid\Panel\Actions::CREATE,
-					'DATA' => [
-						[
-							'TYPE' => Main\Grid\Panel\Types::DROPDOWN,
-							'ID' => $this->getElementId('workflow_status'),
-							'NAME' => 'wf_status_id',
-							'ITEMS' => $statusList
-						],
-						$this->getApplyButton($params)
-					]
+					'DATA' => $data
 				]
 			]
 		];

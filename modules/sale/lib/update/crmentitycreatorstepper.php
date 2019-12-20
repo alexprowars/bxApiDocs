@@ -87,7 +87,7 @@ final class CrmEntityCreator
 	private function setResponsible()
 	{
 		$this->order->setFieldNoDemand(
-			'RESPONSIBLE_ID',
+			"RESPONSIBLE_ID",
 			Settings\OrderSettings::getCurrent()->getDefaultResponsibleId()
 		);
 	}
@@ -111,8 +111,8 @@ final class CrmEntityCreator
 			{
 				/** @var Order\Contact $contact */
 				$contact = Order\Contact::create($communication);
-				$contact->setField('ENTITY_ID', $matches[\CCrmOwnerType::Contact]);
-				$contact->setField('IS_PRIMARY', 'Y');
+				$contact->setField("ENTITY_ID", $matches[\CCrmOwnerType::Contact]);
+				$contact->setField("IS_PRIMARY", "Y");
 
 				$communication->addItem($contact);
 			}
@@ -121,8 +121,8 @@ final class CrmEntityCreator
 			{
 				/** @var Order\Company $company */
 				$company = Order\Company::create($communication);
-				$company->setField('ENTITY_ID', $matches[\CCrmOwnerType::Company]);
-				$company->setField('IS_PRIMARY', 'Y');
+				$company->setField("ENTITY_ID", $matches[\CCrmOwnerType::Company]);
+				$company->setField("IS_PRIMARY", "Y");
 
 				$communication->addItem($company);
 			}
@@ -152,20 +152,20 @@ final class CrmEntityCreator
 		}
 
 		$result = [
-			'MC_REQUISITE_ID' => 0,
-			'MC_BANK_DETAIL_ID' => 0
+			"MC_REQUISITE_ID" => 0,
+			"MC_BANK_DETAIL_ID" => 0
 		];
 
 		$requisiteList = $entity->getRequisiteList();
 		if ($requisiteList)
 		{
-			$result['REQUISITE_ID'] = current($requisiteList)['ID'];
+			$result["REQUISITE_ID"] = current($requisiteList)["ID"];
 		}
 
 		$bankRequisiteList = $entity->getBankRequisiteList();
 		if ($bankRequisiteList)
 		{
-			$result['BANK_DETAIL_ID'] = current($bankRequisiteList)['ID'];
+			$result["BANK_DETAIL_ID"] = current($bankRequisiteList)["ID"];
 		}
 
 		$this->order->setRequisiteLink($result);
@@ -212,13 +212,13 @@ final class CrmEntityCreator
 		Timeline\OrderController::getInstance()->onCreate(
 			(int)$this->order->getId(),
 			[
-				'FIELDS' => [
-					'ID' => (int)$this->order->getId(),
-					'CREATED_BY' => $this->order->getField('CREATED_BY'),
-					'RESPONSIBLE_ID' => $this->order->getField('RESPONSIBLE_ID'),
-					'DATE_INSERT' => $this->order->getField('DATE_INSERT'),
-					'PRICE' => $this->order->getField('PRICE'),
-					'CURRENCY' => $this->order->getField('CURRENCY')
+				"FIELDS" => [
+					"ID" => (int)$this->order->getId(),
+					"CREATED_BY" => $this->order->getField("CREATED_BY"),
+					"RESPONSIBLE_ID" => $this->order->getField("RESPONSIBLE_ID"),
+					"DATE_INSERT" => $this->order->getField("DATE_INSERT"),
+					"PRICE" => $this->order->getField("PRICE"),
+					"CURRENCY" => $this->order->getField("CURRENCY")
 				]
 			]
 		);
@@ -230,18 +230,18 @@ final class CrmEntityCreator
 	 */
 	private function addTimelineEntryOnCancel()
 	{
-		if ($this->order->getField('CANCELED') !== 'Y')
+		if ($this->order->getField("CANCELED") !== "Y")
 			return;
 
 		$fields = [
-			'ID' => $this->order->getId(),
-			'CANCELED' => $this->order->getField('CANCELED'),
+			"ID" => $this->order->getId(),
+			"CANCELED" => $this->order->getField("CANCELED"),
 		];
 
-		$fields['REASON_CANCELED'] = $this->order->getField('REASON_CANCELED');
-		$fields['EMP_CANCELED_ID'] = $this->order->getField('EMP_CANCELED_ID');
+		$fields["REASON_CANCELED"] = $this->order->getField("REASON_CANCELED");
+		$fields["EMP_CANCELED_ID"] = $this->order->getField("EMP_CANCELED_ID");
 
-		Timeline\OrderController::getInstance()->onCancel($this->order->getId(), ['FIELDS' => $fields]);
+		Timeline\OrderController::getInstance()->onCancel($this->order->getId(), ["FIELDS" => $fields]);
 	}
 
 	/**
@@ -252,13 +252,13 @@ final class CrmEntityCreator
 	 */
 	private function addTimelineEntryOnStatusModify($prevStatus, $currentStatus)
 	{
-		$modifyParams = array(
-			'PREVIOUS_FIELDS' => array('STATUS_ID' => $prevStatus),
-			'CURRENT_FIELDS' => array(
-				'STATUS_ID' => $currentStatus,
-				'EMP_STATUS_ID' => $this->order->getField('EMP_STATUS_ID') // ?
-			),
-		);
+		$modifyParams = [
+			"PREVIOUS_FIELDS" => ["STATUS_ID" => $prevStatus],
+			"CURRENT_FIELDS" => [
+				"STATUS_ID" => $currentStatus,
+				"EMP_STATUS_ID" => $this->order->getField("EMP_STATUS_ID") // ?
+			],
+		];
 
 		Timeline\OrderController::getInstance()->onModify($this->order->getId(), $modifyParams);
 	}
@@ -272,9 +272,9 @@ final class CrmEntityCreator
 	{
 		$fields = $this->order->getFields();
 		$selectedFields =[
-			'DATE_INSERT_TIMESTAMP' => $fields['DATE_INSERT']->getTimestamp(),
-			'PRICE' => $currentPrice,
-			'CURRENCY' => $fields['CURRENCY']
+			"DATE_INSERT_TIMESTAMP" => $fields["DATE_INSERT"]->getTimestamp(),
+			"PRICE" => $currentPrice,
+			"CURRENCY" => $fields["CURRENCY"]
 		];
 
 		Timeline\OrderController::getInstance()->updateSettingFields(
@@ -320,7 +320,7 @@ final class CrmEntityCreator
 		}
 
 		$arFilterHistory = ["ORDER_ID" => $this->order->getId()];
-		$arFilterHistory['@TYPE'] = ["ORDER_STATUS_CHANGED", "ORDER_PRICE_CHANGED"];
+		$arFilterHistory["@TYPE"] = ["ORDER_STATUS_CHANGED", "ORDER_PRICE_CHANGED"];
 
 		// new order history data
 		$dbOrderChange = Sale\Internals\OrderChangeTable::getList([
@@ -392,37 +392,37 @@ final class CrmEntityCreator
 		$dealBinding = $this->order->getDealBinding();
 		if ($dealBinding->isExist())
 		{
-			$authorId = (int)$this->order->getField('RESPONSIBLE_ID');
+			$authorId = (int)$this->order->getField("RESPONSIBLE_ID");
 
 			Timeline\OrderEntry::create([
-				'ENTITY_ID' => $this->order->getId(),
-				'TYPE_CATEGORY_ID' => Timeline\TimelineType::CREATION,
-				'AUTHOR_ID' => $authorId,
-				'SETTINGS' => [
-					'FIELDS' => [
-						'PAID' => $this->order->getField('PAYED'),
-						'DONE' => ($this->order->getField('STATUS_ID') === OrderStatus::getFinalStatus())
-							? 'Y'
-							: 'N',
-						'CANCELED' => $this->order->getField('CANCELED'),
+				"ENTITY_ID" => $this->order->getId(),
+				"TYPE_CATEGORY_ID" => Timeline\TimelineType::CREATION,
+				"AUTHOR_ID" => $authorId,
+				"SETTINGS" => [
+					"FIELDS" => [
+						"PAID" => $this->order->getField("PAYED"),
+						"DONE" => ($this->order->getField("STATUS_ID") === OrderStatus::getFinalStatus())
+							? "Y"
+							: "N",
+						"CANCELED" => $this->order->getField("CANCELED"),
 					]
 				],
-				'BINDINGS' => [
+				"BINDINGS" => [
 					[
-						'ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
-						'ENTITY_ID' => $dealBinding->getDealId(),
+						"ENTITY_TYPE_ID" => \CCrmOwnerType::Deal,
+						"ENTITY_ID" => $dealBinding->getDealId(),
 					]
 				],
 			]);
 
 			Timeline\LinkEntry::create([
-				'ENTITY_TYPE_ID' => \CCrmOwnerType::Order,
-				'ENTITY_ID' => $this->order->getId(),
-				'AUTHOR_ID' => $authorId,
-				'BINDINGS' => [
+				"ENTITY_TYPE_ID" => \CCrmOwnerType::Order,
+				"ENTITY_ID" => $this->order->getId(),
+				"AUTHOR_ID" => $authorId,
+				"BINDINGS" => [
 					[
-						'ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
-						'ENTITY_ID' => $dealBinding->getDealId(),
+						"ENTITY_TYPE_ID" => \CCrmOwnerType::Deal,
+						"ENTITY_ID" => $dealBinding->getDealId(),
 					]
 				]
 			]);
@@ -452,6 +452,8 @@ final class CrmEntityCreatorStepper extends Stepper
 	const IS_SALE_CRM_SITE_MASTER_FINISH = "~IS_SALE_CRM_SITE_MASTER_FINISH";
 	const IS_SALE_BSM_SITE_MASTER_FINISH = "~IS_SALE_BSM_SITE_MASTER_FINISH";
 
+	const PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED = "~ADMIN_PANEL_IS_ENABLED_FOR_";
+
 	/** @var string */
 	const WIZARD_SITE_ID = "~CRM_WIZARD_SITE_ID";
 
@@ -461,9 +463,12 @@ final class CrmEntityCreatorStepper extends Stepper
 	/** @var int max executing time in sec */
 	const MAX_EXECUTION_TIME = 5;
 
+	/** @var int max orders of iteration */
+	const MAX_ORDERS = 100;
+
 	protected static $moduleId = "sale";
 
-	private $orderList =  array();
+	private $orderList =  [];
 
 	private $params = [];
 
@@ -479,7 +484,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public function execute(array &$result)
 	{
-		if (!Main\Loader::includeModule('crm'))
+		if (!Main\Loader::includeModule("crm"))
 		{
 			return self::STOP_EXECUTING;
 		}
@@ -487,7 +492,6 @@ final class CrmEntityCreatorStepper extends Stepper
 		$this->initParams();
 
 		$this->orderList = $this->getOrders();
-
 		if (!$this->orderList)
 		{
 			self::unregisterEventHandler();
@@ -511,10 +515,10 @@ final class CrmEntityCreatorStepper extends Stepper
 
 		$this->createCrmEntity();
 
-		$result = array(
-			'count' => $this->getOrderCount(),
-			'steps' => $this->params["updated_order_count"],
-		);
+		$result = [
+			"count" => $this->getOrderCount(),
+			"steps" => $this->params["updated_order_count"],
+		];
 
 		return self::CONTINUE_EXECUTING;
 	}
@@ -559,8 +563,8 @@ final class CrmEntityCreatorStepper extends Stepper
 	private function initParams()
 	{
 		$params = Option::get(self::$moduleId, self::STEPPER_PARAMS, "");
-		$params = ($params !== "" ? @unserialize($params) : array());
-		$this->params = (is_array($params) ? $params : array());
+		$params = ($params !== "" ? @unserialize($params) : []);
+		$this->params = (is_array($params) ? $params : []);
 
 		if (empty($this->params))
 		{
@@ -591,12 +595,12 @@ final class CrmEntityCreatorStepper extends Stepper
 	private function getOrders()
 	{
 		$parameters = [
-			'select' => ['*'],
-			'order' => ['ID' => 'DESC']
+			"order" => ["ID" => "ASC"],
+			"limit" => self::MAX_ORDERS,
 		];
 		if ($this->params["last_order_id" ] !== null)
 		{
-			$parameters['filter'] = ['<ID' => $this->params["last_order_id"]];
+			$parameters["filter"] = [">ID" => $this->params["last_order_id"]];
 		}
 
 		return Order\Order::loadByFilter($parameters);
@@ -609,12 +613,12 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	private function getOrderCount()
 	{
-		return Order\Order::getList(array(
-			'select' => array('CNT'),
-			'runtime' => array(
-				new Main\Entity\ExpressionField('CNT', 'COUNT(*)')
-			)
-		))->fetch()['CNT'];
+		return Order\Order::getList([
+			"select" => ["CNT"],
+			"runtime" => [
+				new Main\Entity\ExpressionField("CNT", "COUNT(*)")
+			]
+		])->fetch()["CNT"];
 	}
 
 	/**
@@ -622,7 +626,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function setFinishStatus()
 	{
-		Main\Config\Option::set(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, 'Y');
+		Main\Config\Option::set(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "Y");
 	}
 
 	/**
@@ -632,7 +636,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function isFinished()
 	{
-		return (Main\Config\Option::get(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, 'N') === 'Y');
+		return (Main\Config\Option::get(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "N") === "Y");
 	}
 
 	/**
@@ -642,17 +646,25 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function isNeedStub()
 	{
-		if ((Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_STUB, "N") === "Y")
-			&& (Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_FINISH, "N") === "Y")
+		if (
+			(
+				Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_STUB, "N") === "Y"
+				&&
+				Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_FINISH, "N") === "Y"
+			)
+			||
+			(
+				Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_STUB, "N") === "Y"
+				&&
+				Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_FINISH, "N") === "Y"
+			)
 		)
 		{
-			return true;
-		}
-		elseif ((Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_STUB, "N") === "Y")
-			&& (Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_FINISH, "N") === "Y")
-		)
-		{
-			return true;
+			global $USER;
+			if (Option::get('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$USER->GetID()) !== 'Y')
+			{
+				return true;
+			}
 		}
 
 		return false;
@@ -665,10 +677,10 @@ final class CrmEntityCreatorStepper extends Stepper
 	{
 		/** @noinspection PhpUndefinedClassInspection */
 		return (bool)\CAgent::GetList(
-			array(),
-			array(
+			[],
+			[
 				"NAME" => __CLASS__."::execAgent();"
-			)
+			]
 		)->Fetch();
 	}
 
@@ -686,9 +698,9 @@ final class CrmEntityCreatorStepper extends Stepper
 		global $APPLICATION;
 
 		$currentPage = $APPLICATION->getCurPage();
-		if ((strpos($currentPage, '/crm/') !== false) || (strpos($currentPage, '/shop/') !== false))
+		if ((strpos($currentPage, "/crm/") !== false) || (strpos($currentPage, "/shop/") !== false))
 		{
-			$ids = array('sale' => __CLASS__);
+			$ids = ["sale" => __CLASS__];
 			$content = self::getHtml($ids, Loc::getMessage("CRM_ENTITY_CREATOR_STEPPER_TITLE"));
 			if ($content)
 			{
@@ -697,6 +709,14 @@ final class CrmEntityCreatorStepper extends Stepper
 
 			unset($content);
 		}
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getTitle()
+	{
+		return Loc::getMessage("CRM_ENTITY_CREATOR_STEPPER_TITLE");
 	}
 
 	/**
@@ -718,7 +738,7 @@ final class CrmEntityCreatorStepper extends Stepper
 			return;
 		}
 
-		if (!Main\Loader::includeModule('crm'))
+		if (!Main\Loader::includeModule("crm"))
 		{
 			return;
 		}
@@ -788,7 +808,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	 * @throws Main\ObjectPropertyException
 	 * @throws Main\SystemException
 	 */
-	public static function getErrors(array $parameters = array())
+	public static function getErrors(array $parameters = [])
 	{
 		return Sale\Internals\OrderConverterCrmErrorTable::getList($parameters);
 	}
@@ -817,11 +837,11 @@ final class CrmEntityCreatorStepper extends Stepper
 	private function addAdminNotify($message, $notifyType)
 	{
 		\CAdminNotify::Add([
-			'MODULE_ID' => 'sale',
-			'TAG' => 'crm_entity_stepper',
-			'MESSAGE' => $message,
-			'NOTIFY_TYPE' => $notifyType,
-			'PUBLIC_SECTION' => 'N',
+			"MODULE_ID" => "sale",
+			"TAG" => "crm_entity_stepper",
+			"MESSAGE" => $message,
+			"NOTIFY_TYPE" => $notifyType,
+			"PUBLIC_SECTION" => "N",
 		]);
 	}
 
@@ -849,8 +869,22 @@ final class CrmEntityCreatorStepper extends Stepper
 		])->fetch();
 
 		$siteUrl = (Main\Context::getCurrent()->getRequest()->isHttps() ? "https://" : "http://").$site["SERVER_NAME"];
-		$pathToOderList = Main\Config\Option::get('crm', 'path_to_order_list', '/shop/orders/');
+		$pathToOderList = Main\Config\Option::get("crm", "path_to_order_list", "/shop/orders/");
 
 		return $siteUrl.$pathToOderList;
+	}
+
+	/**
+	 * @param $params
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	public static function OnAfterUserLogin($params)
+	{
+		$value = Option::get('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$params['USER_ID'], '');
+		if ($value !== '')
+		{
+			Option::set('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$params['USER_ID'], 'N');
+		}
 	}
 }

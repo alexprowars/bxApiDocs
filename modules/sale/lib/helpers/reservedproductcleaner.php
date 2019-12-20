@@ -13,12 +13,13 @@ class ReservedProductCleaner extends Stepper
 
 	public function execute(array &$result)
 	{
-		if(!Loader::includeModule("sale"))
-			return false;
-
 		$className = get_class($this);
 		$option = Option::get("sale", $className, 0);
 		$result["steps"] = $option;
+
+		$registry = Sale\Registry::getInstance(Sale\Registry::REGISTRY_TYPE_ORDER);
+		/** @var Sale\Order $orderClass */
+		$orderClass = $registry->getOrderClassName();
 
 		$limit = 100;
 		$result["steps"] = isset($result["steps"]) ? $result["steps"] : 0;
@@ -58,7 +59,7 @@ class ReservedProductCleaner extends Stepper
 			while($data = $res->fetch())
 			{
 				/** @var Sale\Order $order */
-				$order = Sale\Order::load($data['ORDER_ID']);
+				$order = $orderClass::load($data['ORDER_ID']);
 				$orderSaved = false;
 				$errors = array();
 

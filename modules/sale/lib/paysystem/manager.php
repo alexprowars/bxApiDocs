@@ -725,22 +725,40 @@ final class Manager
 
 	/**
 	 * @param array $data
-	 * @return null|EntityCollection|Payment
+	 * @return Payment|null
+	 * @throws ArgumentException
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
+	 * @throws \Bitrix\Main\NotImplementedException
+	 * @throws \Bitrix\Main\NotSupportedException
+	 * @throws \Bitrix\Main\ObjectException
+	 * @throws \Bitrix\Main\ObjectNotFoundException
+	 * @throws \Bitrix\Main\SystemException
 	 */
 	public static function getPaymentObjectByData(array $data)
 	{
 		$context = Application::getInstance()->getContext();
 
+		$registry = Registry::getInstance(Registry::REGISTRY_TYPE_ORDER);
+
+		/** @var Order $orderClass */
+		$orderClass = $registry->getOrderClassName();
+
 		/** @var Order $order */
-		$order = Order::create($context->getSite());
+		$order = $orderClass::create($context->getSite());
 		$order->setPersonTypeId($data['PERSON_TYPE_ID']);
 
-		$basket = Basket::create($context->getSite());
+		/** @var Basket $basketClass */
+		$basketClass = $registry->getBasketClassName();
+
+		$basket = $basketClass::create($context->getSite());
 		$order->setBasket($basket);
 
 		$collection = $order->getPaymentCollection();
 		if ($collection)
+		{
 			return $collection->createItem();
+		}
 
 		return null;
 	}

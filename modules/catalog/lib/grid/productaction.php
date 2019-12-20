@@ -3,6 +3,7 @@ namespace Bitrix\Catalog\Grid;
 
 use Bitrix\Main,
 	Bitrix\Main\Localization\Loc,
+	Bitrix\Iblock,
 	Bitrix\Catalog;
 
 class ProductAction
@@ -40,35 +41,35 @@ class ProductAction
 			return $result;
 		}
 
-		$blockedTypes = [];
-		if (
-			$catalog['CATALOG_TYPE'] == \CCatalogSku::TYPE_FULL
-			&& (string)Main\Config\Option::get('catalog', 'show_catalog_tab_with_offers') !== 'Y'
-		)
+		$filter = [];
+		$blockedTypes = self::getBlockedProductTypes($catalog, $fields);
+		if (!empty($blockedTypes))
 		{
-			$blockedTypes[Catalog\ProductTable::TYPE_SKU] = true;
+			$filter['!=TYPE'] = $blockedTypes;
 		}
-		$setFields = [
-			'WEIGHT' => true,
-			'QUANTITY' => true,
-			'QUANTITY_TRACE' => true,
-			'CAN_BUY_ZERO' => true,
-			'MEASURE' => true
-		];
-		$blackList = array_intersect_key($fields, $setFields);
-		if (!empty($blackList))
-		{
-			$blockedTypes[Catalog\ProductTable::TYPE_SET] = true;
-		}
-		unset($blackList, $setFields);
+		unset($blockedTypes);
 
-		$sectionElements = self::getSectionProducts($iblockId, $sections);
+		$sectionElements = self::getSectionProducts($iblockId, $sections, $filter);
 		if (empty($sectionElements))
 		{
 			return $result;
 		}
 
-		foreach (array_keys($sectionElements) as $sectionId)
+		$sectionIdList = array_keys($sectionElements);
+		$sectionNames = [];
+		$iterator = Iblock\SectionTable::getList([
+			'select' => ['ID', 'NAME'],
+			'filter' => ['@ID' => $sectionIdList, '=IBLOCK_ID' => $iblockId],
+			'order' => ['ID' => 'ASC']
+		]);
+		while ($row = $iterator->fetch())
+		{
+			$row['ID'] = (int)$row['ID'];
+			$sectionNames[$row['ID']] = $row['NAME'];
+		}
+		unset($row, $iterator);
+
+		foreach ($sectionIdList as $sectionId)
 		{
 			$elementResult = static::updateElementList(
 				$iblockId,
@@ -77,10 +78,17 @@ class ProductAction
 			);
 			if (!$elementResult->isSuccess())
 			{
-
+				$result->addError(new Main\Error(
+					Loc::getMessage(
+						'BX_CATALOG_PRODUCT_ACTION_ERR_SECTION_PRODUCTS_UPDATE',
+						['#ID#' => $sectionId, '#NAME#' => $sectionNames[$sectionId]]
+					),
+					$sectionId
+				));
 			}
 		}
-		unset($index);
+		unset($sectionId);
+		unset($sectionNames, $sectionIdList, $sectionElements);
 
 		return $result;
 	}
@@ -120,27 +128,11 @@ class ProductAction
 			));
 			return $result;
 		}
-		$blockedTypes = [];
-		if (
-			$catalog['CATALOG_TYPE'] == \CCatalogSku::TYPE_FULL
-			&& (string)Main\Config\Option::get('catalog', 'show_catalog_tab_with_offers') !== 'Y'
-		)
+		$blockedTypes = self::getBlockedProductTypes($catalog, $fields);
+		if (!empty($blockedTypes))
 		{
-			$blockedTypes[Catalog\ProductTable::TYPE_SKU] = true;
+			$blockedTypes = array_fill_keys($blockedTypes, true);
 		}
-		$setFields = [
-			'WEIGHT' => true,
-			'QUANTITY' => true,
-			'QUANTITY_TRACE' => true,
-			'CAN_BUY_ZERO' => true,
-			'MEASURE' => true
-		];
-		$blackList = array_intersect_key($fields, $setFields);
-		if (!empty($blackList))
-		{
-			$blockedTypes[Catalog\ProductTable::TYPE_SET] = true;
-		}
-		unset($blackList, $setFields);
 
 		$products = [];
 		foreach (array_chunk($elementIds, 500) as $pageIds)
@@ -228,7 +220,7 @@ class ProductAction
 
 	}
 
-	protected static function getSectionProducts(int $iblockId, array $sections)
+	protected static function getSectionProducts(int $iblockId, array $sections, array $filter)
 	{
 		global $USER;
 
@@ -250,21 +242,21 @@ class ProductAction
 			return $result;
 		}
 
+		$filter['IBLOCK_ID'] = $iblockId;
+		$filter['INCLUDE_SUBSECTIONS'] = 'Y';
+		$filter['CHECK_PERMISSIONS'] = 'Y';
+		$filter['MIN_PERMISSION'] = 'R';
+
 		$dublicates = [];
 		$result = [];
 		foreach ($sections as $sectionId)
 		{
 			$result[$sectionId] = [];
 			$elements = [];
+			$filter['SECTION_ID'] = $sectionId;
 			$iterator = \CIBlockElement::GetList(
 				['ID' => 'ASC'],
-				[
-					'IBLOCK_ID' => $iblockId,
-					'SECTION_ID' => $sectionId,
-					'INCLUDE_SUBSECTIONS' => 'Y',
-					'CHECK_PERMISSIONS' => 'Y',
-					'MIN_PERMISSION' => 'R'
-				],
+				$filter,
 				false,
 				false,
 				['ID']
@@ -311,6 +303,35 @@ class ProductAction
 		}
 		unset($sectionId);
 		unset($dublicates);
+
+		return $result;
+	}
+
+	protected static function getBlockedProductTypes(array $catalog, array $fields)
+	{
+		$result = [];
+
+		$setFields = [
+			'WEIGHT' => true,
+			'QUANTITY' => true,
+			'QUANTITY_TRACE' => true,
+			'CAN_BUY_ZERO' => true,
+			'MEASURE' => true
+		];
+		$blackList = array_intersect_key($fields, $setFields);
+		if (!empty($blackList))
+		{
+			$result[] = Catalog\ProductTable::TYPE_SET;
+		}
+		unset($blackList, $setFields);
+
+		if (
+			$catalog['CATALOG_TYPE'] == \CCatalogSku::TYPE_FULL
+			&& (string)Main\Config\Option::get('catalog', 'show_catalog_tab_with_offers') !== 'Y'
+		)
+		{
+			$result[] = Catalog\ProductTable::TYPE_SKU;
+		}
 
 		return $result;
 	}

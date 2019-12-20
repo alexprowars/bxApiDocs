@@ -956,6 +956,11 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	 */
 	public function current()
 	{
+		if ($this->_iterableObjects === null)
+		{
+			$this->_iterableObjects = $this->_objects;
+		}
+
 		return current($this->_iterableObjects);
 	}
 

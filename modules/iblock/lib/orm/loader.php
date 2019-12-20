@@ -34,7 +34,7 @@ class Loader
 			&& strpos($className, IblockTable::DATA_CLASS_PREFIX) === 0 // prefix of iblock entities
 		)
 		{
-			$iblockApiCode = (int) substr($className, strlen(IblockTable::DATA_CLASS_PREFIX), -5);
+			$iblockApiCode = substr($className, strlen(IblockTable::DATA_CLASS_PREFIX), -5);
 			IblockTable::compileEntity($iblockApiCode);
 		}
 	}

@@ -175,8 +175,8 @@ class Element
 		if (self::$catalogIncluded)
 		{
 			$filter = [];
-			if (!empty($iblock))
-				$filter['@IBLOCK_ID'] = $iblock;
+			if (!empty($iblocks))
+				$filter['@IBLOCK_ID'] = $iblocks;
 
 			$iterator = Catalog\CatalogIblockTable::getList([
 				'select' => ['IBLOCK_ID'],
@@ -331,28 +331,15 @@ class Element
 			switch ($row['PROPERTY_TYPE'])
 			{
 				case Iblock\PropertyTable::TYPE_FILE:
-					if (empty($row['FILE_TYPE']))
-						continue;
-					$row['FILE_TYPE'] = strtolower(str_replace(' ', '', trim($row['FILE_TYPE'])));
-					if (empty($row['FILE_TYPE']))
-						continue;
-					$rawFileTypes = explode(',', $row['FILE_TYPE']);
-					if (empty($rawFileTypes))
-						continue;
-					$rawFileTypes = array_fill_keys($rawFileTypes, true);
-					if (
-						!isset($rawFileTypes['jpg'])
-						&& !isset($rawFileTypes['gif'])
-						&& !isset($rawFileTypes['png'])
-						&& !isset($rawFileTypes['jpeg'])
-					)
-						continue;
-					$result[$index] = [
-						'ID' => $index,
-						'NAME' => $title,
-						'TYPE' => Node\Type::IMAGE,
-						'ALLOWED' => self::FIELD_ALLOWED_SELECT
-					];
+					if (self::checkImageProperty($row))
+					{
+						$result[$index] = [
+							'ID' => $index,
+							'NAME' => $title,
+							'TYPE' => Node\Type::IMAGE,
+							'ALLOWED' => self::FIELD_ALLOWED_SELECT
+						];
+					}
 					break;
 				default:
 					$result[$index] = [
@@ -443,5 +430,30 @@ class Element
 		unset($item, $row);
 
 		return $result;
+	}
+
+	/**
+	 * @param array $property
+	 * @return bool
+	 */
+	protected static function checkImageProperty(array $property)
+	{
+		if (empty($property['FILE_TYPE']))
+			return false;
+		$property['FILE_TYPE'] = strtolower(str_replace(' ', '', trim($property['FILE_TYPE'])));
+		if (empty($property['FILE_TYPE']))
+			return false;
+		$rawFileTypes = explode(',', $property['FILE_TYPE']);
+		if (empty($rawFileTypes))
+			return false;
+		$rawFileTypes = array_fill_keys($rawFileTypes, true);
+		if (
+			!isset($rawFileTypes['jpg'])
+			&& !isset($rawFileTypes['gif'])
+			&& !isset($rawFileTypes['png'])
+			&& !isset($rawFileTypes['jpeg'])
+		)
+			return false;
+		return true;
 	}
 }

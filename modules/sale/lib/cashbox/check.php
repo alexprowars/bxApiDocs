@@ -282,7 +282,9 @@ abstract class Check
 					));
 					if ($data = $dbResPayment->fetch())
 					{
-						$order = Order::load($data['ORDER_ID']);
+						/** @var Order $orderClass */
+						$orderClass = $registry->getOrderClassName();
+						$order = $orderClass::load($data['ORDER_ID']);
 					}
 				}
 				elseif ($entity['ENTITY_TYPE'] === CheckRelatedEntitiesTable::ENTITY_TYPE_SHIPMENT)
@@ -295,7 +297,9 @@ abstract class Check
 					));
 					if ($data = $dbResShipment->fetch())
 					{
-						$order = Order::load($data['ORDER_ID']);
+						/** @var Order $orderClass */
+						$orderClass = $registry->getOrderClassName();
+						$order = $orderClass::load($data['ORDER_ID']);
 					}
 				}
 

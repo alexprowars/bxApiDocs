@@ -115,6 +115,20 @@ class ProductGroupAction extends Iblock\Grid\Panel\GroupAction
 				: Loc::getMessage('IBLOCK_GRID_PANEL_ACTION_SET_PRODUCT_FIELD')
 			);
 
+			$data = [];
+			$data[] = [
+				'TYPE' => Main\Grid\Panel\Types::DROPDOWN,
+				'ID' => $this->getFormProductFieldId(),
+				'NAME' => $this->getFormProductFieldName(),
+				'ITEMS' => $items
+			];
+			if ($this->isUiGrid())
+			{
+				$data[] = $this->getApplyButtonWithConfirm([
+					'APPLY_BUTTON_ID' => 'send_product'
+				]);
+			}
+
 			$result = [
 				'name' => $name,
 				'type' => 'multicontrol',
@@ -124,20 +138,12 @@ class ProductGroupAction extends Iblock\Grid\Panel\GroupAction
 					],
 					[
 						'ACTION' => Main\Grid\Panel\Actions::CREATE,
-						'DATA' => [
-							[
-								'TYPE' => Main\Grid\Panel\Types::DROPDOWN,
-								'ID' => $this->getFormProductFieldId(),
-								'NAME' => $this->getFormProductFieldName(),
-								'ITEMS' => $items
-							],
-							$this->getApplyButtonWithConfirm([
-								'APPLY_BUTTON_ID' => 'send_product'
-							])
-						]
+						'DATA' => $data
 					]
 				]
 			];
+
+			unset($data);
 		}
 		unset($items);
 

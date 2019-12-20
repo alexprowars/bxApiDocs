@@ -1,5 +1,6 @@
 <?
 namespace Bitrix\Main\Update;
+use Bitrix\Main\HttpApplication;
 use \Bitrix\Main\Web\Json;
 use \Bitrix\Main\Config\Option;
 use \Bitrix\Main\Context;
@@ -27,6 +28,12 @@ abstract class Stepper
 	private static $countId = 0;
 	const CONTINUE_EXECUTION = true;
 	const FINISH_EXECUTION = false;
+
+	protected $queueName = "Queue";
+	protected $checkerName = "Checker_";
+	protected $baseName = "Base_";
+	protected $errorName = "Error_";
+
 	/**
 	 * Returns HTML to show updates.
 	 * @param array|string $ids
@@ -335,6 +342,71 @@ HTML;
 		echo Json::encode($result);
 		\CMain::finalActions();
 		die;
+	}
+
+	protected function writeToLog(\Exception $exception)
+	{
+		$application = HttpApplication::getInstance();
+		$exceptionHandler = $application->getExceptionHandler();
+		$exceptionHandler->writeToLog($exception);
+	}
+
+	protected function getQueue(): array
+	{
+		return $this->getOptionData($this->queueName);
+	}
+
+	protected function setQueue(array $queue): void
+	{
+		$queueId = current($queue);
+		$this->checkerName = $this->checkerName.$queueId;
+		$this->baseName = $this->baseName.$queueId;
+		$this->errorName = $this->errorName.$queueId;
+	}
+
+	protected function getQueueOption()
+	{
+		return $this->getOptionData($this->baseName);
+	}
+
+	protected function saveQueueOption(array $data)
+	{
+		Option::set(static::$moduleId, $this->baseName, serialize($data));
+	}
+
+	protected function deleteQueueOption()
+	{
+		Option::delete(static::$moduleId, ["name" => $this->checkerName]);
+		Option::delete(static::$moduleId, ["name" => $this->baseName]);
+	}
+
+	protected function deleteCurrentQueue(array $queue): void
+	{
+		$queueId = current($queue);
+		$currentPos = array_search($queueId, $queue);
+		if ($currentPos !== false)
+		{
+			unset($queue[$currentPos]);
+			Option::set(static::$moduleId, $this->queueName, serialize($queue));
+		}
+	}
+
+	protected function isQueueEmpty()
+	{
+		$queue = $this->getOptionData($this->queueName);
+		return empty($queue);
+	}
+
+	protected function getOptionData($optionName)
+	{
+		$option = Option::get(static::$moduleId, $optionName);
+		$option = ($option !== "" ? unserialize($option) : []);
+		return (is_array($option) ? $option : []);
+	}
+
+	protected function deleteOption($optionName)
+	{
+		Option::delete(static::$moduleId, ["name" => $optionName]);
 	}
 }
 ?>
