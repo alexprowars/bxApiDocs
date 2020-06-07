@@ -30,9 +30,9 @@ final class State extends Dictionary
 		}
 	}
 
-	public function set(array $values)
+	public function set($name, $value = null)
 	{
-		parent::set($values);
+		parent::set($name, $value);
 
 		$this->setDefaultValues();
 
@@ -93,14 +93,14 @@ final class State extends Dictionary
 		$postData = array();
 		foreach($request->getPostList()->toArray() as $name => $data)
 		{
-			if(is_array($data) && count($data) === 1 && empty($data[0]))
+			if(is_array($data) && count($data) === 1 && ($data[0] !== '0' && empty($data[0])))
 			{
 				//empty array
 				unset($prevState[$name]);
 				continue;
 			}
 
-			if(is_array($data) && empty($data[0]))
+			if(is_array($data) && ($data[0] !== '0' && empty($data[0])))
 			{
 				unset($data[0]);
 			}

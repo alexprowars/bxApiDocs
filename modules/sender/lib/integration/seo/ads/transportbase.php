@@ -25,6 +25,8 @@ class TransportBase implements Transport\iBase
 	const CODE_ADS_FB = 'ads_fb';
 	const CODE_ADS_YA = 'ads_ya';
 	const CODE_ADS_GA = 'ads_ga';
+	const CODE_ADS_LOOKALIKE_FB = 'ads_lookalike_fb';
+	const CODE_ADS_LOOKALIKE_VK = 'ads_lookalike_vk';
 
 	/** @var Message\Configuration $configuration Configuration. */
 	protected $configuration;
@@ -167,6 +169,7 @@ class TransportBase implements Transport\iBase
 			$this->adsConfig->contactType = $audience['contactType'];
 			$this->adsConfig->type = $this->getAdsType();
 			$this->adsConfig->autoRemoveDayNumber = $config->get('AUTO_REMOVE_DAY_NUMBER');
+			$this->adsConfig->parentId = 'sender:'.$config->getId();
 
 			if ($adsContactType !== $this->adsConfig->contactType)
 			{

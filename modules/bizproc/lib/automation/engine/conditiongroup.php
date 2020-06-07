@@ -88,6 +88,12 @@ class ConditionGroup
 					$fieldType = $documentService->getFieldTypeObject($documentType, $documentFields[$conditionField]);
 				}
 
+				if (!$fieldType)
+				{
+					$type = 'string';
+					$fieldType = $documentService->getFieldTypeObject($documentType, ['Type' => $type]);
+				}
+
 				if (!$condition->check($fld, $type, $target, $fieldType))
 				{
 					$conditionResult = false;
@@ -291,6 +297,77 @@ class ConditionGroup
 		}
 
 		return $conditionGroup;
+	}
+
+	/**
+	 * Convert values to internal format.
+	 * @param array $documentType
+	 * @return $this
+	 */
+	public function internalizeValues(array $documentType): self
+	{
+		$documentService = \CBPRuntime::GetRuntime(true)->getDocumentService();
+		$documentFields = $documentService->GetDocumentFields($documentType);
+
+		/** @var Condition $condition */
+		foreach ($this->getItems() as [$condition, $joiner])
+		{
+			$field = $condition->getField();
+			$value = $condition->getValue();
+			$property = isset($documentFields[$field]) ? $documentFields[$field] : null;
+			if ($property && !in_array($condition->getOperator(), ['empty', '!empty']))
+			{
+				$value = self::unConvertExpressions($value, $documentType);
+				$valueInternal = $documentService->GetFieldInputValue(
+					$documentType,
+					$property,
+					'field',
+					['field' => $value],
+					$errors
+				);
+
+				if (!$errors)
+				{
+					$condition->setValue($valueInternal);
+				}
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Convert value to external format.
+	 * @param array $documentType
+	 * @return $this
+	 */
+	public function externalizeValues(array $documentType): self
+	{
+		$documentService = \CBPRuntime::GetRuntime(true)->getDocumentService();
+		$documentFields = $documentService->GetDocumentFields($documentType);
+
+		/** @var Condition $condition */
+		foreach ($this->getItems() as [$condition, $joiner])
+		{
+			$field = $condition->getField();
+			$value = $condition->getValue();
+			$property = isset($documentFields[$field]) ? $documentFields[$field] : null;
+			if ($property && !in_array($condition->getOperator(), ['empty', '!empty']))
+			{
+				$value = self::convertExpressions($value, $documentType);
+				if ($property['Type'] === 'user')
+				{
+					$value = \CBPHelper::UsersArrayToString(
+						$value,
+						null,
+						$documentType
+					);
+				}
+				$condition->setValue($value);
+			}
+		}
+
+		return $this;
 	}
 
 	private static function convertExpressions($value, array $documentType)

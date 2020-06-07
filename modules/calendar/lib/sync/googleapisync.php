@@ -6,6 +6,7 @@ use Bitrix\Main\Localization\Loc;
 use \Bitrix\Main\Web\Uri;
 use Bitrix\Main\Application;
 use \Bitrix\Main\Web;
+use Bitrix\Calendar\Util;
 /**
  * Class GoogleApiSync
  *
@@ -30,7 +31,7 @@ final class GoogleApiSync
 			$eventMapping = array(
 				'DAV_XML_ID'	=>	'iCalUID',
 				'NAME'			=>	'summary',
-				'DESCRIPTION'	=>	'description',
+//				'DESCRIPTION'	=>	'description',
 				'CAL_DAV_LABEL'	=>	'etag'
 			);
 
@@ -391,7 +392,7 @@ final class GoogleApiSync
 		$params['calendarId'] = $calendarId;
 		$params['instanceTz'] = !empty($parameters['instanceTz']) ? $parameters['instanceTz'] : null;
 		$params['originalDateFrom'] = !empty($eventData['ORIGINAL_DATE_FROM']) ? $eventData['ORIGINAL_DATE_FROM'] : null;
-		$params['gEventId'] = $eventData['G_EVENT_ID'] ?: str_replace('@google.com', '',  $eventData['DAV_XML_ID']);
+		$params['gEventId'] = $eventData['G_EVENT_ID'] || !strpos($eventData['DAV_XML_ID'], '@google.com')  ? $eventData['G_EVENT_ID'] : str_replace('@google.com', '',  $eventData['DAV_XML_ID']);
 		$params['syncCaldav'] = !empty($parameters['syncCaldav']) ? $parameters['syncCaldav'] : false;
 
 		$newEvent = $this->prepareToSaveEvent($eventData, $params);
@@ -466,9 +467,9 @@ final class GoogleApiSync
 
 		if (!empty($event['description']))
 		{
-			$parts = explode('~-~-~-~-~', $event['description'], 2);
+			$parts = explode('=#=#=#=', $event['description'], 2);
 
-			if (!empty($parts[1]))
+			if (isset($parts[1]))
 			{
 				$returnData["DESCRIPTION"] = trim($parts[1]);
 			}
@@ -507,25 +508,8 @@ final class GoogleApiSync
 
 		if (!empty($event['start']['dateTime']) && !empty($event['end']['dateTime']))
 		{
-			try
-			{
-				$returnData['TZ_FROM'] = empty($event['start']['timeZone']) ? $this->defaultTimezone : $event['start']['timeZone'];
-				new \DateTimeZone($returnData['TZ_FROM']);
-			}
-			catch(Exception $e)
-			{
-				$returnData['TZ_FROM'] = $this->defaultTimezone;
-			}
-
-			try
-			{
-				$returnData['TZ_TO'] = empty($event['end']['timeZone']) ? $this->defaultTimezone : $event['end']['timeZone'];
-				new \DateTimeZone($returnData['TZ_TO']);
-			}
-			catch(Exception $e)
-			{
-				$returnData['TZ_TO'] = $this->defaultTimezone;
-			}
+			$returnData['TZ_FROM'] = Util::isTimezoneValid($event['start']['timeZone']) ? $event['start']['timeZone'] : $this->defaultTimezone;
+			$returnData['TZ_TO'] = Util::isTimezoneValid($event['end']['timeZone']) ? $event['end']['timeZone'] : $this->defaultTimezone;
 
 			$eventStartDateTime = new Type\DateTime($event['start']['dateTime'], \DateTime::RFC3339, new \DateTimeZone($this->defaultTimezone));
 			$returnData['DATE_FROM'] = \CCalendar::Date(\CCalendar::Timestamp($eventStartDateTime->setTimeZone(new \DateTimeZone($returnData['TZ_FROM']))->format(Type\Date::convertFormatToPhp(FORMAT_DATETIME))));
@@ -660,8 +644,9 @@ final class GoogleApiSync
 
 				if (!empty($event['originalStartTime']['dateTime']))
 				{
+					$originalTimeZone = Util::isTimezoneValid($event['originalStartTime']['timeZone']) ? $event['originalStartTime']['timeZone'] : $returnData['TZ_FROM'];
 					$eventOriginalDateFrom = new Type\DateTime($event['originalStartTime']['dateTime'], \DateTime::RFC3339, new \DateTimeZone($this->defaultTimezone));
-					$returnData['ORIGINAL_DATE_FROM'] = \CCalendar::Date(\CCalendar::Timestamp($eventOriginalDateFrom->setTimeZone(new \DateTimeZone($event['originalStartTime']['timeZone']))->format(Type\Date::convertFormatToPhp(FORMAT_DATETIME))));
+					$returnData['ORIGINAL_DATE_FROM'] = \CCalendar::Date(\CCalendar::Timestamp($eventOriginalDateFrom->setTimeZone(new \DateTimeZone($originalTimeZone))->format(Type\Date::convertFormatToPhp(FORMAT_DATETIME))));
 				}
 
 				if (!empty($event['originalStartTime']['date']))
@@ -720,7 +705,7 @@ final class GoogleApiSync
 		if (isset($eventData['ATTENDEES_CODES'])  && self::ENABLE_ATTENDEE_DESC)
 		{
 			$users = $this->getAttendees($eventData['ATTENDEES_CODES']);
-			$newEvent['description'] = Loc::getMessage('ATTENDEES_EVENT').': '.$users.' ~-~-~-~-~ '.$eventData["DESCRIPTION"];
+			$newEvent['description'] = Loc::getMessage('ATTENDEES_EVENT').': '.$users.' =#=#=#= '.$eventData["DESCRIPTION"];
 		}
 		else
 		{
@@ -760,6 +745,26 @@ final class GoogleApiSync
 				elseif ($remindRule['type'] == 'day')
 				{
 					$minutes = 24 * 60 * $remindRule['count'];
+				}
+				elseif ($remindRule['type'] === 'date')
+				{
+					$tz = Util::isTimezoneValid($eventData['TZ_FROM']) ? $this->prepareTimezone($eventData['TZ_FROM']) : $this->defaultTimezone;
+					$dateFrom = new Type\DateTime($eventData['DATE_FROM'], Type\Date::convertFormatToPhp(FORMAT_DATETIME), $tz);
+					$remind = new Type\DateTime($remindRule['value'], Type\Date::convertFormatToPhp(FORMAT_DATETIME), $tz);
+
+					if ($dateFrom->getTimestamp() > $remind->getTimestamp())
+					{
+
+						$diff = $dateFrom->getDiff($remind);
+						$d = $diff->format('%d');
+						$h = $diff->format('%h');
+						$i = $diff->format('%i');
+						$minutes = ((int)$d * 24 * 60) + ((int)$h * 60) + (int)$i;
+					}
+					else
+					{
+						continue;
+					}
 				}
 
 				$newEvent['reminders']['overrides'][] = array(

@@ -169,7 +169,19 @@ class Entities
 						? 'Y'
 						: 'N'
 				),
-				"DATA_ADDITIONAL" => $dataAdditional
+				"DATA_ADDITIONAL" => $dataAdditional,
+				"MULTI" => (
+					(
+						isset($options["returnMultiEmail"])
+						&& $options["returnMultiEmail"] == 'Y'
+					)
+					|| (
+						isset($options["returnMultiPhone"])
+						&& $options["returnMultiPhone"] == 'Y'
+					)
+						? 'Y'
+						: 'N'
+				)
 			)
 		);
 
@@ -330,7 +342,7 @@ class Entities
 
 			$cache->startDataCache();
 			$filter = array(
-				"USER_ID" => $USER->getId()
+				"USER_ID" => $userId
 			);
 
 			if (
@@ -819,6 +831,7 @@ class Entities
 						));
 					}
 				}
+				$destUList = array_slice($destUList, 0, self::LIST_USER_LIMIT, true);
 
 				$lastDestinationList['USERS'] = array_merge($destUList, $destUEList, $destUCRMList);
 				$tmp = array('USERS' => $lastDestinationList['USERS']);

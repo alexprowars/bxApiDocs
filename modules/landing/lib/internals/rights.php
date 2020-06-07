@@ -42,13 +42,17 @@ class RightsTable extends Entity\DataManager
 			)),
 			'ACCESS_CODE' => new Entity\StringField('ACCESS_CODE', array(
 				'title' => Loc::getMessage('LANDING_TABLE_FIELD_RIGHT_ACCESS_CODE'),
-				'required' => true,
-				'validation' => array(__CLASS__, 'validateAccessCode')
+				'required' => true
 			)),
 			'ROLE_ID' => new Entity\IntegerField('ROLE_ID', array(
 				'title' => Loc::getMessage('LANDING_TABLE_FIELD_BY_ROLE_ID'),
 				'default_value' => 0
 			)),
+			'ROLE' => new Entity\ReferenceField(
+				'ROLE',
+				'\Bitrix\Landing\Internals\RoleTable',
+				array('=this.ROLE_ID' => 'ref.ID')
+			),
 			'USER_ACCESS' => new Entity\ReferenceField(
 				'USER_ACCESS',
 				'\Bitrix\Main\UserAccessTable',
@@ -59,17 +63,6 @@ class RightsTable extends Entity\DataManager
 				'\Bitrix\Main\TaskOperationTable',
 				array('=this.TASK_ID' => 'ref.TASK_ID')
 			)
-		);
-	}
-
-	/**
-	 * Returns validators for ACCESS_CODE field.
-	 * @return array
-	 */
-	public static function validateAccessCode()
-	{
-		return array(
-			new Entity\Validator\Length(null, 50),
 		);
 	}
 }

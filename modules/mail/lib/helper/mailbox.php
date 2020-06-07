@@ -18,6 +18,11 @@ abstract class Mailbox
 	protected $startTime, $syncTimeout, $checkpoint;
 	protected $syncParams = array();
 	protected $errors, $warnings;
+	protected $lastSyncResult = array(
+		'newMessages' => 0,
+		'deletedMessages' => 0,
+		'updatedMessages' => 0
+	);
 
 	/**
 	 * Creates active mailbox helper instance by ID
@@ -140,6 +145,7 @@ abstract class Mailbox
 		$this->setCheckpoint();
 
 		$this->session = md5(uniqid(''));
+		$this->errors = new Main\ErrorCollection();
 		$this->warnings = new Main\ErrorCollection();
 	}
 
@@ -221,7 +227,7 @@ abstract class Mailbox
 		$this->session = md5(uniqid(''));
 
 		$count = $this->syncInternal();
-		$success = $count !== false && empty($this->errors);
+		$success = $count !== false && $this->errors->isEmpty();
 
 		$syncUnlock = $this->isTimeQuotaExceeded() ? 0 : -1;
 
@@ -248,18 +254,27 @@ abstract class Mailbox
 		$this->mailbox['OPTIONS']['sync_errors'] = $syncErrors;
 		$this->mailbox['OPTIONS']['next_sync'] = time() + $interval;
 
+		$optionsValue = $this->mailbox['OPTIONS'];
+		unset($optionsValue['imap']['dirsMd5']);
 		$unlockSql = sprintf(
 			"UPDATE b_mail_mailbox SET SYNC_LOCK = %d, OPTIONS = '%s' WHERE ID = %u AND SYNC_LOCK = %u",
-			$syncUnlock, $DB->forSql(serialize($this->mailbox['OPTIONS'])), $this->mailbox['ID'], $this->mailbox['SYNC_LOCK']
+			$syncUnlock,
+			$DB->forSql(serialize($optionsValue)),
+			$this->mailbox['ID'],
+			$this->mailbox['SYNC_LOCK']
 		);
 		if ($DB->query($unlockSql)->affectedRowsCount())
 		{
 			$this->mailbox['SYNC_LOCK'] = $syncUnlock;
 		}
 
+		$lastSyncResult = $this->getLastSyncResult();
+
 		$this->pushSyncStatus(
 			array(
 				'new' => $count,
+				'updated' => $lastSyncResult['updatedMessages'],
+				'deleted' => $lastSyncResult['deletedMessages'],
 				'complete' => $this->mailbox['SYNC_LOCK'] < 0,
 			),
 			true
@@ -379,7 +394,10 @@ abstract class Mailbox
 			ORM\Query\Query::buildFilterSql(
 				Mail\Internals\MessageAccessTable::getEntity(),
 				array(
-					'=ENTITY_TYPE' => Mail\Internals\MessageAccessTable::ENTITY_TYPE_TASKS_TASK,
+					'=ENTITY_TYPE' => array(
+						Mail\Internals\MessageAccessTable::ENTITY_TYPE_TASKS_TASK,
+						Mail\Internals\MessageAccessTable::ENTITY_TYPE_BLOG_POST,
+					),
 				)
 			)
 		);
@@ -607,18 +625,7 @@ abstract class Mailbox
 	{
 		if (empty($params['origin']) && empty($params['replaces']))
 		{
-			$params['lazy_attachments'] = true;
-
-			foreach ($this->getFilters() as $filter)
-			{
-				foreach ($filter['__actions'] as $action)
-				{
-					if (empty($action['LAZY_ATTACHMENTS']))
-					{
-						$params['lazy_attachments'] = false;
-					}
-				}
-			}
+			$params['lazy_attachments'] = $this->isSupportLazyAttachments();
 		}
 
 		return \CMailMessage::addMessage(
@@ -664,6 +671,7 @@ abstract class Mailbox
 			),
 			array(
 				'outcome' => true,
+				'draft' => false,
 				'trash' => false,
 				'spam' => false,
 				'seen' => true,
@@ -707,11 +715,19 @@ abstract class Mailbox
 				'select' => array(
 					'*',
 					'__' => 'MESSAGE.*',
+					'UPLOAD_LOCK' => 'UPLOAD_QUEUE.SYNC_LOCK',
 					'UPLOAD_STAGE' => 'UPLOAD_QUEUE.SYNC_STAGE',
+					'UPLOAD_ATTEMPTS' => 'UPLOAD_QUEUE.ATTEMPTS',
 				),
 				'filter' => array(
 					'>=UPLOAD_QUEUE.SYNC_STAGE' => 0,
 					'<UPLOAD_QUEUE.SYNC_LOCK' => time() - $this->syncTimeout,
+					'<UPLOAD_QUEUE.ATTEMPTS' => 5,
+				),
+				'order' => array(
+					'UPLOAD_QUEUE.SYNC_LOCK' => 'ASC',
+					'UPLOAD_QUEUE.SYNC_STAGE' => 'ASC',
+					'UPLOAD_QUEUE.ATTEMPTS' => 'ASC',
 				),
 			),
 			false
@@ -719,6 +735,14 @@ abstract class Mailbox
 
 		while ($excerpt = $res->fetch())
 		{
+			$n = $excerpt['UPLOAD_ATTEMPTS'] + 1;
+			$interval = min($this->syncTimeout * pow($n, $n), 3600 * 24 * 7);
+
+			if ($excerpt['UPLOAD_LOCK'] > time() - $interval)
+			{
+				continue;
+			}
+
 			$this->syncOutgoingMessage($excerpt);
 
 			if ($this->isTimeQuotaExceeded())
@@ -733,7 +757,7 @@ abstract class Mailbox
 		global $DB;
 
 		$lockSql = sprintf(
-			"UPDATE b_mail_message_upload_queue SET SYNC_LOCK = %u, SYNC_STAGE = %u
+			"UPDATE b_mail_message_upload_queue SET SYNC_LOCK = %u, SYNC_STAGE = %u, ATTEMPTS = ATTEMPTS + 1
 				WHERE ID = '%s' AND MAILBOX_ID = %u AND SYNC_LOCK < %u",
 			$syncLock = time(),
 			max(1, $excerpt['UPLOAD_STAGE']),
@@ -865,51 +889,63 @@ abstract class Mailbox
 		$context->setCategory(Main\Mail\Context::CAT_EXTERNAL);
 		$context->setPriority(Main\Mail\Context::PRIORITY_NORMAL);
 
-		if ($excerpt['UPLOAD_STAGE'] < 2)
-		{
-			$success = Main\Mail\Mail::send(array_merge(
-				$outgoingParams,
-				array(
-					'TRACK_READ' => array(
-						'MODULE_ID' => 'mail',
-						'FIELDS'    => array('msgid' => $excerpt['__MSG_ID']),
-						'URL_PAGE' => '/pub/mail/read.php',
-					),
-					//'TRACK_CLICK' => array(
-					//	'MODULE_ID' => 'mail',
-					//	'FIELDS'    => array('msgid' => $excerpt['__MSG_ID']),
-					//),
-					'CONTEXT' => $context,
-				)
-			));
-
-			if (!$success)
+		$eventManager = \Bitrix\Main\EventManager::getInstance();
+		$eventKey = $eventManager->addEventHandler(
+			'main',
+			'OnBeforeMailSend',
+			function () use (&$excerpt)
 			{
-				// @TODO: to limit attempts
-
-				return false;
+				if ($excerpt['UPLOAD_STAGE'] >= 2)
+				{
+					return new Main\EventResult(Main\EventResult::ERROR);
+				}
 			}
+		);
+
+		$success = Main\Mail\Mail::send(array_merge(
+			$outgoingParams,
+			array(
+				'TRACK_READ' => array(
+					'MODULE_ID' => 'mail',
+					'FIELDS'    => array('msgid' => $excerpt['__MSG_ID']),
+					'URL_PAGE' => '/pub/mail/read.php',
+				),
+				//'TRACK_CLICK' => array(
+				//	'MODULE_ID' => 'mail',
+				//	'FIELDS'    => array('msgid' => $excerpt['__MSG_ID']),
+				//),
+				'CONTEXT' => $context,
+			)
+		));
+
+		$eventManager->removeEventHandler('main', 'OnBeforeMailSend', $eventKey);
+
+		if ($excerpt['UPLOAD_STAGE'] < 2 && !$success)
+		{
+			return false;
 		}
 
-		$needUpload = empty($this->mailbox['OPTIONS']['deny_upload_outcome']);
-
-		// @TODO: use option
-		if ($context->getSmtp() && in_array(strtolower($context->getSmtp()->getHost()), array('smtp.gmail.com', 'smtp.office365.com')))
+		$needUpload = true;
+		if ($context->getSmtp() && $context->getSmtp()->getFrom() == $this->mailbox['EMAIL'])
 		{
-			$needUpload = false;
+			$needUpload = !in_array('deny_upload', (array) $this->mailbox['OPTIONS']['flags']);
 		}
 
 		if ($needUpload)
 		{
-			Mail\Internals\MessageUploadQueueTable::update(
-				array(
-					'ID' => $excerpt['ID'],
-					'MAILBOX_ID' => $excerpt['MAILBOX_ID'],
-				),
-				array(
-					'SYNC_STAGE' => 2,
-				)
-			);
+			if ($excerpt['UPLOAD_STAGE'] < 2)
+			{
+				Mail\Internals\MessageUploadQueueTable::update(
+					array(
+						'ID' => $excerpt['ID'],
+						'MAILBOX_ID' => $excerpt['MAILBOX_ID'],
+					),
+					array(
+						'SYNC_STAGE' => 2,
+						'ATTEMPTS' => 1,
+					)
+				);
+			}
 
 			class_exists('Bitrix\Mail\Helper');
 
@@ -965,6 +1001,35 @@ abstract class Mailbox
 		}
 
 		return false;
+	}
+
+	public function downloadAttachments(array &$excerpt)
+	{
+		$body = $this->downloadMessage($excerpt);
+		if (!empty($body))
+		{
+			list(,,, $attachments) = \CMailMessage::parseMessage($body, $this->mailbox['LANG_CHARSET']);
+
+			return $attachments;
+		}
+
+		return false;
+	}
+
+	public function isSupportLazyAttachments()
+	{
+		foreach ($this->getFilters() as $filter)
+		{
+			foreach ($filter['__actions'] as $action)
+			{
+				if (empty($action['LAZY_ATTACHMENTS']))
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}
 
 	public function getFilters($force = false)
@@ -1196,8 +1261,8 @@ abstract class Mailbox
 	}
 
 	abstract protected function syncInternal();
-	abstract protected function uploadMessage(Main\Mail\Mail $message, array $excerpt);
-	abstract protected function downloadMessage(array &$excerpt);
+	abstract public function uploadMessage(Main\Mail\Mail $message, array &$excerpt);
+	abstract public function downloadMessage(array &$excerpt);
 
 	public function getErrors()
 	{
@@ -1209,4 +1274,13 @@ abstract class Mailbox
 		return $this->warnings;
 	}
 
+	public function getLastSyncResult()
+	{
+		return $this->lastSyncResult;
+	}
+
+	protected function setLastSyncResult(array $data)
+	{
+		$this->lastSyncResult = array_merge($this->lastSyncResult, $data);
+	}
 }

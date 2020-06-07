@@ -271,6 +271,7 @@ class DummyMail extends Main\Mail\Mail
 		$this->settingMailFillToEmail = false;
 		$this->settingMailConvertMailHeader = true;
 		$this->settingConvertNewLineUnixToWindows = true;
+		$this->useBlacklist = false;
 	}
 
 	public static function getMailEol()
@@ -281,6 +282,17 @@ class DummyMail extends Main\Mail\Mail
 	public function __toString()
 	{
 		return sprintf("%s\r\n\r\n%s", $this->getHeaders(), $this->getBody());
+	}
+
+	/**
+	 * @deprecated
+	 */
+	public static function overwriteMessageHeaders(Main\Mail\Mail $message, array $headers)
+	{
+		foreach ($headers as $name => $value)
+		{
+			$message->headers[$name] = $value;
+		}
 	}
 
 }

@@ -1569,14 +1569,14 @@ class BizprocDocument extends CIBlockDocument
 
 		if ($parameters["IBlockRightsMode"] === "E")
 		{
-			if ($operation === CBPCanUserOperateOperation::ReadDocument)
+			if (
+				$operation === CBPCanUserOperateOperation::ReadDocument ||
+				$operation === CBPCanUserOperateOperation::ViewWorkflow
+			)
 				return CIBlockElementRights::userHasRightTo($parameters["IBlockId"], $documentId, "element_read");
 			elseif ($operation === CBPCanUserOperateOperation::WriteDocument)
 				return CIBlockElementRights::userHasRightTo($parameters["IBlockId"], $documentId, "element_edit");
-			elseif (
-				$operation === CBPCanUserOperateOperation::StartWorkflow
-				|| $operation === CBPCanUserOperateOperation::ViewWorkflow
-			)
+			elseif ($operation === CBPCanUserOperateOperation::StartWorkflow)
 			{
 				if (CIBlockElementRights::userHasRightTo($parameters["IBlockId"], $documentId, "element_edit"))
 					return true;

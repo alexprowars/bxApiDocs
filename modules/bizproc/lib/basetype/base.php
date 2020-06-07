@@ -697,6 +697,10 @@ HTML;
 	 */
 	public static function externalizeValue(FieldType $fieldType, $objectName, $value)
 	{
+		if (is_object($value) && method_exists($value, '__toString'))
+		{
+			return (string) $value;
+		}
 		return $value;
 	}
 

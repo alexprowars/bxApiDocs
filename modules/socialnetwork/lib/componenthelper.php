@@ -1149,7 +1149,7 @@ class ComponentHelper
 			$text = $parser->convertHtmlToBB($text);
 		}
 
-		preg_match_all("/\[url\s*=\s*([^\]]*)\](.+?)\[\/url\]/ies".BX_UTF_PCRE_MODIFIER, $text, $res);
+		preg_match_all("/\[url\s*=\s*([^\]]*)\](.+?)\[\/url\]/is".BX_UTF_PCRE_MODIFIER, $text, $res);
 
 		if (
 			!empty($res)
@@ -2795,7 +2795,6 @@ class ComponentHelper
 				$listCommentId => array(
 					"ID" => $listCommentId,
 					"RATING_VOTE_ID" => $comment["RATING_TYPE_ID"].'_'.$listCommentId.'-'.(time()+rand(0, 1000)),
-					"NEW" => "Y",
 					"APPROVED" => "Y",
 					"POST_TIMESTAMP" => $result["timestamp"],
 					"AUTHOR" => array(
@@ -2930,7 +2929,7 @@ class ComponentHelper
 					"OK_MESSAGE" => "",
 					"RESULT" => $listCommentId,
 					"PUSH&PULL" => array(
-						"ACTION" => "REPLY",
+						"ACTION" => ($params["ACTION"] === "UPDATE" ? "EDIT" : "REPLY"),
 						"ID" => $listCommentId
 					),
 					"MODE" => "PULL_MESSAGE",
@@ -3035,12 +3034,25 @@ class ComponentHelper
 
 	public static function processBlogPostNewMailUser(&$HTTPPost, &$componentResult)
 	{
+		$newName = false;
+		if (isset($HTTPPost['SONET_PERMS']))
+		{
+			$HTTPPost['SPERM'] = $HTTPPost['SONET_PERMS'];
+			$newName = true;
+		}
+
 		self::processBlogPostNewCrmContact($HTTPPost, $componentResult);
+
+		if ($newName)
+		{
+			$HTTPPost['SONET_PERMS'] = $HTTPPost['SPERM'];
+			unset($HTTPPost['SPERM']);
+		}
 	}
 
 	private static function processUserEmail($params, &$errorText)
 	{
-		$result = array();
+		$result = [];
 
 		if (
 			!is_array($params)
@@ -3065,18 +3077,20 @@ class ComponentHelper
 		$res = \CUser::getList(
 			$o = "ID",
 			$b = "ASC",
-			array(
+			[
 				"=EMAIL" => $userEmail,
 				"!EXTERNAL_AUTH_ID" => [ "bot", "controller", "replica", "shop", "imconnector", "sale", "saleanonymous" ]
-			),
-			array("FIELDS" => array("ID", "EXTERNAL_AUTH_ID", "ACTIVE"))
+			],
+			[
+				"FIELDS" => [ "ID", "EXTERNAL_AUTH_ID", "ACTIVE" ]
+			]
 		);
 
-		$found = false;
+		$userId = false;
 
 		while (
 			($emailUser = $res->fetch())
-			&& !$found
+			&& !$userId
 		)
 		{
 			if (
@@ -3090,104 +3104,116 @@ class ComponentHelper
 				if ($emailUser["ACTIVE"] == "N") // email only
 				{
 					$user = new \CUser;
-					$user->update($emailUser["ID"], array(
-						"ACTIVE" => "Y"
-					));
+					$user->update($emailUser["ID"], [
+						'ACTIVE' => 'Y'
+					]);
 				}
 
-				$userId = $emailUser["ID"];
-				$found = true;
+				$userId = $emailUser['ID'];
 			}
 		}
 
-		if ($found)
+		if ($userId)
 		{
-			return array(
+			$result = [
 				'U'.$userId
-			);
+			];
 		}
 
-		$userFields = array(
-			'EMAIL' => $userEmail,
-			'NAME' => (
-				isset($params["NAME"])
-					? $params["NAME"]
-					: ''
-			),
-			'LAST_NAME' => (
-				isset($params["LAST_NAME"])
-					? $params["LAST_NAME"]
-					: ''
-			)
-		);
-
-		if (
-			!empty($params["CRM_ENTITY"])
-			&& Loader::includeModule('crm')
-		)
+		if (!$userId)
 		{
-			$userFields['UF'] = array(
-				'UF_USER_CRM_ENTITY' => $params["CRM_ENTITY"]
+			$userFields = array(
+				'EMAIL' => $userEmail,
+				'NAME' => (
+					isset($params["NAME"])
+						? $params["NAME"]
+						: ''
+				),
+				'LAST_NAME' => (
+					isset($params["LAST_NAME"])
+						? $params["LAST_NAME"]
+						: ''
+				)
 			);
-			$res = \CCrmLiveFeedComponent::resolveLFEntityFromUF($params["CRM_ENTITY"]);
-			if (!empty($res))
-			{
-				list($k, $v) = $res;
-				if ($k && $v)
-				{
-					$result[] = $k.$v;
 
-					if (
-						$k == \CCrmLiveFeedEntity::Contact
-						&& ($contact = \CCrmContact::getById($v))
-						&& intval($contact['PHOTO']) > 0
-					)
+			if (
+				!empty($params["CRM_ENTITY"])
+				&& Loader::includeModule('crm')
+			)
+			{
+				$userFields['UF'] = [
+					'UF_USER_CRM_ENTITY' => $params["CRM_ENTITY"]
+				];
+				$res = \CCrmLiveFeedComponent::resolveLFEntityFromUF($params["CRM_ENTITY"]);
+				if (!empty($res))
+				{
+					list($k, $v) = $res;
+					if ($k && $v)
 					{
-						$userFields['PERSONAL_PHOTO_ID'] = intval($contact['PHOTO']);
+						$result[] = $k.$v;
+
+						if (
+							$k == \CCrmLiveFeedEntity::Contact
+							&& ($contact = \CCrmContact::getById($v))
+							&& intval($contact['PHOTO']) > 0
+						)
+						{
+							$userFields['PERSONAL_PHOTO_ID'] = intval($contact['PHOTO']);
+						}
 					}
 				}
 			}
-		}
-		elseif (
-			!empty($params["CREATE_CRM_CONTACT"])
-			&& $params["CREATE_CRM_CONTACT"] == 'Y'
-			&& Loader::includeModule('crm')
-			&& ($contactId = \CCrmLiveFeedComponent::createContact($userFields))
-		)
-		{
-			$userFields['UF'] = array(
-				'UF_USER_CRM_ENTITY' => 'C_'.$contactId
-			);
-			$result[] = "CRMCONTACT".$contactId;
-		}
+			elseif (
+				!empty($params["CREATE_CRM_CONTACT"])
+				&& $params["CREATE_CRM_CONTACT"] == 'Y'
+				&& Loader::includeModule('crm')
+				&& ($contactId = \CCrmLiveFeedComponent::createContact($userFields))
+			)
+			{
+				$userFields['UF'] = [
+					'UF_USER_CRM_ENTITY' => 'C_'.$contactId
+				];
+				$result[] = "CRMCONTACT".$contactId;
+			}
 
-		// invite extranet user by email
-		$invitedUserId = \Bitrix\Mail\User::create($userFields);
+			// invite extranet user by email
+			$userId = \Bitrix\Mail\User::create($userFields);
 
-		$errorMessage = false;
+			$errorMessage = false;
+
+			if (
+				is_object($userId)
+				&& $userId->LAST_ERROR <> ''
+			)
+			{
+				$errorMessage = $userId->LAST_ERROR;
+			}
+
+			if (
+				!$errorMessage
+				&& intval($userId) > 0
+			)
+			{
+				$result[] = "U".$userId;
+			}
+			else
+			{
+				$errorText = $errorMessage;
+			}
+		}
 
 		if (
-			intval($invitedUserId) <= 0
-			&& $invitedUserId->LAST_ERROR <> ''
+			!is_object($userId)
+			&& intval($userId) > 0
 		)
 		{
-			$errorMessage = $invitedUserId->LAST_ERROR;
-		}
-
-		if (
-			!$errorMessage
-			&& intval($invitedUserId) > 0
-		)
-		{
-			$result[] = "U".$invitedUserId;
-		}
-		else
-		{
-			$errorText = $errorMessage;
+			\Bitrix\Main\UI\Selector\Entities::save([
+				'context' => (isset($params['CONTEXT']) && strlen($params['CONTEXT']) > 0 ? $params['CONTEXT'] : 'BLOG_POST'),
+				'code' => 'U'.$userId
+			]);
 		}
 
 		return $result;
-
 	}
 
 	public static function processBlogPostNewMailUserDestinations(&$destinationList)
@@ -3201,7 +3227,8 @@ class ComponentHelper
 				$errorText = '';
 
 				$destRes = self::processUserEmail(array(
-					'EMAIL' => $userEmail
+					'EMAIL' => $userEmail,
+					'CONTEXT' => 'BLOG_POST'
 				), $errorText);
 
 				if (
@@ -3290,7 +3317,7 @@ class ComponentHelper
 
 					$errorText = '';
 
-					$destRes = self::processUserEmail(array(
+					$destRes = self::processUserEmail([
 						'EMAIL' => $userEmail,
 						'NAME' => (
 							isset($HTTPPost["INVITED_USER_NAME"])
@@ -3315,8 +3342,9 @@ class ComponentHelper
 							&& isset($HTTPPost["INVITED_USER_CREATE_CRM_CONTACT"][$userEmail])
 							? $HTTPPost["INVITED_USER_CREATE_CRM_CONTACT"][$userEmail]
 							: 'N'
-						)
-					), $errorText);
+						),
+						'CONTEXT' => 'BLOG_POST'
+					], $errorText);
 
 					foreach($destRes as $code)
 					{
@@ -4051,7 +4079,7 @@ class ComponentHelper
 		return Option::get('socialnetwork', 'workgroups_page', $siteDir.'workgroups/', $siteId);
 	}
 
-	public static function convertBlogPostPermToDestinationList($params = array(), &$resultFields)
+	public static function convertBlogPostPermToDestinationList($params, &$resultFields)
 	{
 		global $USER;
 
@@ -4170,7 +4198,7 @@ class ComponentHelper
 		return $result;
 	}
 
-	public static function checkBlogPostDestinationList($params = array(), &$resultFields)
+	public static function checkBlogPostDestinationList($params, &$resultFields)
 	{
 		global $USER;
 
@@ -4287,17 +4315,24 @@ class ComponentHelper
 				{
 					if (
 						!$postId
-						|| (
-							!empty($postFields)
-							&& $postFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH
-						)
-					)
+						&& $resultFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH
+					) // new post
 					{
 						$resultFields["PUBLISH_STATUS"] = BLOG_PUBLISH_STATUS_READY;
 					}
-					else
+					elseif (
+						$postId
+						&& $resultFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH
+					) // new post
 					{
-						$resultFields["ERROR_MESSAGE"] = Loc::getMessage("SBPE_EXISTING_POST_PREMODERATION");
+						if ($postFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH)
+						{
+							$resultFields["PUBLISH_STATUS"] = $postFields["PUBLISH_STATUS"];
+						}
+						else
+						{
+							$resultFields["ERROR_MESSAGE"] = Loc::getMessage("SBPE_EXISTING_POST_PREMODERATION");
+						}
 					}
 				}
 				else
@@ -4895,5 +4930,10 @@ class ComponentHelper
 		}
 
 		return $canCommentCached[$cacheKey];
+	}
+
+	public static function checkLivefeedTasksAllowed()
+	{
+		return Option::get('socialnetwork', 'livefeed_allow_tasks', true);
 	}
 }

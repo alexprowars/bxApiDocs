@@ -4,25 +4,81 @@ namespace Bitrix\Landing;
 class Agent
 {
 	/**
+	 * Tech method for adding new unique agent.
+	 * @param string $funcName Function name from this class.
+	 * @param array $params Some params for agent function.
+	 * @param int $time Time in seconds for executing period.
+	 * @return void
+	 */
+	public static function addUniqueAgent($funcName, array $params = [], $time = 7200)
+	{
+		if (!method_exists(__CLASS__, $funcName))
+		{
+			return;
+		}
+
+		$funcName = __CLASS__ . '::' . $funcName . '(';
+		foreach ($params as $value)
+		{
+			if (is_int($value))
+			{
+				$funcName .= $value . ',';
+			}
+			else if (is_string($value))
+			{
+				$funcName .= '\'' . $value . '\'' . ',';
+			}
+		}
+		$funcName = trim($funcName, ',');
+		$funcName .= ');';
+		$res = \CAgent::getList(
+			[],
+			[
+				'MODULE_ID' => 'landing',
+				'NAME' => $funcName
+			]
+		);
+		if (!$res->fetch())
+		{
+			\CAgent::addAgent($funcName, 'landing', 'N', $time);
+		}
+	}
+
+	/**
+	 * Clear recycle bin for scope.
+	 * @param string $scope Scope code.
+	 * @param int $days After this time items will be deleted.
+	 * @return string
+	 */
+	public static function clearRecycleScope($scope, $days = null)
+	{
+		Site\Type::setScope($scope);
+
+		self::clearRecycle($days);
+
+		return __CLASS__ . '::' . __FUNCTION__ . '(\'' . $scope . '\');';
+	}
+
+	/**
 	 * Clear recycle bin.
 	 * @param int $days After this time items will be deleted.
 	 * @return string
 	 */
 	public static function clearRecycle($days = null)
 	{
-		Rights::setOff();
+		Rights::setGlobalOff();
+
 		$days = !is_null($days)
 				? (int) $days
 				: (int) Manager::getOption('deleted_lifetime_days');
 
 		$date = new \Bitrix\Main\Type\DateTime;
 		$date->add('-' . $days . ' days');
-		$folders = [];
 
 		// first delete landings
 		$res = Landing::getList([
 			'select' => [
-				'ID', 'FOLDER'
+				'ID', 'FOLDER_ID'
 			],
 			'filter' => [
 				[
@@ -46,41 +102,14 @@ class Agent
 		]);
 		while ($row = $res->fetch())
 		{
-			if ($row['FOLDER'] == 'Y')
+			if ($row['FOLDER_ID'])
 			{
-				$folders[] = $row['ID'];
-				continue;
+				Landing::update($row['ID'], [
+					'FOLDER_ID' => 0
+				]);
 			}
 			$resDel = Landing::delete($row['ID'], true);
 			$resDel->isSuccess();// for trigger
-		}
-
-		// delete from folders
-		if ($folders)
-		{
-			$res = Landing::getList([
-				'select' => [
-					'ID'
-				],
-				'filter' => [
-					'FOLDER_ID' => $folders,
-					'=DELETED' => ['Y', 'N'],
-					'=SITE.DELETED' => ['Y', 'N'],
-					'CHECK_PERMISSIONS' => 'N'
-				],
-				'order' => [
-					'DATE_MODIFY' => 'desc'
-				]
-			]);
-			while ($row = $res->fetch())
-			{
-				array_unshift($folders, $row['ID']);
-			}
-			foreach ($folders as $folderId)
-			{
-				$resDel = Landing::delete($folderId, true);
-				$resDel->isSuccess();// for trigger
-			}
 		}
 
 		// then delete sites
@@ -103,7 +132,7 @@ class Agent
 			$resDel->isSuccess();// for trigger
 		}
 
-		Rights::setOn();
+		Rights::setGlobalOn();
 
 		return __CLASS__ . '::' . __FUNCTION__ . '();';
 	}

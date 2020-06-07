@@ -1741,24 +1741,7 @@ if (Main\Loader::includeModule('sale'))
 					}
 					else
 					{
-						if ($productQuantity <= $catalogQuantity)
-						{
-							$fields["QUANTITY"] = $catalogQuantity - $productQuantity;
-						}
-						else
-						{
-							$fields["QUANTITY"] = 0;
-
-							$minusQuantity = ($productQuantity - $catalogQuantity);
-
-							$needReservedQuantity = $catalogReservedQuantity - $minusQuantity;
-							if ($minusQuantity > $catalogReservedQuantity)
-							{
-								$needReservedQuantity = $catalogReservedQuantity;
-							}
-
-							$fields["QUANTITY_RESERVED"] = $needReservedQuantity;
-						}
+						$fields["QUANTITY"] = $catalogQuantity - $productQuantity;
 					}
 
 				}
@@ -4450,13 +4433,20 @@ if (Main\Loader::includeModule('sale'))
 				if (empty($iblockData['PRODUCT_LIST']))
 					continue;
 
-				foreach($iblockData['PRODUCT_LIST'] as $productData)
+				foreach($iblockData['PRODUCT_LIST'] as $productId)
 				{
-					$productId = $productData['PRODUCT_ID'];
-
 					if (isset($resultList[$productId]))
 					{
-						$resultList[$productId]['QUANTITY'] = 1;
+						if (
+							!empty($resultList[$productId]['QUANTITY_LIST'])
+							&& is_array($resultList[$productId]['QUANTITY_LIST'])
+						)
+						{
+							foreach (array_keys($resultList[$productId]['QUANTITY_LIST']) as $index)
+							{
+								$resultList[$productId]['QUANTITY_LIST'][$index] = 1;
+							}
+						}
 					}
 				}
 			}

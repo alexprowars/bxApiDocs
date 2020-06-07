@@ -4,7 +4,6 @@ namespace Bitrix\Sale\Helpers\Admin\Blocks;
 
 use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale;
 use Bitrix\Sale\Helpers\Admin\OrderEdit;
 use Bitrix\Sale\Services\Company\Manager;
 
@@ -17,10 +16,6 @@ class OrderAdditional
 		global $APPLICATION, $USER;
 
 		$saleModulePermissions = $APPLICATION->GetGroupRight("sale");
-
-		$registry = Sale\Registry::getInstance(Sale\Registry::REGISTRY_TYPE_ORDER);
-		/** @var Sale\Order $orderClass */
-		$orderClass = $registry->getOrderClassName();
 
 		$userCompanyId = null;
 
@@ -47,7 +42,7 @@ class OrderAdditional
 		$lang = Application::getInstance()->getContext()->getLanguage();
 
 		if(get_class($collection) == 'Bitrix\Sale\Order')
-			$orderLocked = $orderClass::isLocked($collection->getId());
+			$orderLocked = \Bitrix\Sale\Order::isLocked($collection->getId());
 		else
 			$orderLocked = false;
 
@@ -166,10 +161,8 @@ class OrderAdditional
 					<tr>
 						<td class="adm-detail-content-cell-l vat" width="40%">'.Loc::getMessage('SALE_ORDER_ADDITIONAL_INFO_RESPONSIBLE').':</td>
 						<td class="adm-detail-content-cell-r">
-							<div class="adm-s-order-person-choose">
-								<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='. $data["RESPONSIBLE_ID"].'" id="order_additional_info_responsible">'.
-									htmlspecialcharsbx($data['RESPONSIBLE']).'
-								</a>&nbsp;
+							<div class="adm-s-order-person-choose">'.static::renderResponsibleLink($data).'
+								&nbsp;
 								<a class="adm-s-bus-morelinkqhsw" onclick="BX.Sale.Admin.OrderAdditionalInfo.choosePerson(\''.$formName.'\', \''.LANGUAGE_ID.'\');" href="javascript:void(0);">
 									'.Loc::getMessage('SALE_ORDER_ADDITIONAL_INFO_CHANGE').'
 								</a>
@@ -208,12 +201,8 @@ class OrderAdditional
 		$data = self::prepareData($collection);
 		$blockEmpResponsible = '';
 
-		$registry = Sale\Registry::getInstance(Sale\Registry::REGISTRY_TYPE_ORDER);
-		/** @var Sale\Order $orderClass */
-		$orderClass = $registry->getOrderClassName();
-
 		if(get_class($collection) == 'Bitrix\Sale\Order')
-			$orderLocked = $orderClass::isLocked($collection->getId());
+			$orderLocked = \Bitrix\Sale\Order::isLocked($collection->getId());
 		else
 			$orderLocked = false;
 
@@ -268,11 +257,7 @@ class OrderAdditional
 					<tr>
 						<td class="adm-detail-content-cell-l vat" width="40%">'.Loc::getMessage('SALE_ORDER_ADDITIONAL_INFO_RESPONSIBLE').':</td>
 						<td class="adm-detail-content-cell-r">
-							<div>
-								<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='. $data["RESPONSIBLE_ID"].'" id="order_additional_info_responsible">'.
-									htmlspecialcharsbx($data['RESPONSIBLE']).'
-								</a>
-							</div>
+							<div>'.static::renderResponsibleLink($data).'</div>
 						</td>
 					</tr>
 					'.$blockEmpResponsible.'
@@ -289,6 +274,11 @@ class OrderAdditional
 					</tr>
 				</tbody>
 			</table>';
+	}
+
+	protected static function renderResponsibleLink($data)
+	{
+		return '<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='. $data["RESPONSIBLE_ID"].'" id="order_additional_info_responsible">'.htmlspecialcharsbx($data['RESPONSIBLE']).'</a>';
 	}
 
 	public static function getScripts()

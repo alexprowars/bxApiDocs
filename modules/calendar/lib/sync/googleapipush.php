@@ -4,6 +4,7 @@ namespace Bitrix\Calendar\Sync;
 
 use Bitrix\Main\Type;
 use \Bitrix\Calendar\PushTable;
+use \Bitrix\Main\Loader;
 
 final class GoogleApiPush
 {
@@ -217,75 +218,82 @@ final class GoogleApiPush
 		}
 
 		$lastId = $start;
-		\Bitrix\Main\Loader::includeModule('dav');
-		$davConnections = \CDavConnection::getList(
-			array("ID" => "ASC"),
-			array(
-				'ACCOUNT_TYPE' => 'google_api_oauth',
-				'>ID' => $start
-			),
-			false,
-			array('nTopCount' => self::CREATE_LIMIT)
-		);
-
-		$connections = array();
-		$pushConnectionIds = array();
-
-		while($row = $davConnections->fetch())
+		if(Loader::includeModule('dav'))
 		{
-			$lastId = $row['ID'];
-			$connections[] = $row;
-			$pushConnectionIds[] = $row['ID'];
-		}
+			$davConnections = \CDavConnection::getList(
+				["ID" => "ASC"],
+				[
+					'ACCOUNT_TYPE' => 'google_api_oauth',
+					'>ID' => $start
+				],
+				false,
+				['nTopCount' => self::CREATE_LIMIT]
+			);
 
-		if (!empty($connections))
-		{
-			$result = PushTable::getList(array(
-				'filter' => array(
-					'=ENTITY_TYPE' => 'CONNECTION',
-					'=ENTITY_ID' => '@ IN (' . implode(',', $pushConnectionIds) . ')'
-				),
-			));
+			$connections = array();
+			$pushConnectionIds = array();
 
-			$pushChannels = array();
-			while($row = $result->fetch())
+			while($row = $davConnections->fetch())
 			{
-				$pushChannels[$row['ENTITY_ID']] = $row;
+				$lastId = $row['ID'];
+				$connections[] = $row;
+				$pushConnectionIds[] = $row['ID'];
 			}
 
-			foreach($connections as $davConnection)
+			if(!empty($connections))
 			{
-				$googleApiConnection = new GoogleApiSync($davConnection['ENTITY_ID']);
-				if (empty($pushChannels[$davConnection['ID']]))
+				$result = PushTable::getList(
+					[
+						'filter' => array(
+							'=ENTITY_TYPE' => 'CONNECTION',
+							'=ENTITY_ID' => '@ IN ('.implode(',', $pushConnectionIds).')')
+					]
+				);
+
+				$pushChannels = array();
+				while($row = $result->fetch())
 				{
-					$channelInfo = $googleApiConnection->startWatchCalendarList($connections['NAME']);
-					if ($channelInfo && isset($channelInfo['id'], $channelInfo['resourceId']))
-					{
-						PushTable::delete(array("ENTITY_TYPE" => 'CONNECTION', 'ENTITY_ID' => $davConnection['ID']));
-						PushTable::add(array(
-							'ENTITY_TYPE' => 'CONNECTION',
-							'ENTITY_ID' => $davConnection['ID'],
-							'CHANNEL_ID' => $channelInfo['id'],
-							'RESOURCE_ID' => $channelInfo['resourceId'],
-							'EXPIRES' => $channelInfo['expiration'],
-							'NOT_PROCESSED' => 'N'
-						));
-					}
+					$pushChannels[$row['ENTITY_ID']] = $row;
 				}
 
-				unset($googleApiConnection);
+				foreach($connections as $davConnection)
+				{
+					$googleApiConnection = new GoogleApiSync($davConnection['ENTITY_ID']);
+					if(empty($pushChannels[$davConnection['ID']]))
+					{
+						$channelInfo = $googleApiConnection->startWatchCalendarList($connections['NAME']);
+						if($channelInfo && isset($channelInfo['id'], $channelInfo['resourceId']))
+						{
+							PushTable::delete(["ENTITY_TYPE" => 'CONNECTION', 'ENTITY_ID' => $davConnection['ID']]);
+							PushTable::add([
+								'ENTITY_TYPE' => 'CONNECTION',
+								'ENTITY_ID' => $davConnection['ID'],
+								'CHANNEL_ID' => $channelInfo['id'],
+								'RESOURCE_ID' => $channelInfo['resourceId'],
+								'EXPIRES' => $channelInfo['expiration'], 'NOT_PROCESSED' => 'N'
+							]);
+						}
+					}
+
+					unset($googleApiConnection);
+				}
 			}
-		}
-		if ($lastId == $start)
-		{
-			\CAgent::removeAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(" . $start . ");", "calendar");
-			\CAgent::removeAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(0);", "calendar");
-			\CAgent::addAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(0);", "calendar", "N", 3600, "", "Y", Type\DateTime::createFromTimestamp(strtotime('+1 hour'))->format(Type\Date::convertFormatToPhp(FORMAT_DATETIME)));
-			return null;
+
+			if($lastId == $start)
+			{
+				\CAgent::removeAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(".$start.");", "calendar");
+				\CAgent::removeAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(0);", "calendar");
+				\CAgent::addAgent("\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(0);", "calendar", "N", 3600, "", "Y", Type\DateTime::createFromTimestamp(strtotime('+1 hour'))->format(Type\Date::convertFormatToPhp(FORMAT_DATETIME)));
+				return null;
+			}
+			else
+			{
+				return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(".$lastId.");";
+			}
 		}
 		else
 		{
-			return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(" . $lastId . ");";
+			return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::createWatchChannels(".$lastId.");";
 		}
 	}
 
@@ -333,20 +341,22 @@ final class GoogleApiPush
 	 */
 	public static function clearPushChannels()
 	{
-		\Bitrix\Main\Loader::includeModule('dav');
-		$result = PushTable::getList(array(
-			'limit'	 => self::CLEAR_LIMIT
-		));
-		$hasRows = false;
-		while ($row = $result->fetch())
+		if (Loader::includeModule('dav'))
 		{
-			$hasRows = true;
-			self::stopChannel($row);
+			$result = PushTable::getList(array(
+				'limit'	 => self::CLEAR_LIMIT
+			));
+			$hasRows = false;
+			while ($row = $result->fetch())
+			{
+				$hasRows = true;
+				self::stopChannel($row);
+			}
+			if ($hasRows)
+				return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::clearPushChannels();";
+			else
+				return null;
 		}
-		if ($hasRows)
-			return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::clearPushChannels();";
-		else
-			return null;
 	}
 
 	/**
@@ -388,98 +398,95 @@ final class GoogleApiPush
 	 */
 	public static function processPush()
 	{
-		\Bitrix\Main\Loader::includeModule('dav');
-		$result = PushTable::getList(array(
-			'filter' => array('=NOT_PROCESSED' => 'Y'),
-			'order' => array('FIRST_PUSH_DATE' => 'ASC'),
-			'limit' => self::PROCESS_LIMIT
-		));
-		$pushRows = array();
-
-		while ($row = $result->fetch())
+		if (Loader::includeModule('dav'))
 		{
-			$pushRows[] = $row;
-			if ($row['ENTITY_TYPE'] == 'CONNECTION')
-			{
-				$connectionIds[] = $row['ENTITY_ID'];
-			}
-			if ($row['ENTITY_TYPE'] == 'SECTION')
-			{
-				$sectionIds[] = $row['ENTITY_ID'];
-			}
-		}
+			$result = PushTable::getList([
+				'filter' => ['=NOT_PROCESSED' => 'Y'],
+				'order' => ['FIRST_PUSH_DATE' => 'ASC'],
+				'limit' => self::PROCESS_LIMIT
+			]);
+			$pushRows = [];
 
-		if (!empty($pushRows))
-		{
-			global $DB;
-			$sections = array();
-			$connections = array();
-			if (!empty($sectionIds))
+			while($row = $result->fetch())
 			{
-				$sectionResult =  $DB->query("SELECT * FROM b_calendar_section WHERE ID IN (" . implode(',', $sectionIds) . ")");
-				while ($row = $sectionResult->fetch())
+				$pushRows[] = $row;
+				if($row['ENTITY_TYPE'] == 'CONNECTION')
 				{
-					$sections[$row['ID']] = $row;
+					$connectionIds[] = $row['ENTITY_ID'];
+				}
+				if($row['ENTITY_TYPE'] == 'SECTION')
+				{
+					$sectionIds[] = $row['ENTITY_ID'];
 				}
 			}
 
-			if (!empty($connectionIds))
+			if(!empty($pushRows))
 			{
-				$connectionResult =  $DB->query("SELECT * FROM b_dav_connections WHERE ID IN (" . implode(',', $connectionIds) . ")");
-				while ($row = $connectionResult->fetch())
+				global $DB;
+				$sections = [];
+				$connections = [];
+				if(!empty($sectionIds))
 				{
-					$connections[$row['ID']] = $row;
-				}
-			}
-
-			foreach($pushRows as $row)
-			{
-				$resynced = false;
-				$eventsSyncToken = false;
-				if ($row['ENTITY_TYPE'] == 'CONNECTION')
-				{
-					if (!empty($connections[$row['ENTITY_ID']]))
+					$sectionResult = $DB->query("SELECT * FROM b_calendar_section WHERE ID IN (".implode(',', $sectionIds).")");
+					while($row = $sectionResult->fetch())
 					{
-						$resynced = \CCalendarSync::syncConnection($connections[$row['ENTITY_ID']]);
+						$sections[$row['ID']] = $row;
 					}
 				}
-				elseif ($row['ENTITY_TYPE'] == 'SECTION')
+
+				if(!empty($connectionIds))
 				{
-					if (!empty($sections[$row['ENTITY_ID']]))
+					$connectionResult = $DB->query("SELECT * FROM b_dav_connections WHERE ID IN (".implode(',', $connectionIds).")");
+					while($row = $connectionResult->fetch())
 					{
-						$eventsSyncToken = \CCalendarSync::syncCalendarEvents($sections[$row['ENTITY_ID']]);
-						if ($eventsSyncToken)
+						$connections[$row['ID']] = $row;
+					}
+				}
+
+				foreach($pushRows as $row)
+				{
+					$resynced = false;
+					$eventsSyncToken = false;
+					if($row['ENTITY_TYPE'] == 'CONNECTION')
+					{
+						if(!empty($connections[$row['ENTITY_ID']]))
 						{
-							\CCalendarSect::edit(array(
-								'arFields' => array(
-									'ID' => $sections[$row['ENTITY_ID']]['ID'],
-									'SYNC_TOKEN' => $eventsSyncToken
-								)
-							));
+							$resynced = \CCalendarSync::syncConnection($connections[$row['ENTITY_ID']]);
 						}
 					}
-				}
+					elseif($row['ENTITY_TYPE'] == 'SECTION')
+					{
+						if(!empty($sections[$row['ENTITY_ID']]))
+						{
+							$eventsSyncToken = \CCalendarSync::syncCalendarEvents($sections[$row['ENTITY_ID']]);
+							if($eventsSyncToken)
+							{
+								\CCalendarSect::edit(array('arFields' => array('ID' => $sections[$row['ENTITY_ID']]['ID'], 'SYNC_TOKEN' => $eventsSyncToken)));
+							}
+						}
+					}
 
-				if (($resynced && $row['ENTITY_TYPE'] == 'CONNECTION') ||
-					($eventsSyncToken && $row['ENTITY_TYPE'] == 'SECTION'))
-				{
-					PushTable::update(
-						array(
-							'ENTITY_TYPE' => $row['ENTITY_TYPE'],
-							'ENTITY_ID' => $row['ENTITY_ID']
-						),
-						array(
-							'NOT_PROCESSED' => 'N',
-							'FIRST_PUSH_DATE' => null
-						)
-					);
+					if(($resynced && $row['ENTITY_TYPE'] == 'CONNECTION')
+						|| ($eventsSyncToken && $row['ENTITY_TYPE'] == 'SECTION'))
+					{
+						PushTable::update(
+							[
+								'ENTITY_TYPE' => $row['ENTITY_TYPE'],
+								'ENTITY_ID' => $row['ENTITY_ID']
+							],
+							[
+								'NOT_PROCESSED' => 'N',
+								'FIRST_PUSH_DATE' => null
+							]
+						);
+					}
+					else
+					{
+						//PushTable::delete(array("ENTITY_TYPE" => $row['ENTITY_TYPE'], 'ENTITY_ID' => $row['ENTITY_ID']));
+					}
 				}
-				else
-				{
-					//PushTable::delete(array("ENTITY_TYPE" => $row['ENTITY_TYPE'], 'ENTITY_ID' => $row['ENTITY_ID']));
-				}
+				\CCalendar::clearCache();
 			}
-			\CCalendar::clearCache();
 		}
 
 		return "\\Bitrix\\Calendar\\Sync\\GoogleApiPush::processPush();";

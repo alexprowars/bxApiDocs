@@ -133,6 +133,31 @@ abstract class Check
 	}
 
 	/**
+	 * @return string
+	 */
+	public function getUrl()
+	{
+		if (!$this->getField('LINK_PARAMS'))
+		{
+			return '';
+		}
+
+		$cashbox = Manager::getObjectById($this->getField('CASHBOX_ID'));
+		if (!$cashbox)
+		{
+			return '';
+		}
+
+		$ofd = $cashbox->getOfd();
+		if (!$ofd)
+		{
+			return '';
+		}
+
+		return $ofd->generateCheckLink($this->getField('LINK_PARAMS'));
+	}
+
+	/**
 	 * @param array $cashboxList
 	 */
 	public function setAvailableCashbox(array $cashboxList)
@@ -350,7 +375,7 @@ abstract class Check
 		elseif ($this->fields['SHIPMENT_ID'] > 0)
 		{
 			/** @var Shipment $shipmentClassName */
-			$shipmentClassName = $registry->getPaymentClassName();
+			$shipmentClassName = $registry->getShipmentClassName();
 			$dbRes = $shipmentClassName::getList(array('filter' => array('ID' => $this->fields['SHIPMENT_ID'])));
 			$data = $dbRes->fetch();
 			$orderId = $data['ORDER_ID'];
@@ -785,7 +810,7 @@ abstract class Check
 	 */
 	protected function buildTag1162(string $markingCode, string $markingCodeGroup) : string
 	{
-		list($gtin, $serial, ) = $this->parseMarkingCode($markingCode);
+		[$gtin, $serial, ] = $this->parseMarkingCode($markingCode);
 
 		return
 			$this->convertToBinaryFormat($markingCodeGroup, 2).' '.
@@ -799,8 +824,8 @@ abstract class Check
 	 */
 	private function parseMarkingCode(string $code) : array
 	{
-		$gtin = substr($code, 0, 14);
-		$serial = substr($code, 14, 13);
+		$gtin = substr($code, 2, 14);
+		$serial = substr($code, 18, 13);
 		$reserve = substr($code, 27);
 
 		return [$gtin, $serial, $reserve];

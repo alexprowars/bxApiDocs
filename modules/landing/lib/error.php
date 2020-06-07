@@ -34,6 +34,20 @@ class Error
 	}
 
 	/**
+	 * Returns first error frm errors stack.
+	 * @return \Bitrix\Main\Error|null
+	 */
+	public function getFirstError()
+	{
+		if ($this->errors)
+		{
+			$errors = array_values($this->errors);
+			return array_shift($errors);
+		}
+		return null;
+	}
+
+	/**
 	 * Get current errors.
 	 * @return array
 	 */

@@ -220,7 +220,7 @@ class Element extends CopyImplementer
 		{
 			foreach ($inputValue as $value)
 			{
-				if (array_key_exists($value, $enumRatio))
+				if ($value && array_key_exists($value, $enumRatio))
 				{
 					$values[] = $enumRatio[$value];
 				}

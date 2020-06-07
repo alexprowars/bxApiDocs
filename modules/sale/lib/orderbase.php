@@ -119,7 +119,7 @@ abstract class OrderBase extends Internals\Entity
 			"STAT_GID", "RECURRING_ID", "LOCKED_BY", "IS_RECURRING",
 			"DATE_LOCK", "RECOUNT_FLAG", "AFFILIATE_ID", "DELIVERY_DOC_NUM", "DELIVERY_DOC_DATE", "UPDATED_1C",
 			"STORE_ID", "ORDER_TOPIC", "RESPONSIBLE_ID", "DATE_BILL", "DATE_PAY_BEFORE", "ACCOUNT_NUMBER",
-			"XML_ID", "ID_1C", "VERSION_1C", "VERSION", "EXTERNAL_ORDER", "COMPANY_ID",
+			"XML_ID", "ID_1C", "VERSION_1C", "VERSION", "EXTERNAL_ORDER", "COMPANY_ID", "IS_SYNC_B24"
 		);
 
 		return array_merge($result, static::getCalculatedFields());
@@ -711,16 +711,6 @@ abstract class OrderBase extends Internals\Entity
 		}
 
 		return $result;
-	}
-
-	/**
-	 * Return order id
-	 *
-	 * @return int
-	 */
-	public function getId()
-	{
-		return (int)$this->getField('ID');
 	}
 
 	/**
@@ -1637,7 +1627,7 @@ abstract class OrderBase extends Internals\Entity
 			{
 				$this->setField('DATE_MARKED', new Type\DateTime());
 
-				if ($USER->isAuthorized())
+				if (is_object($USER) && $USER->isAuthorized())
 				{
 					$this->setField('EMP_MARKED_ID', $USER->getID());
 				}
@@ -1922,7 +1912,7 @@ abstract class OrderBase extends Internals\Entity
 	 */
 	public function isPaid()
 	{
-		return $this->getField('PAYED') === "Y";
+		return $this->getField('PAYED') === 'Y';
 	}
 
 	/**
@@ -1932,7 +1922,17 @@ abstract class OrderBase extends Internals\Entity
 	 */
 	public function isAllowDelivery()
 	{
-		return $this->getField('ALLOW_DELIVERY') === "Y";
+		return $this->getField('ALLOW_DELIVERY') === 'Y';
+	}
+
+	/**
+	 * Return TRUE, if order is deducted. Else return FALSE
+	 *
+	 * @return bool
+	 */
+	public function isDeducted()
+	{
+		return $this->getField('DEDUCTED') === 'Y';
 	}
 
 	/**
@@ -1942,7 +1942,7 @@ abstract class OrderBase extends Internals\Entity
 	 */
 	public function isCanceled()
 	{
-		return $this->getField('CANCELED') === "Y";
+		return $this->getField('CANCELED') === 'Y';
 	}
 
 	/**
@@ -2803,7 +2803,7 @@ abstract class OrderBase extends Internals\Entity
 	/**
 	 * @deprecated Use \Bitrix\Sale\OrderBase::getAvailableFields instead
 	 *
-	 * @return array
+	 * @returns array
 	 */
 	public static function getSettableFields()
 	{
@@ -2811,9 +2811,9 @@ abstract class OrderBase extends Internals\Entity
 	}
 
 	/**
-	 * @return null|string
 	 * @internal
 	 *
+	 * @return string
 	 */
 	public static function getEntityEventName()
 	{

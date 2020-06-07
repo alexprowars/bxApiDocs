@@ -1,9 +1,11 @@
-<?
+<?php
 namespace Bitrix\Bizproc;
 
+use Bitrix\Bizproc\Workflow\Entity\WorkflowInstanceTable;
 use \Bitrix\Main\Loader;
 use \Bitrix\Rest\AppLangTable;
 use \Bitrix\Rest\AppTable;
+use Bitrix\Rest\PlacementTable;
 use \Bitrix\Rest\RestException;
 use \Bitrix\Rest\AccessException;
 
@@ -11,7 +13,9 @@ Loader::includeModule('rest');
 
 class RestService extends \IRestService
 {
-	const SCOPE = 'bizproc';
+	public const SCOPE = 'bizproc';
+	public const PLACEMENT_ACTIVITY_PROPERTIES_DIALOG = 'BIZPROC_ACTIVITY_PROPERTIES_DIALOG';
+
 	protected static $app;
 	private static $allowedOperations = array('', '!', '<', '<=', '>', '>=');//, '><', '!><', '?', '=', '!=', '%', '!%', ''); May be later?
 
@@ -37,47 +41,54 @@ class RestService extends \IRestService
 
 	public static function onRestServiceBuildDescription()
 	{
-		$map = array();
+		$map = [];
+
 		if (\CBPRuntime::isFeatureEnabled())
 		{
-			$map = array(
-
+			$map = [
 				//activity
-				'bizproc.activity.add' => array(__CLASS__, 'addActivity'),
-				'bizproc.activity.update' => array(__CLASS__, 'updateActivity'),
-				'bizproc.activity.delete' => array(__CLASS__, 'deleteActivity'),
-				'bizproc.activity.log' => array(__CLASS__, 'writeActivityLog'),
-				'bizproc.activity.list' => array(__CLASS__, 'getActivityList'),
+				'bizproc.activity.add' => [__CLASS__, 'addActivity'],
+				'bizproc.activity.update' => [__CLASS__, 'updateActivity'],
+				'bizproc.activity.delete' => [__CLASS__, 'deleteActivity'],
+				'bizproc.activity.log' => [__CLASS__, 'writeActivityLog'],
+				'bizproc.activity.list' => [__CLASS__, 'getActivityList'],
 
 				//event
-				'bizproc.event.send' => array(__CLASS__, 'sendEvent'),
+				'bizproc.event.send' => [__CLASS__, 'sendEvent'],
 
 				//task
-				'bizproc.task.list' =>  array(__CLASS__, 'getTaskList'),
-				'bizproc.task.complete' =>  array(__CLASS__, 'completeTask'),
+				'bizproc.task.list' => [__CLASS__, 'getTaskList'],
+				'bizproc.task.complete' => [__CLASS__, 'completeTask'],
 
 				//workflow
-				'bizproc.workflow.terminate' => array(__CLASS__, 'terminateWorkflow'),
-				'bizproc.workflow.start' => array(__CLASS__, 'startWorkflow'),
+				'bizproc.workflow.terminate' => [__CLASS__, 'terminateWorkflow'],
+				'bizproc.workflow.start' => [__CLASS__, 'startWorkflow'],
+
 				//workflow.instance
-				'bizproc.workflow.instance.list' => array(__CLASS__, 'getWorkflowInstances'),
+				'bizproc.workflow.instance.list' => [__CLASS__, 'getWorkflowInstances'],
+
 				//workflow.template
-				'bizproc.workflow.template.list' => array(__CLASS__, 'getWorkflowTemplates'),
-				'bizproc.workflow.template.add' => array(__CLASS__, 'addWorkflowTemplate'),
-				'bizproc.workflow.template.update' => array(__CLASS__, 'updateWorkflowTemplate'),
-				'bizproc.workflow.template.delete' => array(__CLASS__, 'deleteWorkflowTemplate'),
+				'bizproc.workflow.template.list' => [__CLASS__, 'getWorkflowTemplates'],
+				'bizproc.workflow.template.add' => [__CLASS__, 'addWorkflowTemplate'],
+				'bizproc.workflow.template.update' => [__CLASS__, 'updateWorkflowTemplate'],
+				'bizproc.workflow.template.delete' => [__CLASS__, 'deleteWorkflowTemplate'],
 
 				//aliases
-				'bizproc.workflow.instances' => array(__CLASS__, 'getWorkflowInstances'),
-			);
+				'bizproc.workflow.instances' => [__CLASS__, 'getWorkflowInstances'],
+			];
 		}
 
-		if (\CBPRuntime::isFeatureEnabled()
+		if (
+			\CBPRuntime::isFeatureEnabled()
 			|| \CBPRuntime::isFeatureEnabled('crm_automation_lead')
 			|| \CBPRuntime::isFeatureEnabled('crm_automation_deal')
+			|| \CBPRuntime::isFeatureEnabled('crm_automation_order')
+			|| \CBPRuntime::isFeatureEnabled('tasks_automation')
 		)
 		{
 			$map = array_merge($map, array(
+				'bizproc.event.send' => [__CLASS__, 'sendEvent'],
+				'bizproc.activity.log' => [__CLASS__, 'writeActivityLog'],
 
 				//robot
 				'bizproc.robot.add' => array(__CLASS__, 'addRobot'),
@@ -86,13 +97,20 @@ class RestService extends \IRestService
 				'bizproc.robot.list' => array(__CLASS__, 'getRobotList'),
 
 				//provider
-				'bizproc.provider.add' => array(__CLASS__, 'addProvider'),
-				'bizproc.provider.delete' => array(__CLASS__, 'deleteProvider'),
-				'bizproc.provider.list' => array(__CLASS__, 'getProviderList'),
+				'bizproc.provider.add' => [__CLASS__, 'addProvider'],
+				'bizproc.provider.delete' => [__CLASS__, 'deleteProvider'],
+				'bizproc.provider.list' => [__CLASS__, 'getProviderList'],
 			));
 		}
 
-		return $map ? array(static::SCOPE => $map) : false;
+		//placements
+		$map[\CRestUtil::PLACEMENTS] = [
+			static::PLACEMENT_ACTIVITY_PROPERTIES_DIALOG => ['private' => true],
+		];
+
+		return [
+			static::SCOPE => $map,
+		];
 	}
 
 	/**
@@ -134,6 +152,8 @@ class RestService extends \IRestService
 		{
 			RestProviderTable::delete($activity['ID']);
 		}
+
+		self::deleteAppPlacement($app['ID']);
 	}
 
 	/**
@@ -193,6 +213,7 @@ class RestService extends \IRestService
 		else
 			self::validateActivity($params, $server);
 
+		$appId = self::getAppId($server->getClientId());
 		$params['APP_ID'] = $server->getClientId();
 		$params['INTERNAL_CODE'] = self::generateInternalCode($params);
 		$params['APP_NAME'] = self::getAppName($params['APP_ID']);
@@ -211,10 +232,21 @@ class RestService extends \IRestService
 		$params['IS_ROBOT'] = $isRobot ? 'Y' : 'N';
 		$params['USE_PLACEMENT'] = ($params['USE_PLACEMENT'] === 'Y') ? 'Y' : 'N';
 
+		if ($params['USE_PLACEMENT'] === 'Y')
+		{
+			self::validateActivityHandler($params['PLACEMENT_HANDLER'], $server);
+			self::upsertAppPlacement($appId, $params['CODE'], $params['PLACEMENT_HANDLER']);
+		}
+
 		$result = RestActivityTable::add($params);
 
 		if ($result->getErrors())
 		{
+			if ($params['USE_PLACEMENT'] === 'Y')
+			{
+				self::deleteAppPlacement($appId, $params['CODE']);
+			}
+
 			throw new RestException('Activity save error!', self::ERROR_ACTIVITY_ADD_FAILURE);
 		}
 
@@ -303,6 +335,7 @@ class RestService extends \IRestService
 			throw new RestException('Activity or Robot not found!', self::ERROR_ACTIVITY_NOT_FOUND);
 		}
 		RestActivityTable::delete($result['ID']);
+		self::deleteAppPlacement(self::getAppId($params['APP_ID']), $params['CODE']);
 
 		return true;
 	}
@@ -325,7 +358,7 @@ class RestService extends \IRestService
 			throw new AccessException("Application context required");
 		}
 
-		$params = array_change_key_case($params, CASE_UPPER);
+		$params = self::prepareActivityData($params);
 		self::checkAdminPermissions();
 		self::validateActivityCode($params['CODE']);
 		$params['APP_ID'] = $server->getClientId();
@@ -386,13 +419,13 @@ class RestService extends \IRestService
 
 		if (isset($fields['PROPERTIES']))
 		{
-			self::validateActivityProperties($fields['PROPERTIES'], $isRobot);
+			self::validateActivityProperties($fields['PROPERTIES']);
 			$toUpdate['PROPERTIES'] = $fields['PROPERTIES'];
 		}
 
 		if (isset($fields['RETURN_PROPERTIES']))
 		{
-			self::validateActivityProperties($fields['RETURN_PROPERTIES'], $isRobot);
+			self::validateActivityProperties($fields['RETURN_PROPERTIES']);
 			$toUpdate['RETURN_PROPERTIES'] = $fields['RETURN_PROPERTIES'];
 		}
 
@@ -430,6 +463,17 @@ class RestService extends \IRestService
 			throw new RestException('No fields to update', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
 		}
 
+		if (isset($fields['PLACEMENT_HANDLER']))
+		{
+			self::validateActivityHandler($params['PLACEMENT_HANDLER'], $server);
+			self::upsertAppPlacement(self::getAppId($params['APP_ID']), $params['CODE'], $fields['PLACEMENT_HANDLER']);
+		}
+
+		if (isset($toUpdate['USE_PLACEMENT']) && $toUpdate['USE_PLACEMENT'] === 'N')
+		{
+			self::deleteAppPlacement(self::getAppId($params['APP_ID']), $params['CODE']);
+		}
+
 		RestActivityTable::update($result['ID'], $toUpdate);
 
 		return true;
@@ -446,7 +490,7 @@ class RestService extends \IRestService
 	public static function sendEvent($params, $n, $server)
 	{
 		$params = array_change_key_case($params, CASE_UPPER);
-		list($workflowId, $activityName, $eventId) = self::extractEventToken($params['EVENT_TOKEN']);
+		[$workflowId, $activityName, $eventId] = self::extractEventToken($params['EVENT_TOKEN']);
 
 		\CBPRuntime::sendExternalEvent(
 			$workflowId,
@@ -472,7 +516,7 @@ class RestService extends \IRestService
 	public static function writeActivityLog($params, $n, $server)
 	{
 		$params = array_change_key_case($params, CASE_UPPER);
-		list($workflowId, $activityName, $eventId) = self::extractEventToken($params['EVENT_TOKEN']);
+		[$workflowId, $activityName, $eventId] = self::extractEventToken($params['EVENT_TOKEN']);
 
 		$logMessage = isset($params['LOG_MESSAGE']) ? $params['LOG_MESSAGE'] : '';
 
@@ -643,7 +687,6 @@ class RestService extends \IRestService
 	 */
 	public static function startWorkflow($params, $n, $server)
 	{
-		self::checkAdminPermissions();
 		$params = array_change_key_case($params, CASE_UPPER);
 
 		if (empty($params['TEMPLATE_ID']))
@@ -652,8 +695,9 @@ class RestService extends \IRestService
 		}
 
 		$documentId = self::validateDocumentId($params['DOCUMENT_ID']);
-
 		$templateId = (int)$params['TEMPLATE_ID'];
+		self::checkStartWorkflowPermissions($documentId, $templateId);
+
 		$workflowParameters = isset($params['PARAMETERS']) && is_array($params['PARAMETERS']) ? $params['PARAMETERS'] : [];
 
 		$workflowParameters[\CBPDocument::PARAM_TAGRET_USER] = self::getCurrentUserId();
@@ -667,6 +711,28 @@ class RestService extends \IRestService
 		}
 
 		return $workflowId;
+	}
+
+	private static function checkStartWorkflowPermissions(array $documentId, $templateId)
+	{
+		if (static::isAdmin())
+		{
+			return true;
+		}
+
+		if (
+			\CBPDocument::CanUserOperateDocument(
+				\CBPCanUserOperateOperation::StartWorkflow,
+				static::getCurrentUserId(),
+				$documentId,
+				['WorkflowTemplateId' => $templateId]
+			)
+		)
+		{
+			return true;
+		}
+
+		throw new AccessException();
 	}
 
 	/**
@@ -704,7 +770,7 @@ class RestService extends \IRestService
 
 		$select = static::getSelect($params['SELECT'], $fields, array('ID'));
 		$filter = static::getFilter($params['FILTER'], $fields, array('MODIFIED'));
-		$filter['!AUTO_EXECUTE'] = \CBPDocumentEventType::Automation;
+		$filter['<AUTO_EXECUTE'] = \CBPDocumentEventType::Automation;
 
 		$order = static::getOrder($params['ORDER'], $fields, array('ID' => 'ASC'));
 
@@ -1411,7 +1477,7 @@ class RestService extends \IRestService
 			throw new RestException('Empty activity NAME!', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
 
 		if (isset($data['PROPERTIES']))
-			static::validateActivityProperties($data['PROPERTIES'], true);
+			static::validateActivityProperties($data['PROPERTIES']);
 
 		if (isset($data['RETURN_PROPERTIES']))
 			static::validateActivityProperties($data['RETURN_PROPERTIES']);
@@ -1481,22 +1547,10 @@ class RestService extends \IRestService
 		}
 	}
 
-	private static function validateActivityProperties($properties, $isRobot = false)
+	private static function validateActivityProperties($properties)
 	{
 		if (!is_array($properties))
 			throw new RestException('Wrong properties array!', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
-
-		$map = 	array(
-			FieldType::BOOL => true,
-			FieldType::DATE => true,
-			FieldType::DATETIME => true,
-			FieldType::DOUBLE => true,
-			FieldType::INT => true,
-			FieldType::SELECT => true,
-			FieldType::STRING => true,
-			FieldType::TEXT => true,
-			FieldType::USER => true,
-		);
 
 		foreach ($properties as $key => $property)
 		{
@@ -1504,13 +1558,6 @@ class RestService extends \IRestService
 				throw new RestException('Wrong property key ('.$key.')!', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
 			if (empty($property['NAME']))
 				throw new RestException('Empty property NAME ('.$key.')!', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
-
-			if ($isRobot)
-			{
-				$type = isset($property['TYPE']) ? $property['TYPE'] : FieldType::STRING;
-				if (!array_key_exists($type, $map))
-					throw new RestException('Unsupported property type ('.$type.')!', self::ERROR_ACTIVITY_VALIDATION_FAILURE);
-			}
 		}
 	}
 
@@ -1560,6 +1607,68 @@ class RestService extends \IRestService
 		if (empty($name))
 		{
 			throw new RestException('Empty activity code!', self::ERROR_TEMPLATE_VALIDATION_FAILURE);
+		}
+	}
+
+	private static function upsertAppPlacement(int $appId, string $code,  string $handler)
+	{
+		$filter = [
+			'=APP_ID' => $appId,
+			'=ADDITIONAL' => $code,
+			'=PLACEMENT' => static::PLACEMENT_ACTIVITY_PROPERTIES_DIALOG,
+		];
+
+		$dbRes = PlacementTable::getList(array(
+			'filter' => $filter
+		));
+
+		$placementHandler = $dbRes->fetch();
+
+		if ($placementHandler)
+		{
+			$result = PlacementTable::update($placementHandler['ID'], ['PLACEMENT_HANDLER' => $handler]);
+		}
+		else
+		{
+			$placementBind = array(
+				'APP_ID' => $appId,
+				'ADDITIONAL' => $code,
+				'PLACEMENT' => static::PLACEMENT_ACTIVITY_PROPERTIES_DIALOG,
+				'PLACEMENT_HANDLER' => $handler,
+			);
+
+			$result = PlacementTable::add($placementBind);
+		}
+
+		if(!$result->isSuccess())
+		{
+			$errorMessage = $result->getErrorMessages();
+			throw new RestException(
+				'Unable to set placement handler: '.implode(', ', $errorMessage),
+				RestException::ERROR_CORE
+			);
+		}
+	}
+
+	private static function deleteAppPlacement(int $appId, string $code = null)
+	{
+		$filter = [
+			'=APP_ID' => $appId,
+			'=PLACEMENT' => static::PLACEMENT_ACTIVITY_PROPERTIES_DIALOG,
+		];
+
+		if ($code)
+		{
+			$filter['=ADDITIONAL'] = $code;
+		}
+
+		$dbRes = PlacementTable::getList(array(
+			'filter' => $filter
+		));
+
+		while($placementHandler = $dbRes->fetch())
+		{
+			PlacementTable::delete($placementHandler["ID"]);
 		}
 	}
 

@@ -43,6 +43,7 @@ class UrlPreview
 		if(!static::isEnabled())
 			return false;
 
+		$url = static::unfoldShortLink($url);
 		$url = static::normalizeUrl($url);
 		if($url == '')
 			return false;
@@ -483,7 +484,7 @@ class UrlPreview
 		$uriParser = new Uri($url);
 		if(static::isUrlLocal($uriParser))
 		{
-			if($routeRecord = Router::dispatch(new Uri(static::unfoldShortLink($url))))
+			if($routeRecord = Router::dispatch($uriParser))
 			{
 				$metadata = array(
 					'URL' => $url,
@@ -538,6 +539,8 @@ class UrlPreview
 	protected static function getRemoteUrlMetadata(Uri $uri)
 	{
 		$httpClient = new HttpClient();
+		//prevents proxy to LAN
+		$httpClient->setPrivateIp(false);
 		$httpClient->setTimeout(5);
 		$httpClient->setStreamTimeout(5);
 		$httpClient->setHeader('User-Agent', self::USER_AGENT, true);
@@ -778,6 +781,7 @@ class UrlPreview
 	 */
 	public static function fetchVideoMetaData($url)
 	{
+		$url = static::unfoldShortLink($url);
 		$uri = new Uri($url);
 		if(static::isHostTrusted($uri) || static::isEnabled())
 		{

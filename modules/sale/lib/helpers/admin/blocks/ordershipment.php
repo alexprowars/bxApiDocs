@@ -9,6 +9,8 @@ use Bitrix\Main\Type\Date;
 use Bitrix\Sale\Cashbox\Internals\CashboxTable;
 use Bitrix\Sale\Cashbox;
 use Bitrix\Sale\Delivery\CalculationResult;
+use Bitrix\Sale\Exchange\Integration\Admin\Link;
+use Bitrix\Sale\Exchange\Integration\Admin\Registry;
 use Bitrix\Sale\Helpers\Admin\OrderEdit;
 use Bitrix\Sale\Delivery\Services;
 use Bitrix\Sale\Delivery\Restrictions;
@@ -1261,8 +1263,12 @@ class OrderShipment
 		$sectionEdit = '';
 		$allowedOrderStatusesUpdate = DeliveryStatus::getStatusesUserCanDoOperations($USER->GetID(), array('update'));
 		if (in_array($data["STATUS_ID"], $allowedOrderStatusesUpdate) && !$data['ORDER_LOCKED'] && $formType != 'archive')
-			$sectionEdit = '<div class="adm-bus-pay-section-action" id="SHIPMENT_SECTION_'.$index.'_EDIT"><a href="/bitrix/admin/sale_order_shipment_edit.php?order_id='.$data['ORDER_ID'].'&shipment_id='.$data['ID'].'&backurl='.urlencode($backUrl).'&lang='.$lang.'">'.Loc::getMessage('SALE_ORDER_SHIPMENT_BLOCK_SHIPMENT_EDIT').'</a></div>';
-
+		{
+			$sectionEdit = '<div class="adm-bus-pay-section-action" id="SHIPMENT_SECTION_'.$index.'_EDIT">'.
+				static::renderShipmentEditLink($data+['backurl'=>$backUrl]).
+				Loc::getMessage('SALE_ORDER_SHIPMENT_BLOCK_SHIPMENT_EDIT').'</a></div>';
+		}
+			
 		$weightView = roundEx(
 			floatval(
 				$data['WEIGHT']/self::getWeightKoef($data['SITE_ID'])
@@ -1502,6 +1508,22 @@ class OrderShipment
 		return $result;
 	}
 
+	protected static function renderShipmentEditLink($data)
+	{
+		$backUrl = $data['backurl'];
+		$href = Link::getInstance()
+			->create()
+			->setPageByType(Registry::SALE_ORDER_SHIPMENT_EDIT)
+			->setFilterParams(false)
+			->fill()
+			->setField('order_id', $data['ORDER_ID'])
+			->setField('shipment_id', $data['ID'])
+			->setField('backurl', $backUrl)
+			->build();
+
+		return '<a href="'.$href.'">';
+	}
+
 	private static function getShortViewTemplate($data, $index, $logo, $formType)
 	{
 		global $USER;
@@ -1599,9 +1621,9 @@ class OrderShipment
 		return $result;
 	}
 
-	public static function createNewShipmentButton()
+	public static function createNewShipmentButton($params=[])
 	{
-		return '<input type="button" class="adm-order-block-add-button" onclick="BX.Sale.Admin.GeneralShipment.createNewShipment()" value = "'.Loc::getMessage('SALE_ORDER_SHIPMENT_ADD_SHIPMENT').'">';
+		return '<input type="button" class="adm-order-block-add-button" onclick="BX.Sale.Admin.GeneralShipment.createNewShipment(this,'.\CUtil::PhpToJSObject($params).')" value = "'.Loc::getMessage('SALE_ORDER_SHIPMENT_ADD_SHIPMENT').'">';
 	}
 
 	/**

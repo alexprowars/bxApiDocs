@@ -38,14 +38,6 @@ abstract class BasketPropertyItemBase extends Internals\CollectableEntity
 	}
 
 	/**
-	 * @return int
-	 */
-	public function getId()
-	{
-		return $this->getField('ID');
-	}
-
-	/**
 	 * @return string|void
 	 */
 	public static function getRegistryEntity()

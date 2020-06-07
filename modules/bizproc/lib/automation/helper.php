@@ -13,11 +13,12 @@ class Helper
 	protected static $maps;
 	protected static $documentFields;
 
-	public static function prepareUserSelectorEntities(array $documentType, $users, $config = [])
+	public static function prepareUserSelectorEntities(array $documentType, $users, $config = []): array
 	{
 		$result = [];
 		$users = (array)$users;
 		$documentUserFields = static::getDocumentFields($documentType, 'user');
+		$documentUserGroups = self::getDocumentUserServiceGroups($documentType);
 
 		foreach ($users as $user)
 		{
@@ -29,12 +30,15 @@ class Helper
 				$user = intval(substr($user, 5));
 				if (($user > 0) && !in_array($user, $result))
 				{
-					$result[] = array(
+					$userInfo = self::getUserInfo($user);
+					$result[] = [
 						'id'         => 'U'.$user,
 						'entityId'   => $user,
-						'name'       => htmlspecialcharsBx(self::getFormattedUserName($user)),
-						'entityType' => 'users'
-					);
+						'name'       => htmlspecialcharsBx($userInfo['fullName']),
+						'photoSrc'       => $userInfo['photoSrc'],
+						'url'       => $userInfo['url'],
+						'entityType' => 'users',
+					];
 				}
 			}
 			elseif ($user === 'author' &&
@@ -50,6 +54,15 @@ class Helper
 					'id'         => $documentUserFields[$responsibleKey]['Expression'],
 					'entityId'   => $documentUserFields[$responsibleKey]['Expression'],
 					'name'       => htmlspecialcharsBx($documentUserFields[$responsibleKey]['Name']),
+					'entityType' => 'bpuserroles'
+				);
+			}
+			elseif (isset($documentUserGroups[$user]))
+			{
+				$result[] = array(
+					'id'         => $user,
+					'entityId'   => $user,
+					'name'       => htmlspecialcharsBx($documentUserGroups[$user]),
 					'entityType' => 'bpuserroles'
 				);
 			}
@@ -99,6 +112,10 @@ class Helper
 		{
 			$responsibleKey = isset($documentUserFields['ASSIGNED_BY_ID']) ? 'ASSIGNED_BY_ID' : 'RESPONSIBLE_ID';
 			$result = '{=Document:'.$responsibleKey.'}';
+		}
+		elseif (isset($documentUserFields['CREATED_BY']))
+		{
+			$result = '{=Document:CREATED_BY}';
 		}
 		return $result;
 	}
@@ -155,17 +172,29 @@ class Helper
 			if (!is_scalar($file))
 				continue;
 
+			$found = false;
 			foreach ($documentUserFields as $id => $field)
 			{
 				if ($file !== $field['Expression'])
 					continue;
 
+				$found = true;
 				$result[] = array(
 					'id' => $id,
 					'expression' => $field['Expression'],
 					'name' => $field['Name'],
 					'type' => 'file'
 				);
+			}
+
+			if (!$found && strpos($file, '{') === 0)
+			{
+				$result[] = [
+					'id' => $file,
+					'expression' => $file,
+					'name' => $file,
+					'type' => 'file'
+				];
 			}
 		}
 		return $result;
@@ -311,11 +340,42 @@ class Helper
 					'BaseType' => $field['BaseType'],
 					'Expression' => '{{'.$field['Name'].'}}',
 					'SystemExpression' => '{=Document:'.$id.'}',
-					'Options' => $field['Options']
+					'Options' => $field['Options'],
+					'Multiple' => $field['Multiple'],
 				);
 			}
 		}
 		return $resultFields;
+	}
+
+	private static function getDocumentUserServiceGroups(array $documentType)
+	{
+		$documentService = \CBPRuntime::GetRuntime(true)->getDocumentService();
+		return $documentService->GetAllowableUserGroups($documentType);
+	}
+
+	public static function getDocumentUserGroups(array $documentType): array
+	{
+		$docGroups = self::getDocumentUserServiceGroups($documentType);
+		$groups = [];
+
+		if ($docGroups)
+		{
+			foreach ($docGroups as $id => $groupName)
+			{
+				if (!$groupName || strpos($id, 'group_') === 0)
+				{
+					continue;
+				}
+
+				$groups[] = [
+					'id' => preg_match('/^[0-9]+$/', $id) ? 'G'.$id : $id,
+					'name' => $groupName
+				];
+			}
+		}
+
+		return $groups;
 	}
 
 	protected static function getFieldsMap(array $documentType)
@@ -474,7 +534,7 @@ class Helper
 		return array('h' => $pairs[0], 'i' => $pairs[1]);
 	}
 
-	private static function getFormattedUserName($userID, $format = '', $htmlEncode = false)
+	private static function getUserInfo($userID, $format = '', $htmlEncode = false)
 	{
 		$userID = intval($userID);
 		if($userID <= 0)
@@ -496,12 +556,18 @@ class Helper
 				'FIELDS' => array(
 					'ID',
 					'NAME', 'SECOND_NAME', 'LAST_NAME',
-					'LOGIN', 'TITLE', 'EMAIL'
+					'LOGIN', 'TITLE', 'EMAIL',
+					'PERSONAL_PHOTO'
 				)
 			)
 		);
 
 		$user = $dbUser ? $dbUser->Fetch() : null;
-		return is_array($user) ? \CUser::FormatName($format, $user, true, $htmlEncode) : '';
+
+		return [
+			'fullName' => $user ? \CUser::FormatName($format, $user, true, $htmlEncode) : '',
+			'photoSrc' => $user ? \CBPViewHelper::getUserPhotoSrc($user) : null,
+			'url' => sprintf('/company/personal/user/%s/', $userID),
+		];
 	}
 }

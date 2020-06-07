@@ -940,36 +940,67 @@ abstract class ElementList extends Base
 
 	protected function getSort()
 	{
-		$sortFields = array();
-
-		if (
-			(
-				$this->isIblockCatalog
-				|| (
-					$this->isMultiIblockMode()
-					|| (!$this->isMultiIblockMode() && $this->offerIblockExist($this->arParams['IBLOCK_ID']))
+		$sortFields = $this->getCustomSort();
+		if (empty($sortFields))
+		{
+			if (
+				(
+					$this->isIblockCatalog
+					|| (
+						$this->isMultiIblockMode()
+						|| (!$this->isMultiIblockMode() && $this->offerIblockExist($this->arParams['IBLOCK_ID']))
+					)
 				)
+				&& $this->arParams['HIDE_NOT_AVAILABLE'] === 'L'
 			)
-			&& $this->arParams['HIDE_NOT_AVAILABLE'] === 'L'
-		)
-		{
-			$sortFields['AVAILABLE'] = 'desc,nulls';
-		}
+			{
+				$sortFields['AVAILABLE'] = 'desc,nulls';
+			}
 
-		$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD']);
-		if (!isset($sortFields[$field]))
-		{
-			$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER'];
-		}
+			$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD']);
+			if (!isset($sortFields[$field]))
+			{
+				$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER'];
+			}
 
-		$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD2']);
-		if (!isset($sortFields[$field]))
-		{
-			$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER2'];
+			$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD2']);
+			if (!isset($sortFields[$field]))
+			{
+				$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER2'];
+			}
+			unset($field);
 		}
-		unset($field);
 
 		return $sortFields;
+	}
+
+	protected function getCustomSort(): array
+	{
+		$result = [];
+
+		if (!empty($this->arParams['CUSTOM_ELEMENT_SORT']) && is_array($this->arParams['CUSTOM_ELEMENT_SORT']))
+		{
+			foreach ($this->arParams['CUSTOM_ELEMENT_SORT'] as $field => $value)
+			{
+				if (!is_string($value))
+				{
+					continue;
+				}
+				$field = strtoupper($field);
+				if (isset($result[$field]))
+				{
+					continue;
+				}
+				if (!preg_match(self::SORT_ORDER_MASK, $value))
+				{
+					continue;
+				}
+				$result[$field] = $value;
+			}
+			unset($field, $value);
+		}
+
+		return $result;
 	}
 
 	protected function getElementList($iblockId, $products)

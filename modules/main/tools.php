@@ -6478,11 +6478,11 @@ function ClearVars($prefix="str_")
  * <p>Округляет сверху значение $value до $prec знаков после запятой.</p>
  *
  *
- * @param  $value  Округляемое значение
+ * @param  float $value  Округляемое значение
  *
  * @param  $prec = 0 Число знаков запятой, до которых происходит округление.
  *
- * @return function 
+ * @return float
  *
  * @static
  * @link http://dev.1c-bitrix.ru/api_help/main/functions/other/roundex.php

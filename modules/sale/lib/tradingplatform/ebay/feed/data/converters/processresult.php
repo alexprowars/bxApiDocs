@@ -16,7 +16,7 @@ class ProcessResult extends DataConverter
 
 		$result["RESULT_ID"] = $data["RESULT_ID"];
 
-		if(strlen($data["CONTENT"]) >= 0)
+		if((string)$data["CONTENT"] !== '')
 		{
 			$strings = explode("\n", $data["CONTENT"]);
 			$fields = array();

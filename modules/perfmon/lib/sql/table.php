@@ -213,7 +213,7 @@ class Table extends BaseObject
 				}
 				else
 				{
-					throw new NotSupportedException("',' or ')' expected. line:".$token->line);
+					throw new NotSupportedException("',' or ')' expected got (".$token->text."). line:".$token->line);
 				}
 
 				$tokenizer->skipWhiteSpace();

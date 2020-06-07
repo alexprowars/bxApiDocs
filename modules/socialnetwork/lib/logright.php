@@ -36,6 +36,9 @@ class LogRightTable extends Entity\DataManager
 			),
 			'GROUP_CODE' => array(
 				'data_type' => 'string',
+			),
+			'LOG_UPDATE' => array(
+				'data_type' => 'datetime'
 			)
 		);
 
@@ -71,6 +74,22 @@ class LogRightTable extends Entity\DataManager
 		$tableName = self::getTableName();
 		list($prefix, $values) = $helper->prepareUpdate($tableName, $updateFields);
 		$connection->queryExecute("UPDATE {$tableName} SET {$prefix} WHERE `LOG_ID` = ".$logId);
+
+		return true;
+	}
+
+	public static function deleteByGroupCode($value = '')
+	{
+		if (strlen($value) <= 0)
+		{
+			return false;
+		}
+
+		$connection = Application::getConnection();
+		$helper = $connection->getSqlHelper();
+
+		$tableName = self::getTableName();
+		$connection->queryExecute("DELETE FROM {$tableName} WHERE `GROUP_CODE` = '".$helper->forSql($value)."'");
 
 		return true;
 	}

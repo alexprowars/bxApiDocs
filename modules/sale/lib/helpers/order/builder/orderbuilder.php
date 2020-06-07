@@ -328,6 +328,8 @@ abstract class OrderBuilder
 			$isNew = ($shipmentId <= 0);
 			$deliveryService = null;
 
+			$extraServices = ($item['EXTRA_SERVICES']) ? $item['EXTRA_SERVICES'] : array();
+
 			$settableShipmentFields = $this->getSettableShipmentFields();
 			if(count($settableShipmentFields)>0)
 			{
@@ -400,8 +402,6 @@ abstract class OrderBuilder
 					$this->errorsContainer->addErrors($basketResult->getErrors());
 				}
 			}
-
-			$extraServices = ($item['EXTRA_SERVICES']) ? $item['EXTRA_SERVICES'] : array();
 
 			$shipmentFields = array(
 				'COMPANY_ID' => (isset($item['COMPANY_ID']) && intval($item['COMPANY_ID']) > 0) ? intval($item['COMPANY_ID']) : 0,

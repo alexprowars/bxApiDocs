@@ -7,6 +7,8 @@ namespace Bitrix\Main\UserField\Internal;
  */
 abstract class TypeFactory
 {
+	protected $itemEntities = [];
+
 	/**
 	 * @return TypeDataManager
 	 */
@@ -25,7 +27,24 @@ abstract class TypeFactory
 	 */
 	public function getItemDataClass($type): string
 	{
-		return $this->getTypeDataClass()::compileEntity($type)->getDataClass();
+		return $this->getItemEntity($type)->getDataClass();
+	}
+
+	public function getItemEntity($type): \Bitrix\Main\ORM\Entity
+	{
+		$typeData = $this->getTypeDataClass()::resolveType($type);
+		if(!empty($typeData) && isset($this->itemEntities[$typeData['ID']]))
+		{
+			return $this->itemEntities[$typeData['ID']];
+		}
+
+		$entity = $this->getTypeDataClass()::compileEntity($type);
+		if($entity)
+		{
+			$this->itemEntities[$typeData['ID']] = $entity;
+		}
+
+		return $entity;
 	}
 
 	/**

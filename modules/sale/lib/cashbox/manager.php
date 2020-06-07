@@ -54,6 +54,18 @@ final class Manager
 	}
 
 	/**
+	 * @param array $parameters
+	 * @return Main\ORM\Query\Result
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	public static function getList(array $parameters = [])
+	{
+		return CashboxTable::getList($parameters);
+	}
+
+	/**
 	 * @param $id
 	 * @return Cashbox|ICheckable|null
 	 */
@@ -202,17 +214,17 @@ final class Manager
 	/**
 	 * @param $cashboxId
 	 * @param Check $check
-	 * @return Result
+	 * @return array
 	 */
 	public static function buildConcreteCheckQuery($cashboxId, Check $check)
 	{
-		$result = new Result();
-
 		$cashbox = static::getObjectById($cashboxId);
 		if ($cashbox)
+		{
 			return $cashbox->buildCheckQuery($check);
+		}
 
-		return $result;
+		return [];
 	}
 
 	/**

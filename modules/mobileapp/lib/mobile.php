@@ -105,7 +105,7 @@ class Mobile
 
 		if (array_key_exists("MOBILE_API_VERSION", $_COOKIE))
 		{
-			self::$apiVersion = intval($_COOKIE["MOBILE_API_VERSION"]);
+			self::$apiVersion = $_COOKIE["MOBILE_API_VERSION"];
 		}
 		elseif ($APPLICATION->get_cookie("MOBILE_APP_VERSION"))
 		{
@@ -113,7 +113,7 @@ class Mobile
 		}
 		elseif (array_key_exists("api_version", $_REQUEST))
 		{
-			self::$apiVersion = intval($_REQUEST["api_version"]);
+			self::$apiVersion = $_REQUEST["api_version"];
 		}
 		else
 		{
@@ -124,6 +124,8 @@ class Mobile
 				self::$apiVersion = $pregMatch[0];
 			}
 		}
+
+		self::$apiVersion = intval(self::$apiVersion);
 	}
 
 	/**

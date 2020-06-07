@@ -37,6 +37,8 @@ abstract class Base extends \CBitrixComponent
 	/** @var ErrorCollection */
 	protected $errorCollection;
 
+	protected $separateLoading = false;
+
 	protected $selectFields = array();
 	protected $filterFields = array();
 	protected $sortFields = array();
@@ -219,6 +221,23 @@ abstract class Base extends \CBitrixComponent
 	}
 
 	/**
+	 * @param $state
+	 * @return void
+	 */
+	protected function setSeparateLoading($state)
+	{
+		$this->separateLoading = (bool)$state;
+	}
+
+	/**
+	 * @return bool
+	 */
+	protected function isSeparateLoading()
+	{
+		return $this->separateLoading;
+	}
+
+	/**
 	 * Return settings script path with modified time postfix.
 	 *
 	 * @param string $componentPath		Path to component.
@@ -230,7 +249,9 @@ abstract class Base extends \CBitrixComponent
 		if ($settingsName === 'filter_conditions')
 		{
 			if (Loader::includeModule('catalog'))
+			{
 				\CJSCore::Init(['core_condtree']);
+			}
 		}
 		$path = $componentPath.'/settings/'.$settingsName.'/script.js';
 		$file = new Main\IO\File(Main\Application::getDocumentRoot().$path);
@@ -1648,16 +1669,93 @@ abstract class Base extends \CBitrixComponent
 		if (!empty($this->globalFilter))
 			$globalFilter = $this->convertFilter($this->globalFilter);
 
-		$elementIterator = \CIBlockElement::GetList(
-			$this->sortFields,
-			array_merge($globalFilter, $filterFields),
-			false,
-			$this->navParams,
-			$selectFields
-		);
+		$iteratorParams = [
+			'select' => $selectFields,
+			'filter' => array_merge($globalFilter, $filterFields),
+			'order' => $this->sortFields,
+			'navigation' => $this->navParams
+		];
+		if ($this->isSeparateLoading() && $iblockId > 0)
+		{
+			$elementIterator = $this->getSeparateList($iteratorParams);
+		}
+		else
+		{
+			$elementIterator = $this->getFullIterator($iteratorParams);
+		}
+		unset($iteratorParams);
+
 		$elementIterator->SetUrlTemplates($this->arParams['DETAIL_URL']);
 
 		return $elementIterator;
+	}
+
+	/**
+	 * @param array $params
+	 * @return \CIBlockResult
+	 */
+	protected function getSeparateList(array $params)
+	{
+		$list = [];
+
+		$selectFields = ['ID', 'IBLOCK_ID'];
+		if (!empty($params['order']))
+		{
+			$selectFields = array_unique(array_merge(
+				$selectFields,
+				array_keys($params['order'])
+			));
+		}
+
+		$iterator = \CIBlockElement::GetList(
+			$params['order'],
+			$params['filter'],
+			false,
+			$params['navigation'],
+			$selectFields
+		);
+		while ($row = $iterator->Fetch())
+		{
+			$id = (int)$row['ID'];
+			$list[$id] = $row;
+		}
+		unset($row);
+
+		if (!empty($list))
+		{
+			$fullIterator = \CIBlockElement::GetList(
+				[],
+				['IBLOCK_ID' => $params['filter']['IBLOCK_ID'], 'ID' => array_keys($list), 'SITE_ID' => $this->getSiteId()],
+				false,
+				false,
+				$params['select']
+			);
+			while ($row = $fullIterator->Fetch())
+			{
+				$id = (int)$row['ID'];
+				$list[$id] = $list[$id] + $row;
+			}
+			unset($row, $fullIterator);
+
+			$iterator->InitFromArray(array_values($list));
+		}
+
+		return $iterator;
+	}
+
+	/**
+	 * @param array $params
+	 * @return \CIBlockResult
+	 */
+	protected function getFullIterator(array $params)
+	{
+		return \CIBlockElement::GetList(
+			$params['order'],
+			$params['filter'],
+			false,
+			$params['navigation'],
+			$params['select']
+		);
 	}
 
 	/**
@@ -3375,7 +3473,7 @@ abstract class Base extends \CBitrixComponent
 		foreach (array_keys($urls) as $index)
 		{
 			$value = str_replace('%23ID%23', '#ID#', $urls[$index]); // format compatibility
-			$urls['~'.$index] = str_replace('%23ID%23', '#ID#', \CHTTP::urnEncode($value, 'utf-8')); // format compatibility
+			$urls['~'.$index] = $value;
 			$urls[$index] = Main\Text\HtmlFilter::encode($value, ENT_QUOTES);
 		}
 		unset($index);
@@ -5152,7 +5250,12 @@ abstract class Base extends \CBitrixComponent
 		);
 	}
 
-	protected function getEmptyPriceMatrix()
+	/**
+	 * Returns old price result format for product with price ranges. Do not use this method.
+	 *
+	 * @return array
+	 */
+	protected function getEmptyPriceMatrix(): array
 	{
 		return array(
 			'ROWS' => array(),

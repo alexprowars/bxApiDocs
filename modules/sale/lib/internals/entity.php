@@ -144,7 +144,7 @@ abstract class Entity
 
 	/**
 	 * @param $name
-	 * @return null|string
+	 * @return string|null
 	 */
 	public function getField($name)
 	{
@@ -598,7 +598,7 @@ abstract class Entity
 	 */
 	public function getId()
 	{
-		return $this->getField("ID");
+		return (int)$this->getField("ID");
 	}
 
 	/**

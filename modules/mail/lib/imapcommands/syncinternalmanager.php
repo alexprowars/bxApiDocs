@@ -63,19 +63,6 @@ class SyncInternalManager
 		}
 		$this->isInit = true;
 		$result = new Main\Result();
-		foreach ($this->messagesIds as $index => $messagesId)
-		{
-			if (strlen($messagesId) !== 32)
-			{
-				return $result->addError(new Main\Error(Loc::getMessage('MAIL_CLIENT_WRONG_PARAMETERS'),
-					'MAIL_CLIENT_WRONG_PARAMETERS'));
-			}
-		}
-		if (!is_numeric($this->mailboxId))
-		{
-			return $result->addError(new Main\Error(Loc::getMessage('MAIL_CLIENT_WRONG_PARAMETERS'),
-				'MAIL_CLIENT_WRONG_PARAMETERS'));
-		}
 
 		$this->mailbox = $this->repository->getMailbox($this->mailboxUserId);
 		if (!$this->mailbox)

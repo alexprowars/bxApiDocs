@@ -74,6 +74,11 @@ class IblockPriceChanger
 			}
 		}
 
+		$_SESSION['CHANGE_PRICE_PARAMS']['PRICE_TYPE'] = $userDialogParams['PRICE_TYPE'];
+		$_SESSION['CHANGE_PRICE_PARAMS']['UNITS'] = $userDialogParams['UNITS'];
+		$_SESSION['CHANGE_PRICE_PARAMS']['FORMAT_RESULTS'] = $userDialogParams['FORMAT_RESULTS'];
+		$_SESSION['CHANGE_PRICE_PARAMS']['INITIAL_PRICE_TYPE'] = $userDialogParams['INITIAL_PRICE_TYPE'];
+
 		return $this->userDialogParams = $userDialogParams;
 	}
 
@@ -483,7 +488,7 @@ class IblockPriceChanger
 						];
 						if ($basePriceId == $targetType)
 						{
-							$data['actions']['PARENT_PRICE'] = true;
+							$data['actions']['RECOUNT_PRICES'] = true;
 						}
 						$priceResult = Catalog\Model\Price::update($destinationPrice['ID'], $data);
 						unset($data);

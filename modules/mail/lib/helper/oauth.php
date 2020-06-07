@@ -27,7 +27,7 @@ abstract class OAuth
 				OAuth\Google::getServiceName(),
 				OAuth\LiveId::getServiceName(),
 				OAuth\Yandex::getServiceName(),
-				//OAuth\Mailru::getServiceName(),
+				OAuth\Mailru::getServiceName(),
 			);
 		}
 
@@ -505,8 +505,7 @@ abstract class OAuth
 						'<?=\CUtil::jsEscape($this->getStoredUid()) ?>',
 						'<?=\CUtil::jsEscape($this->getUrl()) ?>',
 						<?=Main\Web\Json::encode($userData) ?>
-					],
-					true
+					]
 				);
 
 				if (targetWindow !== window)

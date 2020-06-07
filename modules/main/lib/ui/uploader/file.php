@@ -39,7 +39,8 @@ class File
 			"files" => array(
 				"default" => array()
 			)
-		);
+		) + $file;
+
 		$this->package = $package;
 
 		if (FileInputUtility::instance()->checkFile($this->package->getCid(), $hash))
@@ -72,7 +73,9 @@ class File
 	{
 		if (empty($file["id"]))
 			return md5($file["name"]);
-		return $file["id"];
+		if (preg_match("/^file([0-9]+)$/", $file["id"]))
+			return $file["id"];
+		return md5($file["id"]);
 	}
 
 	/**
@@ -178,13 +181,17 @@ class File
 					"error" => $file["error"]
 				);
 				$file["uploadStatus"] = "uploaded";
+				$data = $r->getData();
 				if (count($info["chunks"]) == $info["count"])
 				{
-					$data = $r->getData();
 					$data["name"] = $this->getName();
 					$data["code"] = $info["code"];
 					$data["uploadStatus"] = "uploaded";
-					$info = $data;
+					$info = $data + array_intersect_key($info, ["width" => "", "height" => ""]);
+				}
+				else
+				{
+					$info += array_intersect_key($data, ["width" => "", "height" => ""]);
 				}
 				$this->setFile($code, $info);
 				$storage->flushDescriptor();

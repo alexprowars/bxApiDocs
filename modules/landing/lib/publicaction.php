@@ -123,6 +123,11 @@ class PublicAction
 			$data = array();
 		}
 
+		if (isset($data['scope']))
+		{
+			\Bitrix\Landing\Site\Type::setScope($data['scope']);
+		}
+
 		if (!$isRest && (!defined('BX_UTF') || BX_UTF !== true))
 		{
 			$data = Manager::getApplication()->convertCharsetArray(
@@ -204,7 +209,14 @@ class PublicAction
 						$action['params_init']
 					);
 					// answer
-					if ($result->isSuccess())
+					if ($result === null)// void is accepted as success
+					{
+						return array(
+							'type' => 'success',
+							'result' => true
+						);
+					}
+					else if ($result->isSuccess())
 					{
 						return array(
 							'type' => 'success',
@@ -267,6 +279,8 @@ class PublicAction
 		$request = $context->getRequest();
 		$files = $request->getFileList();
 		$postlist = $context->getRequest()->getPostList();
+
+		\Bitrix\Landing\Site\Type::setScope($request->get('type'));
 
 		// multiple commands
 		if (
@@ -363,7 +377,8 @@ class PublicAction
 
 			$classes = array(
 				self::REST_SCOPE_DEFAULT => array(
-					'block', 'site', 'landing', 'repo', 'template', 'demos', 'role'
+					'block', 'site', 'landing', 'repo', 'template',
+					'demos', 'role', 'syspage', 'chat'
 				),
 				self::REST_SCOPE_CLOUD => array(
 					'cloud'
@@ -480,7 +495,7 @@ class PublicAction
 
 		if ($app = AppTable::getByClientId($parameters['ID']))
 		{
-			$stat = self::getRestStat(true, false);
+			$stat = self::getRestStat(true);
 			if (isset($stat['blocks'][$app['CODE']]))
 			{
 				$eventResult = new \Bitrix\Main\EventResult(
@@ -512,9 +527,10 @@ class PublicAction
 	 * Gets stat data of using rest app.
 	 * @param bool $humanFormat Gets data in human format.
 	 * @param bool $onlyActive Gets data only in active states.
+	 * @param array $additionalFilter Additional filter array.
 	 * @return array
 	 */
-	public static function getRestStat($humanFormat = false, $onlyActive = true)
+	public static function getRestStat($humanFormat = false, $onlyActive = true, array $additionalFilter = [])
 	{
 		$blockCnt = [];
 		$fullStat = [
@@ -522,6 +538,18 @@ class PublicAction
 			'pages' => []
 		];
 		$activeValues = $onlyActive ? 'Y' : ['Y', 'N'];
+		$filter = [
+			'CODE' => 'repo_%',
+			'=DELETED' => 'N',
+			'=PUBLIC' => $activeValues,
+			'=LANDING.ACTIVE' => $activeValues,
+			'=LANDING.SITE.ACTIVE' => $activeValues
+		];
+
+		if (isset($additionalFilter['SITE_ID']))
+		{
+			$filter['LANDING.SITE_ID'] = $additionalFilter['SITE_ID'];
+		}
 
 		Rights::setOff();
 
@@ -530,13 +558,7 @@ class PublicAction
 			'select' => [
 				'CODE', 'CNT'
 			],
-			'filter' => [
-				'CODE' => 'repo_%',
-				'=DELETED' => 'N',
-				'=PUBLIC' => $activeValues,
-				'=LANDING.ACTIVE' => $activeValues,
-				'=LANDING.SITE.ACTIVE' => $activeValues
-			],
+			'filter' => $filter,
 			'group' => [
 				'CODE'
 			],
@@ -560,6 +582,10 @@ class PublicAction
  		]);
 		while ($row = $res->fetch())
 		{
+			if (!$row['APP_CODE'])
+			{
+				continue;
+			}
 			if (!isset($fullStat['blocks'][$row['APP_CODE']]))
 			{
 				$fullStat['blocks'][$row['APP_CODE']] = 0;
@@ -569,37 +595,45 @@ class PublicAction
 		unset($blockCnt);
 
 		// gets all demo catalog
-		$demos = [];
+		$demosCodes = [];
 		$res = Demos::getList([
 			'select' => [
-				'APP_CODE', 'XML_ID'
+				'APP_CODE'
+			],
+			'group' => [
+				'APP_CODE'
 			]
 		]);
 		while ($row = $res->fetch())
 		{
-			$demos[$row['APP_CODE'] . '.' . $row['XML_ID']] = $row;
+			$demosCodes[] = $row['APP_CODE'];
 		}
 
 		// gets all partners active pages by demo catalog
-		if ($demos)
+		if ($demosCodes)
 		{
+			$filter = [
+				'=DELETED' => 'N',
+				'=ACTIVE' => $activeValues,
+				'=SITE.ACTIVE' => $activeValues,
+				'=INITIATOR_APP_CODE' => $demosCodes
+			];
+			if (isset($additionalFilter['SITE_ID']))
+			{
+				$filter['SITE_ID'] = $additionalFilter['SITE_ID'];
+			}
 			$res = Landing::getList([
 				'select' => [
 					'INITIATOR_APP_CODE', 'CNT'
 				],
-				'filter' => [
-					'=DELETED' => 'N',
-					'=ACTIVE' => $activeValues,
-					'=SITE.ACTIVE' => $activeValues,
-					'=INITIATOR_APP_CODE' => array_keys($demos)
-				],
+				'filter' => $filter,
 				'runtime' => [
 					new \Bitrix\Main\Entity\ExpressionField('CNT', 'COUNT(*)')
 				]
 			]);
 			while ($row = $res->fetch())
 			{
-				$appCode = $demos[$row['INITIATOR_APP_CODE']]['APP_CODE'];
+				$appCode = $row['INITIATOR_APP_CODE'];
 				if (!isset($fullStat['pages'][$appCode]))
 				{
 					$fullStat['pages'][$appCode] = 0;
@@ -608,11 +642,8 @@ class PublicAction
 			}
 		}
 
-		// gets client id for apps
-		if (
-			!$humanFormat &&
-			\Bitrix\Main\Loader::includeModule('rest')
-		)
+		// get client id for apps
+		if (!$humanFormat && \Bitrix\Main\Loader::includeModule('rest'))
 		{
 			$appsCode = array_merge(
 				array_keys($fullStat['blocks']),
@@ -636,14 +667,16 @@ class PublicAction
 						if (isset($stat[$row['CODE']]))
 						{
 							$stat[$row['CLIENT_ID']] = $stat[$row['CODE']];
-							unset($stat[$row['CODE']]);
+							if ($row['CLIENT_ID'] !== $row['CODE'])
+							{
+								unset($stat[$row['CODE']]);
+							}
 						}
 					}
-					unset($code, $stat);
+					unset($stat);
 				}
 			}
 		}
-		unset($demos, $res, $row);
 
 		Rights::setOn();
 

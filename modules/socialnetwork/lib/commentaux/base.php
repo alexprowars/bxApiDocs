@@ -36,6 +36,11 @@ abstract class Base
 		return '';
 	}
 
+	public function canDelete()
+	{
+		return true;
+	}
+
 	public function getLiveParams()
 	{
 		$result = array();

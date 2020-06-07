@@ -405,9 +405,11 @@ class OrderBasket
 			$data = static::prepareData();
 
 		$totalPrices = OrderEdit::getTotalPrices($this->order, $this, false);
+		$weight = $this->order->getBasket() ? $this->order->getBasket()->getWeight() : 0;
 
 		if($this->mode == self::EDIT_MODE)
 		{
+
 			$result .= '
 				BX.ready(function(){
 					var obParams = {
@@ -424,7 +426,7 @@ class OrderBasket
 						unRemovableFields: ["PRICE", "QUANTITY"],
 						formatQuantity: "'.Option::get('sale', 'format_quantity', 'AUTO').'",
 						weightUnit: "'.$this->weightUnit.'",
-						'.$this->getTotalBlockFieldsJs($totalPrices, $data).'
+						'.$this->getTotalBlockFieldsJs($totalPrices, array("WEIGHT" => $weight)).'
 					};';
 
 			if(!$defTails)
@@ -467,7 +469,7 @@ class OrderBasket
 						mode: "view",
 						formatQuantity: "'.Option::get('sale', 'format_quantity', 'AUTO').'",
 						weightUnit: "'.$this->weightUnit.'",
-						'.$this->getTotalBlockFieldsJs($totalPrices, array("WEIGHT" => $this->order->getBasket()->getWeight())).'
+						'.$this->getTotalBlockFieldsJs($totalPrices, array("WEIGHT" => $weight)).'
 					};';
 
 			if(!$defTails)
@@ -2042,7 +2044,6 @@ class OrderBasket
 						{
 							\Bitrix\Sale\Helpers\Admin\OrderEdit::setProviderTrustData($item, $this->order, $providerData[$basketCode]);
 							$params["PROVIDER_DATA"] = serialize($providerData[$basketCode]);
-							$params["IS_ENABLED"] = $providerData[$basketCode]['CAN_BUY'] === 'N' ? 'N' : 'Y';
 						}
 					}
 				}
@@ -2053,7 +2054,6 @@ class OrderBasket
 					if(is_array($providerData) && !empty($providerData))
 					{
 						$params["PROVIDER_DATA"] = serialize($providerData);
-						$params["IS_ENABLED"] = $providerData[$basketCode]['CAN_BUY'] === 'N' ? 'N' : 'Y';
 					}
 				}
 
@@ -2115,6 +2115,8 @@ class OrderBasket
 						$params["IS_SET_PARENT"] = "Y";
 					}
 				}
+
+				$params["IS_ENABLED"] = ($params['CAN_BUY'] === 'N') ? 'N' : 'Y';
 
 				$result["ITEMS"][$basketCode] = $params;
 			}

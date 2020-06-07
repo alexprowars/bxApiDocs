@@ -50,6 +50,15 @@ class Favicon extends \Bitrix\Landing\Hook\Page
 	}
 
 	/**
+	 * Exec or not hook in edit mode.
+	 * @return boolean
+	 */
+	public function enabledInEditMode()
+	{
+		return false;
+	}
+
+	/**
 	 * Enable or not the hook.
 	 * @return boolean
 	 */
@@ -92,7 +101,8 @@ class Favicon extends \Bitrix\Landing\Hook\Page
 					),
 					BX_RESIZE_IMAGE_EXACT
 				);
-				$ext = array_pop(explode('.', $file['src']));
+				$srcExplode = explode('.', $file['src']);
+				$ext = array_pop($srcExplode);
 				$icons .= '<link rel="icon" type="image/' . $ext .
 						  '" href="' . $file['src'] . '" sizes="' . $size . '">';
 			}

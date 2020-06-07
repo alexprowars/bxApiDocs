@@ -35,10 +35,8 @@ class OrderBuyer
 						<tr'.(intval($data["USER_ID"]) <= 0 ? ' style="display: none"': '' ).' id="sale-order-buyer-name-wrap">
 							<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage("SALE_ORDER_BUYER").':</td>
 							<td class="adm-detail-content-cell-r">
-								<div class="adm-s-order-person-choose">
-									<a id="BUYER_USER_NAME" href="'.$data["BUYER_URL"].'">'.
-										htmlspecialcharsbx($data["BUYER_USER_NAME"]).
-									'</a>&nbsp;
+								<div class="adm-s-order-person-choose">'.static::renderBuyerLink($data, ['id="BUYER_USER_NAME"']).'
+									&nbsp;
 									<a class="adm-s-bus-morelinkqhsw" onclick="BX.Sale.Admin.OrderBuyer.showChooseBuyerWindow(\''.LANGUAGE_ID.'\')" href="javascript:void(0);">
 										'.Loc::getMessage("SALE_ORDER_BUYER_CHANGE").'
 									</a>&nbsp;
@@ -131,11 +129,7 @@ class OrderBuyer
 					<tr>
 						<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage("SALE_ORDER_BUYER").':</td>
 						<td class="adm-detail-content-cell-r">
-							<div>
-									<a href="'.$data["BUYER_URL"].'">'.
-									htmlspecialcharsbx($data["BUYER_USER_NAME"]).
-								'</a>
-							</div>
+							<div>'.static::renderBuyerLink($data).'</div>
 						</td>
 					</tr>
 					<tr>
@@ -159,6 +153,11 @@ class OrderBuyer
 				</table>
 			</div>';
 
+	}
+
+	protected static function renderBuyerLink($data, $attr=[])
+	{
+		return '<a href="'.$data["BUYER_URL"].'" '.(count($attr)>0 ? implode(' ', $attr):"").'>'.htmlspecialcharsbx($data["BUYER_USER_NAME"]).'</a>'; die;
 	}
 
 	public static function getScripts()

@@ -13,6 +13,7 @@ use Bitrix\Main\Error;
 use Bitrix\Main\ErrorCollection;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Main\ORM;
+use Bitrix\Main\Web\Uri;
 
 Loc::loadLanguageFile(__FILE__);
 
@@ -355,13 +356,64 @@ class Agreement
 	 */
 	public function getLabelText()
 	{
-		if ($this->isCustomType())
+		return str_replace('%', '', $this->getLabel());
+	}
+
+	/**
+	 * Get url.
+	 *
+	 * @return string
+	 */
+	public function getUrl()
+	{
+		return ($this->data['USE_URL'] === 'Y' && $this->data['URL'])
+			? (new Uri($this->data['URL']))->getLocator()
+			: null;
+	}
+
+	/**
+	 * Get label with synbols '%' for link in label text.
+	 *
+	 * @return string
+	 */
+	public function getLabel()
+	{
+		$text = $this->isCustomType() ? $this->data['LABEL_TEXT'] : $this->intl->getLabelText();
+		$text = Text::replace($text, $this->replace);
+
+		if ($this->data['USE_URL'] !== 'Y')
 		{
-			return $this->data['LABEL_TEXT'];
+			return str_replace('%', '', $text);
 		}
 
-		$label = $this->intl->getLabelText();
-		return Text::replace($label, $this->replace);
+		$text = trim(trim($text), "%");
+		$text = explode('%', $text);
+		$text = array_filter($text);
+
+		/** @var array $text */
+		switch (count($text))
+		{
+			case 0:
+			case 1:
+			$text = array_merge([''], $text, ['']);
+				break;
+
+			case 2:
+				$text[] = '';
+				break;
+
+			case 3:
+				break;
+
+			default:
+				$text = array_merge(
+					array_slice($text, 0, 2),
+					[implode('', array_slice($text, 2))]
+				);
+				break;
+		}
+
+		return implode('%', $text);
 	}
 
 	/**

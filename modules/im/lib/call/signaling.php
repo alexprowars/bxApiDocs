@@ -14,13 +14,14 @@ class Signaling
 		$this->call = $call;
 	}
 
-	public function sendInvite($senderId, array $toUserIds, $isMobile, $video = false)
+	public function sendInvite(int $senderId, array $toUserIds, $isMobile, $video = false)
 	{
 		$users = $this->call->getUsers();
 		$userData = \CIMContactList::getUserData(['ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y']);
 		$config = array(
 			'call' => $this->call->toArray((count($toUserIds) == 1 ? $toUserIds[0] : 0)),
 			'users' => $users,
+			'invitedUsers' => $toUserIds,
 			'userData' => $userData,
 			'senderId' => $senderId,
 			'publicIds' => $this->getPublicIds($users),
@@ -45,6 +46,29 @@ class Signaling
 				$pushText = Loc::getMessage('IM_CALL_INVITE', ['#USER_NAME#' => Loc::getMessage('IM_CALL_INVITE_NA')]);
 			}
 
+			$senderUserData = \CIMContactList::getUserData(['ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y']);
+			$senderUserData = [
+				'users' => [
+					$senderId => $senderUserData['users'][$senderId]
+				],
+				'hrphoto' => [
+					$senderId => $senderUserData['hrphoto'][$senderId]
+				],
+			];
+			$userDataForPush = [
+				'users' => array_map(
+					function($element)
+					{
+						return[
+							'id' => $element['id'],
+							'name' => $element['name']
+						];
+					},
+					$senderUserData['users']
+				),
+				'hrphoto' => $senderUserData['hrphoto']
+			];
+
 			$push = [
 				'message' => $pushText,
 				'expiry' => 0,
@@ -57,7 +81,8 @@ class Signaling
 						],
 						'video' => $video,
 						'users' => $users,
-						'userData' => $userData,
+						'userData' => $userDataForPush,
+						'isMobile' => $isMobile,
 						'senderId' => $senderId
 					]
 				],
@@ -76,10 +101,10 @@ class Signaling
 			$push = null;
 		}
 
-		return self::send('Call::incoming', $toUserIds, $config, $push);
+		return $this->send('Call::incoming', $toUserIds, $config, $push);
 	}
 
-	public function sendUsersInvited($senderId, array $toUserIds, array $users)
+	public function sendUsersInvited(int $senderId, array $toUserIds, array $users)
 	{
 		$config = array(
 			'call' => $this->call->toArray(),
@@ -89,10 +114,10 @@ class Signaling
 			'publicIds' => $this->getPublicIds($users),
 		);
 
-		return self::send('Call::usersInvited', $toUserIds, $config);
+		return $this->send('Call::usersInvited', $toUserIds, $config);
 	}
 
-	public function sendAssociatedEntityReplaced($senderId)
+	public function sendAssociatedEntityReplaced(int $senderId)
 	{
 		$config = array(
 			'call' => $this->call->toArray(),
@@ -101,27 +126,28 @@ class Signaling
 
 		$toUserIds = $this->call->getUsers();
 
-		return self::send('Call::associatedEntityReplaced', $toUserIds, $config);
+		return $this->send('Call::associatedEntityReplaced', $toUserIds, $config);
 	}
 
-	public function sendAnswer($senderId, $callInstanceId)
+	public function sendAnswer(int $senderId, $callInstanceId, $isMobile)
 	{
 		$config = array(
 			'call' => $this->call->toArray(),
 			'senderId' => $senderId,
-			'callInstanceId' => $callInstanceId
+			'callInstanceId' => $callInstanceId,
+			'isMobile' => $isMobile,
 		);
 
 		$toUserIds = $this->call->getUsers();
 
-		return self::send('Call::answer', $toUserIds, $config, $this->getCancelingPush());
+		return $this->send('Call::answer', $toUserIds, $config, $this->getCancelingPush());
 	}
 
-	public function sendPing($senderId, $requestId)
+	public function sendPing(int $senderId, $requestId)
 	{
 		$config = array(
 			'requestId' => $requestId,
-			'call' => $this->call->toArray(),
+			'callId' => $this->call->getId(),
 			'senderId' => $senderId
 		);
 
@@ -129,19 +155,20 @@ class Signaling
 		$toUserIds = array_filter($toUserIds, function($value) use ($senderId) {
 			return $value != $senderId;
 		});
-		return self::send('Call::ping', $toUserIds, $config);
+		return $this->send('Call::ping', $toUserIds, $config, null, 0);
 	}
 
-	public function sendNegotiationNeeded($senderId, $toUserId)
+	public function sendNegotiationNeeded(int $senderId, int $toUserId, $restart)
 	{
-		return self::send('Call::negotiationNeeded', $toUserId, array(
-			'senderId' => $senderId
+		return $this->send('Call::negotiationNeeded', $toUserId, array(
+			'senderId' => $senderId,
+			'restart' => $restart
 		));
 	}
 
-	public function sendConnectionOffer($senderId, $toUserId, $connectionId, $offerSdp, $userAgent)
+	public function sendConnectionOffer(int $senderId, int $toUserId, string $connectionId, string $offerSdp, string $userAgent)
 	{
-		return self::send('Call::connectionOffer', $toUserId, array(
+		return $this->send('Call::connectionOffer', $toUserId, array(
 			'senderId' => $senderId,
 			'connectionId' => $connectionId,
 			'sdp' => $offerSdp,
@@ -149,9 +176,9 @@ class Signaling
 		));
 	}
 
-	public function sendConnectionAnswer($senderId, $toUserId, $connectionId, $answerSdp, $userAgent)
+	public function sendConnectionAnswer(int $senderId, int $toUserId, string $connectionId, string $answerSdp, string $userAgent)
 	{
-		return self::send('Call::connectionAnswer', $toUserId, array(
+		return $this->send('Call::connectionAnswer', $toUserId, array(
 			'senderId' => $senderId,
 			'connectionId' => $connectionId,
 			'sdp' => $answerSdp,
@@ -159,15 +186,16 @@ class Signaling
 		));
 	}
 
-	public function sendIceCandidates($senderId, $toUserId, array $iceCandidates)
+	public function sendIceCandidates(int $senderId, int $toUserId, string $connectionId, array $iceCandidates)
 	{
-		return self::send('Call::iceCandidate', $toUserId, array(
+		return $this->send('Call::iceCandidate', $toUserId, array(
 			'senderId' => $senderId,
+			'connectionId' => $connectionId,
 			'candidates' => $iceCandidates
 		));
 	}
 
-	public function sendHangup($senderId, array $toUserIds, $callInstanceId, $code = 200)
+	public function sendHangup(int $senderId, array $toUserIds, string $callInstanceId, $code = 200)
 	{
 		if(count($this->call->getUsers()) == 2 && $this->call->getProvider() === Call::PROVIDER_PLAIN)
 		{
@@ -178,7 +206,7 @@ class Signaling
 			$push = null;
 		}
 
-		return self::send('Call::hangup', $toUserIds, array(
+		return $this->send('Call::hangup', $toUserIds, array(
 			'senderId' => $senderId,
 			'callInstanceId' => $callInstanceId,
 			'code' => $code,
@@ -197,7 +225,7 @@ class Signaling
 			$push = null;
 		}
 
-		return self::send('Call::finish', $this->call->getUsers(), [], $push);
+		return $this->send('Call::finish', $this->call->getUsers(), [], $push);
 	}
 
 	protected function getPublicIds(array $userIds)
@@ -223,13 +251,13 @@ class Signaling
 		];
 	}
 
-	protected function send($command, $users, array $params = [], $push = null, $ttl = 0)
+	protected function send(string $command, $users, array $params = [], $push = null, $ttl = 5)
 	{
 		if(!Loader::includeModule('pull'))
 			return false;
 
 		if(!isset($params['call']))
-			$params['call'] = $this->call->toArray();
+			$params['call'] = ['ID' => $this->call->getId()];
 
 		if(!isset($params['callId']))
 			$params['callId'] = $this->call->getId();

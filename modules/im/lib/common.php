@@ -55,7 +55,7 @@ class Common
 
 	public static function isDialogId($id)
 	{
-		return $id && preg_match('/^[0-9]{1,}|chat[0-9]{1,}$/i', $id);
+		return $id && preg_match('/^([0-9]{1,}|chat[0-9]{1,})$/i', $id);
 	}
 
 	public static function getUserId($userId = null)
@@ -72,6 +72,39 @@ class Common
 		}
 
 		return $userId;
+	}
+
+	public static function toJson($array, $camelCase = true)
+	{
+		$result = [];
+		foreach ($array as $field => $value)
+		{
+			if (is_array($value))
+			{
+				$value = self::toJson($value, $camelCase);
+			}
+			else if ($value instanceof \Bitrix\Main\Type\DateTime)
+			{
+				$value = date('c', $value->getTimestamp());
+			}
+			else if (is_string($value) && $value && is_string($field) && in_array($field, Array('AVATAR')) && strpos($value, 'http') !== 0)
+			{
+				$value = \Bitrix\Im\Common::getPublicDomain().$value;
+			}
+
+			if ($camelCase)
+			{
+				$field = lcfirst(\Bitrix\Main\Text\StringHelper::snake2camel($field));
+			}
+			else
+			{
+				$field = strtolower($field);
+			}
+
+			$result[$field] = $value;
+		}
+
+		return $result;
 	}
 
 	public static function getPullExtra()

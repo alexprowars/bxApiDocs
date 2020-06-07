@@ -2,7 +2,6 @@
 namespace Bitrix\Main\Engine\Response;
 
 use Bitrix\Main\ErrorCollection;
-use Bitrix\Main\Errorable;
 use Bitrix\Main\Page\Asset;
 use Bitrix\Main\Page\AssetMode;
 use Bitrix\Main\Engine\Response\ContentArea\ContentAreaInterface;
@@ -10,7 +9,7 @@ use Bitrix\Main\Engine\Response\ContentArea\ContentAreaInterface;
 /**
  * Response type for rendering ajax html content from action
  */
-class HtmlContent extends AjaxJson implements Errorable
+class HtmlContent extends AjaxJson
 {
 	private $jsPathList = [];
 	private $cssPathList = [];

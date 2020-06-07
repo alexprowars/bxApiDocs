@@ -45,7 +45,7 @@ class ProductGroupAction extends Iblock\Grid\Panel\GroupAction
 		{
 			$this->catalogConfig = \CCatalogSku::GetInfoByIBlock($this->iblockId);
 			$this->catalogOptions['SEPARATE_MODE'] = (string)Main\Config\Option::get('catalog', 'show_catalog_tab_with_offers') === 'Y';
-			$this->catalogOptions['STORE_MODE'] = (string)Main\Config\Option::get('catalog', 'default_use_store_control') === 'Y';
+			$this->catalogOptions['STORE_MODE'] = Catalog\Config\State::isUsedInventoryManagement();
 		}
 	}
 

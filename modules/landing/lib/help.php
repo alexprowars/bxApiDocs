@@ -45,12 +45,13 @@ class Help
 			'fr' => '8460105'
 		),
 		'LANDING_EDIT' => array(
-			'ru' => 's93291',
-			'ua' => 's94173',
+			'ru' => 's105667',
+			'ua' => 's105681',
 			'en' => 's95157',
 			'de' => 's95161',
 			'es' => 's95265',
-			'br' => 's99169'
+			'br' => 's119713',
+			'fr' => 's110613'
 		),
 		'DOMAIN_EDIT' => array(
 			'ru' => '6624333',
@@ -60,6 +61,12 @@ class Help
 			'es' => '8479199',
 			'br' => '8513557',
 			'fr' => '8460145'
+		),
+		'DOMAIN_BITRIX24' => array(
+			'ru' => '11341354'
+		),
+		'DOMAIN_FREE' => array(
+			'ru' => '11341378'
 		),
 		'GMAP_EDIT' => array(
 			'ru' => '8203739',
@@ -106,7 +113,11 @@ class Help
 			'fr' => '9203285'
 		),
 		'DYNAMIC_BLOCKS' => array(
-			'ru' => '10104989'
+			'ru' => '10104989',
+			'en' => '10134346',
+			'de' => '10119494',
+			'es' => '10133942',
+			'fr' => '10133930'
 		),
 		'YACOUNTER' => array(
 			'ru' => '9494147'
@@ -115,8 +126,18 @@ class Help
 			'ru' => '7919271'
 		),
 		'SPEED' => array(
+			'ru' => '11565144',
+			'ua' => '11567047'
 		)
 	);
+
+	/**
+	 * Landing's codes.
+	 * @var array
+	 */
+	protected static $helpLanding = [
+		'FREE_DOMAIN_FOR_MONEY' => 'limit_free_domen'
+	];
 
 	/**
 	 * Gets domain's array.
@@ -125,6 +146,20 @@ class Help
 	public static function getDomains()
 	{
 		return self::$domains;
+	}
+
+	/**
+	 * Returns help landing code by inner code.
+	 * @param string $code Inner landing code.
+	 * @return string|null
+	 */
+	public static function getHelpLandingCode(string $code): ?string
+	{
+		if (isset(self::$helpLanding[$code]))
+		{
+			return self::$helpLanding[$code];
+		}
+		return null;
 	}
 
 	/**
@@ -164,7 +199,7 @@ class Help
 			return 'https://helpdesk.' . self::$domains[$helpZone] .
 					(
 						(substr($helpId, 0, 1) == 's')
-						? ('/#section' . substr($helpId, 1))
+						? ('/section/' . substr($helpId, 1) . '/')
 						: ('/open/' . $helpId . '/')
 					);
 		}

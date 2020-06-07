@@ -1480,10 +1480,19 @@ abstract class EntityObject implements ArrayAccess
 
 				foreach ($elementals as $localFieldName => $remoteFieldName)
 				{
-					// skip local primary in non-raw state
-					if ($this->state !== State::RAW && $this->entity->getField($localFieldName)->isPrimary())
+					if ($this->entity->getField($localFieldName)->isPrimary())
 					{
-						continue;
+						// skip local primary in non-raw state
+						if ($this->state !== State::RAW)
+						{
+							continue;
+						}
+
+						// skip autocomplete
+						if ($this->state === State::RAW && $this->entity->getField($localFieldName)->isAutocomplete())
+						{
+							continue;
+						}
 					}
 
 					$elementalValue = empty($value) ? null : $value->sysGetValue($remoteFieldName);
@@ -1512,7 +1521,10 @@ abstract class EntityObject implements ArrayAccess
 		}
 
 		// on primary gain event
-		$this->sysOnPrimarySet();
+		if ($field instanceof ScalarField && $field->isPrimary() && $this->sysHasPrimary())
+		{
+			$this->sysOnPrimarySet();
+		}
 
 		return $this;
 	}
@@ -1769,7 +1781,7 @@ abstract class EntityObject implements ArrayAccess
 
 			if ($field instanceof Reference)
 			{
-				if ($saveCascade)
+				if ($saveCascade && !empty($value))
 				{
 					$value->save();
 				}

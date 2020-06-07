@@ -3,6 +3,8 @@
 namespace Bitrix\Vote\Uf;
 
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Type\DateTime;
+use Bitrix\Vote\AttachTable;
 
 Loc::loadMessages(__FILE__);
 
@@ -322,11 +324,19 @@ final class VoteUserType
 		}
 		else
 		{
-			$uniqType = ($userField["SETTINGS"]["UNIQUE"] ? $userField["SETTINGS"]["UNIQUE"] : (\Bitrix\Vote\Vote\EventLimits::BY_USER_AUTH|\Bitrix\Vote\Vote\EventLimits::BY_USER_ID));
-			if (is_array($userField["SETTINGS"]["UNIQUE"]))
+			$uniqType = \Bitrix\Vote\Vote\EventLimits::BY_USER_AUTH|\Bitrix\Vote\Vote\EventLimits::BY_USER_ID;
+			if (is_array($userField) && array_key_exists("SETTINGS", $userField) && array_key_exists("UNIQUE", $userField["SETTINGS"]))
 			{
-				foreach ( $userField["SETTINGS"]["UNIQUE"] as $res)
-					$uniqType |= $res;
+				$uniqType = 0;
+				if (is_array($userField["SETTINGS"]["UNIQUE"]))
+				{
+					foreach ( $userField["SETTINGS"]["UNIQUE"] as $res)
+						$uniqType |= $res;
+				}
+				else
+				{
+					$uniqType = intval($userField["SETTINGS"]["UNIQUE"]);
+				}
 			}
 		}
 		if ($uniqType&\Bitrix\Vote\Vote\EventLimits::BY_USER_AUTH)
@@ -605,12 +615,16 @@ final class VoteUserType
 			$userId = ($userId ?: (is_object($USER) ? $USER->getId() : $userId));
 			global ${$userField["FIELD_NAME"] . "_" . $value . "_DATA"};
 			$data = ${$userField["FIELD_NAME"] . "_" . $value . "_DATA"} ?: false;
-			if (!is_array($data) || empty($data))
-				return "";
 
 			$userFieldManager = Manager::getInstance($userField);
-
 			list($type, $realValue) = self::detectType($value);
+			if ($type == self::TYPE_SAVED_ATTACH && (!is_array($data) || empty($data)))
+			{
+				return $value;
+			}
+
+			if (!is_array($data) || empty($data))
+				return "";
 
 			/*@var \Bitrix\Vote\Attach $attach*/
 			$attach = ($type == self::TYPE_SAVED_ATTACH ? $userFieldManager->loadFromAttachId($realValue) :
@@ -626,7 +640,7 @@ final class VoteUserType
 				throw new \Bitrix\Main\AccessDeniedException(Loc::getMessage("VOTE_EDIT_ACCESS_IS_DENIED"));
 
 			$data["OPTIONS"] = (is_array($data["OPTIONS"]) ? array_sum($data["OPTIONS"]) : 0);
-			$data["UNIQUE_TYPE"] = ($userField["SETTINGS"]["UNIQUE"] & \Bitrix\Vote\Vote\EventLimits::BY_USER_AUTH ? $userField["SETTINGS"]["UNIQUE"] | \Bitrix\Vote\Vote\EventLimits::BY_USER_ID : $userField["SETTINGS"]["UNIQUE"]);
+			$data["UNIQUE_TYPE"] = intval($userField["SETTINGS"]["UNIQUE"] & \Bitrix\Vote\Vote\EventLimits::BY_USER_AUTH ? $userField["SETTINGS"]["UNIQUE"] | \Bitrix\Vote\Vote\EventLimits::BY_USER_ID : $userField["SETTINGS"]["UNIQUE"]);
 			$interval = intval($userField["SETTINGS"]["UNIQUE_IP_DELAY"]["DELAY"]);
 			$interval = in_array($userField["SETTINGS"]["UNIQUE_IP_DELAY"]["DELAY_TYPE"], array("S", "M", "H")) ? "PT".$interval.$userField["SETTINGS"]["UNIQUE_IP_DELAY"]["DELAY_TYPE"] : "P".$interval."D";
 			$data["KEEP_IP_SEC"] = (new \DateTime("@0"))->add(new \DateInterval($interval))->getTimestamp();
@@ -640,6 +654,51 @@ final class VoteUserType
 		{
 			throw $e;
 		}
+	}
+
+	/**
+	 * @param array $userField
+	 * @param int $newEntityId
+	 * @param $attachedId
+	 * @param object $implementer
+	 * @param bool $userId
+	 * @return array|int|string
+	 * @throws \Bitrix\Main\ObjectException
+	 */
+	public static function onBeforeCopy(array $userField, int $newEntityId, $attachedId, $implementer, $userId = false)
+	{
+		if (empty($userField) || empty($attachedId))
+		{
+			return "";
+		}
+
+		global $USER;
+		$userId = ($userId ?: (is_object($USER) ? $USER->getId() : $userId));
+
+		$userFieldManager = Manager::getInstance($userField);
+
+		$attachedObject = $userFieldManager->loadFromAttachId($attachedId);
+
+		$voteId = 0;
+		if (is_callable([$implementer, "copyVote"]))
+		{
+			$voteId = $implementer->copyVote($attachedObject->getVoteId());
+		}
+
+		$attachedId = "";
+		if ($voteId > 0)
+		{
+			$attachedId = AttachTable::add([
+				"MODULE_ID" => $attachedObject->getModuleId(),
+				"OBJECT_ID" => $voteId,
+				"ENTITY_ID" => $newEntityId,
+				"ENTITY_TYPE" => $attachedObject->getEntityType(),
+				"CREATED_BY" => $userId,
+				"CREATE_TIME" => new DateTime()
+			])->getId();
+		}
+
+		return $attachedId;
 	}
 
 	/**

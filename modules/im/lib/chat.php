@@ -323,6 +323,16 @@ class Chat
 		return \Bitrix\Im\Dialog::hasAccess('chat'.$chatId);
 	}
 
+	/**
+	 * @param $chatId
+	 * @param null $userId
+	 * @param array $options
+	 * @return array|bool
+	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 */
 	public static function getMessages($chatId, $userId = null, $options = Array())
 	{
 		$userId = \Bitrix\Im\Common::getUserId($userId);
@@ -440,6 +450,7 @@ class Chat
 		{
 			list($lineId) = explode('|', $chatData['CHAT_ENTITY_ID']);
 			$userOptions['LIVECHAT'] = $lineId;
+			$userOptions['USER_CODE'] = 'livechat|' . $lineId . '|' . $chatData['CHAT_ID'] . '|' . $userId;
 		}
 
 		$messages = Array();
@@ -562,12 +573,27 @@ class Chat
 		$relations = self::getRelation($chatId, ['SELECT' => ['ID', 'USER_ID']]);
 		foreach ($relations as $user)
 		{
-			$users[] = \Bitrix\Im\User::getInstance($user['USER_ID'])->getArray(Array('JSON' => $options['JSON'] === 'Y'? 'Y': 'N'));
+			$instance = \Bitrix\Im\User::getInstance($user['USER_ID']);
+			if (!$instance->isExists() || !$instance->isActive())
+			{
+				continue;
+			}
+
+			$users[] = $instance->getArray(Array('JSON' => $options['JSON'] === 'Y'? 'Y': 'N'));
 		}
 
 		return $users;
 	}
 
+	/**
+	 * @param $id
+	 * @param array $params
+	 * @return array|bool|mixed
+	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 */
 	public static function getById($id, $params = array())
 	{
 		$userId = \Bitrix\Im\Common::getUserId();
@@ -595,6 +621,7 @@ class Chat
 			{
 				list($lineId) = explode('|', $chat['CHAT_ENTITY_ID']);
 				$userOptions['LIVECHAT'] = $lineId;
+				$userOptions['USER_CODE'] = 'livechat|' . $lineId . '|' . $id . '|' . $userId;
 			}
 
 			$relations = self::getRelation($id);
@@ -687,7 +714,7 @@ class Chat
 		$chats = array();
 		while ($row = $orm->fetch())
 		{
-			$avatar = \CIMChat::GetAvatarImage($row['AVATAR'], 100, false);
+			$avatar = \CIMChat::GetAvatarImage($row['AVATAR'], 200, false);
 			$color = strlen($row['COLOR']) > 0? Color::getColor($row['COLOR']): Color::getColorByNumber($row['ID']);
 
 			$chatType = \Bitrix\Im\Chat::getType($row);
@@ -791,9 +818,21 @@ class Chat
 			}
 		}
 
-		if (User::getInstance($params['CURRENT_USER'])->isExtranet())
+		if (
+			User::getInstance($params['CURRENT_USER'])->isExtranet()
+			|| User::getInstance($params['CURRENT_USER'])->isBot()
+		)
 		{
-			$filter['=TYPE'] = [self::TYPE_OPEN, self::TYPE_GROUP, self::TYPE_THREAD, self::TYPE_PRIVATE];
+			$filter['=TYPE'] = [
+				self::TYPE_OPEN,
+				self::TYPE_GROUP,
+				self::TYPE_THREAD,
+				self::TYPE_PRIVATE
+			];
+			if (User::getInstance($params['CURRENT_USER'])->isBot())
+			{
+				$filter['=TYPE'][] = self::TYPE_OPEN_LINE;
+			}
 			$filter['=RELATION.USER_ID'] = $params['CURRENT_USER'];
 		}
 		else
@@ -802,10 +841,6 @@ class Chat
 				'LOGIC' => 'OR',
 				[
 					'=TYPE' => self::TYPE_OPEN,
-				],
-				[
-					'=TYPE' => self::TYPE_OPEN_LINE,
-					'=RELATION.USER_ID' => $params['CURRENT_USER']
 				],
 				[
 					'=TYPE' => self::TYPE_GROUP,
@@ -818,7 +853,11 @@ class Chat
 				[
 					'=TYPE' => self::TYPE_PRIVATE,
 					'=RELATION.USER_ID' => $params['CURRENT_USER']
-				]
+				],
+				[
+					'=TYPE' => self::TYPE_OPEN_LINE,
+					'=RELATION.USER_ID' => $params['CURRENT_USER']
+				],
 			];
 		}
 
@@ -956,27 +995,8 @@ class Chat
 		return $relation;
 	}
 
-	private static function toJson($array)
+	public static function toJson($array)
 	{
-		foreach ($array as $field => $value)
-		{
-			if (is_array($value))
-			{
-				$array[$field] = self::toJson($value);
-			}
-			else if ($value instanceof \Bitrix\Main\Type\DateTime)
-			{
-				$array[$field] = date('c', $value->getTimestamp());
-			}
-			else if (is_string($value) && $value && is_string($field) && in_array($field, Array('AVATAR')) && strpos($value, 'http') !== 0)
-			{
-				$array[$field] = \Bitrix\Im\Common::getPublicDomain().$value;
-			}
-			else if (is_array($value))
-			{
-				$array[$field] = array_change_key_case($value, CASE_LOWER);
-			}
-		}
-		return array_change_key_case($array, CASE_LOWER);
+		return \Bitrix\Im\Common::toJson($array, false);
 	}
 }

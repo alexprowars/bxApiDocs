@@ -7,31 +7,64 @@ use Bitrix\Im\Call\Registry;
 use Bitrix\Main\Context;
 use Bitrix\Main\Engine;
 use Bitrix\Main\Error;
+use Bitrix\Main\Loader;
 use Bitrix\Main\Type\DateTime;
 
 class Call extends Engine\Controller
 {
-	public function createAction($type, $provider, $entityType, $entityId)
+	public function createAction($type, $provider, $entityType, $entityId, $joinExisting = false)
 	{
 		$currentUserId = $this->getCurrentUser()->getId();
-		$call = \Bitrix\Im\Call\Call::createWithEntity($type, $provider, $entityType, $entityId, $currentUserId);
 
-		if(!$call->getAssociatedEntity()->checkAccess($currentUserId))
+		if($joinExisting)
 		{
-			$this->errorCollection[] = new Error("You can not create this call", 'access_denied');
-			return null;
+			$call = \Bitrix\Im\Call\Call::searchActive($type, $provider, $entityType, $entityId);
+			if($call && !$call->getAssociatedEntity()->checkAccess($currentUserId))
+			{
+				$this->errorCollection[] = new Error("You can not access this call", 'access_denied');
+				return null;
+			}
 		}
 
-		$initiator = $call->getUser($currentUserId);
-		$initiator->updateState(CallUser::STATE_READY);
-		$initiator->updateLastSeen(new DateTime());
+		if($call)
+		{
+			$isNew = false;
+			if(!$call->hasUser($currentUserId))
+			{
+				$call->addUser($currentUserId);
+			}
+		}
+		else
+		{
+			$isNew = true;
+			$call = \Bitrix\Im\Call\Call::createWithEntity($type, $provider, $entityType, $entityId, $currentUserId);
+			if(!$call->getAssociatedEntity()->checkAccess($currentUserId))
+			{
+				$this->errorCollection[] = new Error("You can not create this call", 'access_denied');
+				return null;
+			}
+			$initiator = $call->getUser($currentUserId);
+			$initiator->updateState(CallUser::STATE_READY);
+			$initiator->updateLastSeen(new DateTime());
+		}
 
 		$users = $call->getUsers();
-		return array(
+		$publicChannels = Loader::includeModule('pull') ?
+			\Bitrix\Pull\Channel::getPublicIds([
+				'TYPE' => \CPullChannel::TYPE_PRIVATE,
+				'USERS' => $users,
+				'JSON' => true
+			])
+			:
+			[];
+
+		return [
 			'call' => $call->toArray(),
+			'isNew' => $isNew,
 			'users' => $users,
-			'userData' => \CIMContactList::GetUserData(Array('ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y')),
-		);
+			'userData' => \CIMContactList::GetUserData(['ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y']),
+			'publicChannels' =>$publicChannels
+		];
 	}
 
 	public function createChildCallAction($parentId, $newProvider, $newUsers)
@@ -67,19 +100,41 @@ class Call extends Engine\Controller
 		);
 	}
 
+	public function getAction($callId)
+	{
+		$currentUserId = $this->getCurrentUser()->getId();
+
+		$call = Registry::getCallWithId($callId);
+		if(!$this->checkCallAccess($call, $currentUserId))
+		{
+			$this->errorCollection[] = new Error("You do not have access to the parent call", "access_denied");
+			return null;
+		}
+
+		$users = $call->getUsers();
+		return array(
+			'call' => $call->toArray($currentUserId),
+			'users' => $users,
+			'userData' => \CIMContactList::GetUserData(Array('ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y')),
+		);
+	}
+
 	public function inviteAction($callId, array $userIds, $video = "N")
 	{
-		$video = ($video === "Y");
+		$isVideo = ($video === "Y");
 		$currentUserId = $this->getCurrentUser()->getId();
 		$call = Registry::getCallWithId($callId);
 
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
 
-		$call->getUser($currentUserId)->updateLastSeen(new DateTime());
-
 		$userAgent = Context::getCurrent()->getRequest()->getUserAgent();
 		$isMobile = strpos($userAgent, "Bitrix24") !== false;
+		$call->getUser($currentUserId)->update([
+			'LAST_SEEN' => new DateTime(),
+			'IS_MOBILE' => $isMobile ? 'Y' : 'N'
+		]);
+
 		$usersToInvite = [];
 		foreach ($userIds as $userId)
 		{
@@ -99,7 +154,7 @@ class Call extends Engine\Controller
 		}
 
 		// send invite to the ones being invited.
-		$call->getSignaling()->sendInvite($currentUserId, $usersToInvite, $isMobile, $video);
+		$call->getSignaling()->sendInvite($currentUserId, $usersToInvite, $isMobile, $isVideo);
 
 		// send userInvited to everyone else.
 		$allUsers = $call->getUsers();
@@ -108,8 +163,7 @@ class Call extends Engine\Controller
 
 		if($call->getState() == \Bitrix\Im\Call\Call::STATE_NEW)
 		{
-			$call->setState(\Bitrix\Im\Call\Call::STATE_INVITING);
-			$call->save();
+			$call->updateState(\Bitrix\Im\Call\Call::STATE_INVITING);
 		}
 
 		return true;
@@ -128,6 +182,8 @@ class Call extends Engine\Controller
 	{
 		$currentUserId = $this->getCurrentUser()->getId();
 		$call = Registry::getCallWithId($callId);
+		$userAgent = Context::getCurrent()->getRequest()->getUserAgent();
+		$isMobile = strpos($userAgent, "Bitrix24") !== false;
 
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
@@ -135,11 +191,14 @@ class Call extends Engine\Controller
 		$callUser = $call->getUser($currentUserId);
 		if($callUser)
 		{
-			$callUser->updateState(CallUser::STATE_READY);
-			$callUser->updateLastSeen(new DateTime());
+			$callUser->update([
+				'STATE' => CallUser::STATE_READY,
+				'LAST_SEEN' => new DateTime(),
+				'IS_MOBILE' => $isMobile ? 'Y' : 'N'
+			]);
 		}
 
-		$call->getSignaling()->sendAnswer($currentUserId, $callInstanceId);
+		$call->getSignaling()->sendAnswer($currentUserId, $callInstanceId, $isMobile);
 	}
 
 	public function declineAction($callId, $callInstanceId, $code = 603)
@@ -153,7 +212,15 @@ class Call extends Engine\Controller
 		$callUser = $call->getUser($currentUserId);
 		if($callUser)
 		{
-			$callUser->updateState(CallUser::STATE_DECLINED);
+			if($code == 486)
+			{
+				$callUser->updateState(CallUser::STATE_BUSY);
+			}
+			else
+			{
+				$callUser->updateState(CallUser::STATE_DECLINED);
+			}
+			$callUser->updateLastSeen(new DateTime());
 		}
 
 		$userIds = $call->getUsers();
@@ -161,7 +228,7 @@ class Call extends Engine\Controller
 
 		if(!$call->hasActiveUsers())
 		{
-			$call->finish(603);
+			$call->finish();
 		}
 	}
 
@@ -181,6 +248,10 @@ class Call extends Engine\Controller
 		if($callUser)
 		{
 			$callUser->updateLastSeen(new DateTime());
+			if($callUser->getState() == CallUser::STATE_UNAVAILABLE)
+			{
+				$callUser->updateState(CallUser::STATE_IDLE);
+			}
 		}
 
 		if($retransmit)
@@ -191,15 +262,22 @@ class Call extends Engine\Controller
 		return true;
 	}
 
-	public function negotiationNeededAction($callId, $userId)
+	public function negotiationNeededAction($callId, $userId, $restart = false)
 	{
+		$restart = (bool)$restart;
 		$currentUserId = $this->getCurrentUser()->getId();
 		$call = Registry::getCallWithId($callId);
 
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
 
-		$call->getSignaling()->sendNegotiationNeeded($currentUserId, $userId);
+		$callUser = $call->getUser($currentUserId);
+		if($callUser)
+		{
+			$callUser->updateLastSeen(new DateTime());
+		}
+
+		$call->getSignaling()->sendNegotiationNeeded($currentUserId, $userId, $restart);
 		return true;
 	}
 
@@ -210,6 +288,12 @@ class Call extends Engine\Controller
 
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
+
+		$callUser = $call->getUser($currentUserId);
+		if($callUser)
+		{
+			$callUser->updateLastSeen(new DateTime());
+		}
 
 		$call->getSignaling()->sendConnectionOffer($currentUserId, $userId, $connectionId, $sdp, $userAgent);
 		return true;
@@ -223,11 +307,17 @@ class Call extends Engine\Controller
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
 
+		$callUser = $call->getUser($currentUserId);
+		if($callUser)
+		{
+			$callUser->updateLastSeen(new DateTime());
+		}
+
 		$call->getSignaling()->sendConnectionAnswer($currentUserId, $userId, $connectionId, $sdp, $userAgent);
 		return true;
 	}
 
-	public function iceCandidateAction($callId, $userId, array $candidates)
+	public function iceCandidateAction($callId, $userId, $connectionId, array $candidates)
 	{
 		// mobile can alter key order, so we recover it
 		ksort($candidates);
@@ -238,11 +328,17 @@ class Call extends Engine\Controller
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
 
-		$call->getSignaling()->sendIceCandidates($currentUserId, $userId, $candidates);
+		$callUser = $call->getUser($currentUserId);
+		if($callUser)
+		{
+			$callUser->updateLastSeen(new DateTime());
+		}
+
+		$call->getSignaling()->sendIceCandidates($currentUserId, $userId, $connectionId, $candidates);
 		return true;
 	}
 
-	public function hangupAction($callId, $callInstanceId)
+	public function hangupAction($callId, $callInstanceId, $retransmit = true)
 	{
 		$currentUserId = $this->getCurrentUser()->getId();
 		$call = Registry::getCallWithId($callId);
@@ -254,14 +350,18 @@ class Call extends Engine\Controller
 		if($callUser)
 		{
 			$callUser->updateState(CallUser::STATE_IDLE);
+			$callUser->updateLastSeen(new DateTime());
 		}
 
 		$userIds = $call->getUsers();
-		$call->getSignaling()->sendHangup($currentUserId, $userIds, $callInstanceId);
+		if($retransmit)
+		{
+			$call->getSignaling()->sendHangup($currentUserId, $userIds, $callInstanceId);
+		}
 
 		if(!$call->hasActiveUsers())
 		{
-			$call->finish(200);
+			$call->finish();
 		}
 	}
 

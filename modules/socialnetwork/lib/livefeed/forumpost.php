@@ -31,7 +31,8 @@ final class ForumPost extends Provider
 			'report_comment',
 			'photo_comment',
 			'wiki_comment',
-			'lists_new_element_comment'
+			'lists_new_element_comment',
+			'crm_activity_add_comment'
 		);
 	}
 

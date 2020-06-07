@@ -182,6 +182,13 @@ class OrderEdit
 			);
 		}
 
+		$connectedB24Portal = '';
+
+		if(Loader::includeModule('b24connector'))
+		{
+			$connectedB24Portal = \Bitrix\B24Connector\Connection::getDomain();
+		}
+
 		$curFormat = \CCurrencyLang::GetFormatDescription($currencyId);
 		$currencyLang = preg_replace("/(^|[^&])#/", '$1', $curFormat["FORMAT_STRING"]);
 		$langPhrases = array("SALE_ORDEREDIT_DISCOUNT_UNKNOWN", "SALE_ORDEREDIT_REFRESHING_DATA", "SALE_ORDEREDIT_FIX",
@@ -195,6 +202,7 @@ class OrderEdit
 					BX.Sale.Admin.OrderEditPage.siteId = "'.\CUtil::JSEscape($order->getSiteId()).'";
 					BX.Sale.Admin.OrderEditPage.languageId = "'.LANGUAGE_ID.'";
 					BX.Sale.Admin.OrderEditPage.formId = "'.$formId.'_form";
+					BX.Sale.Admin.OrderEditPage.connectedB24Portal = "'.\CUtil::JSEscape($connectedB24Portal).'";
 					BX.Sale.Admin.OrderEditPage.adminTabControlId = "'.$formId.'";
 					'.(!empty($currencies) ? 'BX.Currency.setCurrencies('.\CUtil::PhpToJSObject($currencies, false, true, true).');' : '').
 					'BX.Sale.Admin.OrderEditPage.currency = "'.\CUtil::JSEscape($currencyId).'";
@@ -1700,22 +1708,32 @@ class OrderEdit
 		return DiscountCouponsManager::get(true, array(), true, false);
 	}
 
+	/**
+	 * @param Order $order
+	 * @param bool $needRecalculate
+	 * @return array
+	 * @throws ArgumentNullException
+	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
+	 * @throws \Bitrix\Main\NotSupportedException
+	 */
 	public static function getDiscountsApplyResult(Order $order, $needRecalculate = false)
 	{
 		static $calcResults = null;
 
-		if ($order instanceof \Bitrix\Sale\Archive\Order)
+		if ($order instanceof Sale\Archive\Order)
 		{
-			/** @var \Bitrix\Sale\Archive\Order $order*/
+			/** @var Sale\Archive\Order $order */
 			return $order->getDiscountData();
 		}
 
-		if($calcResults === null || $needRecalculate)
+		if ($calcResults === null || $needRecalculate)
 		{
-			if($needRecalculate)
+			$discounts = $order->getDiscount();
+
+			if ($needRecalculate)
 			{
-				/** @var \Bitrix\Sale\Result $r */
-				$r = $order->getDiscount()->calculate();
+				/** @var Sale\Result $r */
+				$r = $discounts->calculate();
 
 				if ($r->isSuccess())
 				{
@@ -1724,7 +1742,8 @@ class OrderEdit
 				}
 			}
 
-			$calcResults = $order->getDiscount()->getApplyResult(true);
+			$calcResults = $discounts->getApplyResult(true);
+			unset($discounts);
 		}
 
 		return $calcResults === null ? array() : $calcResults;
@@ -1746,7 +1765,7 @@ class OrderEdit
 		$result = array();
 		$discounts = array();
 
-		if ($order instanceof \Bitrix\Sale\Archive\Order)
+		if ($order instanceof Sale\Archive\Order)
 		{
 			$discounts = $order->getDiscountData();
 			return $discounts['COUPON_LIST'];

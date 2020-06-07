@@ -55,7 +55,10 @@ class EntityCopier implements Copyable
 		foreach ($results as $result)
 		{
 			$data = $data + $result->getData();
-			$this->result->addErrors($result->getErrors());
+			if ($result->getErrors())
+			{
+				$this->result->addErrors($result->getErrors());
+			}
 		}
 		if ($data)
 		{
@@ -71,44 +74,45 @@ class EntityCopier implements Copyable
 	 */
 	public function copy(ContainerCollection $containerCollection)
 	{
-		$result = [$this->implementerName => []];
+		$this->result->setData([]);
 
+		$result = [];
 		foreach ($containerCollection as $container)
 		{
-			$entityIdToCopy = $this->getEntityIdToCopy($container);
-			if (!$entityIdToCopy)
+			$entityId = $this->getEntityIdToCopy($container);
+			if (!$entityId)
 			{
 				continue;
 			}
 
-			$fields = $this->getFields($container, $entityIdToCopy);
+			$fields = $this->getFields($container, $entityId);
 
 			if (empty($fields))
 			{
-				$result[$this->implementerName][$entityIdToCopy] = false;
+				$result = $this->addToResultByName($result, [$entityId => false], $this->implementerName);
 			}
 			else
 			{
-				$dictionary = $this->createDictionary($container, $fields);
+				$dictionary = $this->getDictionary($container, $fields);
 
 				$fields = $this->prepareFieldsToCopy($container, $fields);
 
 				$copiedEntityId = $this->addEntity($container, $fields);
 				if (!$copiedEntityId)
 				{
-					$result[$this->implementerName][$entityIdToCopy] = false;
+					$result = $this->addToResultByName($result, [$entityId => false], $this->implementerName);
 					$this->result->addErrors($this->implementer->getErrors());
 					continue;
 				}
 
-				$copyChildrenResult = $this->copyChildren($container, $entityIdToCopy, $copiedEntityId);
+				$copyChildrenResult = $this->copyChildren($container, $entityId, $copiedEntityId);
 				if ($copyChildrenResult->getErrors())
 				{
 					$this->result->addErrors($copyChildrenResult->getErrors());
 				}
-				$result[$this->implementerName] = $result[$this->implementerName] + $copyChildrenResult->getData();
+				$result = $this->addToResult($result, $copyChildrenResult->getData());
 
-				$result[$this->implementerName][$entityIdToCopy] = $copiedEntityId;
+				$result = $this->addToResultByName($result, [$entityId => $copiedEntityId], $this->implementerName);
 
 				$this->setCopiedEntityId($container, $copiedEntityId);
 
@@ -118,37 +122,40 @@ class EntityCopier implements Copyable
 
 		$this->startCopyEntities($containerCollection);
 
-		$result[$this->implementerName] = $result[$this->implementerName] + $this->result->getData();
+		$result = $this->addToResult($result, $this->result->getData());
+
 		$this->result->setData($result);
 
 		return $this->result;
 	}
 
 	/**
-	 * Returns the identifier map of the parent copied entity.
+	 * Returns the ids map of the parent copied entity.
 	 *
 	 * @return array
 	 */
-	public function getMapIdsCopiedEntity()
+	public function getMapIdsCopiedEntity(): array
 	{
-		return $this->getMapIdsParentEntity(current($this->result->getData()));
+		return $this->getMapIdsByImplementer($this->implementerName, $this->result->getData());
 	}
 
-	private function getMapIdsParentEntity(array $data)
+	/**
+	 * Returns the ids map of result by name implementer.
+	 *
+	 * @param string $implementerName Implementer name.
+	 * @param array $data Result list.
+	 * @return array
+	 */
+	public function getMapIdsByImplementer(string $implementerName, array $data): array
 	{
-		$mapIdsCopiedEntity = [];
-		foreach ($data as $key => $values)
+		$mapIds = [];
+
+		if (array_key_exists($implementerName, $data))
 		{
-			if ($key == $this->implementerName && is_array($values))
-			{
-				$mapIdsCopiedEntity = $mapIdsCopiedEntity + $this->getMapIdsParentEntity($values);
-			}
-			elseif (is_int($key))
-			{
-				$mapIdsCopiedEntity[$key] = $values;
-			}
+			return $data[$implementerName];
 		}
-		return $mapIdsCopiedEntity;
+
+		return $mapIds;
 	}
 
 	protected function getEntityIdToCopy(Container $container)
@@ -161,9 +168,9 @@ class EntityCopier implements Copyable
 		return $this->implementer->getFields($container, $entityId);
 	}
 
-	protected function createDictionary(Container $container, array $fields)
+	protected function getDictionary(Container $container, array $fields)
 	{
-		return new Dictionary();
+		return $container->getDictionary();
 	}
 
 	protected function prepareFieldsToCopy(Container $container, $fields)
@@ -191,5 +198,34 @@ class EntityCopier implements Copyable
 	protected function setDictionary(Container $container, Dictionary $dictionary)
 	{
 		$container->setDictionary($dictionary);
+	}
+
+	private function addToResultByName(array $result, array $mapIds, string $implementerName): array
+	{
+		if (!array_key_exists($implementerName, $result))
+		{
+			$result[$implementerName] = [];
+		}
+
+		$result[$implementerName] += $mapIds;
+
+		return $result;
+	}
+
+	private function addToResult(array $result, array $mapIds): array
+	{
+		foreach ($mapIds as $key => $values)
+		{
+			if (array_key_exists($key, $result))
+			{
+				$result[$key] += $values;
+			}
+			else
+			{
+				$result[$key] = $values;
+			}
+		}
+
+		return $result;
 	}
 }

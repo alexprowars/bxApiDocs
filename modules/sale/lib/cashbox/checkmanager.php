@@ -272,14 +272,17 @@ final class CheckManager
 				if (
 					class_exists('\Bitrix\Crm\Order\Order')
 					&& $order instanceof \Bitrix\Crm\Order\Order
-					&& $order->getDealBinding()->isExist()
+					&& $order->getDealBinding()
 				)
 				{
-					$order->getDealBinding()->addTimelineCheckEntry($checkId, ['PRINTED' => 'N']);
+					$order->addTimelineCheckEntryOnCreate($checkId, ['PRINTED' => 'N']);
 				}
 
 				if ($order !== null
-					&& ($payment !== null || $shipment !== null)
+					&& (
+						$payment !== null
+						|| $shipment !== null
+					)
 				)
 				{
 					$r = new Result();
@@ -338,49 +341,46 @@ final class CheckManager
 
 			if ($updateResult->isSuccess())
 			{
-				if ($payment !== null || $shipment !== null)
-				{
-					$isSend = false;
-					$event = new Main\Event(
-						'sale',
-						static::EVENT_ON_CHECK_PRINT_SEND,
-						array('PAYMENT' => $payment, 'SHIPMENT' => $shipment, 'CHECK' => $check)
-					);
-					$event->send();
-
-					$eventResults = $event->getResults();
-					/** @var Main\EventResult $eventResult */
-					foreach($eventResults as $eventResult)
-					{
-						if($eventResult->getType() == Main\EventResult::SUCCESS)
-							$isSend = true;
-					}
-
-					if (!$isSend)
-					{
-						if ($payment !== null)
-						{
-							/** @var Sale\Notify $notifyClassName */
-							$notifyClassName = $registry->getNotifyClassName();
-							$notifyClassName::callNotify($payment, Sale\EventActions::EVENT_ON_CHECK_PRINT);
-						}
-						elseif ($shipment !== null)
-						{
-							/** @var Sale\Notify $notifyClassName */
-							$notifyClassName = $registry->getNotifyClassName();
-							$notifyClassName::callNotify($shipment, Sale\EventActions::EVENT_ON_CHECK_PRINT);
-						}
-					}
-				}
-
 				/** @ToDO Will be removed after OrderCheckCollection is realized */
 				if (
 					class_exists('\Bitrix\Crm\Order\Order')
 					&& $order instanceof \Bitrix\Crm\Order\Order
-					&& $order->getDealBinding()->isExist()
+					&& $order->getDealBinding()
 				)
 				{
-					$order->getDealBinding()->addTimelineCheckEntry($checkId, ['PRINTED' => 'Y']);
+					$order->addTimelineCheckEntryOnCreate($checkId, ['PRINTED' => 'Y']);
+				}
+
+				$isSend = false;
+				$event = new Main\Event(
+					'sale',
+					static::EVENT_ON_CHECK_PRINT_SEND,
+					array('PAYMENT' => $payment, 'SHIPMENT' => $shipment, 'CHECK' => $check)
+				);
+				$event->send();
+
+				$eventResults = $event->getResults();
+				/** @var Main\EventResult $eventResult */
+				foreach($eventResults as $eventResult)
+				{
+					if($eventResult->getType() == Main\EventResult::SUCCESS)
+						$isSend = true;
+				}
+
+				if (!$isSend)
+				{
+					if ($payment !== null)
+					{
+						/** @var Sale\Notify $notifyClassName */
+						$notifyClassName = $registry->getNotifyClassName();
+						$notifyClassName::callNotify($payment, Sale\EventActions::EVENT_ON_CHECK_PRINT);
+					}
+					elseif ($shipment !== null)
+					{
+						/** @var Sale\Notify $notifyClassName */
+						$notifyClassName = $registry->getNotifyClassName();
+						$notifyClassName::callNotify($shipment, Sale\EventActions::EVENT_ON_CHECK_PRINT);
+					}
 				}
 			}
 			else
@@ -1216,6 +1216,9 @@ final class CheckManager
 	/**
 	 * @param $id
 	 * @return Check|null
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
 	 */
 	public static function getObjectById($id)
 	{

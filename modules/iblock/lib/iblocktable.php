@@ -366,7 +366,7 @@ class IblockTable extends DataManager
 			}
 
 			// build property entity with base fields
-			$propertyValueEntity = $property->getValueEntity();
+			$propertyValueEntity = $property->getValueEntity($elementEntity);
 
 			// add custom fields
 			if (!empty($property->getUserType()) && !empty($userTypeList[$property->getUserType()]['GetORMFields']))

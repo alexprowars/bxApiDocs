@@ -7,7 +7,6 @@ use Bitrix\Main,
 	Bitrix\Crm\Settings,
 	Bitrix\Crm\Timeline,
 	Bitrix\Crm\Order\Matcher,
-	Bitrix\Crm\Order\OrderStatus,
 	Bitrix\Main\Config\Option,
 	Bitrix\Main\Update\Stepper,
 	Bitrix\Main\Localization\Loc;
@@ -198,9 +197,6 @@ final class CrmEntityCreator
 
 		// cancel
 		$this->addTimelineEntryOnCancel();
-
-		// deal
-		$this->addTimelineDealBinding();
 	}
 
 	/**
@@ -382,52 +378,6 @@ final class CrmEntityCreator
 
 		return $result;
 	}
-
-	/**
-	 * @throws Main\ArgumentException
-	 * @throws Main\SystemException
-	 */
-	private function addTimelineDealBinding()
-	{
-		$dealBinding = $this->order->getDealBinding();
-		if ($dealBinding->isExist())
-		{
-			$authorId = (int)$this->order->getField("RESPONSIBLE_ID");
-
-			Timeline\OrderEntry::create([
-				"ENTITY_ID" => $this->order->getId(),
-				"TYPE_CATEGORY_ID" => Timeline\TimelineType::CREATION,
-				"AUTHOR_ID" => $authorId,
-				"SETTINGS" => [
-					"FIELDS" => [
-						"PAID" => $this->order->getField("PAYED"),
-						"DONE" => ($this->order->getField("STATUS_ID") === OrderStatus::getFinalStatus())
-							? "Y"
-							: "N",
-						"CANCELED" => $this->order->getField("CANCELED"),
-					]
-				],
-				"BINDINGS" => [
-					[
-						"ENTITY_TYPE_ID" => \CCrmOwnerType::Deal,
-						"ENTITY_ID" => $dealBinding->getDealId(),
-					]
-				],
-			]);
-
-			Timeline\LinkEntry::create([
-				"ENTITY_TYPE_ID" => \CCrmOwnerType::Order,
-				"ENTITY_ID" => $this->order->getId(),
-				"AUTHOR_ID" => $authorId,
-				"BINDINGS" => [
-					[
-						"ENTITY_TYPE_ID" => \CCrmOwnerType::Deal,
-						"ENTITY_ID" => $dealBinding->getDealId(),
-					]
-				]
-			]);
-		}
-	}
 }
 
 /**
@@ -443,22 +393,26 @@ final class CrmEntityCreatorStepper extends Stepper
 
 	/** @var string */
 	const IS_SALE_CRM_SITE_MASTER_STUB = "~IS_SALE_CRM_SITE_MASTER_STUB";
-	const IS_SALE_BSM_SITE_MASTER_STUB = "~IS_SALE_BSM_SITE_MASTER_STUB";
 
 	/** @var string */
 	const ORDER_CONVERT_IS_FINISH = "~ORDER_CONVERT_IS_FINISH";
 
 	/** @var string */
 	const IS_SALE_CRM_SITE_MASTER_FINISH = "~IS_SALE_CRM_SITE_MASTER_FINISH";
-	const IS_SALE_BSM_SITE_MASTER_FINISH = "~IS_SALE_BSM_SITE_MASTER_FINISH";
 
 	const PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED = "~ADMIN_PANEL_IS_ENABLED_FOR_";
+
+	const IS_CRM_SITE_MASTER_OPENED = "~IS_CRM_SITE_MASTER_OPENED";
 
 	/** @var string */
 	const WIZARD_SITE_ID = "~CRM_WIZARD_SITE_ID";
 
 	/** @var string */
 	const STEPPER_PARAMS = "~CRM_ENTITY_CREATOR_STEPPER_PARAMS";
+
+	const UPDATE_ORDER_CONVERTER_CRM_ERROR_TABLE = "~UPDATE_ORDER_CONVERTER_CRM_ERROR_TABLE";
+
+	const ORDER_CONVERTER_CRM_ERROR_COUNT = "~ORDER_CONVERTER_CRM_ERROR_COUNT";
 
 	/** @var int max executing time in sec */
 	const MAX_EXECUTION_TIME = 5;
@@ -491,10 +445,12 @@ final class CrmEntityCreatorStepper extends Stepper
 
 		$this->initParams();
 
-		$this->orderList = $this->getOrders();
+		$this->orderList = self::isUpdateOrder() ? $this->getErrorOrders() : $this->getOrders();
 		if (!$this->orderList)
 		{
 			self::unregisterEventHandler();
+			self::unregisterOrderUpdateEventHandler();
+
 			self::setFinishStatus();
 
 			if ((boolean)self::getErrors()->fetch())
@@ -516,7 +472,7 @@ final class CrmEntityCreatorStepper extends Stepper
 		$this->createCrmEntity();
 
 		$result = [
-			"count" => $this->getOrderCount(),
+			"count" => self::isUpdateOrder() ? $this->getErrorOrderCount() : $this->getOrderCount(),
 			"steps" => $this->params["updated_order_count"],
 		];
 
@@ -524,7 +480,10 @@ final class CrmEntityCreatorStepper extends Stepper
 	}
 
 	/**
+	 * @throws Main\ArgumentException
 	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
 	 */
 	private function createCrmEntity()
 	{
@@ -538,12 +497,19 @@ final class CrmEntityCreatorStepper extends Stepper
 				if (!$resultAdd->isSuccess())
 				{
 					$errorMessages = $resultAdd->getErrorMessages();
-					$this->addError($order->getId(), implode(" ", $errorMessages));
+					$this->setError($order->getId(), implode(" ", $errorMessages));
+				}
+				else
+				{
+					if (self::isUpdateOrder())
+					{
+						$this->deleteError($order->getId());
+					}
 				}
 			}
 			catch (\Exception $ex)
 			{
-				$this->addError($order->getId(), $ex->getMessage());
+				$this->setError($order->getId(), $ex->getMessage());
 			}
 
 			$this->updateParams($order->getId());
@@ -609,6 +575,55 @@ final class CrmEntityCreatorStepper extends Stepper
 	/**
 	 * @return mixed
 	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	private function getErrorOrders()
+	{
+		$parameters = [
+			"order" => ["ORDER_ID" => "ASC"],
+			"limit" => self::MAX_ORDERS,
+		];
+		if ($this->params["last_order_id" ] !== null)
+		{
+			$parameters["filter"] = [">ORDER_ID" => $this->params["last_order_id"]];
+		}
+
+		$errorOrderIdList = [];
+		$orderErrorIterator = self::getErrors($parameters);
+		while($orderError = $orderErrorIterator->fetch())
+		{
+			$errorOrderIdList[] = $orderError["ORDER_ID"];
+		}
+
+		if ($errorOrderIdList)
+		{
+			$parameters = [
+				"filter" => ["ID" => $errorOrderIdList]
+			];
+
+			$orders = Order\Order::loadByFilter($parameters);
+			$ordersIdList = [];
+			foreach ($orders as $order)
+			{
+				$ordersIdList[] = $order->getId();
+			}
+
+			$diffOrderListId = array_diff($errorOrderIdList, $ordersIdList);
+			foreach ($diffOrderListId as $diffOrderId)
+			{
+				self::deleteError($diffOrderId);
+			}
+
+			return $orders;
+		}
+
+		return [];
+	}
+
+	/**
+	 * @return mixed
+	 * @throws Main\ArgumentException
 	 * @throws Main\SystemException
 	 */
 	private function getOrderCount()
@@ -622,11 +637,35 @@ final class CrmEntityCreatorStepper extends Stepper
 	}
 
 	/**
+	 * @return mixed
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	private function getErrorOrderCount()
+	{
+		$optionValue = Option::get(self::$moduleId, self::ORDER_CONVERTER_CRM_ERROR_COUNT, false);
+		if ($optionValue === false)
+		{
+			$optionValue = Sale\Internals\OrderConverterCrmErrorTable::getList([
+				"select" => ["CNT"],
+				"runtime" => [
+					new Main\Entity\ExpressionField("CNT", "COUNT(*)")
+				]
+			])->fetch()["CNT"];
+
+			Option::set(self::$moduleId, self::ORDER_CONVERTER_CRM_ERROR_COUNT, $optionValue);
+		}
+
+		return $optionValue;
+	}
+
+	/**
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
 	public static function setFinishStatus()
 	{
-		Main\Config\Option::set(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "Y");
+		Option::set(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "Y");
 	}
 
 	/**
@@ -636,7 +675,17 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function isFinished()
 	{
-		return (Main\Config\Option::get(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "N") === "Y");
+		return (Option::get(self::$moduleId, self::ORDER_CONVERT_IS_FINISH, "N") === "Y");
+	}
+
+	/**
+	 * @return bool
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	private static function isUpdateOrder()
+	{
+		return (Option::get(self::$moduleId, self::UPDATE_ORDER_CONVERTER_CRM_ERROR_TABLE, "N") === "Y");
 	}
 
 	/**
@@ -646,19 +695,25 @@ final class CrmEntityCreatorStepper extends Stepper
 	 */
 	public static function isNeedStub()
 	{
-		if (
+		$isShow = false;
+		if (Option::get("sale", self::IS_CRM_SITE_MASTER_OPENED, "N") === "Y")
+		{
+			if
 			(
-				Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_STUB, "N") === "Y"
+				Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_STUB, "N") === "Y"
 				&&
-				Main\Config\Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_FINISH, "N") === "Y"
+				Option::get("sale", self::IS_SALE_CRM_SITE_MASTER_FINISH, "N") === "Y"
 			)
-			||
-			(
-				Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_STUB, "N") === "Y"
-				&&
-				Main\Config\Option::get("sale", self::IS_SALE_BSM_SITE_MASTER_FINISH, "N") === "Y"
-			)
-		)
+			{
+				$isShow = true;
+			}
+		}
+		else
+		{
+			$isShow = Main\ModuleManager::isModuleInstalled("crm");
+		}
+
+		if ($isShow)
 		{
 			global $USER;
 			if (Option::get('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$USER->GetID()) !== 'Y')
@@ -686,10 +741,20 @@ final class CrmEntityCreatorStepper extends Stepper
 
 	/**
 	 * Show progress bar in crm and shop section
+	 *
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
 	 */
-	public static function showProgressBar()
+	public static function showProgressBar(): void
 	{
-		if (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
+		if (defined("ADMIN_SECTION")
+			|| (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
+		)
+		{
+			return;
+		}
+
+		if (self::getCrmSiteId() !== SITE_ID)
 		{
 			return;
 		}
@@ -727,18 +792,17 @@ final class CrmEntityCreatorStepper extends Stepper
 	 * @throws Main\ObjectPropertyException
 	 * @throws Main\SystemException
 	 */
-	public static function bindAgent()
+	public static function bindAgent(): void
 	{
-		if (!defined("SITE_TEMPLATE_ID"))
-		{
-			return;
-		}
-		elseif (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
+		if (defined("ADMIN_SECTION")
+			|| (defined("SITE_TEMPLATE_ID") && SITE_TEMPLATE_ID !== "bitrix24")
+			|| (!Main\Loader::includeModule("crm"))
+		)
 		{
 			return;
 		}
 
-		if (!Main\Loader::includeModule("crm"))
+		if (self::getCrmSiteId() !== SITE_ID)
 		{
 			return;
 		}
@@ -748,8 +812,8 @@ final class CrmEntityCreatorStepper extends Stepper
 			return;
 		}
 
-		if (!CrmEntityCreatorStepper::isAgent()
-			&& !CrmEntityCreatorStepper::isFinished()
+		if (!self::isAgent()
+			&& !self::isFinished()
 		)
 		{
 			include_once $_SERVER["DOCUMENT_ROOT"].BX_ROOT."/components/bitrix/sale.crm.site.master/tools/sitepatcher.php";
@@ -787,7 +851,71 @@ final class CrmEntityCreatorStepper extends Stepper
 		UnRegisterModuleDependences("main", "OnEpilog", self::$moduleId, __CLASS__, "bindAgent");
 	}
 
+	/**
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	public static function bindAgentOrderUpdate()
+	{
+		if (!self::isAgent())
+		{
+			Option::delete(self::$moduleId, ["name" => self::STEPPER_PARAMS]);
+			Option::delete(self::$moduleId, ["name" => self::ORDER_CONVERT_IS_FINISH]);
 
+			Option::set(self::$moduleId, self::UPDATE_ORDER_CONVERTER_CRM_ERROR_TABLE, "Y");
+
+			// create agent
+			self::bind(5);
+		}
+	}
+
+	/**
+	 * Register event handler for show progressbar
+	 *
+	 * @throws Main\ArgumentNullException
+	 */
+	public static function registerOrderUpdateEventHandler()
+	{
+		Option::delete(self::$moduleId, ["name" => self::ORDER_CONVERT_IS_FINISH]);
+		Option::delete(self::$moduleId, ["name" => self::ORDER_CONVERTER_CRM_ERROR_COUNT]);
+
+		RegisterModuleDependences("main", "OnEpilog", self::$moduleId, __CLASS__, "showProgressBar", 500);
+
+		RegisterModuleDependences("main", "OnEpilog", self::$moduleId, __CLASS__, "bindAgentOrderUpdate", 500);
+	}
+
+	/**
+	 * Unregister event handler for show progressbar
+	 */
+	public static function unregisterOrderUpdateEventHandler()
+	{
+		UnRegisterModuleDependences("main", "OnEpilog", self::$moduleId, __CLASS__, "showProgressBar");
+
+		UnRegisterModuleDependences("main", "OnEpilog", self::$moduleId, __CLASS__, "bindAgentOrderUpdate");
+	}
+
+	/**
+	 * @param $orderId
+	 * @param $errorMessage
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 * @throws \Exception
+	 */
+	private function setError($orderId, $errorMessage): void
+	{
+		$orderRow = Sale\Internals\OrderConverterCrmErrorTable::getList([
+			'filter' => ["ORDER_ID" => $orderId],
+		])->fetch();
+		if (!$orderRow)
+		{
+			$this->addError($orderId, $errorMessage);
+		}
+		else
+		{
+			$this->updateError($orderId, $errorMessage);
+		}
+	}
 	/**
 	 * @param $orderId
 	 * @param $errorMessage
@@ -799,6 +927,34 @@ final class CrmEntityCreatorStepper extends Stepper
 			"ORDER_ID" => $orderId,
 			"ERROR" => $errorMessage
 		]);
+	}
+
+	/**
+	 * @param $orderId
+	 * @param $errorMessage
+	 * @throws \Exception
+	 */
+	private function updateError($orderId, $errorMessage)
+	{
+		Sale\Internals\OrderConverterCrmErrorTable::update($orderId, [
+			"ERROR" => $errorMessage
+		]);
+	}
+
+	/**
+	 * @param $orderId
+	 * @throws \Exception
+	 */
+	private function deleteError($orderId)
+	{
+		$orderRow = Sale\Internals\OrderConverterCrmErrorTable::getList([
+			"select" => ["ID"],
+			"filter" => ["ORDER_ID" => $orderId],
+		])->fetch();
+		if ($orderRow)
+		{
+			Sale\Internals\OrderConverterCrmErrorTable::delete($orderRow["ID"]);
+		}
 	}
 
 	/**
@@ -850,7 +1006,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
 	 */
-	private function getCrmSiteId()
+	private static function getCrmSiteId()
 	{
 		return Option::get(self::$moduleId, self::WIZARD_SITE_ID);
 	}
@@ -865,11 +1021,11 @@ final class CrmEntityCreatorStepper extends Stepper
 	{
 		$site = Main\SiteTable::getList([
 			"select" => ["SERVER_NAME"],
-			"filter" => ["=LID" => $this->getCrmSiteId()]
+			"filter" => ["=LID" => self::getCrmSiteId()]
 		])->fetch();
 
 		$siteUrl = (Main\Context::getCurrent()->getRequest()->isHttps() ? "https://" : "http://").$site["SERVER_NAME"];
-		$pathToOderList = Main\Config\Option::get("crm", "path_to_order_list", "/shop/orders/");
+		$pathToOderList = Option::get("crm", "path_to_order_list", "/shop/orders/");
 
 		return $siteUrl.$pathToOderList;
 	}
@@ -882,7 +1038,7 @@ final class CrmEntityCreatorStepper extends Stepper
 	public static function OnAfterUserLogin($params)
 	{
 		$value = Option::get('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$params['USER_ID'], '');
-		if ($value !== '')
+		if ($value !== '' && $value !== 'N')
 		{
 			Option::set('sale', self::PREFIX_OPTION_ADMIN_PANEL_IS_ENABLED.$params['USER_ID'], 'N');
 		}

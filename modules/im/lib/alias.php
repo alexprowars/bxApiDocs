@@ -6,6 +6,7 @@ class Alias
 	const ENTITY_TYPE_USER = 'USER';
 	const ENTITY_TYPE_CHAT = 'CHAT';
 	const ENTITY_TYPE_OPEN_LINE = 'LINES';
+	const ENTITY_TYPE_CALL = 'CALL';
 	const ENTITY_TYPE_OTHER = 'OTHER';
 
 	const CACHE_TTL = 31536000;

@@ -95,6 +95,11 @@ class Server
 		return $this->get("SERVER_PORT");
 	}
 
+	public function getRequestScheme()
+	{
+		return $this->get("REQUEST_SCHEME");
+	}
+
 	/**
 	 * Returns requested uri.
 	 * /index.php/test1/test2?login=yes&back_url_admin=/

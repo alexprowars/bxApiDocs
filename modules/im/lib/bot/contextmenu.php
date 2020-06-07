@@ -12,18 +12,27 @@ class ContextMenu
 {
 	private $botId = 0;
 	private $items = Array();
-	
+
 	function __construct($botId = 0)
 	{
 		$this->botId = intval($botId);
 	}
-	
+
 	public function addItem($params)
 	{
 		$button = Array();
-		$button['BOT_ID'] = $this->botId;
+		if (isset($button['BOT_ID']) && intval($button['BOT_ID']) > 0)
+		{
+			$button['BOT_ID'] = intval($button['BOT_ID']);
+		}
+		else
+		{
+			$button['BOT_ID'] = $this->botId;
+		}
 		if (!isset($params['TEXT']) || strlen(trim($params['TEXT'])) <= 0)
+		{
 			return false;
+		}
 
 		if (isset($params['LINK']) && preg_match('#^(?:/|https?://)#', $params['LINK']))
 		{
@@ -91,7 +100,7 @@ class ContextMenu
 				$menu->addItem($button);
 			}
 		}
-		
+
 		return $menu->isEmpty()? null: $menu;
 	}
 

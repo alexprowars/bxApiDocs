@@ -56,6 +56,8 @@ class Service
 			MessageBase::CODE_ADS_VK => Retargeting\Service::TYPE_VKONTAKTE,
 			MessageBase::CODE_ADS_YA => Retargeting\Service::TYPE_YANDEX,
 			MessageBase::CODE_ADS_GA => Retargeting\Service::TYPE_GOOGLE,
+			MessageBase::CODE_ADS_LOOKALIKE_FB => Retargeting\Service::TYPE_FACEBOOK,
+			MessageBase::CODE_ADS_LOOKALIKE_VK => Retargeting\Service::TYPE_VKONTAKTE,
 		);
 	}
 

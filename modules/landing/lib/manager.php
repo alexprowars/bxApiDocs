@@ -18,7 +18,7 @@ class Manager
 	 * User agreement actual version.
 	 * @see Manager::getOption('user_agreement_version')
 	 */
-	const USER_AGREEMENT_VERSION = 2;
+	const USER_AGREEMENT_VERSION = 4;
 
 	/**
 	 * Publication default path.
@@ -73,6 +73,11 @@ class Manager
 	const FEATURE_DYNAMIC_BLOCK = 'dynamic_block';
 
 	/**
+	 * Feature name for free custom domain.
+	 */
+	const FEATURE_FREE_DOMAIN = 'free_domain';
+
+	/**
 	 * If true, that self::isB24() returns false always.
 	 * @var bool
 	 */
@@ -95,7 +100,7 @@ class Manager
 	 * @var string
 	 */
 	private static $themeTypoId = '';
-	
+
 	/**
 	 * Get main instance of \CMain.
 	 * @return \CMain
@@ -136,12 +141,12 @@ class Manager
 	 * Get current user id.
 	 * @return int
 	 */
-	public static function getUserId()
+	public static function getUserId(): int
 	{
 		$user = self::getUserInstance();
 		if ($user instanceof \CUser)
 		{
-			return $user->getId();
+			return (int)$user->getId();
 		}
 		return 0;
 	}
@@ -221,6 +226,17 @@ class Manager
 		}
 
 		return $docRoot;
+	}
+
+	/**
+	 * Returns current dir.
+	 * @return false|string|null
+	 */
+	public static function getCurDir()
+	{
+		return Application::getInstance()->getContext()
+										 ->getRequest()
+										 ->getRequestedPageDirectory();
 	}
 
 	/**
@@ -380,6 +396,10 @@ class Manager
 	 */
 	public static function getPublicationPathConst()
 	{
+		if (defined('LANDING_PUBLICATION_PATH_CONST'))
+		{
+			return LANDING_PUBLICATION_PATH_CONST;
+		}
 		return self::isB24()
 				? self::PUBLICATION_PATH
 				: self::PUBLICATION_PATH_SITEMAN;
@@ -394,10 +414,16 @@ class Manager
 	 */
 	public static function getPublicationPath($siteCode = null, $siteId = null, $createPubPath = false)
 	{
-		$basePath = self::getOption(
-			'pub_path_' . (!isset($siteId) ? (self::getMainSiteId()) : $siteId),
-			self::getPublicationPathConst()
-		);
+		$tyePublicationPath = Site\Type::getPublicationPath();
+
+		$basePath = $tyePublicationPath;
+		if ($basePath === null)
+		{
+			$basePath = self::getOption(
+				'pub_path_' . (!isset($siteId) ? (self::getMainSiteId()) : $siteId),
+				self::getPublicationPathConst()
+			);
+		}
 		$subDir = self::getSmnSiteDir($siteId);
 		if ($siteCode === null)
 		{
@@ -468,7 +494,7 @@ class Manager
 	{
 		return self::getApplication()->getPageProperty($marker);
 	}
-	
+
 	/**
 	 * Get themes entity from template dir.
 	 * @param string $tplId Site template id.
@@ -478,7 +504,7 @@ class Manager
 	protected static function getThemesEntity($tplId, $entityType)
 	{
 		$themes = array();
-		
+
 		$path = self::getDocRoot() . getLocalPath('templates/' . $tplId) . '/'.$entityType.'/';
 		if (
 			file_exists($path) &&
@@ -493,10 +519,10 @@ class Manager
 				}
 			}
 		}
-		
+
 		return $themes;
 	}
-	
+
 	/**
 	 * Get themes from template dir.
 	 * @param string $tplId Site template id.
@@ -506,7 +532,7 @@ class Manager
 	{
 		return self::getThemesEntity($tplId, 'themes');
 	}
-	
+
 	/**
 	 * Get themes typo from template dir.
 	 * @param string $tplId Site template id.
@@ -559,8 +585,8 @@ class Manager
 	{
 		return defined('SMN_SITE_ID') ? SMN_SITE_ID : SITE_ID;
 	}
-	
-	
+
+
 	/**
 	 * Set new colored theme id.
 	 * @param string $themeId Theme id.
@@ -570,7 +596,7 @@ class Manager
 	{
 		self::$themeId = $themeId;
 	}
-	
+
 	/**
 	 * Set new colored theme id.
 	 * @param string $themeTypoId Theme id.
@@ -589,17 +615,17 @@ class Manager
 	{
 		return self::$themeId;
 	}
-	
+
 	/**
 	 * Add assets to page from hooks and themes
 	 * @return void
 	 */
-	public static function initAssets()
+	public static function initAssets($lid = 0)
 	{
 		self::setThemeAssets();
 
 		$assets = Assets\Manager::getInstance();
-		$assets->setOutput();
+		$assets->setOutput($lid);
 	}
 
 	/**
@@ -610,7 +636,7 @@ class Manager
 	{
 		$assets = Assets\Manager::getInstance();
 		$tplId = self::getTemplateId(SITE_ID);
-		
+
 		if (self::$themeId)
 		{
 			foreach(self::findThemeFiles(self::$themeId, 'themes', $tplId) as $path)
@@ -618,7 +644,7 @@ class Manager
 				$assets->addAsset($path);
 			}
 		}
-		
+
 		if (self::$themeTypoId)
 		{
 			foreach(self::findThemeFiles(self::$themeTypoId, 'themes-typo', $tplId) as $path)
@@ -627,8 +653,8 @@ class Manager
 			}
 		}
 	}
-	
-	
+
+
 	/**
 	 * Set current selected or default color theme.
 	 * @return void
@@ -687,7 +713,7 @@ class Manager
 		{
 			$files[] = $themePath . '.css';
 		}
-		
+
 		return $files;
 	}
 
@@ -785,11 +811,7 @@ class Manager
 			}
 			// save
 			$module = 'landing';
-			$file['name'] = preg_replace(
-				'/[\(\)\s]+/s',
-				'_',
-				$file['name']
-			);
+			$file['name'] = File::sanitizeFileName($file['name']);
 			$file['MODULE_ID'] = $module;
 			$file = \CFile::saveFile($file, $module);
 			if ($file)
@@ -831,6 +853,15 @@ class Manager
 		{
 			unset(self::$tmpFeatures[$feature]);
 		}
+	}
+
+	/**
+	 * Disable all tmp feature.
+	 * @return void
+	 */
+	public static function disableAllFeaturesTmp()
+	{
+		self::$tmpFeatures = [];
 	}
 
 	/**
@@ -879,37 +910,53 @@ class Manager
 			return true;
 		}
 
+		$bitrix24 = Loader::includeModule('bitrix24');
+
+		if (!isset($params['type']) || !$params['type'])
+		{
+			$params['type'] = 'PAGE';
+		}
+
 		if (
+			$feature == self::FEATURE_CREATE_PAGE ||
+			$feature == self::FEATURE_PUBLICATION_PAGE ||
 			$feature == self::FEATURE_CREATE_SITE ||
 			$feature == self::FEATURE_PUBLICATION_SITE
 		)
 		{
-			$optSuff = ($feature == self::FEATURE_PUBLICATION_SITE)
-						? '_publication'
-						: '';
-			if (
-				isset($params['type']) &&
-				$params['type'] == 'STORE'
-			)
+			if (!$bitrix24)
 			{
-				$limit = self::getOption('shops_limit_count' . $optSuff);
+				return true;
 			}
-			else
-			{
-				$limit = self::getOption('site_limit_count' . $optSuff);
-			}
+			$optPrefix = ($feature == self::FEATURE_CREATE_PAGE || $feature == self::FEATURE_PUBLICATION_PAGE)
+							? 'landing_page_' : 'landing_site_';
+			$optSuffix = ($feature == self::FEATURE_PUBLICATION_SITE || $feature == self::FEATURE_PUBLICATION_PAGE)
+							? '_publication' : '';
+			$variableCode = $optPrefix . strtolower($params['type']) . $optSuffix;
+			$limit = (int) Feature::getVariable($variableCode);
 			if ($limit)
 			{
 				$filter = array(
 					'CHECK_PERMISSIONS' => 'N'
 				);
-				if ($feature == self::FEATURE_PUBLICATION_SITE)
+				if (
+					$feature == self::FEATURE_PUBLICATION_SITE ||
+					$feature == self::FEATURE_PUBLICATION_PAGE
+				)
 				{
 					$filter['=ACTIVE'] = 'Y';
 				}
-				if (isset($params['type']))
+				if (
+					$feature == self::FEATURE_CREATE_PAGE ||
+					$feature == self::FEATURE_PUBLICATION_PAGE
+				)
+				{
+					$filter['=SITE.TYPE'] = $params['type'];
+				}
+				else
 				{
 					$filter['=TYPE'] = $params['type'];
+					$filter['=SPECIAL'] = 'N';
 				}
 				if (
 					isset($params['filter']) &&
@@ -921,53 +968,18 @@ class Manager
 						$params['filter']
 					);
 				}
-				$check = Site::getList(array(
-					'select' => array(
-						'CNT' => new Entity\ExpressionField('CNT', 'COUNT(ID)')
-					),
-					'filter' => $filter,
-					'group' => array()
-				))->fetch();
-				if ($check && $check['CNT'] >= $limit)
-				{
-					return false;
-				}
-			}
-			return true;
-		}
-		elseif (
-			$feature == self::FEATURE_CREATE_PAGE ||
-			$feature == self::FEATURE_PUBLICATION_PAGE
-		)
-		{
-			if ($feature == self::FEATURE_PUBLICATION_PAGE)
-			{
-				$limit = self::getOption('pages_limit_count_publication');
-			}
-			else
-			{
-				$limit = self::getOption('pages_limit_count');
-			}
-			if ($limit)
-			{
-				$filter = array(
-					'CHECK_PERMISSIONS' => 'N'
-				);
-				if ($feature == self::FEATURE_PUBLICATION_PAGE)
-				{
-					$filter['=ACTIVE'] = 'Y';
-				}
 				if (
-					isset($params['filter']) &&
-					is_array($params['filter'])
+					$feature == self::FEATURE_CREATE_PAGE ||
+					$feature == self::FEATURE_PUBLICATION_PAGE
 				)
 				{
-					$filter = array_merge(
-						$filter,
-						$params['filter']
-					);
+					$class = __NAMESPACE__ . '\\Landing';
 				}
-				$check = Landing::getList(array(
+				else
+				{
+					$class = __NAMESPACE__ . '\\Site';
+				}
+				$check = $class::getList(array(
 					'select' => array(
 						'CNT' => new Entity\ExpressionField('CNT', 'COUNT(*)')
 					),
@@ -983,7 +995,7 @@ class Manager
 		}
 		elseif ($feature == self::FEATURE_ENABLE_ALL_HOOKS)
 		{
-			if (!Loader::includeModule('bitrix24'))
+			if (!$bitrix24)
 			{
 				return true;
 			}
@@ -998,7 +1010,7 @@ class Manager
 		}
 		elseif ($feature == self::FEATURE_PERMISSIONS_AVAILABLE)
 		{
-			if (Loader::includeModule('bitrix24'))
+			if ($bitrix24)
 			{
 				return (self::getOption('permissions_available', 'N') == 'Y') ||
 					   Feature::isFeatureEnabled('landing_permissions_available');
@@ -1007,7 +1019,13 @@ class Manager
 		}
 		elseif ($feature == self::FEATURE_DYNAMIC_BLOCK)
 		{
-			if (!Loader::includeModule('bitrix24'))
+			if (!$bitrix24)
+			{
+				return true;
+			}
+			// @todo: make more useful in future
+			$scope = Site\Type::getCurrentScopeId();
+			if ($scope == 'KNOWLEDGE' || $scope == 'GROUP')
 			{
 				return true;
 			}
@@ -1028,6 +1046,7 @@ class Manager
 			if ($dynamicBlocks === null)
 			{
 				$dynamicBlocks = [];
+				// plain sql, reason for this described in task 186683
 				$sql = '
 					SELECT
 						B.ID as ID,
@@ -1052,7 +1071,8 @@ class Manager
 					WHERE
 						B.DELETED = "N" AND 
 						L.DELETED = "N" AND
-						S.DELETED = "N"
+						S.DELETED = "N" AND
+						S.TYPE NOT IN ("KNOWLEDGE", "GROUP")
 					GROUP BY FB.BLOCK_ID
 					ORDER BY B.DATE_MODIFY ASC;';
 				$res = Application::getConnection()->query($sql);
@@ -1088,7 +1108,49 @@ class Manager
 
 			return false;
 		}
-		// old feature for compatibility
+		elseif ($feature == self::FEATURE_FREE_DOMAIN)
+		{
+			if (!$bitrix24)
+			{
+				return false;
+			}
+			$availableCount = Feature::getVariable(
+				'landing_free_domain'
+			);
+			if ($availableCount === null)
+			{
+				return false;
+			}
+			if ($availableCount > 0)
+			{
+				$filter = [
+					'!PROVIDER' => null
+				];
+				if (
+					isset($params['filter']) &&
+					is_array($params['filter'])
+				)
+				{
+					$filter = array_merge(
+						$filter,
+						$params['filter']
+					);
+				}
+				$check = Domain::getList([
+					'select' => [
+						'CNT' => new Entity\ExpressionField('CNT', 'COUNT(*)')
+					],
+					'filter' => $filter,
+					'group' => []
+				])->fetch();
+				if ($check && $check['CNT'] >= $availableCount)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+		// old features for backward compatibility
 		elseif ($feature == self::FEATURE_CUSTOM_DOMAIN)
 		{
 			return true;
@@ -1103,6 +1165,13 @@ class Manager
 	 */
 	public static function getZone()
 	{
+		static $zone = null;
+
+		if ($zone !== null)
+		{
+			return $zone;
+		}
+
 		$request = Application::getInstance()->getContext()->getRequest();
 		if ($request->get('user_lang'))
 		{
@@ -1176,7 +1245,7 @@ class Manager
 		{
 			$context = Application::getInstance()->getContext();
 			$host = $context->getServer()->getHttpHost();
-			
+
 			// strip port
 			if (strpos($host, ':') !== false)
 			{
@@ -1214,7 +1283,7 @@ class Manager
 	 * Is B24 portal?
 	 * @return bool
 	 */
-	public static function isB24()
+	public static function isB24(): bool
 	{
 		static $return = null;
 
@@ -1238,6 +1307,26 @@ class Manager
 							ModuleManager::isModuleInstalled('crm') ||
 							ModuleManager::isModuleInstalled('intranet');
 			}
+		}
+
+		return $return;
+	}
+
+
+	/**
+	 * Is Site Manager and B24 connector
+	 * @return bool|null
+	 */
+	public static function isB24Connector(): bool
+	{
+		static $return = null;
+
+		if ($return === null)
+		{
+			$return =
+				!self::isB24()
+				&& Loader::includeModule('b24connector')
+				&& Loader::includeModule('socialservices');
 		}
 
 		return $return;
@@ -1292,49 +1381,28 @@ class Manager
 		{
 			return $staticPath;
 		}
-		
+
 		if (
-			ModuleManager::isModuleInstalled('bitrix24') &&
-			method_exists('CBitrix24', 'isStage') &&
-			method_exists('CBitrix24', 'isEtalon') &&
+			Loader::includeModule('bitrix24') &&
 			(\CBitrix24::isStage() || \CBitrix24::isEtalon())
 		)
 		{
-			$path = 'https://repo-dev.bitrix24.site/rest/1/w1uqy3swvyp50bso/';
+			$staticPath = 'https://repo-dev.bitrix24.site/rest/1/w1uqy3swvyp50bso/';
 		}
 		else
 		{
-			$path = 'https://repo.bitrix24.site/rest/1/w1uqy3swvyp50bso/';
+			$staticPath = 'https://repo.bitrix24.site/rest/1/w1uqy3swvyp50bso/';
 		}
-
-		if (
-			!defined('LANDING_DISABLE_CLOUD') ||
-			LANDING_DISABLE_CLOUD !== true
-		)
-		{
-			Option::set(
-				'landing',
-				'block_vendor_bitrix',
-				$path
-			);
-		}
-		else
-		{
-			if (self::getOption('block_vendor_bitrix'))
-			{
-				Option::delete(
-					'landing',
-					array(
-						'name' => 'block_vendor_bitrix'
-					)
-				);
-			}
-		}
-
-		$staticPath = $path;
 
 		return $staticPath;
 	}
+
+	public static function isCloudDisable()
+	{
+		return defined('LANDING_DISABLE_CLOUD') &&
+			   LANDING_DISABLE_CLOUD === true;
+	}
+
 
 	/**
 	 * Get module version.
@@ -1500,29 +1568,10 @@ class Manager
 
 	/**
 	 * Clear cache, if repository version and current is different.
+	 * @deprecated since 20.2.100
 	 * @return void
 	 */
 	public static function checkRepositoryVersion()
 	{
-		$restPath = parse_url(self::getRestPath());
-
-		$httpClient = new \Bitrix\Main\Web\HttpClient();
-		$httpClient->setTimeout(2);
-		$httpClient->setStreamTimeout(2);
-		$repVersion = (int)$httpClient->get(
-			$restPath['scheme'] . '://' . $restPath['host'] . '/version.txt'
-		);
-
-		if ($repVersion)
-		{
-			if ($repVersion > self::getOption('repository_version'))
-			{
-				self::getCacheManager()->clearByTag('landing_blocks');
-				self::getCacheManager()->clearByTag('landing_demo');
-				self::setOption('repository_version', $repVersion);
-			}
-		}
-
-		unset($restPath, $httpClient, $repVersion);
 	}
 }

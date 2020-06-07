@@ -118,7 +118,7 @@ class HttpRequest extends Request
 	 * Returns the GET parameter of the current request.
 	 *
 	 * @param string $name Parameter name
-	 * @return null|string
+	 * @return null|mixed
 	 */
 	public function getQuery($name)
 	{
@@ -139,7 +139,7 @@ class HttpRequest extends Request
 	 * Returns the POST parameter of the current request.
 	 *
 	 * @param $name
-	 * @return null|string
+	 * @return null|mixed
 	 */
 	public function getPost($name)
 	{
@@ -160,7 +160,7 @@ class HttpRequest extends Request
 	 * Returns the FILES parameter of the current request.
 	 *
 	 * @param $name
-	 * @return null|string
+	 * @return null|mixed
 	 */
 	public function getFile($name)
 	{
@@ -409,10 +409,14 @@ class HttpRequest extends Request
 		$headers = [];
 		foreach ($server as $name => $value)
 		{
-			if (substr($name, 0, 5) === 'HTTP_')
+			if (strpos($name, 'HTTP_') === 0)
 			{
 				$headerName = substr($name, 5);
 				$headers[$headerName] = $value;
+			}
+			elseif (in_array($name, ['CONTENT_TYPE', 'CONTENT_LENGTH'], true))
+			{
+				$headers[$name] = $value;
 			}
 		}
 

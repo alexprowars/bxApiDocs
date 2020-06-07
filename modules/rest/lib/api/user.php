@@ -1,6 +1,7 @@
 <?php
 namespace Bitrix\Rest\Api;
 
+use Bitrix\Intranet\Invitation;
 use Bitrix\Main\Entity\ExpressionField;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ModuleManager;
@@ -245,6 +246,7 @@ class User extends \IRestService
 
 		$allowedUserFields = static::getDefaultAllowedUserFields();
 		$allowedUserFields[] = 'IS_ONLINE';
+		$allowedUserFields[] = 'HAS_DEPARTAMENT';
 		$allowedUserFields[] = 'NAME_SEARCH';
 		$allowedUserFields[] = 'EXTERNAL_AUTH_ID';
 		if ($server->getMethod() == "user.search")
@@ -319,6 +321,19 @@ class User extends \IRestService
 			{
 				$filter["ID"] = (isset($filter["ID"]) ? array_intersect((is_array($filter["ID"]) ? $filter["ID"] : array($filter["ID"])), $filteredUserIDs) : $filteredUserIDs);
 			}
+		}
+
+		if(array_key_exists("HAS_DEPARTAMENT", $filter))
+		{
+			if($filter["HAS_DEPARTAMENT"] == "Y")
+			{
+				$filter[] = [
+					'LOGIC' => 'AND',
+					'!UF_DEPARTMENT' => false,
+				];
+			}
+
+			unset($filter["HAS_DEPARTAMENT"]);
 		}
 
 		$result = array();
@@ -516,6 +531,11 @@ class User extends \IRestService
 
 						$inviteFields['ID'] = $ID;
 
+						Invitation::add([
+							'USER_ID' => $ID,
+							'TYPE' => Invitation::TYPE_EMAIL
+						]);
+
 						\CIntranetInviteDialog::InviteUser(
 							$inviteFields,
 							(isset($userFields["MESSAGE_TEXT"])) ? htmlspecialcharsbx($userFields["MESSAGE_TEXT"]) : GetMessage("BX24_INVITE_DIALOG_INVITE_MESSAGE_TEXT_1")
@@ -620,7 +640,7 @@ class User extends \IRestService
 		}
 		foreach($userData as $key => $value)
 		{
-			if(in_array($key, $allowedUserFields))
+			if(in_array($key, $allowedUserFields, true))
 			{
 				$user[$key] = $value;
 			}

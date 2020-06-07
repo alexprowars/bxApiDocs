@@ -41,6 +41,7 @@ class Imap
 
 	protected static $atomRegex    = '[^\x00-\x20\x22\x25\x28-\x2a\x5c\x5d\x7b\x7f-\xff]+';
 	protected static $qcharRegex   = '[^\x00\x0a\x0d\x22\x5c\x80-\xff]|\x5c[\x5c\x22]';
+	protected static $qcharExtRegex = '[^\x00\x0a\x0d\x22\x5c]|\x5c[\x5c\x22]'; // #119098
 	protected static $astringRegex = '[^\x00-\x20\x22\x25\x28-\x2a\x5c\x7b\x7f-\xff]+';
 
 	public function __construct($host, $port, $tls, $strict, $login, $password, $encoding = null)
@@ -94,7 +95,6 @@ class Imap
 	{
 		$this->disconnect();
 
-		unset($this->errors);
 		unset($this->sessState);
 		unset($this->sessCapability);
 		$this->sessCounter = 0;
@@ -117,7 +117,7 @@ class Imap
 	{
 		$error = null;
 
-		if ($this->sessState)
+		if (!empty($this->sessState))
 			return true;
 
 		$resource = @stream_socket_client(
@@ -181,23 +181,29 @@ class Imap
 			return false;
 		}
 
-		$this->executeCommand('STARTTLS', $error);
+		$response = $this->executeCommand('STARTTLS', $error);
 
-		if (!$error)
+		if ($error)
 		{
-			if (stream_socket_enable_crypto($this->stream, true, STREAM_CRYPTO_METHOD_ANY_CLIENT))
-			{
-				if (!$this->capability($error))
-					return false;
-			}
-			else
-			{
-				$this->reset();
+			$error = $error == Imap::ERR_COMMAND_REJECTED ? null : $error;
+			$error = $this->errorMessage(array(Imap::ERR_STARTTLS, $error), $response);
 
-				$error = $this->errorMessage(Imap::ERR_STARTTLS);
+			return false;
+		}
 
+		if (stream_socket_enable_crypto($this->stream, true, STREAM_CRYPTO_METHOD_ANY_CLIENT))
+		{
+			if (!$this->capability($error))
+			{
 				return false;
 			}
+		}
+		else
+		{
+			$this->reset();
+
+			$error = $this->errorMessage(Imap::ERR_STARTTLS);
+			return false;
 		}
 
 		return true;
@@ -484,11 +490,12 @@ class Imap
 			{
 				$result = false;
 
+				// #120949
 				$regex = sprintf(
 					'/^
 						(
 							[a-z0-9]+ (?: \. [a-z0-9]+ )*
-							(?: \[ (?: [a-z0-9]+ (?: \. [a-z0-9]+ )* (?: \x20 %s )* )? \] )?
+							(?: \[ (?: [a-z0-9]+ (?: \. [a-z0-9]* )* (?: \x20 %s )* )? \] )?
 							(?: < \d+ > )?
 						)
 						\x20
@@ -567,7 +574,7 @@ class Imap
 
 					$item = BinaryString::getSubstring($item, BinaryString::getLength($matches[0]));
 				}
-				else if (preg_match(sprintf('/^ " ( (?: %s )* ) " %s /ix', self::$qcharRegex, $tail), $item, $matches))
+				else if (preg_match(sprintf('/^ " ( (?: %s )* ) " %s /ix', self::$qcharExtRegex, $tail), $item, $matches))
 				{
 					$result = self::unescapeQuoted($matches[1]);
 
@@ -579,8 +586,39 @@ class Imap
 
 					$item = BinaryString::getSubstring($item, BinaryString::getLength($matches[0]));
 				}
+				else if (preg_match(sprintf('/^ %s /ix', $tail), $item, $matches))
+				{
+					$result = '';
+
+					$item = BinaryString::getSubstring($item, BinaryString::getLength($matches[0]));
+				}
 
 				return $result;
+			};
+
+			$bodystructure = function (&$value) use (&$bodystructure)
+			{
+				if (!is_array($value) || !is_array($value[0]))
+				{
+					return $value;
+				}
+
+				$value[0] = $bodystructure($value[0]);
+				$value[0] = array($value[0]);
+
+				while (array_key_exists(1, $value) && is_array($value[1]))
+				{
+					$value[0][] = $bodystructure($value[1]);
+
+					array_splice($value, 1, 1);
+				}
+
+				while (count($value[0]) == 1 && count($value[0][0]) == 1)
+				{
+					$value[0] = $value[0][0];
+				}
+
+				return $value;
 			};
 
 			foreach ($this->getUntagged($fetchUntaggedRegex, true) as $item)
@@ -595,6 +633,11 @@ class Imap
 					{
 						if (($value = $shiftValue($item[1][2])) !== false)
 						{
+							if (in_array(strtoupper($name), array('BODY', 'BODYSTRUCTURE')))
+							{
+								$value = $bodystructure($value);
+							}
+
 							$data[$name] = $value;
 
 							continue;
@@ -607,6 +650,8 @@ class Imap
 				$list[$data['id']] = $data;
 			}
 		}
+
+		ksort($list);
 
 		if (!preg_match('/[:,]/', $range))
 		{
@@ -784,6 +829,7 @@ class Imap
 				\( (?<flags> ( \x5c? %1$s ( \x20 \x5c? %1$s )* )? ) \) \x20
 				(?<delim> NIL | " ( %2$s ) " ) \x20
 				(?<name> \{ \d+ \} | " ( %2$s )* " | %3$s ) \r\n
+				(?<ext> .* )
 			/ix',
 			self::$atomRegex, self::$qcharRegex, self::$astringRegex
 		);
@@ -802,7 +848,7 @@ class Imap
 
 			if (preg_match('/^ \{ ( \d+ ) \} $/ix', $sname, $literal))
 			{
-				$sname = \CUtil::binSubstr($item, \CUtil::binStrlen($matches[0]), $literal[1]);
+				$sname = \CUtil::binSubstr($matches['ext'], 0, $literal[1]);
 			}
 			else if (preg_match('/^ " ( .* ) " $/ix', $sname, $quoted))
 			{
@@ -1857,15 +1903,19 @@ class Imap
 		foreach ($errors as $i => $error)
 		{
 			$errors[$i] = static::decodeError($error);
-			$this->errors->setError(new Main\Error($errors[$i], $error > 0 ? $error : 0));
+			$this->errors->setError(new Main\Error((string) $errors[$i], $error > 0 ? $error : 0));
 		}
 
 		$error = join(': ', $errors);
 		if ($details)
 		{
-			$error .= sprintf(' (%s)', join(': ', $details));
+			$error .= sprintf(' (IMAP: %s)', join(': ', $details));
+
+			$this->errors->setError(new Main\Error('IMAP', -1));
 			foreach ($details as $item)
-				$this->errors->setError(new Main\Error($item, -1));
+			{
+				$this->errors->setError(new Main\Error((string) $item, -1));
+			}
 		}
 
 		return $error;

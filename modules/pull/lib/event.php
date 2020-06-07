@@ -519,14 +519,7 @@ class Event
 		}
 
 		$parameters['module_id'] = strtolower($parameters['module_id']);
-		if (isset($parameters['expire']))
-		{
-			$parameters['expire'] = intval($parameters['expire']);
-		}
-		else
-		{
-			$parameters['expire'] = 86400;
-		}
+		$parameters['expiry'] = (int)($parameters['expiry'] ?? 86400);
 
 		if (isset($parameters['paramsCallback']))
 		{

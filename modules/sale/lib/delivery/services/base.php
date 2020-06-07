@@ -829,6 +829,10 @@ abstract class Base
 		return Manager::createObject($fields);
 	}
 
+	/**
+	 * @return bool
+	 * @throws \Bitrix\Main\LoaderException
+	 */
 	public static function isHandlerCompatible()
 	{
 		$result = true;
@@ -840,7 +844,7 @@ abstract class Base
 		{
 			$languageId = \CBitrix24::getLicensePrefix();
 
-			if(!in_array($languageId, ['ru', 'kz', 'by']))
+			if(!in_array($languageId, ['ru', 'kz', 'by', 'ua']))
 			{
 				$result = false;
 			}

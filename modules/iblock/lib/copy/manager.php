@@ -6,11 +6,12 @@ use Bitrix\Iblock\Copy\Implement\Children\Element as ElementImplementer;
 use Bitrix\Iblock\Copy\Implement\Children\Field as FieldImplementer;
 use Bitrix\Iblock\Copy\Implement\Children\Section as SectionImplementer;
 use Bitrix\Iblock\Copy\Implement\Children\Workflow as WorkflowImplementer;
-use Bitrix\Lists\Copy\Implement\Iblock as IblockImplementer;
+use Bitrix\Iblock\Copy\Implement\Iblock as IblockImplementer;
 use Bitrix\Main\Copy\Container;
 use Bitrix\Main\Copy\ContainerCollection;
 use Bitrix\Main\Copy\EntityCopier;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Type\Dictionary;
 
 class Manager
 {
@@ -21,6 +22,7 @@ class Manager
 	protected $targetIblockTypeId = "";
 	protected $targetSocnetGroupId = 0;
 
+	private $iblockImplementer;
 	private $fieldImplementer;
 	private $workflowImplementer;
 
@@ -32,6 +34,11 @@ class Manager
 	];
 
 	private $mapIdsCopiedIblock = [];
+
+	/**
+	 * @var Dictionary
+	 */
+	private $dictionary;
 
 	public function __construct($iblockTypeId, array $iblockIdsToCopy, $socnetGroupId = 0)
 	{
@@ -64,6 +71,19 @@ class Manager
 		{
 			unset($this->features[$key]);
 		}
+	}
+
+	/**
+	 * @param Dictionary $dictionary
+	 */
+	public function setDictionary(Dictionary $dictionary): void
+	{
+		$this->dictionary = $dictionary;
+	}
+
+	public function setIblockImplementer(IblockImplementer $implementer)
+	{
+		$this->iblockImplementer = $implementer;
 	}
 
 	public function setFieldImplementer(Child $implementer)
@@ -105,7 +125,12 @@ class Manager
 
 		foreach ($this->iblockIdsToCopy as $iblockId)
 		{
-			$containerCollection[] = new Container($iblockId);
+			$container = new Container($iblockId);
+			if ($this->dictionary)
+			{
+				$container->setDictionary($this->dictionary);
+			}
+			$containerCollection[] = $container;
 		}
 
 		return $containerCollection;
@@ -114,7 +139,9 @@ class Manager
 	private function getIblockCopier()
 	{
 		global $CACHE_MANAGER;
-		$iblockImplementer = new IblockImplementer();
+
+		$iblockImplementer = ($this->iblockImplementer ? $this->iblockImplementer : new IblockImplementer());
+
 		$iblockImplementer->setTargetIblockTypeId($this->targetIblockTypeId);
 		$iblockImplementer->setTargetSocnetGroupId($this->targetSocnetGroupId);
 		if (is_object($CACHE_MANAGER))

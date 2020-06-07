@@ -239,7 +239,7 @@ HTML;
 	 * @param int $delay Delay for running agent
 	 * @return void
 	 */
-	public static function bind($delay = 120)
+	public static function bind($delay = 300)
 	{
 		/** @var Stepper $c */
 		$c = get_called_class();
@@ -253,7 +253,7 @@ HTML;
 	 * @param int $delay Delay for running agent
 	 * @return void
 	 */
-	public static function bindClass($className, $moduleId, $delay = 120)
+	public static function bindClass($className, $moduleId, $delay = 300)
 	{
 		if (class_exists("\CAgent"))
 		{
@@ -358,10 +358,13 @@ HTML;
 
 	protected function setQueue(array $queue): void
 	{
-		$queueId = current($queue);
-		$this->checkerName = $this->checkerName.$queueId;
-		$this->baseName = $this->baseName.$queueId;
-		$this->errorName = $this->errorName.$queueId;
+		$queueId = (string) current($queue);
+		$this->checkerName = (strpos($this->checkerName, $queueId) === false ?
+			$this->checkerName.$queueId : $this->checkerName);
+		$this->baseName = (strpos($this->baseName, $queueId) === false ?
+			$this->baseName.$queueId : $this->baseName);
+		$this->errorName = (strpos($this->errorName, $queueId) === false ?
+			$this->errorName.$queueId : $this->errorName);
 	}
 
 	protected function getQueueOption()
@@ -376,6 +379,9 @@ HTML;
 
 	protected function deleteQueueOption()
 	{
+		$queue = $this->getQueue();
+		$this->setQueue($queue);
+		$this->deleteCurrentQueue($queue);
 		Option::delete(static::$moduleId, ["name" => $this->checkerName]);
 		Option::delete(static::$moduleId, ["name" => $this->baseName]);
 	}

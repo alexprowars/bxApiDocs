@@ -167,8 +167,12 @@ class Field
 						$field['CURRENT_VALUE'] = $value['VALUE'];
 						$html .= ' '.self::renderField($field);
 					}
-					$result['customHtml'] .= '<input type="hidden" name="'.
-						$field['FIELD_ID'].'['.$key.'][VALUE]" value="'.HtmlFilter::encode($value['VALUE']).'">';
+					$value['VALUE'] = (!is_array($value['VALUE']) ? [$value['VALUE']] : $value['VALUE']);
+					foreach ($value['VALUE'] as $innerKey => $innerValue)
+					{
+						$result['customHtml'] .= '<input type="hidden" name="'.
+							$field['FIELD_ID'].'[n'.$innerKey.'][VALUE]" value="'.HtmlFilter::encode($innerValue).'">';
+					}
 				}
 			}
 			if($field['READ'] == 'N')
@@ -1510,7 +1514,8 @@ class Field
 				'CURRENT_ELEMENTS_ID' => $currentElements,
 				'POPUP' => 'Y',
 				'ONLY_READ' => $field['READ'],
-				'PANEL_SELECTED_VALUES' => 'Y'
+				'PANEL_SELECTED_VALUES' => 'Y',
+				'TEMPLATE_URL' => $field['LIST_ELEMENT_URL']
 			),
 			null, array('HIDE_ICONS' => 'Y')
 		);

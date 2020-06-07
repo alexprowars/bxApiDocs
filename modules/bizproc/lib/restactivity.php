@@ -96,7 +96,7 @@ class RestActivityTable extends Entity\DataManager
 			),
 			'USE_PLACEMENT' => array(
 				'data_type' => 'boolean',
-				'values' => ['Y', 'N']
+				'values' => ['N', 'Y']
 			),
 			'NAME' => array(
 				'data_type' => 'text',
@@ -127,7 +127,7 @@ class RestActivityTable extends Entity\DataManager
 			),
 			'IS_ROBOT' => array(
 				'data_type' => 'boolean',
-				'values' => array('Y', 'N')
+				'values' => ['N', 'Y']
 			),
 		);
 	}

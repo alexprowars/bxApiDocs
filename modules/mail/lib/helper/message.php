@@ -71,8 +71,9 @@ class Message
 						}
 
 						$message[$extField][] = array(
-							'name'  => $address->getName(),
+							'name' => $address->getName(),
 							'email' => $address->getEmail(),
+							'formated' => ($address->getName() ? $address->get() : $address->getEmail()),
 						);
 					}
 					else
@@ -109,11 +110,13 @@ class Message
 				if ($diskFile = Attachment\Storage::getObjectByAttachment($item, true))
 				{
 					$message['__files'][$k] = array(
-						'id'      => sprintf('n%u', $diskFile->getId()),
-						'name'    => $item['FILE_NAME'],
-						'url'     => $urlManager->getUrlForShowFile($diskFile, $urlParams),
-						'size'    => \CFile::formatSize($diskFile->getSize()),
-						'fileId'  => $diskFile->getFileId(),
+						'id' => sprintf('n%u', $diskFile->getId()),
+						'name' => $item['FILE_NAME'],
+						'url' => $urlManager->getUrlForShowFile($diskFile, $urlParams),
+						'size' => \CFile::formatSize($diskFile->getSize()),
+						'fileId' => $diskFile->getFileId(),
+						'objectId' => $diskFile->getId(),
+						'bytes' => $diskFile->getSize(),
 					);
 
 					if (\Bitrix\Disk\TypeFile::isImage($diskFile))
@@ -121,7 +124,7 @@ class Message
 						$message['__files'][$k]['preview'] = $urlManager->getUrlForShowFile(
 							$diskFile,
 							array_merge(
-								array('width' => 80, 'height' => 80),
+								array('width' => 80, 'height' => 80, 'exact' => 'Y'),
 								$urlParams
 							)
 						);
@@ -143,11 +146,12 @@ class Message
 					if (!empty($file) && is_array($file))
 					{
 						$message['__files'][$k] = array(
-							'id'      => $file['ID'],
-							'name'    => $item['FILE_NAME'],
-							'url'     => $file['SRC'],
-							'size'    => \CFile::formatSize($file['FILE_SIZE']),
-							'fileId'  => $file['ID'],
+							'id' => $file['ID'],
+							'name' => $item['FILE_NAME'],
+							'url' => $file['SRC'],
+							'size' => \CFile::formatSize($file['FILE_SIZE']),
+							'fileId' => $file['ID'],
+							'bytes' => $file['FILE_SIZE'],
 						);
 
 						if (\CFile::isImage($item['FILE_NAME'], $item['CONTENT_TYPE']))
@@ -342,12 +346,71 @@ class Message
 
 	public static function ensureAttachments(&$message)
 	{
-		if ($message['OPTIONS']['attachments'] > 0 && !($message['ATTACHMENTS'] > 0))
+		if ($message['ATTACHMENTS'] > 0 || !($message['OPTIONS']['attachments'] > 0))
 		{
-			if (Main\Config\Option::get('mail', 'save_attachments', B_MAIL_SAVE_ATTACHMENTS) == 'Y')
+			return;
+		}
+
+		if (Main\Config\Option::get('mail', 'save_attachments', B_MAIL_SAVE_ATTACHMENTS) !== 'Y')
+		{
+			return;
+		}
+
+		$mailboxHelper = Mailbox::createInstance($message['MAILBOX_ID'], false);
+
+		$attachments = empty($mailboxHelper) ? false : $mailboxHelper->downloadAttachments($message);
+
+		if (false === $attachments)
+		{
+			$logEntry = sprintf(
+				'Helper\Message: Attachments downloading failed (%u:%s:%u)',
+				$message['MAILBOX_ID'],
+				$message['DIR_MD5'],
+				$message['MSG_UID']
+			);
+
+			if (!empty($mailboxHelper) && !$mailboxHelper->getErrors()->isEmpty())
 			{
-				return static::resync($message);
+				$logEntry .= PHP_EOL . join(PHP_EOL, $mailboxHelper->getErrors()->toArray());
 			}
+
+			addMessage2Log($logEntry, 'mail', 2);
+
+			return false;
+		}
+
+		foreach ($attachments as $i => $item)
+		{
+			$attachFields = array(
+				'MESSAGE_ID'   => $message['ID'],
+				'FILE_NAME'    => $item['FILENAME'],
+				'CONTENT_TYPE' => $item['CONTENT-TYPE'],
+				'FILE_DATA'    => $item['BODY'],
+				'CONTENT_ID'   => $item['CONTENT-ID'],
+			);
+
+			$attachmentId = \CMailMessage::addAttachment($attachFields);
+
+			if ($attachmentId > 0)
+			{
+				$message['ATTACHMENTS']++;
+
+				$message['BODY_HTML'] = preg_replace(
+					sprintf(
+						'/<img([^>]+)src\s*=\s*(\'|\")?\s*(http:\/\/cid:%s)\s*\2([^>]*)>/is',
+						preg_quote($item['CONTENT-ID'], '/')
+					),
+					sprintf('<img\1src="aid:%u"\4>', $attachmentId),
+					$message['BODY_HTML']
+				);
+			}
+		}
+
+		if ($message['ATTACHMENTS'] > 0)
+		{
+			\CMailMessage::update($message['ID'], array('BODY_HTML' => $message['BODY_HTML']));
+
+			return $message['ID'];
 		}
 	}
 
@@ -355,7 +418,26 @@ class Message
 	{
 		$mailboxHelper = Mailbox::createInstance($message['MAILBOX_ID'], false);
 
-		return empty($mailboxHelper) ? false : $mailboxHelper->resyncMessage($message);
+		$result = empty($mailboxHelper) ? false : $mailboxHelper->resyncMessage($message);
+
+		if (false === $result)
+		{
+			$logEntry = sprintf(
+				'Helper\Message: Message resync failed (%u:%s:%u)',
+				$message['MAILBOX_ID'],
+				$message['DIR_MD5'],
+				$message['MSG_UID']
+			);
+
+			if (!empty($mailboxHelper) && !$mailboxHelper->getErrors()->isEmpty())
+			{
+				$logEntry .= PHP_EOL . join(PHP_EOL, $mailboxHelper->getErrors()->toArray());
+			}
+
+			addMessage2Log($logEntry, 'mail', 3);
+		}
+
+		return $result;
 	}
 
 }

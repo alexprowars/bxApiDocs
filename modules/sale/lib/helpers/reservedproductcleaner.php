@@ -1,8 +1,8 @@
 <?
 namespace Bitrix\Sale\Helpers;
 
-use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\ORM;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Main\Update\Stepper;
 use Bitrix\Sale;
@@ -114,6 +114,12 @@ class ReservedProductCleaner extends Stepper
 						));
 					}
 				}
+			}
+
+			// crutch for #120087
+			if (!is_object($USER) || $USER->GetID() <= 0)
+			{
+				ORM\Entity::destroy(Sale\Internals\OrderTable::getEntity());
 			}
 		}
 

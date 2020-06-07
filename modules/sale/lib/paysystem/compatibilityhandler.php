@@ -343,6 +343,11 @@ class CompatibilityHandler extends ServiceHandler implements ICheckable
 			}
 		}
 
+		if (isset($data["CODES"]) && is_array($data["CODES"]))
+		{
+			$data["CODES"] = $this->filterDescriptionCodes($data["CODES"]);
+		}
+
 		return $data;
 	}
 

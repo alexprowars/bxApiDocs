@@ -154,7 +154,7 @@ class OrderInfo
 				$params = $eventResult->getParameters();
 
 				if(!empty($params) && is_array($params))
-					$customData = $params;
+					$customData = array_merge($customData, $params);
 			}
 		}
 		///
@@ -170,6 +170,7 @@ class OrderInfo
 				)." [".$order->getSiteId()."]".'</div>
 					<div class="adm-bus-orderinfoblock-status success" id="order_info_order_status_name">'.$order->getField('STATUS_ID').'</div> <!-- TODO -->
 				</div>
+				'.static::getOrderInfoBlock($order).'
 				<div class="adm-bus-orderinfoblock-content">
 					<div class="adm-bus-orderinfoblock-content-block-customer">
 						<ul class="adm-bus-orderinfoblock-content-customer-info">
@@ -320,5 +321,10 @@ class OrderInfo
 
 		}
 		return $result;
+	}
+	
+	protected static function getOrderInfoBlock(Order $order)
+	{
+		return '';
 	}
 }

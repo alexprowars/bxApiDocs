@@ -113,6 +113,7 @@ class MailMessageUidTable extends Entity\DataManager
 		));
 
 		$result = $connection->query(sprintf('DELETE %s', $query));
+		$result->setCount($connection->getAffectedRowsCount());
 
 		if ($messagesIds = array_column($eventData, 'MESSAGE_ID'))
 		{

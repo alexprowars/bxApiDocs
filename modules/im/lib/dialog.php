@@ -196,6 +196,13 @@ class Dialog
 			$chat = new \CIMChat($userId);
 			$result = $chat->SetReadMessage($chatId, $messageId);
 		}
+		else if ($dialogId === 'notify')
+		{
+			$notify = new \CIMNotify();
+			$notify->MarkNotifyRead(0, true);
+
+			return true;
+		}
 		else
 		{
 			$CIMMessage = new \CIMMessage($userId);
@@ -203,6 +210,48 @@ class Dialog
 		}
 
 		return $result;
+	}
+
+	public static function readAll($userId = null)
+	{
+		$userId = \Bitrix\Im\Common::getUserId($userId);
+		if (!$userId)
+		{
+			return false;
+		}
+
+		\Bitrix\Main\Application::getConnection()->query(
+			"UPDATE b_im_relation R
+				INNER JOIN b_im_chat C on C.ID = R.CHAT_ID
+				SET R.LAST_ID = C.LAST_MESSAGE_ID,
+				R.UNREAD_ID = 0,
+				R.LAST_READ = NOW(),
+				R.STATUS = " . IM_STATUS_READ . ",
+				R.COUNTER = 0
+				WHERE R.MESSAGE_TYPE <> '" . IM_MESSAGE_OPEN_LINE . "'
+				AND R.COUNTER > 0
+				AND R.USER_ID = " . $userId
+		);
+
+		\Bitrix\Main\Application::getConnection()->query(
+			"UPDATE b_im_recent R
+			SET R.UNREAD = 'N'
+			WHERE R.UNREAD = 'Y'"
+		);
+
+		$notify = new \CIMNotify();
+		$notify->MarkNotifyRead(0, true);
+
+		if (\CModule::IncludeModule("pull"))
+		{
+			\Bitrix\Pull\Event::add($userId, [
+				'module_id' => 'im',
+				'command' => 'readAllChats',
+				'extra' => \Bitrix\Im\Common::getPullExtra()
+			]);
+		}
+
+		return true;
 	}
 
 	public static function unread($dialogId, $messageId = null, $userId = null)

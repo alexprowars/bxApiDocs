@@ -100,6 +100,8 @@ class Config
 			);
 		}
 
+		$config['PUBLIC_CHANNELS'] = \Bitrix\Pull\Channel::getPublicIds(['JSON' => (bool)$params['JSON']]);
+
 		if ($params['JSON'])
 		{
 			$result['server'] = array_change_key_case($config['SERVER'], CASE_LOWER);
@@ -118,6 +120,8 @@ class Config
 			{
 				$result['clientId'] = $config['CLIENT_ID'];
 			}
+
+			$result['publicChannels'] = $config['PUBLIC_CHANNELS'];
 
 			$config = $result;
 		}
