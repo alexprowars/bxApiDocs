@@ -104,7 +104,7 @@ class CUserOptions
 		$user_id = intval($user_id);
 		$category = strtolower($category);
 
-		if (!isset(self::$cache[$user_id][$category][$name]))
+		if (!is_array(self::$cache[$user_id][$category]) || !array_key_exists($name, self::$cache[$user_id][$category]))
 		{
 			if ($user_id > 0)
 			{
@@ -124,7 +124,6 @@ class CUserOptions
 							WHERE (USER_ID=".$user_id." OR USER_ID=0 AND COMMON='Y')
 								AND CATEGORY='".$DB->ForSql($category)."'
 						";
-
 						$res = $DB->Query($strSql);
 						while ($res_array = $res->Fetch())
 						{
@@ -138,7 +137,7 @@ class CUserOptions
 
 				if (!isset(self::$cache[$user_id][$category][$name]))
 				{
-					self::$cache[$user_id][$category][$name] = $default_value;
+					self::$cache[$user_id][$category][$name] = null;
 				}
 			}
 			else
@@ -163,11 +162,15 @@ class CUserOptions
 
 				if (!isset(self::$cache[$user_id][$category][$name]))
 				{
-					self::$cache[$user_id][$category][$name] = $default_value;
+					self::$cache[$user_id][$category][$name] = null;
 				}
 			}
 		}
 
+		if (!isset(self::$cache[$user_id][$category][$name]))
+		{
+			return $default_value;
+		}
 		return self::$cache[$user_id][$category][$name];
 	}
 
@@ -188,6 +191,8 @@ class CUserOptions
 			$user_id = $USER->GetID();
 		}
 
+		$category = strtolower($category);
+
 		$user_id = intval($user_id);
 		$arFields = array(
 			"USER_ID" => $user_id,
@@ -197,42 +202,16 @@ class CUserOptions
 			"COMMON" => ($bCommon ? "Y" : "N"),
 		);
 
-		if($DB->type == "ORACLE")
-		{
-			//old way because MERGE doesn't support bindings
-			$res = $DB->Query("
-				SELECT ID FROM b_user_option
-				WHERE
-				".($bCommon ? "USER_ID=0 AND COMMON='Y' " : "USER_ID=".$user_id)."
-					AND CATEGORY='".$DB->ForSql($category, 50)."'
-					AND NAME='".$DB->ForSql($name, 255)."'
-			");
+		$arUpdateFields = array(
+			"VALUE" => $arFields["VALUE"],
+			"COMMON" => $arFields["COMMON"],
+		);
+		$helper = \Bitrix\Main\Application::getConnection()->getSqlHelper();
+		$sql = $helper->prepareMerge("b_user_option", array("USER_ID", "CATEGORY", "NAME"), $arFields, $arUpdateFields);
 
-			if ($res_array = $res->Fetch())
-			{
-				$strUpdate = $DB->PrepareUpdate("b_user_option", $arFields);
-				if ($strUpdate != "")
-				{
-					$strSql = "UPDATE b_user_option SET ".$strUpdate." WHERE ID=".$res_array["ID"];
-					if (!$DB->QueryBind($strSql, array("VALUE" => $arFields["VALUE"])))
-						return false;
-				}
-			}
-			else
-			{
-				if (!$DB->Add("b_user_option", $arFields, array("VALUE")))
-					return false;
-			}
-		}
-		else
+		if(!$DB->Query(current($sql)))
 		{
-			$helper = \Bitrix\Main\Application::getConnection()->getSqlHelper();
-			$sql = $helper->prepareMerge("b_user_option", array("USER_ID", "CATEGORY", "NAME"), $arFields, $arFields);
-
-			if(!$DB->Query(current($sql)))
-			{
-				return false;
-			}
+			return false;
 		}
 
 		if($bCommon)

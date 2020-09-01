@@ -302,7 +302,7 @@ class MailServicesTable extends Entity\DataManager
 					return array(
 						function ($value)
 						{
-							return strtolower($value);
+							return mb_strtolower($value);
 						}
 					);
 				},
@@ -311,7 +311,7 @@ class MailServicesTable extends Entity\DataManager
 					return array(
 						function ($value)
 						{
-							return strtolower($value);
+							return mb_strtolower($value);
 						}
 					);
 				},

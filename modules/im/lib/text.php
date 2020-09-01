@@ -80,7 +80,7 @@ class Text
 	 */
 	public static function getDateConverterParams($text)
 	{
-		if (strlen($text) <= 0)
+		if ($text == '')
 			return Array();
 
 		$text = preg_replace_callback("/\[PUT(?:=(.+?))?\](.+?)?\[\/PUT\]/i", Array('\Bitrix\Im\Text', 'setReplacement'), $text);
@@ -179,7 +179,7 @@ class Text
 			$text = trim($text);
 		}
 
-		if (strlen($text) <= 0)
+		if ($text == '')
 		{
 			$text = Loc::getMessage('IM_MESSAGE_DELETE');
 		}

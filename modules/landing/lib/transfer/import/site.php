@@ -4,6 +4,7 @@ namespace Bitrix\Landing\Transfer\Import;
 use \Bitrix\Landing\Site as SiteCore;
 use \Bitrix\Landing\Landing as LandingCore;
 use \Bitrix\Landing\Transfer\AppConfiguration;
+use \Bitrix\Landing\Block;
 use \Bitrix\Landing\File;
 use \Bitrix\Landing\Hook;
 use \Bitrix\Landing\Template;
@@ -28,10 +29,6 @@ class Site
 	 */
 	public static function getUrl(string $type): string
 	{
-		if (Manager::getOption('transfer_enabled') != 'Y')
-		{
-			return '';
-		}
 		if (!\Bitrix\Main\Loader::includeModule('rest'))
 		{
 			return '';
@@ -172,6 +169,7 @@ class Site
 			if ($res->isSuccess())
 			{
 				$return['RATIO']['BLOCKS'] = [];
+				$return['RATIO']['BLOCKS_PENDING'] = [];
 				$return['RATIO']['LANDINGS'] = [];
 				$return['RATIO']['FOLDERS'] = [];
 				$return['RATIO']['TEMPLATES'] = [];
@@ -219,24 +217,66 @@ class Site
 	}
 
 	/**
-	 * Final step.
-	 * @param Event $event
+	 * Sets replace array to the pending blocks.
+	 * @param array $pendingIds Pending block ids.
+	 * @param array $replace Array for future linking.
 	 * @return void
 	 */
-	public static function onFinish(Event $event): void
+	protected static function linkingPendingBlocks(array $pendingIds, array $replace): void
+	{
+		$replace = base64_encode(serialize($replace));
+		$res = BlockTable::getList([
+			'select' => [
+				'ID'
+			],
+			'filter' => [
+				'ID' => $pendingIds
+			]
+		]);
+		while ($row = $res->fetch())
+		{
+			$blockInstance = new Block($row['ID']);
+			if ($blockInstance->exist())
+			{
+				$blockInstance->updateNodes([
+					AppConfiguration::SYSTEM_COMPONENT_REST_PENDING => [
+						'REPLACE' => $replace
+					]
+				]);
+				$blockInstance->save();
+			}
+		}
+	}
+
+	/**
+	 * Final step.
+	 * @param Event $event
+	 * @return array
+	 */
+	public static function onFinish(Event $event): array
 	{
 		$ratio = $event->getParameter('RATIO');
 
 		if (isset($ratio['LANDING']))
 		{
+			$siteType = $ratio['LANDING']['TYPE'];
 			$siteId = $ratio['LANDING']['SITE_ID'];
 			$blocks = $ratio['LANDING']['BLOCKS'];
 			$landings = $ratio['LANDING']['LANDINGS'];
+			$blocksPending = $ratio['LANDING']['BLOCKS_PENDING'];
 			$folders = $ratio['LANDING']['FOLDERS'];
 			$templatesOld = $ratio['LANDING']['TEMPLATES'];
 			$templateLinking = $ratio['LANDING']['TEMPLATE_LINKING'];
 			$specialPages = $ratio['LANDING']['SPECIAL_PAGES'];
 			$sysPages = $ratio['LANDING']['SYS_PAGES'];
+			\Bitrix\Landing\Site\Type::setScope($siteType);
+			if ($blocksPending)
+			{
+				self::linkingPendingBlocks($blocksPending, [
+					'block' => $blocks,
+					'landing' => $landings
+				]);
+			}
 			// move pages to the folders if needed
 			foreach ($folders as $lid => $folderId)
 			{
@@ -315,7 +355,8 @@ class Site
 						'ID', 'CONTENT'
 					],
 					'filter' => [
-						'ID' => array_values($blocks)
+						'ID' => array_values($blocks),
+						'!ID' => $blocksPending
 					]
 				]);
 				while ($row = $res->fetch())
@@ -355,6 +396,25 @@ class Site
 					}
 				}
 			}
+
+			return [
+				'CREATE_DOM_LIST' => [
+					[
+						'TAG' => 'a',
+						'DATA' => [
+							'attrs' => [
+								'class' => 'ui-btn ui-btn-lg ui-btn-primary',
+								'data-issite' => 'Y',
+								'href' => '#' . $siteId,
+								'target' => '_top'
+							],
+							'text' => Loc::getMessage('LANDING_IMPORT_FINISH_GOTO_SITE')
+						]
+					]
+				],
+			];
 		}
+
+		return [];
 	}
 }

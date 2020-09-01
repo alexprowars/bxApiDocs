@@ -3,13 +3,13 @@ IncludeModuleLangFile(__FILE__);
 
 class CEventFileman
 {
-	public static function MakeFilemanObject()
+	function MakeFilemanObject()
 	{
 		$obj = new CEventFileman;
 		return $obj;
 	}
 
-	public static function GetFilter()
+	function GetFilter()
 	{
 		$arFilter = array();
 		$module_id = 'fileman';
@@ -22,7 +22,7 @@ class CEventFileman
 		return  $arFilter;
 	}
 	
-	public static function GetAuditTypes()
+	function GetAuditTypes()
 	{
 		return array(
 			"PAGE_EDIT" => "[PAGE_EDIT] ".GetMessage("LOG_TYPE_PAGE_EDIT"), 
@@ -46,7 +46,7 @@ class CEventFileman
 		);         
 	}
 	
-	public static function GetEventInfo($row, $arParams, $arUser)
+	function GetEventInfo($row, $arParams, $arUser)
 	{
 		$site = CFileMan::__CheckSite($site);
 		$DOC_ROOT = CSite::GetSiteDocRoot($site);		
@@ -59,7 +59,7 @@ class CEventFileman
 		}
 		else
 		{						
-			if ((is_file($DOC_ROOT."/".$DESCRIPTION['path']) || is_dir($DOC_ROOT."/".$DESCRIPTION['path'])) && !strrpos($DESCRIPTION['path'], " "))
+			if ((is_file($DOC_ROOT."/".$DESCRIPTION['path']) || is_dir($DOC_ROOT."/".$DESCRIPTION['path'])) && !mb_strrpos($DESCRIPTION['path'], " "))
 				$fileURL = SITE_DIR.$DESCRIPTION['path'];
 		}
 		
@@ -129,7 +129,7 @@ class CEventFileman
 				);     
 	}
 	
-	public static function GetFilterSQL($var)
+	function GetFilterSQL($var)
 	{
 		if (is_array($var))
 			foreach($var as $key => $val)

@@ -4,7 +4,7 @@ class CAllPerfomanceTable
 {
 	public $TABLE_NAME = "";
 
-	public function GetList($arSelect, $arFilter, $arOrder = array(), $arNavParams = false)
+	function GetList($arSelect, $arFilter, $arOrder = array(), $arNavParams = false)
 	{
 		global $DB;
 
@@ -21,7 +21,7 @@ class CAllPerfomanceTable
 		$arQueryOrder = array();
 		foreach ($arOrder as $strColumn => $strDirection)
 		{
-			$strDirection = strtoupper($strDirection) == "ASC"? "ASC": "DESC";
+			$strDirection = mb_strtoupper($strDirection) == "ASC"? "ASC": "DESC";
 			if (array_key_exists($strColumn, $arFields))
 			{
 				$arSelect[] = $strColumn;
@@ -98,7 +98,7 @@ class CAllPerfomanceTable
 		}
 	}
 
-	public function NavQuery($arNavParams, $arQuerySelect, $strTableName, $strQueryWhere, $arQueryOrder)
+	function NavQuery($arNavParams, $arQuerySelect, $strTableName, $strQueryWhere, $arQueryOrder)
 	{
 		global $DB;
 		if (intval($arNavParams["nTopCount"]) <= 0)
@@ -183,7 +183,7 @@ class CAllPerfomanceTable
 		return $tableName;
 	}
 
-	public static function GetTableFields($TABLE_NAME = false, $bExtended = false)
+	function GetTableFields($TABLE_NAME = false, $bExtended = false)
 	{
 		if ($TABLE_NAME && $bExtended)
 			return array();
@@ -191,7 +191,7 @@ class CAllPerfomanceTable
 			return array();
 	}
 
-	public static function getCreateIndexDDL($TABLE_NAME, $INDEX_NAME, $INDEX_COLUMNS)
+	function getCreateIndexDDL($TABLE_NAME, $INDEX_NAME, $INDEX_COLUMNS)
 	{
 		return "CREATE INDEX ".$INDEX_NAME." ON ".$TABLE_NAME." (".implode(", ", $INDEX_COLUMNS).")";
 	}

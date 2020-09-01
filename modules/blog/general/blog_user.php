@@ -1,6 +1,12 @@
 <?
+
+use Bitrix\Main\Config\Option;
+use Bitrix\Main\ModuleManager;
+
 IncludeModuleLangFile(__FILE__);
 $GLOBALS["BLOG_USER"] = Array();
+
+use Bitrix\Blog\BlogUser;
 
 class CAllBlogUser
 {
@@ -86,9 +92,7 @@ class CAllBlogUser
 
 		if (is_set($arFields, "AVATAR"))
 		{
-			$max_size = COption::GetOptionInt("blog", "avatar_max_size", 30000);
-			//$max_width = COption::GetOptionInt("blog", "avatar_max_width", 100);
-			//$max_height = COption::GetOptionInt("blog", "avatar_max_height", 100);
+			$max_size = Option::get('blog', 'avatar_max_size', 30000);
 			$res = CFile::CheckImageFile($arFields["AVATAR"], $max_size, 0, 0);
 			if (strlen($res) > 0)
 			{
@@ -559,53 +563,12 @@ class CAllBlogUser
 
 	public static function GetUserName($alias, $name, $lastName, $login, $secondName = "")
 	{
-		$result = "";
-
-		$canUseAlias = COption::GetOptionString("blog", "allow_alias", "Y");
-		if ($canUseAlias == "Y")
-			$result = $alias;
-
-		if (strlen($result) <= 0)
-		{
-			$result = CUser::FormatName(CSite::GetNameFormat(false), 
-				array("NAME" 		=> $name,
-					"LAST_NAME" 	=> $lastName,
-					"SECOND_NAME" 	=> $secondName,
-					"LOGIN"			=> $login), true, false);
-		}
-
-		return $result;
+		return BlogUser::GetUserName($alias, $name, $lastName, $login, $secondName);
 	}
 	
 	public static function GetUserNameEx($arUser, $arBlogUser, $arParams)
 	{
-		$result = "";
-		if (!$arParams["bSoNet"])
-		{
-			$canUseAlias = COption::GetOptionString("blog", "allow_alias", "Y");
-			if ($canUseAlias == "Y")
-				$result = $arBlogUser["ALIAS"];
-		}
-
-		if (strlen($result) <= 0)
-		{
-			$arParams["NAME_TEMPLATE"] = $arParams["NAME_TEMPLATE"] ? $arParams["NAME_TEMPLATE"] : CSite::GetNameFormat();
-			$arParams["NAME_TEMPLATE"] = str_replace(
-					array("#NOBR#", "#/NOBR#"), 
-					array("", ""), 
-					$arParams["NAME_TEMPLATE"]
-			);
-			$bUseLogin = $arParams["SHOW_LOGIN"] != "N" ? true : false;
-
-			$result = CUser::FormatName(
-						$arParams["NAME_TEMPLATE"], 
-						$arUser, 
-						$bUseLogin,
-						false
-					);
-		}
-
-		return $result;
+		return BlogUser::GetUserNameEx($arUser, $arBlogUser, $arParams);
 	}	
 
 	public static function PreparePath($userID = 0, $siteID = False, $is404 = True)
@@ -676,10 +639,10 @@ class CAllBlogUser
 		else
 		{
 			if (intval($arParams["AVATAR_SIZE"]) <= 0)
-				$arParams["AVATAR_SIZE"] = 42;
+				$arParams["AVATAR_SIZE"] = 100;
 
 			if (intval($arParams["AVATAR_SIZE_COMMENT"]) <= 0)
-				$arParams["AVATAR_SIZE_COMMENT"] = 30;
+				$arParams["AVATAR_SIZE_COMMENT"] = 100;
 
 			$bResizeImmediate = (isset($arParams["RESIZE_IMMEDIATE"]) && $arParams["RESIZE_IMMEDIATE"] == "Y");
 
@@ -687,7 +650,7 @@ class CAllBlogUser
 				"FIELDS" => Array("ID", "LAST_NAME", "NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "PERSONAL_GENDER", "EXTERNAL_AUTH_ID")
 			);
 
-			if (IsModuleInstalled('extranet'))
+			if (ModuleManager::isModuleInstalled('extranet'))
 			{
 				$arSelect["SELECT"] = array('UF_DEPARTMENT');
 			}
@@ -700,6 +663,25 @@ class CAllBlogUser
 			);
 			if($arResult["arUser"] = $dbUser->GetNext())
 			{
+				if (
+					IntVal($arResult["arUser"]["PERSONAL_PHOTO"]) <= 0
+					&& ModuleManager::isModuleInstalled('socialnetwork')
+				)
+				{
+					switch ($arResult["arUser"]["PERSONAL_GENDER"])
+					{
+						case "M":
+							$suffix = "male";
+							break;
+						case "F":
+							$suffix = "female";
+							break;
+						default:
+							$suffix = "unknown";
+					}
+					$arResult["arUser"]["PERSONAL_PHOTO"] = Option::get('socialnetwork', 'default_user_picture_'.$suffix, false, SITE_ID);
+				}
+
 				if(IntVal($arResult["arUser"]["PERSONAL_PHOTO"]) > 0)
 				{
 					$arResult["arUser"]["PERSONAL_PHOTO_file"] = CFile::GetFileArray($arResult["arUser"]["PERSONAL_PHOTO"]);
@@ -765,22 +747,61 @@ class CAllBlogUser
 		{
 			if (intval($arParams["AVATAR_SIZE"]) <= 0)
 			{
-				$arParams["AVATAR_SIZE"] = 42;
+				$arParams["AVATAR_SIZE"] = 100;
 			}
 
 			if (intval($arParams["AVATAR_SIZE_COMMENT"]) <= 0)
 			{
-				$arParams["AVATAR_SIZE_COMMENT"] = 30;
+				$arParams["AVATAR_SIZE_COMMENT"] = 100;
+			}
+
+			$arSelectParams = Array(
+				"FIELDS" => Array("ID", "LAST_NAME", "NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "PERSONAL_GENDER", "EXTERNAL_AUTH_ID")
+			);
+
+			if (
+				ModuleManager::isModuleInstalled('intranet')
+				|| ModuleManager::isModuleInstalled('crm')
+			)
+			{
+				$arSelectParams["SELECT"] = array();
+				if (ModuleManager::isModuleInstalled('intranet'))
+				{
+					$arSelectParams["SELECT"][] = "UF_DEPARTMENT";
+				}
+				if (ModuleManager::isModuleInstalled('crm'))
+				{
+					$arSelectParams["SELECT"][] = "UF_USER_CRM_ENTITY";
+				}
 			}
 
 			$dbUser = CUser::GetList(
 				($sort_by = Array('ID'=>'desc')),
 				($dummy=''),
 				Array("ID" => implode(" | ", $arIdToGet)),
-				Array("FIELDS" => Array("ID", "LAST_NAME", "NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "PERSONAL_GENDER", "EXTERNAL_AUTH_ID"))
+				$arSelectParams
 			);
 			while ($arUser = $dbUser->GetNext())
 			{
+				if (
+					intVal($arUser["PERSONAL_PHOTO"]) <= 0
+					&& ModuleManager::isModuleInstalled('socialnetwork')
+				)
+				{
+					switch ($arUser['PERSONAL_GENDER'])
+					{
+						case "M":
+							$suffix = "male";
+							break;
+						case "F":
+							$suffix = "female";
+							break;
+						default:
+							$suffix = "unknown";
+					}
+					$arUser['PERSONAL_PHOTO'] = Option::get('socialnetwork', 'default_user_picture_'.$suffix, false, SITE_ID);
+				}
+
 				if(IntVal($arUser["PERSONAL_PHOTO"]) > 0)
 				{
 					$arUser["PERSONAL_PHOTO_file"] = CFile::GetFileArray($arUser["PERSONAL_PHOTO"]);
@@ -806,12 +827,12 @@ class CAllBlogUser
 						$arUser["PERSONAL_PHOTO_img_30"] = CFile::ShowImage($arUser["PERSONAL_PHOTO_resized_30"]["src"], $arParams["AVATAR_SIZE_COMMENT"], $arParams["AVATAR_SIZE_COMMENT"], "border=0 align='right'");
 					}
 				}
+
 				$arUser["url"] = CComponentEngine::MakePathFromTemplate($path, array("user_id" => $arUser["ID"]));
 
 				$arResult["arUser"][$arUser["ID"]] = CBlogPost::$arBlogUCache[$arUser["ID"]] = $arUser;
 			}
 		}
-
 		return $arResult["arUser"];
 	}
 }

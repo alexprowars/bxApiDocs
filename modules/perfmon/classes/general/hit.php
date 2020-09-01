@@ -23,7 +23,7 @@ class CPerfomanceHit
 		$arQueryOrder = array();
 		foreach ($arOrder as $strColumn => $strDirection)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			if (preg_match("/^(MIN|MAX|AVG|SUM)_(.*)$/", $strColumn, $arMatch))
 			{
 				$strGroupFunc = $arMatch[1];
@@ -34,7 +34,7 @@ class CPerfomanceHit
 				$strGroupFunc = "";
 			}
 
-			$strDirection = strtoupper($strDirection) == "ASC"? "ASC": "DESC";
+			$strDirection = mb_strtoupper($strDirection) == "ASC"? "ASC": "DESC";
 			switch ($strColumn)
 			{
 			case "ID":
@@ -109,7 +109,7 @@ class CPerfomanceHit
 		$arQuerySelect = array();
 		foreach ($arSelect as $strColumn)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			if (preg_match("/^(MIN|MAX|AVG|SUM)_(.*)$/", $strColumn, $arMatch))
 			{
 				$strGroupFunc = $arMatch[1];
@@ -287,7 +287,21 @@ class CPerfomanceHit
 				".$strHaving."
 			";
 			$res_cnt = $DB->Query($strSql);
-			$ar_cnt = $res_cnt->Fetch();
+			
+			if ($bGroup)
+			{
+				$c = 0;
+				while ($ar_cnt = $res_cnt->Fetch())
+				{
+					$c++;
+				}
+			}
+			else
+			{
+				$ar_cnt = $res_cnt->Fetch();
+				$c = $ar_cnt["CNT"];
+			}
+			
 
 			$strSql = "
 				SELECT ".implode(", ", $arQuerySelect)."
@@ -299,7 +313,7 @@ class CPerfomanceHit
 				".(count($arQueryOrder)? "ORDER BY ".implode(", ", $arQueryOrder): "")."
 			";
 			$res = new CDBResult();
-			$res->NavQuery($strSql, $ar_cnt["CNT"], $arNavStartParams);
+			$res->NavQuery($strSql, $c, $arNavStartParams);
 		}
 		else
 		{

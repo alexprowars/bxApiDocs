@@ -1,17 +1,19 @@
 <?
-use Bitrix\Main\Localization\Loc;
-Loc::loadMessages(__FILE__);
+use Bitrix\Main\Localization\Loc,
+	Bitrix\Iblock;
 
-// define('BT_UT_SKU_CODE','SKU');
+Loc::loadMessages(__FILE__);
 
 class CIBlockPropertySKU extends CIBlockPropertyElementAutoComplete
 {
+	const USER_TYPE = 'SKU';
+
 	public static function GetUserTypeDescription()
 	{
 		return array(
-			"PROPERTY_TYPE" => "E",
-			"USER_TYPE" => BT_UT_SKU_CODE,
-			"DESCRIPTION" => Loc::getMessage('BT_UT_SKU_DESCR'),
+			"PROPERTY_TYPE" => Iblock\PropertyTable::TYPE_ELEMENT,
+			"USER_TYPE" => self::USER_TYPE,
+			"DESCRIPTION" => Loc::getMessage('BT_UT_SKU_DESCRIPTION'),
 			"GetPropertyFieldHtml" => array(__CLASS__, "GetPropertyFieldHtml"),
 			"GetPropertyFieldHtmlMulty" => array(__CLASS__, "GetPropertyFieldHtml"),
 			"GetPublicViewHTML" => array(__CLASS__, "GetPublicViewHTML"),
@@ -20,7 +22,11 @@ class CIBlockPropertySKU extends CIBlockPropertyElementAutoComplete
 			"GetAdminFilterHTML" => array(__CLASS__,'GetAdminFilterHTML'),
 			"GetSettingsHTML" => array(__CLASS__,'GetSettingsHTML'),
 			"PrepareSettings" => array(__CLASS__,'PrepareSettings'),
-			"AddFilterFields" => array(__CLASS__,'AddFilterFields')
+			"AddFilterFields" => array(__CLASS__,'AddFilterFields'),
+			"GetUIFilterProperty" => array(__CLASS__, 'GetUIFilterProperty'),
+			'GetUIEntityEditorProperty' => array(__CLASS__, 'GetUIEntityEditorProperty'),
+			'GetUIEntityEditorPropertyEditHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyEditHtml'),
+			'GetUIEntityEditorPropertyViewHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyViewHtml'),
 		);
 	}
 
@@ -40,8 +46,8 @@ class CIBlockPropertySKU extends CIBlockPropertyElementAutoComplete
 		 */
 		$arResult = parent::PrepareSettings($arFields);
 		$arResult['SHOW_ADD'] = 'N';
-		$arFields['MULTIPLE'] = 'N';
 		$arFields['USER_TYPE_SETTINGS'] = $arResult;
+		$arFields['MULTIPLE'] = 'N';
 
 		return $arFields;
 	}
@@ -80,9 +86,12 @@ class CIBlockPropertySKU extends CIBlockPropertyElementAutoComplete
 		</tr>
 		<tr>
 		<td>'.Loc::getMessage('BT_UT_SKU_SETTING_REP_SYMBOL').'</td>
-		<td>'.SelectBoxFromArray($strHTMLControlName["NAME"].'[REP_SYM]', static::GetReplaceSymList(true),htmlspecialcharsbx($arSettings['REP_SYM'])).'&nbsp;<input type="text" name="'.$strHTMLControlName["NAME"].'[OTHER_REP_SYM]" size="1" maxlength="1" value="'.$arSettings['OTHER_REP_SYM'].'"></td>
+		<td>'.SelectBoxFromArray($strHTMLControlName["NAME"].'[REP_SYM]', static::GetReplaceSymList(true),htmlspecialcharsbx($arSettings['REP_SYM'])).'&nbsp;<input type="text" name="'.$strHTMLControlName["NAME"].'[OTHER_REP_SYM]" size="1" maxlength="1" value="'.htmlspecialcharsbx($arSettings['OTHER_REP_SYM']).'"></td>
 		</tr>';
 
 		return $strResult;
 	}
 }
+
+/** @deprecated */
+define('BT_UT_SKU_CODE', CIBlockPropertySKU::USER_TYPE);

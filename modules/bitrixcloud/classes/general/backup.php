@@ -187,7 +187,7 @@ class CBitrixCloudBackup
 	 *
 	 * @return CBitrixCloudBackup
 	 */
-	static public function clearOptions()
+	public function clearOptions()
 	{
 		CBitrixCloudOption::getOption("backup_files")->delete();
 		CBitrixCloudOption::getOption("backup_quota")->delete();
@@ -357,7 +357,7 @@ class CBitrixCloudBackup
 	 * @return string
 	 *
 	 */
-	static public function addBackupJob($secret_key, $url, $time = 0, $weekdays = array())
+	public function addBackupJob($secret_key, $url, $time = 0, $weekdays = array())
 	{
 		try
 		{
@@ -377,7 +377,7 @@ class CBitrixCloudBackup
 	 * @return string
 	 *
 	 */
-	static public function deleteBackupJob()
+	public function deleteBackupJob()
 	{
 		try
 		{
@@ -391,7 +391,7 @@ class CBitrixCloudBackup
 		}
 	}
 
-	static public function getBackupJob()
+	public function getBackupJob()
 	{
 		try
 		{

@@ -1,17 +1,6 @@
 <?php
 
 // 2012-04-19 Checked/modified for compatibility with new data model
-
-/**
- * 
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/learning/classes/ccourseimport/index.php
- * @author Bitrix
- */
 class CCourseImport
 {
 	var $package_dir;
@@ -526,54 +515,6 @@ class CCourseImport
 
 
 	// 2012-04-18 Checked/modified for compatibility with new data model
-	
-	/**
-	* <p>Метод импортирует курс. Метод нестатический.</p>
-	*
-	*
-	* @return bool <p>Метод возвращает <i>true</i>, если создание курса прошло успешно. При
-	*  возникновении ошибки метод вернёт <i>false</i>, а в свойстве объекта
-	* LAST_ERROR  будет содержаться текст ошибки.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     if ($USER-&gt;IsAdmin())
-	*     {
-	*         @set_time_limit(0);
-	*         $package = new CCourseImport($PACKAGE_DIR = "/upload/mypackage/", Array("ru", "en"));
-	* 
-	*         if (strlen($package-&gt;LAST_ERROR) &gt; 0)
-	*         {
-	*             echo "Error: ".$package-&gt;LAST_ERROR;
-	*         }
-	*         else
-	*         {
-	*             $success = $package-&gt;ImportPackage();
-	* 
-	*             if (!$success)
-	*                 echo "Error: ".$package-&gt;LAST_ERROR;
-	*             else
-	*                 echo "Ok!";
-	*         }
-	*     }
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/learning/classes/ccourseimport/index.php">CCourseImport</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/ccourseimport/ccourseimport.php">CCourseImport</a> </li></ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/ccourseimport/importpackage.php
-	* @author Bitrix
-	*/
 	public function ImportPackage()
 	{
 		if (!$this->CreateCourse())

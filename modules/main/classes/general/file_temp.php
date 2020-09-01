@@ -1,6 +1,8 @@
-<?
+<?php
+
 class CTempFile
 {
+	private static $is_exit_function_registered = false;
 	private static $arFiles = array();
 
 	public static function GetAbsoluteRoot()
@@ -43,8 +45,11 @@ class CTempFile
 			if(!file_exists($temp_path))
 			{
 				//Delayed unlink
-				if(empty(self::$arFiles))
+				if(!self::$is_exit_function_registered)
+				{
+					self::$is_exit_function_registered = true;
 					register_shutdown_function(array('CTempFile', 'Cleanup'));
+				}
 
 				self::$arFiles[$temp_path] = $dir_name."/".$dir_add;
 
@@ -98,8 +103,11 @@ class CTempFile
 		}
 
 		//Delayed unlink
-		if(empty(self::$arFiles))
+		if(!self::$is_exit_function_registered)
+		{
+			self::$is_exit_function_registered = true;
 			register_shutdown_function(array('CTempFile', 'Cleanup'));
+		}
 
 		//Function ends only here
 		return $temp_path;
@@ -128,36 +136,52 @@ class CTempFile
 					CTempFile::_absolute_path_recursive_delete($temp_path);
 				}
 			}
+			elseif(file_exists($temp_dir))
+			{
+				@rmdir($temp_dir);
+			}
 		}
 
 		//Clean directories with $hours_to_keep_files > 0
 		$dir_name = self::GetAbsoluteRoot()."/";
-		if($handle = opendir($dir_name))
+		if (file_exists($dir_name))
 		{
-			while(($day_files_dir = readdir($handle)) !== false)
+			if ($handle = opendir($dir_name))
 			{
-				if(preg_match("/^BXTEMP-(.*?)\$/", $day_files_dir, $match) && is_dir($dir_name.$day_files_dir))
+				while (($day_files_dir = readdir($handle)) !== false)
 				{
-					$this_day_name = 'BXTEMP-'.date('Y-m-d');
-					if($day_files_dir < $this_day_name)
-						CTempFile::_absolute_path_recursive_delete($dir_name.$day_files_dir);
-					elseif($day_files_dir == $this_day_name)
+					if ($day_files_dir == '.' || $day_files_dir == '..')
+						continue;
+					if (preg_match("/^BXTEMP-(.*?)\$/", $day_files_dir) && is_dir($dir_name.$day_files_dir))
 					{
-						if($hour_handle = opendir($dir_name.$day_files_dir))
-						{
-							$this_hour_name = date('H');
-							while(($hour_files_dir = readdir($hour_handle)) !== false)
-							{
-								if($hour_files_dir == '.' || $hour_files_dir == '..')
-									continue;
-								if($hour_files_dir < $this_hour_name)
-									CTempFile::_absolute_path_recursive_delete($dir_name.$day_files_dir.'/'.$hour_files_dir);
-							}
-						}
+						CTempFile::_process_directory($dir_name, $day_files_dir);
 					}
 				}
+				closedir($handle);
 			}
-			closedir($handle);
+		}
+	}
+
+	private static function _process_directory($dir_name, $day_files_dir)
+	{
+		$this_day_name = 'BXTEMP-'.date('Y-m-d');
+		if ($day_files_dir < $this_day_name)
+		{
+			CTempFile::_absolute_path_recursive_delete($dir_name.$day_files_dir);
+		}
+		elseif ($day_files_dir == $this_day_name)
+		{
+			if ($hour_handle = opendir($dir_name.$day_files_dir))
+			{
+				$this_hour_name = date('H');
+				while (($hour_files_dir = readdir($hour_handle)) !== false)
+				{
+					if ($hour_files_dir == '.' || $hour_files_dir == '..')
+						continue;
+					if ($hour_files_dir < $this_hour_name)
+						CTempFile::_absolute_path_recursive_delete($dir_name.$day_files_dir.'/'.$hour_files_dir);
+				}
+			}
 		}
 	}
 
@@ -187,7 +211,8 @@ class CTempFile
 				}
 				closedir($handle);
 			}
-			if(!@rmdir($path))
+			$r = @rmdir($path);
+			if(!$r)
 				return false;
 			return $f;
 		}
@@ -195,4 +220,3 @@ class CTempFile
 	}
 
 }
-?>

@@ -13,12 +13,12 @@ class CPHPCacheXCache implements ICacheBackend
 	var $written = false;
 	var $read = false;
 
-	public function __construct()
+	function __construct()
 	{
 		$this->CPHPCacheXCache();
 	}
 
-	public function CPHPCacheXCache()
+	function CPHPCacheXCache()
 	{
 		if(defined("BX_CACHE_SID"))
 			$this->sid = BX_CACHE_SID;
@@ -26,12 +26,12 @@ class CPHPCacheXCache implements ICacheBackend
 			$this->sid = "BX";
 	}
 
-	public static function IsAvailable()
+	function IsAvailable()
 	{
 		return function_exists('xcache_get');
 	}
 
-	public function clean($basedir, $initdir = false, $filename = false)
+	function clean($basedir, $initdir = false, $filename = false)
 	{
 		if(strlen($filename))
 		{
@@ -70,7 +70,7 @@ class CPHPCacheXCache implements ICacheBackend
 		return true;
 	}
 
-	public function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
+	function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		$basedir_version = xcache_get($this->sid.$basedir);
 		if($basedir_version === null)
@@ -102,7 +102,7 @@ class CPHPCacheXCache implements ICacheBackend
 		return true;
 	}
 
-	public function write($arAllVars, $basedir, $initdir, $filename, $TTL)
+	function write($arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		$basedir_version = xcache_get($this->sid.$basedir);
 		if($basedir_version === null)
@@ -133,7 +133,7 @@ class CPHPCacheXCache implements ICacheBackend
 		xcache_set($basedir_version."|".$initdir_version."|".$filename, $arAllVars, intval($TTL));
 	}
 
-	public static function IsCacheExpired($path)
+	function IsCacheExpired($path)
 	{
 		return false;
 	}

@@ -5,7 +5,7 @@ $GLOBALS["BLOG_TRACKBACK"] = Array();
 class CAllBlogTrackback
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		global $DB;
 
@@ -76,7 +76,7 @@ class CAllBlogTrackback
 	}
 
 	//*************** SELECT *********************/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
@@ -106,7 +106,7 @@ class CAllBlogTrackback
 
 
 	//*************** SEND / RECEIVE PINGS *********************/
-	public static function SendPing($postID, $arPingUrls = array())
+	function SendPing($postID, $arPingUrls = array())
 	{
 		$postID = IntVal($postID);
 
@@ -139,6 +139,7 @@ class CAllBlogTrackback
 				else
 					$serverName = COption::GetOptionString("main", "server_name", "");
 			}
+			$serverName = \Bitrix\Main\Text\HtmlFilter::encode($serverName);
 
 			if (strlen($charset) <= 0)
 			{
@@ -185,7 +186,7 @@ class CAllBlogTrackback
 		}
 	}
 
-	public static function GetPing($blogUrl, $postID, $arParams = array())
+	function GetPing($blogUrl, $postID, $arParams = array())
 	{
 		global $DB;
 
@@ -307,7 +308,7 @@ class CAllBlogTrackback
 		return $bSuccess;
 	}
 
-	public static function SendPingResponce($error = 0, $text = "")
+	function SendPingResponce($error = 0, $text = "")
 	{
 		header("Content-type: text/xml; charset=".LANG_CHARSET);
 		echo "<"."?xml version=\"1.0\" encoding=\"".SITE_CHARSET."\"?".">\n";

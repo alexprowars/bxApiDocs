@@ -20,21 +20,74 @@ IncludeModuleLangFile(__FILE__);
 class CCloudStorageBucket extends CAllCloudStorageBucket
 {
 	protected/*.array[string]string.*/$arBucket;
+	protected $enabledFailover = true;
+	protected $queueFlag = true;
 	/** @var CCloudStorageService $service */
 	protected/*.CCloudStorageService.*/ $service;
 	protected static/*.array[int][string]string.*/$arBuckets;
 	/**
 	 * @param int $ID
+	 * @param bool $enabledFailover
 	 */
-	public function __construct($ID)
+	public function __construct($ID, $enabledFailover = true)
 	{
 		$this->_ID = intval($ID);
+		if (!$enabledFailover)
+			$this->disableFailOver();
+	}
+	public function disableFailOver()
+	{
+		$this->enabledFailover = false;
+	}
+	/**
+	 * @return boolean
+	 */
+	public function isFailoverEnabled()
+	{
+		return $this->enabledFailover;
+	}
+	/**
+	 * @param boolean $queueFlag
+	 */
+	public function setQueueFlag($queueFlag = true)
+	{
+		$this->queueFlag = (bool)$queueFlag;
+	}
+	/**
+	 * @return boolean
+	 */
+	public function getQueueFlag()
+	{
+		return $this->queueFlag;
 	}
 	/**
 	 * @return array[string]string
 	*/
 	public function getBucketArray()
 	{
+		if(!isset($this->arBucket))
+		{
+			self::_init();
+			$this->arBucket = self::$arBuckets[$this->_ID];
+			if (
+				$this->isFailoverEnabled() && CCloudFailover::IsEnabled()
+				&& $this->arBucket["FAILOVER_ACTIVE"] === 'Y'
+				&& $this->arBucket["FAILOVER_BUCKET_ID"] > 0
+			)
+			{
+				$failoverBucket = new CCloudStorageBucket($this->FAILOVER_BUCKET_ID, false);
+				if ($failoverBucket->Init())
+				{
+					$this->arBucket["SERVICE_ID"] = $failoverBucket->SERVICE_ID;
+					$this->arBucket["BUCKET"] = $failoverBucket->BUCKET;
+					$this->arBucket["LOCATION"] = $failoverBucket->LOCATION;
+					$this->arBucket["CNAME"] = $failoverBucket->CNAME;
+					$this->arBucket["PREFIX"] = $failoverBucket->PREFIX;
+					$this->arBucket["SETTINGS"] = $failoverBucket->SETTINGS;
+				}
+			}
+		}
+
 		return $this->arBucket;
 	}
 	/**
@@ -48,7 +101,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $str
 	 * @return string
 	*/
-	private function CompileModuleRule($str)
+	private static function CompileModuleRule($str)
 	{
 		$res = array();
 		$ar = explode(",", $str);
@@ -67,7 +120,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $str
 	 * @return string
 	*/
-	private function CompileExtentionRule($str)
+	private static function CompileExtentionRule($str)
 	{
 		$res = array();
 		$ar = explode(",", $str);
@@ -86,7 +139,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $str
 	 * @return double
 	*/
-	private function ParseSize($str)
+	private static function ParseSize($str)
 	{
 		static $scale = array(
 			'' => 1.0,
@@ -94,7 +147,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 			'M' => 1048576.0,
 			'G' => 1073741824.0,
 		);
-		$str = strtoupper(trim($str));
+		$str = mb_strtoupper(trim($str));
 		if($str !== '' && preg_match("/([0-9.]+)(|K|M|G)\$/", $str, $match) > 0)
 		{
 			return doubleval($match[1])*$scale[$match[2]];
@@ -108,7 +161,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $str
 	 * @return array[int][int]double
 	*/
-	private function CompileSizeRule($str)
+	private static function CompileSizeRule($str)
 	{
 		$res = /*.(array[int][int]double).*/array();
 		$ar = explode(",", $str);
@@ -130,7 +183,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param array[int][string]string $arRules
 	 * @return array[int][string]string
 	*/
-	private function CompileRules($arRules)
+	private static function CompileRules($arRules)
 	{
 		$arCompiled = /*.(array[int][string]string).*/array();
 		if(is_array($arRules))
@@ -206,23 +259,18 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $name
 	 * @return mixed
 	*/
-	public function __get($name)
+	function __get($name)
 	{
-		if(!isset($this->arBucket))
-		{
-			self::_init();
-			$this->arBucket = self::$arBuckets[$this->_ID];
-		}
-
-		if(isset($this->arBucket) && array_key_exists($name, $this->arBucket))
-			return $this->arBucket[$name];
+		$arBucket = $this->getBucketArray();
+		if($arBucket && array_key_exists($name, $arBucket))
+			return $arBucket[$name];
 		else
 			return null;
 	}
 	/**
 	 * @return bool
 	*/
-	public function Init()
+	function Init()
 	{
 		if(is_object($this->service))
 		{
@@ -236,17 +284,44 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 		}
 	}
 	/**
+	 * @return bool
+	*/
+	function RenewToken()
+	{
+		if ($this->service->tokenHasExpired)
+		{
+			$newSettings = false;
+			foreach(GetModuleEvents("clouds", "OnExpiredToken", true) as $arEvent)
+			{
+				$newSettings = ExecuteModuleEventEx($arEvent, array($this->arBucket));
+				if ($newSettings)
+					break;
+			}
+			if ($newSettings)
+			{
+				$updateResult = $this->Update(array("SETTINGS" => $newSettings));
+				if ($updateResult)
+				{
+					$this->service->tokenHasExpired = false;
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+	/**
 	 * @param array[string]string $arSettings
 	 * @return bool
 	*/
-	public function CheckSettings(&$arSettings)
+	function CheckSettings(&$arSettings)
 	{
 		return $this->service->CheckSettings($this->arBucket, $arSettings);
 	}
 	/**
 	 * @return bool
 	*/
-	public function CreateBucket()
+	function CreateBucket()
 	{
 		return $this->service->CreateBucket($this->arBucket);
 	}
@@ -254,7 +329,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param mixed $arFile
 	 * @return string
 	*/
-	public function GetFileSRC($arFile)
+	function GetFileSRC($arFile)
 	{
 		if(is_array($arFile) && isset($arFile["URN"]))
 			return $this->service->GetFileSRC($this->arBucket, $arFile["URN"]);
@@ -265,7 +340,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $filePath
 	 * @return bool
 	*/
-	public function FileExists($filePath)
+	function FileExists($filePath)
 	{
 		return $this->service->FileExists($this->arBucket, $filePath);
 	}
@@ -274,7 +349,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $filePath
 	 * @return bool
 	*/
-	public function DownloadToFile($arFile, $filePath)
+	function DownloadToFile($arFile, $filePath)
 	{
 		return $this->service->DownloadToFile($this->arBucket, $arFile, $filePath);
 	}
@@ -283,11 +358,21 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param mixed $arFile
 	 * @return bool
 	*/
-	public function SaveFile($filePath, $arFile)
+	function SaveFile($filePath, $arFile)
 	{
 		$result = $this->service->SaveFile($this->arBucket, $filePath, $arFile);
+		if (!$result && $this->RenewToken())
+		{
+			$result = $this->service->SaveFile($this->getBucketArray(), $filePath, $arFile);
+		}
+
 		if ($result)
 		{
+			if ($this->queueFlag)
+			{
+				CCloudFailover::queueCopy($this, $filePath);
+			}
+
 			foreach(GetModuleEvents("clouds", "OnAfterSaveFile", true) as $arEvent)
 			{
 				ExecuteModuleEventEx($arEvent, array($this, $arFile, $filePath));
@@ -299,11 +384,16 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $filePath
 	 * @return bool
 	*/
-	public function DeleteFile($filePath)
+	function DeleteFile($filePath)
 	{
 		$result = $this->service->DeleteFile($this->arBucket, $filePath);
 		if ($result)
 		{
+			if ($this->queueFlag)
+			{
+				CCloudFailover::queueDelete($this, $filePath);
+			}
+
 			foreach(GetModuleEvents("clouds", "OnAfterDeleteFile", true) as $arEvent)
 			{
 				ExecuteModuleEventEx($arEvent, array($this, array('del' => 'Y'), $filePath));
@@ -316,11 +406,16 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $filePath
 	 * @return bool
 	*/
-	public function FileCopy($arFile, $filePath)
+	function FileCopy($arFile, $filePath)
 	{
 		$result = $this->service->FileCopy($this->arBucket, $arFile, $filePath);
 		if ($result)
 		{
+			if ($this->queueFlag)
+			{
+				CCloudFailover::queueCopy($this, $filePath);
+			}
+
 			foreach(GetModuleEvents("clouds", "OnAfterCopyFile", true) as $arEvent)
 			{
 				ExecuteModuleEventEx($arEvent, array($this, $arFile, $filePath));
@@ -334,14 +429,19 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param bool $overwrite
 	 * @return bool
 	*/
-	public function FileRename($sourcePath, $targetPath, $overwrite = true)
+	function FileRename($sourcePath, $targetPath, $overwrite = true)
 	{
 		$result = $this->service->FileRename($this->arBucket, $sourcePath, $targetPath, $overwrite);
 		if ($result)
 		{
+			if ($this->queueFlag)
+			{
+				CCloudFailover::queueRename($this, $sourcePath, $targetPath);
+			}
+
 			foreach(GetModuleEvents("clouds", "OnAfterRenameFile", true) as $arEvent)
 			{
-				ExecuteModuleEventEx($arEvent, array($this, $sourcePath, $targetFile));
+				ExecuteModuleEventEx($arEvent, array($this, $sourcePath, $targetPath));
 			}
 		}
 		return $result;
@@ -349,20 +449,27 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	/**
 	 * @param string $filePath
 	 * @param bool $bRecursive
+	 * @param int $pageSize
+	 * @param string $pageMarker
 	 * @return array[string][int]string
 	*/
-	public function ListFiles($filePath = "/", $bRecursive = false)
+	function ListFiles($filePath = "/", $bRecursive = false, $pageSize = 0, $pageMarker = '')
 	{
-		return $this->service->ListFiles($this->arBucket, $filePath, $bRecursive);
+		$result = $this->service->ListFiles($this->arBucket, $filePath, $bRecursive, $pageSize, $pageMarker);
+		if (!$result && $this->RenewToken())
+		{
+			$result = $this->service->ListFiles($this->getBucketArray(), $filePath, $bRecursive, $pageSize, $pageMarker);
+		}
+		return $result;
 	}
 	/**
 	 * @param string $filePath
 	 * @return double
 	*/
-	public function GetFileSize($filePath)
+	function GetFileSize($filePath)
 	{
-		$DIR_NAME = substr($filePath, 0, strrpos($filePath, "/") + 1);
-		$FILE_NAME = substr($filePath, strlen($DIR_NAME));
+		$DIR_NAME = mb_substr($filePath, 0, mb_strrpos($filePath, "/") + 1);
+		$FILE_NAME = mb_substr($filePath, mb_strlen($DIR_NAME));
 
 		$arListing = $this->service->ListFiles($this->arBucket, $DIR_NAME, false);
 		if(is_array($arListing))
@@ -386,7 +493,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param int $ID
 	 * @return bool
 	*/
-	public static function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -409,20 +516,20 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 			$arFields["BUCKET"] = trim($arFields["BUCKET"]);
 
 			$bBadLength = false;
-			if(strpos($arFields["BUCKET"], ".") !== false)
+			if(mb_strpos($arFields["BUCKET"], ".") !== false)
 			{
 				$arName = explode(".", $arFields["BUCKET"]);
 				$bBadLength = false;
 				foreach($arName as $str)
-					if(strlen($str) < 2 || strlen($str) > 63)
+					if(mb_strlen($str) < 2 || mb_strlen($str) > 63)
 						$bBadLength = true;
 			}
 
-			if(strlen($arFields["BUCKET"]) <= 0)
+			if($arFields["BUCKET"] == '')
 				$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_EMPTY_BUCKET"));
 			if(preg_match("/[^a-z0-9._-]/", $arFields["BUCKET"]) > 0)
 				$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_BAD_BUCKET_NAME"));
-			if(strlen($arFields["BUCKET"]) < 2 || strlen($arFields["BUCKET"]) > 63)
+			if(mb_strlen($arFields["BUCKET"]) < 2 || mb_strlen($arFields["BUCKET"]) > 63)
 				$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_WRONG_BUCKET_NAME_LENGTH"));
 			if($bBadLength)
 				$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_WRONG_BUCKET_NAME_LENGTH2"));
@@ -431,7 +538,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 			if(preg_match("/(-\\.|\\.-)/", $arFields["BUCKET"]) > 0)
 				$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_BAD_BUCKET_NAME3"));
 
-			if(strlen($arFields["BUCKET"]) > 0)
+			if($arFields["BUCKET"] <> '')
 			{
 				$rsBucket = self::GetList(array(), array(
 					"=SERVICE_ID" => $arFields["SERVICE_ID"],
@@ -441,6 +548,31 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				if(is_array($arBucket) && $arBucket["ID"] != $ID)
 					$aMsg[] = array("id" => "BUCKET", "text" => GetMessage("CLO_STORAGE_BUCKET_ALREADY_EXISTS"));
 			}
+		}
+
+		if(array_key_exists("FAILOVER_ACTIVE", $arFields))
+		{
+			$arFields["FAILOVER_ACTIVE"] = $arFields["FAILOVER_ACTIVE"] === "Y"? "Y": "N";
+		}
+
+		if(isset($arFields["FAILOVER_BUCKET_ID"]) && $arFields["FAILOVER_BUCKET_ID"] == $ID)
+		{
+			unset($arFields["FAILOVER_BUCKET_ID"]);
+		}
+
+		if(array_key_exists("FAILOVER_COPY", $arFields))
+		{
+			$arFields["FAILOVER_COPY"] = $arFields["FAILOVER_COPY"] === "Y"? "Y": "N";
+		}
+
+		if(array_key_exists("FAILOVER_DELETE", $arFields))
+		{
+			$arFields["FAILOVER_DELETE"] = $arFields["FAILOVER_DELETE"] === "Y"? "Y": "N";
+		}
+
+		if(array_key_exists("FAILOVER_DELETE_DELAY", $arFields))
+		{
+			$arFields["FAILOVER_DELETE_DELAY"] = (int)$arFields["FAILOVER_DELETE_DELAY"];
 		}
 
 		if(!empty($aMsg))
@@ -457,7 +589,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param array[string]string $arSelect
 	 * @return CDBResult
 	*/
-	static function GetList($arOrder=false, $arFilter=false, $arSelect=false)
+	static function GetList($arOrder=array(), $arFilter=array(), $arSelect=array())
 	{
 		global $DB;
 
@@ -479,6 +611,11 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				"FILE_SIZE",
 				"LAST_FILE_ID",
 				"FILE_RULES",
+				"FAILOVER_ACTIVE",
+				"FAILOVER_BUCKET_ID",
+				"FAILOVER_COPY",
+				"FAILOVER_DELETE",
+				"FAILOVER_DELETE_DELAY",
 			);
 
 		if(!is_array($arOrder))
@@ -487,8 +624,8 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 		$arQueryOrder = array();
 		foreach($arOrder as $strColumn => $strDirection)
 		{
-			$strColumn = strtoupper($strColumn);
-			$strDirection = strtoupper($strDirection)==="ASC"? "ASC": "DESC";
+			$strColumn = mb_strtoupper($strColumn);
+			$strDirection = mb_strtoupper($strDirection) === "ASC"? "ASC": "DESC";
 			switch($strColumn)
 			{
 				case "ID":
@@ -504,7 +641,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 		$arQuerySelect = array();
 		foreach($arSelect as $strColumn)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			switch($strColumn)
 			{
 				case "ID":
@@ -521,6 +658,11 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				case "FILE_SIZE":
 				case "LAST_FILE_ID":
 				case "FILE_RULES":
+				case "FAILOVER_ACTIVE":
+				case "FAILOVER_BUCKET_ID":
+				case "FAILOVER_COPY":
+				case "FAILOVER_DELETE":
+				case "FAILOVER_DELETE_DELAY":
 					$arQuerySelect[$strColumn] = "s.".$strColumn;
 					break;
 			}
@@ -554,6 +696,31 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				"TABLE_ALIAS" => "s",
 				"FIELD_NAME" => "s.BUCKET",
 				"FIELD_TYPE" => "string",
+			),
+			"FAILOVER_ACTIVE" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.FAILOVER_ACTIVE",
+				"FIELD_TYPE" => "string",
+			),
+			"FAILOVER_BUCKET_ID" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.FAILOVER_BUCKET_ID",
+				"FIELD_TYPE" => "int",
+			),
+			"FAILOVER_COPY" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.FAILOVER_COPY",
+				"FIELD_TYPE" => "string",
+			),
+			"FAILOVER_DELETE" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.FAILOVER_DELETE",
+				"FIELD_TYPE" => "string",
+			),
+			"FAILOVER_DELETE_DELAY" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.FAILOVER_DELETE_DELAY",
+				"FIELD_TYPE" => "int",
 			),
 		);
 		$obQueryWhere->SetFields($arFields);
@@ -592,9 +759,10 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	}
 	/**
 	 * @param array[string]string $arFields
+	 * @param boolean $createBucket
 	 * @return mixed
 	*/
-	public function Add($arFields)
+	function Add($arFields, $createBucket = true)
 	{
 		global $DB, $APPLICATION, $CACHE_MANAGER;
 		$strError = '';
@@ -617,19 +785,25 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				return false;
 			$this->arBucket["SETTINGS"] = $arFields["SETTINGS"];
 
-			if($this->CreateBucket())
+			if ($createBucket)
+				$creationResult = $this->CreateBucket();
+			else
+				$creationResult = true;
+
+			if ($creationResult)
 			{
 				$arFields["SETTINGS"] = serialize($arFields["SETTINGS"]);
 				$this->_ID = $DB->Add("b_clouds_file_bucket", $arFields);
+				self::$arBuckets = null;
 				$this->arBucket = null;
-				if(CACHED_b_clouds_file_bucket !== false)
+				if (CACHED_b_clouds_file_bucket !== false)
 					$CACHE_MANAGER->CleanDir("b_clouds_file_bucket");
 				return $this->_ID;
 			}
 			else
 			{
 				$e = $APPLICATION->GetException();
-				if(is_object($e))
+				if (is_object($e))
 					$strError = GetMessage("CLO_STORAGE_CLOUD_ADD_ERROR", array("#error_msg#" => $e->GetString()));
 				else
 					$strError = GetMessage("CLO_STORAGE_CLOUD_ADD_ERROR", array("#error_msg#" => 'CSB42343'));
@@ -648,7 +822,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	/**
 	 * @return bool
 	*/
-	public function Delete()
+	function Delete()
 	{
 		global $DB, $APPLICATION, $CACHE_MANAGER;
 		$strError = '';
@@ -702,7 +876,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param array[string]string $arFields
 	 * @return mixed
 	*/
-	public function Update($arFields)
+	function Update($arFields)
 	{
 		global $DB, $CACHE_MANAGER;
 
@@ -737,7 +911,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 		}
 
 		$strUpdate = $DB->PrepareUpdate("b_clouds_file_bucket", $arFields);
-		if(strlen($strUpdate) > 0)
+		if($strUpdate <> '')
 		{
 			$strSql = "
 				UPDATE b_clouds_file_bucket SET
@@ -748,6 +922,8 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				return false;
 		}
 
+		self::$arBuckets = null;
+		$this->arBucket = null;
 		if(CACHED_b_clouds_file_bucket !== false)
 			$CACHE_MANAGER->CleanDir("b_clouds_file_bucket");
 
@@ -798,7 +974,7 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 	 * @param string $value
 	 * @return void
 	*/
-	public function setHeader($name, $value)
+	function setHeader($name, $value)
 	{
 		$this->service->setHeader($name, $value);
 	}

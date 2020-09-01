@@ -226,7 +226,7 @@ abstract class CBXAllShortUri
 		return true;
 	}
 	
-	static public function GetHttpStatusCodeText($code)
+	public static function GetHttpStatusCodeText($code)
 	{
 		$code = intval($code);
 

@@ -48,7 +48,7 @@ class CForumEventLog
 		CEventLog::Log("NOTICE", $type, "forum", $id, $description);
 	}
 
-	public static function GetAuditTypes()
+	function GetAuditTypes()
 	{
 		return array(
 			"FORUM_MESSAGE_APPROVE" => "[FORUM_MESSAGE_APPROVE] ".GetMessage("FORUM_MESSAGE_APPROVE"),
@@ -77,13 +77,13 @@ class CForumEventLog
 
 class CEventForum
 {
-	public static function MakeForumObject()
+	function MakeForumObject()
 	{
 		$obj = new CEventForum;
 		return $obj;
 	}
 
-	public static function GetFilter()
+	function GetFilter()
 	{
 		$arFilter = array();
 		if (CModule::IncludeModule('forum'))
@@ -96,7 +96,7 @@ class CEventForum
 		return  $arFilter;
 	}
 
-	public static function GetAuditTypes()
+	function GetAuditTypes()
 	{
 		AddEventHandler("main", "GetAuditTypesForum", array("CForumEventLog", "GetAuditTypes"));
 		foreach(GetModuleEvents("main", "GetAuditTypesForum", true) as $arEvent)
@@ -106,7 +106,7 @@ class CEventForum
 		return $AuditTypes;
 	}
 
-	public static function GetEventInfo($row, $arParams)
+	function GetEventInfo($row, $arParams)
 	{
 		if (CModule::IncludeModule('forum'))
 		{
@@ -200,7 +200,7 @@ class CEventForum
 				);
 	}
 
-	public static function GetFilterSQL($var)
+	function GetFilterSQL($var)
 	{
 		if (is_array($var))
 			foreach($var as $key => $val)

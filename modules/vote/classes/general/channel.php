@@ -9,7 +9,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CAllVoteChannel
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "vote";
 		return "<br>Module: ".$module_id."<br>Class: CAllVoteChannel<br>File: ".__FILE__;
@@ -19,7 +19,7 @@ class CAllVoteChannel
 	{
 		global $DB, $APPLICATION;
 		$aMsg = array();
-		$ID = intVal($ID);
+		$ID = intval($ID);
 
 		foreach(array("TITLE", "SYMBOLIC_NAME") as $key)
 		{
@@ -140,7 +140,7 @@ class CAllVoteChannel
 		return $ID;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 		if (!self::CheckFields("UPDATE", $arFields, $ID))
@@ -177,10 +177,10 @@ class CAllVoteChannel
 		return $ID;
 	}
 
-	public static function SetAccessPermissions($ID, $arGroups)
+	function SetAccessPermissions($ID, $arGroups)
 	{
 		global $DB;
-		$ID = intVal($ID);
+		$ID = intval($ID);
 		$arGroups = (is_array($arGroups) ? $arGroups : array());
 		$arMainGroups = array();
 		if ($ID <= 0 || empty($arGroups))
@@ -336,7 +336,7 @@ class CAllVoteChannel
 		}
 	}
 
-	public static function GetSiteArray($CHANNEL_ID)
+	function GetSiteArray($CHANNEL_ID)
 	{
 		$err_mess = (CAllVoteChannel::err_mess())."<br>Function: GetSiteArray<br>Line: ";
 		global $DB;
@@ -375,7 +375,7 @@ class CAllVoteChannel
 
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 		$err_mess = (CAllVoteChannel::err_mess())."<br>Function: Delete<br>Line: ";
@@ -403,7 +403,7 @@ class CAllVoteChannel
 		return $res;
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		$ID = intval($ID);
 		if ($ID <= 0)
@@ -412,7 +412,7 @@ class CAllVoteChannel
 		return $res;
 	}
 
-	public static function GetArrayGroupPermission($channel_id)
+	function GetArrayGroupPermission($channel_id)
 	{
 		global $DB;
 
@@ -492,7 +492,7 @@ class CVoteDiagramType
 {
 	var $arType = Array();
 
-	public function CVoteDiagramType($directCall=true)
+	function CVoteDiagramType($directCall=true)
 	{
 		if ($directCall)
 		{

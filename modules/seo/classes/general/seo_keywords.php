@@ -1,7 +1,7 @@
 <?
 class CSeoKeywords
 { 
-	public static function GetList($arOrder, $arFilter)
+	function GetList($arOrder, $arFilter)
 	{
 		global $DB;
 		
@@ -64,7 +64,7 @@ class CSeoKeywords
 		return $DB->Query($query);
 	}
 	
-	public static function CheckFields($ACTION, &$arFields)
+	function CheckFields($ACTION, &$arFields)
 	{
 		if ($ACTION == 'UPDATE' && isset($arFields['ID']))
 			$arFields['ID'] = intval($arFields['ID']);
@@ -101,7 +101,7 @@ class CSeoKeywords
 		return true;
 	}
 	
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $APPLICATION, $DB;
 		
@@ -125,7 +125,7 @@ class CSeoKeywords
 		return $ID;
 	}
 	
-	public static function Update($arFields)
+	function Update($arFields)
 	{
 		global $APPLICATION, $DB;
 		
@@ -158,7 +158,10 @@ class CSeoKeywords
 			}
 		}
 		
-		$cnt = $DB->Update('b_seo_keywords', $arUpdate, $strUpdateBy == 'ID' ? 'WHERE ID=\''.$ID.'\'' : 'WHERE URL=\''.$URL.'\'');
+		$condition = $strUpdateBy == 'ID' ? 'WHERE ID=\''.$ID.'\'' : 'WHERE URL=\''.$URL.'\'';
+		if($siteId = $DB->ForSql($arFields['SITE_ID']))
+			$condition .= ' AND SITE_ID=\''.$siteId.'\'';
+		$cnt = $DB->Update('b_seo_keywords', $arUpdate, $condition);
 		
 		if ($cnt <= 0 && $strUpdateBy == 'URL')
 		{
@@ -169,7 +172,7 @@ class CSeoKeywords
 		return $cnt;
 	}
 	
-	public static function GetByURL($URL, $SITE_ID = false, $bPart = false, $bCleanUrl = false)
+	function GetByURL($URL, $SITE_ID = false, $bPart = false, $bCleanUrl = false)
 	{
 		if ($bCleanUrl)
 			$URL = CSeoUtils::CleanURL($URL);

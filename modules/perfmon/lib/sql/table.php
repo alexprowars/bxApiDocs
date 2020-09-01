@@ -69,14 +69,15 @@ class Table extends BaseObject
 	 *
 	 * @param Tokenizer $tokenizer Tokens collection.
 	 * @param boolean $unique Uniqueness flag.
+	 * @param boolean $fulltext Fulltext flag.
 	 * @param string $indexName Optional name of the index.
 	 *
 	 * @return Table
 	 * @see Index::create
 	 */
-	public function createIndex(Tokenizer $tokenizer, $unique = false, $indexName = '')
+	public function createIndex(Tokenizer $tokenizer, $unique = false, $fulltext = false, $indexName = '')
 	{
-		$index = Index::create($tokenizer, $unique, $indexName);
+		$index = Index::create($tokenizer, $unique, $fulltext, $indexName);
 		$index->setParent($this);
 		$this->indexes->add($index);
 		return $this;
@@ -154,6 +155,15 @@ class Table extends BaseObject
 					elseif ($tokenizer->testUpperText('INDEX'))
 						$tokenizer->skipWhiteSpace();
 					$table->createIndex($tokenizer, true);
+				}
+				elseif ($tokenizer->testUpperText('FULLTEXT'))
+				{
+					$tokenizer->skipWhiteSpace();
+					if ($tokenizer->testUpperText('KEY'))
+						$tokenizer->skipWhiteSpace();
+					elseif ($tokenizer->testUpperText('INDEX'))
+						$tokenizer->skipWhiteSpace();
+					$table->createIndex($tokenizer, false, true);
 				}
 				elseif ($tokenizer->testUpperText('PRIMARY'))
 				{

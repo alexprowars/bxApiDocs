@@ -6,7 +6,7 @@ class CSitePath extends CAllSitePath
 {
 	/*************** ADD, UPDATE, DELETE *****************/
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -52,7 +52,7 @@ class CSitePath extends CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -99,7 +99,7 @@ class CSitePath extends CAllSitePath
 
 	//*************** SELECT *********************/
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 

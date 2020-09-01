@@ -73,6 +73,7 @@ class DateTimeType extends DateType
 		return [
 			'DEFAULT_VALUE' => $def,
 			'USE_SECOND' => ($userField['SETTINGS']['USE_SECOND'] === 'N' ? 'N' : 'Y'),
+			'USE_TIMEZONE' => ($userField['SETTINGS']['USE_TIMEZONE'] === 'Y' ? 'Y' : 'N'),
 		];
 	}
 
@@ -163,7 +164,21 @@ class DateTimeType extends DateType
 			}
 		}
 
-		return (string)$value;
+		$isFieldWithoutTimeZone = static::isFieldWithoutTimeZone($userField);
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Disable();
+		}
+
+		$value = (string)$value;
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Enable();
+		}
+
+		return $value;
 	}
 
 
@@ -175,9 +190,21 @@ class DateTimeType extends DateType
 	 */
 	public static function onBeforeSave(?array $userField, $value)
 	{
-		if($value !== '' && !($value instanceof Type\DateTime))
+		if($value != '' && !($value instanceof Type\DateTime))
 		{
+			$isFieldWithoutTimeZone = static::isFieldWithoutTimeZone($userField);
+
+			if ($isFieldWithoutTimeZone)
+			{
+				\CTimeZone::Disable();
+			}
+
 			$value = Type\DateTime::createFromUserTime($value);
+
+			if ($isFieldWithoutTimeZone)
+			{
+				\CTimeZone::Enable();
+			}
 		}
 
 		return $value;
@@ -207,7 +234,61 @@ class DateTimeType extends DateType
 	 */
 	public static function formatField(?array $userField, string $fieldName): string
 	{
+		$isFieldWithoutTimeZone = static::isFieldWithoutTimeZone($userField);
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Disable();
+		}
+
 		global $DB;
-		return $DB->dateToCharFunction($fieldName, static::FORMAT_TYPE_FULL);
+		$date = $DB->dateToCharFunction($fieldName, static::FORMAT_TYPE_FULL);
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Enable();
+		}
+
+		return $date;
+	}
+
+	/**
+	 * @param array|null $userField
+	 * @return bool
+	 */
+	protected static function isFieldWithoutTimeZone(?array $userField): bool
+	{
+		return (
+			isset($userField['SETTINGS']['USE_TIMEZONE'])
+			&&
+			$userField['SETTINGS']['USE_TIMEZONE']==='N'
+			&&
+			\CTimeZone::Enabled()
+		);
+	}
+
+	/**
+	 * @param array $userField
+	 * @param Type\DateTime $dateTime
+	 * @return string
+	 */
+	public static function charToDate(array $userField, Type\DateTime $dateTime): string
+	{
+		$isFieldWithoutTimeZone = static::isFieldWithoutTimeZone($userField);
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Disable();
+		}
+
+		global $DB;
+		$value = $DB->CharToDateFunction($dateTime);
+
+		if ($isFieldWithoutTimeZone)
+		{
+			\CTimeZone::Enable();
+		}
+
+		return (string) $value;
 	}
 }

@@ -75,6 +75,7 @@ class User
 			]),
 			'SYSTEM' => 'Y',
 			'INCREMENT_COUNTER' => 'N',
+			'PUSH' => 'N'
 		]);
 	}
 
@@ -106,6 +107,7 @@ class User
 			]),
 			'SYSTEM' => 'Y',
 			'INCREMENT_COUNTER' => 'N',
+			'PUSH' => 'N'
 		]);
 	}
 
@@ -233,6 +235,9 @@ class User
 		]);
 		while($row = $orm->fetch())
 		{
+			if ($row['ID'] == $userId)
+				continue;
+
 			\CIMMessage::Add([
 				"TO_USER_ID" => $row['ID'],
 				"FROM_USER_ID" => $userId,

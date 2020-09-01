@@ -3,45 +3,27 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/socialnetwork/classes/ge
 
 class CSocNetSubscription extends CAllSocNetSubscription
 {
-
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
-		$arFields1 = array();
-		foreach ($arFields as $key => $value)
-		{
-			if (substr($key, 0, 1) == "=")
-			{
-				$arFields1[substr($key, 1)] = $value;
-				unset($arFields[$key]);
-			}
-		}
+		$arFields1 = \Bitrix\Socialnetwork\Util::getEqualityFields($arFields);
 
 		if (!CSocNetSubscription::CheckFields("ADD", $arFields))
 			return false;
 
 		$arInsert = $DB->PrepareInsert("b_sonet_subscription", $arFields);
-
-		foreach ($arFields1 as $key => $value)
-		{
-			if (strlen($arInsert[0]) > 0)
-				$arInsert[0] .= ", ";
-			$arInsert[0] .= $key;
-			if (strlen($arInsert[1]) > 0)
-				$arInsert[1] .= ", ";
-			$arInsert[1] .= $value;
-		}
+		\Bitrix\Socialnetwork\Util::processEqualityFieldsToInsert($arFields1, $arInsert);
 
 		$ID = false;
-		if (strlen($arInsert[0]) > 0)
+		if ($arInsert[0] <> '')
 		{
 			$strSql =
 				"INSERT INTO b_sonet_subscription(".$arInsert[0].") ".
 				"VALUES(".$arInsert[1].")";
 			$DB->Query($strSql, False, "File: ".__FILE__."<br>Line: ".__LINE__);
 
-			$ID = IntVal($DB->LastID());
+			$ID = intval($DB->LastID());
 		}
 
 		if(defined("BX_COMP_MANAGED_CACHE"))
@@ -50,7 +32,7 @@ class CSocNetSubscription extends CAllSocNetSubscription
 		return $ID;
 	}
 
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 
@@ -74,9 +56,9 @@ class CSocNetSubscription extends CAllSocNetSubscription
 				"SELECT ".$arSqls["SELECT"]." ".
 				"FROM b_sonet_subscription SS ".
 				"	".$arSqls["FROM"]." ";
-			if (strlen($arSqls["WHERE"]) > 0)
+			if ($arSqls["WHERE"] <> '')
 				$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-			if (strlen($arSqls["GROUPBY"]) > 0)
+			if ($arSqls["GROUPBY"] <> '')
 				$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
 
 			//echo "!1!=".htmlspecialcharsbx($strSql)."<br>";
@@ -92,36 +74,36 @@ class CSocNetSubscription extends CAllSocNetSubscription
 			"SELECT ".$arSqls["SELECT"]." ".
 			"FROM b_sonet_subscription SS ".
 			"	".$arSqls["FROM"]." ";
-		if (strlen($arSqls["WHERE"]) > 0)
+		if ($arSqls["WHERE"] <> '')
 			$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-		if (strlen($arSqls["GROUPBY"]) > 0)
+		if ($arSqls["GROUPBY"] <> '')
 			$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
-		if (strlen($arSqls["ORDERBY"]) > 0)
+		if ($arSqls["ORDERBY"] <> '')
 			$strSql .= "ORDER BY ".$arSqls["ORDERBY"]." ";
 
-		if (is_array($arNavStartParams) && IntVal($arNavStartParams["nTopCount"]) <= 0)
+		if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) <= 0)
 		{
 			$strSql_tmp =
 				"SELECT COUNT('x') as CNT ".
 				"FROM b_sonet_subscription SS ".
 				"	".$arSqls["FROM"]." ";
-			if (strlen($arSqls["WHERE"]) > 0)
+			if ($arSqls["WHERE"] <> '')
 				$strSql_tmp .= "WHERE ".$arSqls["WHERE"]." ";
-			if (strlen($arSqls["GROUPBY"]) > 0)
+			if ($arSqls["GROUPBY"] <> '')
 				$strSql_tmp .= "GROUP BY ".$arSqls["GROUPBY"]." ";
 
 			//echo "!2.1!=".htmlspecialcharsbx($strSql_tmp)."<br>";
 
 			$dbRes = $DB->Query($strSql_tmp, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			$cnt = 0;
-			if (strlen($arSqls["GROUPBY"]) <= 0)
+			if ($arSqls["GROUPBY"] == '')
 			{
 				if ($arRes = $dbRes->Fetch())
 					$cnt = $arRes["CNT"];
 			}
 			else
 			{
-				// Ð¢ÐžÐ›Ð¬ÐšÐž Ð”Ð›Ð¯ MYSQL!!! Ð”Ð›Ð¯ ORACLE Ð”Ð Ð£Ð“ÐžÐ™ ÐšÐžÐ”
+				// ÒÎËÜÊÎ ÄËß MYSQL!!! ÄËß ORACLE ÄÐÓÃÎÉ ÊÎÄ
 				$cnt = $dbRes->SelectedRowsCount();
 			}
 
@@ -133,7 +115,7 @@ class CSocNetSubscription extends CAllSocNetSubscription
 		}
 		else
 		{
-			if (is_array($arNavStartParams) && IntVal($arNavStartParams["nTopCount"]) > 0)
+			if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) > 0)
 				$strSql .= "LIMIT ".intval($arNavStartParams["nTopCount"]);
 
 			//echo "!3!=".htmlspecialcharsbx($strSql)."<br>";

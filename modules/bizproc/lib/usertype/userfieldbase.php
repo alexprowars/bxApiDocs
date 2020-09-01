@@ -35,8 +35,8 @@ class UserFieldBase extends BaseType\Base
 		$arUserFieldType = $USER_FIELD_MANAGER->GetUserType($sType);
 		$userField = [
 			'ENTITY_ID' => sprintf('%s_%s',
-				strtoupper($fieldType->getDocumentType()[0]),
-				strtoupper($fieldType->getDocumentType()[2])
+				mb_strtoupper($fieldType->getDocumentType()[0]),
+				mb_strtoupper($fieldType->getDocumentType()[2])
 			),
 			'FIELD_NAME' => 'UF_XXXXXXX',
 			'USER_TYPE_ID' => $sType,
@@ -142,8 +142,8 @@ class UserFieldBase extends BaseType\Base
 
 		$arUserField = [
 			'ENTITY_ID' => sprintf('%s_%s',
-				strtoupper($fieldType->getDocumentType()[0]),
-				strtoupper($fieldType->getDocumentType()[2])
+				mb_strtoupper($fieldType->getDocumentType()[0]),
+				mb_strtoupper($fieldType->getDocumentType()[2])
 			),
 			'FIELD_NAME' => static::generateControlName($field),
 			'USER_TYPE_ID' => $sType,
@@ -234,7 +234,7 @@ class UserFieldBase extends BaseType\Base
 
 	protected static function getUserType(FieldType $fieldType)
 	{
-		return substr($fieldType->getType(), 3);
+		return mb_substr($fieldType->getType(), 3);
 	}
 
 	private static function formatCrmValuePrintable(FieldType $fieldType, $value)

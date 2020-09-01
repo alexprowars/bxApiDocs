@@ -78,7 +78,7 @@ class ExportFileList
 			if ($this->totalItems > 0)
 			{
 				$this->exportFileName = $this->generateExportFileName($path, $this->languages);
-				$this->createExportTempFile();
+				$this->createExportTempFile($this->exportFileName);
 			}
 
 			$this->saveProgressParameters();

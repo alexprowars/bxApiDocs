@@ -73,14 +73,14 @@ class Mobile
 		}
 		else
 		{
-			$deviceDetectSource = strtolower(Context::getCurrent()->getServer()->get("HTTP_USER_AGENT"));
+			$deviceDetectSource = mb_strtolower(Context::getCurrent()->getServer()->get("HTTP_USER_AGENT"));
 		}
 
-		if (strrpos(ToUpper($deviceDetectSource), "IPHONE") > 0 || strrpos(ToUpper($deviceDetectSource), "IPAD") > 0)
+		if (mb_strrpos(ToUpper($deviceDetectSource), "IPHONE") > 0 || mb_strrpos(ToUpper($deviceDetectSource), "IPAD") > 0)
 		{
 			self::$platform = "ios";
 		}
-		elseif (strrpos(ToUpper($deviceDetectSource), "ANDROID") > 0 || strrpos(ToUpper($deviceDetectSource), "ANDROID") === 0)
+		elseif (mb_strrpos(ToUpper($deviceDetectSource), "ANDROID") > 0 || mb_strrpos(ToUpper($deviceDetectSource), "ANDROID") === 0)
 		{
 			self::$platform = "android";
 		}
@@ -265,7 +265,7 @@ JSCODE;
 			$APPLICATION->AddHeadString($androidJS, false, true);
 		}
 		$userAgent = \Bitrix\Main\Context::getCurrent()->getServer()->get("HTTP_USER_AGENT");
-		if(strpos($userAgent, "WKWebView/BitrixMobile") === false)
+		if(mb_strpos($userAgent, "WKWebView/BitrixMobile") === false)
 		{
 			if (self::getInstance()->getBXScriptSupported())
 			{

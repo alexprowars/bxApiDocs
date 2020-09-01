@@ -49,6 +49,8 @@ class Agreement
 	/** @var DataProvider|null $dataProvider Data provider. */
 	protected $dataProvider;
 
+	private $isAgreementTextHtml;
+
 	/**
 	 * Get active agreement list.
 	 *
@@ -95,6 +97,8 @@ class Agreement
 		$this->intl = new Intl();
 		$this->load($id);
 		$this->setReplace($replace);
+
+		$this->isAgreementTextHtml = ($this->data['IS_AGREEMENT_TEXT_HTML'] == 'Y');
 	}
 
 	/**
@@ -188,6 +192,8 @@ class Agreement
 	{
 		unset($data['ID']);
 		$this->data = $data;
+
+		$this->isAgreementTextHtml = ($this->data['IS_AGREEMENT_TEXT_HTML'] == 'Y');
 	}
 
 	/**
@@ -217,6 +223,11 @@ class Agreement
 		if(!$this->check())
 		{
 			return;
+		}
+
+		if ($this->isAgreementTextHtml)
+		{
+			(new \CBXSanitizer)->sanitizeHtml($data['AGREEMENT_TEXT']);
 		}
 
 		if($this->id)
@@ -281,6 +292,11 @@ class Agreement
 		return ($this->data['ACTIVE'] == self::ACTIVE);
 	}
 
+	public function isAgreementTextHtml(): bool
+	{
+		return $this->isAgreementTextHtml;
+	}
+
 	/**
 	 * Return true if is custom type.
 	 *
@@ -322,6 +338,26 @@ class Agreement
 	 * @return string
 	 */
 	public function getText($cutTitle = false)
+	{
+		$text = $this->getContent($cutTitle);
+
+		return ($this->isAgreementTextHtml ? strip_tags($text) : $text);
+	}
+
+	/**
+	 * Get html.
+	 * @return string
+	 */
+	public function getHtml()
+	{
+		$text = $this->getContent();
+
+		$text = ($this->isAgreementTextHtml ? $text : nl2br($text));
+
+		return (new \CBXSanitizer)->sanitizeHtml($text);
+	}
+
+	private function getContent($cutTitle = false)
 	{
 		if ($this->isCustomType())
 		{

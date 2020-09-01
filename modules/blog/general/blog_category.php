@@ -5,7 +5,7 @@ $GLOBALS["BLOG_CATEGORY"] = Array();
 class CAllBlogCategory
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		if ((is_set($arFields, "NAME") || $ACTION=="ADD") && strlen($arFields["NAME"]) <= 0)
 		{

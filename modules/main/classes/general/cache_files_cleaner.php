@@ -9,7 +9,7 @@ class CFileCacheCleaner
 
 	private $_obFileTree;
 
-	public function __construct($CacheType)
+	function __construct($CacheType)
 	{
 		global $DB;
 		$this->_CacheType = $CacheType;
@@ -50,7 +50,7 @@ class CFileCacheCleaner
 		}
 	}
 
-	public function InitPath($PathToCheck)
+	function InitPath($PathToCheck)
 	{
 		if(strlen($PathToCheck) > 0)
 		{
@@ -88,7 +88,7 @@ class CFileCacheCleaner
 		}
 	}
 
-	public function Start()
+	function Start()
 	{
 		if($this->_CurrentBase)
 		{
@@ -97,7 +97,7 @@ class CFileCacheCleaner
 		}
 	}
 
-	public function GetNextFile()
+	function GetNextFile()
 	{
 		if(is_object($this->_obFileTree))
 		{
@@ -135,7 +135,7 @@ class CFileCacheCleaner
 		}
 	}
 
-	public static function GetFileExpiration($FileName)
+	function GetFileExpiration($FileName)
 	{
 		if(preg_match('#^'.$_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT.'/html_pages/.*\\.html$#', $FileName))
 		{
@@ -177,12 +177,12 @@ class _CFileTree
 	var $_path = '';
 	var $_dir = false;
 
-	public function __construct($in_path="/")
+	function __construct($in_path="/")
 	{
 		$this->_in_path = preg_replace("#[\\\\\\/]+#", "/", $in_path);
 	}
 
-	public function Start($path="/")
+	function Start($path="/")
 	{
 		$this->_path = preg_replace("#[\\\\\\/]+#", "/", $this->_in_path.trim($path, "/"));
 
@@ -202,7 +202,7 @@ class _CFileTree
 		}
 	}
 
-	public static function FileExists($file)
+	function FileExists($file)
 	{
 		if(function_exists('accelerator_reset'))
 		{
@@ -226,7 +226,7 @@ class _CFileTree
 		}
 	}
 
-	public function GetNextFile()
+	function GetNextFile()
 	{
 		if(!is_array($this->_dir))
 		{
@@ -267,7 +267,7 @@ class _CFileTree
 		return $path."/".$last;
 	}
 
-	public function GoUp()
+	function GoUp()
 	{
 		$last_dir = self::ExtractFileFromPath($this->_path);
 		//We are not going to go up any more
@@ -293,7 +293,7 @@ class _CFileTree
 			return $this->GoUp(); // try to go upper
 	}
 
-	public static function ReadDir($dir)
+	function ReadDir($dir)
 	{
 		$dir = rtrim($dir, "/");
 		if(is_dir($dir))

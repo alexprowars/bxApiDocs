@@ -122,8 +122,6 @@ class Landing
 			}
 		}
 
-		\Bitrix\Landing\Transfer\AppConfiguration::ttt($files);
-
 		return [
 			'FILE_NAME' => str_replace(
 				['#site_id#', '#landing_id#'],

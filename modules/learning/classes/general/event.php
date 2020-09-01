@@ -18,7 +18,7 @@ class CLearningEvent
 	}
 
 
-	static public function GetFilter()
+	public function GetFilter()
 	{
 		$arFilter = array();
 
@@ -26,7 +26,7 @@ class CLearningEvent
 	}
 
 
-	static public function GetAuditTypes()
+	public function GetAuditTypes()
 	{
 		return array(
 			'LEARNING_REMOVE_ITEM' => '[LEARNING_REMOVE_ITEM] ' . GetMessage('LEARNING_LOG_REMOVE_ITEM')
@@ -34,7 +34,7 @@ class CLearningEvent
 	}
 
 
-	static public function GetEventInfo($row, $arParams)
+	public function GetEventInfo($row, $arParams)
 	{
 		$EventPrint = '???';
 		switch($row['AUDIT_TYPE_ID'])
@@ -52,7 +52,7 @@ class CLearningEvent
 	}
 
 
-	static public function GetFilterSQL($var)
+	public function GetFilterSQL($var)
 	{
 		$ar = array();
 

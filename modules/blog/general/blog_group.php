@@ -5,7 +5,7 @@ $GLOBALS["BLOG_GROUP"] = Array();
 class CAllBlogGroup
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		if ((is_set($arFields, "NAME") || $ACTION=="ADD") && strlen($arFields["NAME"]) <= 0)
 		{
@@ -40,7 +40,7 @@ class CAllBlogGroup
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 

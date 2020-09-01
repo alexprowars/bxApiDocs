@@ -80,7 +80,7 @@ class OrderStatus
 				</tr>';
 		}
 
-		if(strlen($data['SOURCE_NAME']) > 0)
+		if($data['SOURCE_NAME'] <> '')
 		{
 			$result .=	'<tr>'.
 							'<td class="adm-detail-content-cell-l">'.Loc::getMessage("SALE_ORDER_STATUS_SOURCE").':</td>'.
@@ -184,7 +184,7 @@ class OrderStatus
 		{
 			$reasonHtml = '
 				<div class="adm-s-select-popup-modal-title">'.Loc::getMessage("SALE_ORDER_STATUS_COMMENT").'</div>
-				<textarea style="width:400px;min-height:100px;" name="FORM_REASON_CANCELED" id="FORM_REASON_CANCELED"'.($isCanceled ? ' disabled' : '' ).'>'.(strlen($reasonCanceled) > 0 ? htmlspecialcharsbx($reasonCanceled) : '').'</textarea>
+				<textarea style="width:400px;min-height:100px;" name="FORM_REASON_CANCELED" id="FORM_REASON_CANCELED"'.($isCanceled ? ' disabled' : '' ).'>'.($reasonCanceled <> '' ? htmlspecialcharsbx($reasonCanceled) : '').'</textarea>
 			';
 		}
 		else
@@ -253,19 +253,19 @@ class OrderStatus
 		{
 			$creator = static::getUserInfo($order->getField("CREATED_BY"));
 
-			if(strlen($order->getField("CREATED_BY")) > 0)
+			if($order->getField("CREATED_BY") <> '')
 				$creatorName = OrderEdit::getUserName($order->getField("CREATED_BY"), $order->getSiteId());
 			else
 				$creatorName = "";
 
-			if(strlen($order->getField("EMP_CANCELED_ID")) > 0)
+			if($order->getField("EMP_CANCELED_ID") <> '')
 				$cancelerName = OrderEdit::getUserName($order->getField("EMP_CANCELED_ID"), $order->getSiteId());
 			else
 				$cancelerName = "";
 
 			$sourceName = "";
 
-			if(strlen($order->getField('XML_ID')) > 0)
+			if($order->getField('XML_ID') <> '')
 			{
 				$dbRes = OrderTable::getList(array(
 					'filter' => array(

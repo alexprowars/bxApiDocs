@@ -29,12 +29,20 @@ class CSocServYandexAuth extends CSocServAuth
 		return $this->entityOAuth;
 	}
 
-	static public function GetSettings()
+	public function GetSettings()
 	{
 		return array(
 			array("yandex_appid", GetMessage("socserv_yandex_client_id"), "", array("text", 40)),
 			array("yandex_appsecret", GetMessage("socserv_yandex_client_secret"), "", array("text", 40)),
-			array("note"=>GetMessage("socserv_yandex_note", array('#URL#'=>CYandexOAuthInterface::GetRedirectURI()))),
+			array(
+				'note' => getMessage(
+					'socserv_yandex_note_2',
+					array(
+						'#URL#' => \CYandexOAuthInterface::getRedirectUri(),
+						'#MAIL_URL#' => \CHttp::urn2uri('/bitrix/tools/mail_oauth.php'),
+					)
+				),
+			),
 		);
 	}
 
@@ -60,7 +68,7 @@ class CSocServYandexAuth extends CSocServAuth
 		return $this->entityOAuth->GetAuthUrl($redirect_uri, $state);
 	}
 
-	static public function GetFormHtml($arParams)
+	public function GetFormHtml($arParams)
 	{
 		$url = static::getUrl('opener', null, $arParams);
 
@@ -76,7 +84,7 @@ class CSocServYandexAuth extends CSocServAuth
 		}
 	}
 
-	static public function GetOnClickJs($arParams)
+	public function GetOnClickJs($arParams)
 	{
 		$url = static::getUrl('opener', null, $arParams);
 		return "BX.util.popup('".CUtil::JSEscape($url)."', 680, 600)";
@@ -88,8 +96,11 @@ class CSocServYandexAuth extends CSocServAuth
 		$userId = intval($this->userId);
 		if($userId > 0)
 		{
-			$dbSocservUser = CSocServAuthDB::GetList(array(), array('USER_ID' => $userId, "EXTERNAL_AUTH_ID" => static::ID), false, false, array("OATOKEN", "REFRESH_TOKEN", "OATOKEN_EXPIRES"));
-			if($arOauth = $dbSocservUser->Fetch())
+			$dbSocservUser = \Bitrix\Socialservices\UserTable::getList([
+				'filter' => ['=USER_ID' => $userId, "=EXTERNAL_AUTH_ID" => static::ID],
+				'select' => ["OATOKEN", "REFRESH_TOKEN", "OATOKEN_EXPIRES"]
+			]);
+			if($arOauth = $dbSocservUser->fetch())
 			{
 				$accessToken = $arOauth["OATOKEN"];
 			}
@@ -285,9 +296,11 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 
 	const USERINFO_URL = "https://login.yandex.ru/info";
 
+	const MAX_DEVICE_ID_LENGTH = 50;
+
 	protected $arResult = array();
 
-	static public function __construct($appID = false, $appSecret = false, $code = false)
+	public function __construct($appID = false, $appSecret = false, $code = false)
 	{
 		if($appID === false)
 		{
@@ -302,7 +315,7 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 		parent::__construct($appID, $appSecret, $code);
 	}
 
-	static public function GetRedirectURI()
+	public function GetRedirectURI()
 	{
 		return \CHTTP::URN2URI("/bitrix/tools/oauth/yandex.php");
 	}
@@ -319,13 +332,41 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 			: '';
 	}
 
+	/**
+	 * @param string $redirect_uri
+	 * @param string $state
+	 * @return string
+	 */
 	public function GetAuthUrl($redirect_uri = '', $state = '')
 	{
+		$deviceId = $this->getDeviceId($state);
+
 		return self::AUTH_URL
 			."?response_type=code"
 			."&client_id=".urlencode($this->appID)
+			.(!empty($deviceId) ? "&device_id=".$deviceId : '')
 			."&display=popup"
+			."&redirect_uri=".urlencode($redirect_uri)
 			.(!empty($state) ? "&state=".urlencode($state) : '');
+	}
+
+	/**
+	 * @param string $state
+	 * @return string
+	 */
+	public function getDeviceId($state)
+	{
+		$deviceId = '';
+		if (!empty($state) && isset($_SESSION[$state]))
+		{
+			list(, $deviceId) = $_SESSION[$state];
+			if ($deviceId)
+			{
+				$deviceId = substr($deviceId, 0, self::MAX_DEVICE_ID_LENGTH);
+			}
+		}
+
+		return $deviceId;
 	}
 
 	public function GetAccessToken()
@@ -350,7 +391,7 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 			return false;
 		}
 
-		$h = new \Bitrix\Main\Web\HttpClient(array("socketTimeout" => $this->httpTimeout	));
+		$h = new \Bitrix\Main\Web\HttpClient(array("socketTimeout" => $this->httpTimeout));
 		$h->setAuthorization($this->appID, $this->appSecret);
 
 		$result = $h->post(self::TOKEN_URL, array(
@@ -388,7 +429,14 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 		$h = new \Bitrix\Main\Web\HttpClient();
 		$result = $h->get(self::USERINFO_URL.'?format=json&oauth_token='.urlencode($this->access_token));
 
-		$result = \Bitrix\Main\Web\Json::decode($result);
+		try
+		{
+			$result = \Bitrix\Main\Web\Json::decode($result);
+		}
+		catch(\Bitrix\Main\SystemException $e)
+		{
+			$result = false;
+		}
 
 		if(is_array($result))
 		{
@@ -396,6 +444,30 @@ class CYandexOAuthInterface extends CSocServOAuthTransport
 			$result["refresh_token"] = $this->refresh_token;
 			$result["expires_in"] = $this->accessTokenExpires;
 		}
+		return $result;
+	}
+
+	public function GetAppInfo()
+	{
+		if ($this->access_token === false)
+			return false;
+
+		$h = new \Bitrix\Main\Web\HttpClient();
+		$h->setTimeout($this->httpTimeout);
+
+		$result = $h->get(self::USERINFO_URL.'?format=json&oauth_token='.urlencode($this->access_token));
+
+		try
+		{
+			$result = \Bitrix\Main\Web\Json::decode($result);
+			$result = array_key_exists("client_id", $result)
+							? array("id" => $result["client_id"])
+							: array();
+		} catch (\Bitrix\Main\ArgumentException $e)
+		{
+			$result = array();
+		}
+
 		return $result;
 	}
 }

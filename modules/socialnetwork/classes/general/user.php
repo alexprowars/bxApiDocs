@@ -1,17 +1,6 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CSocNetUser</b> - класс, содержащий вспомогательные методы для работы с пользователями социальной сети.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/index.php
- * @author Bitrix
- */
 class CAllSocNetUser
 {
 	public static function OnUserDelete($ID)
@@ -19,9 +8,11 @@ class CAllSocNetUser
 		global $APPLICATION;
 
 		if (!CSocNetGroup::__ValidateID($ID))
+		{
 			return false;
+		}
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		$bSuccess = True;
 
 		if (!CSocNetGroup::DeleteNoDemand($ID))
@@ -45,6 +36,8 @@ class CAllSocNetUser
 			CSocNetLogComments::DeleteNoDemand($ID);
 			CSocNetFeatures::DeleteNoDemand($ID);
 			CSocNetSubscription::DeleteEx($ID);
+			\Bitrix\Socialnetwork\Item\UserContentView::deleteNoDemand($ID);
+			\Bitrix\Socialnetwork\LogRightTable::deleteByGroupCode('U'.$ID);
 
 			CUserOptions::DeleteOption("socialnetwork", "~menu_".SONET_ENTITY_USER."_".$ID, false, 0);
 		}
@@ -56,7 +49,9 @@ class CAllSocNetUser
 	{
 		$rsUser = CUser::GetByID($arFields["ID"]);
 		if ($arUser = $rsUser->Fetch())
-			// define("GLOBAL_ACTIVE_VALUE", $arUser["ACTIVE"]);
+		{
+			define("GLOBAL_ACTIVE_VALUE", $arUser["ACTIVE"]);
+		}
 	}
 
 	public static function OnAfterUserAdd(&$arFields)
@@ -67,23 +62,41 @@ class CAllSocNetUser
 	public static function OnAfterUserLogout(&$arParams)
 	{
 		if (array_key_exists("SONET_ADMIN", $_SESSION))
+		{
 			unset($_SESSION["SONET_ADMIN"]);
+		}
 	}
 
 	public static function OnAfterUserUpdate(&$arFields)
 	{
-		if (array_key_exists("ACTIVE", $arFields) && defined("GLOBAL_ACTIVE_VALUE") && GLOBAL_ACTIVE_VALUE != $arFields["ACTIVE"]):
-
+		if (
+			array_key_exists("ACTIVE", $arFields)
+			&& defined("GLOBAL_ACTIVE_VALUE")
+			&& GLOBAL_ACTIVE_VALUE != $arFields["ACTIVE"]
+		)
+		{
 			$arGroups = array();
-			$dbResult = CSocNetUserToGroup::GetList(array(), array("USER_ID" => $arFields["ID"]), false, false, array("GROUP_ID"));
+			$dbResult = CSocNetUserToGroup::GetList(
+				array(),
+				array(
+					"USER_ID" => $arFields["ID"]
+				),
+				false,
+				false,
+				array("GROUP_ID")
+			);
 			while ($arResult = $dbResult->Fetch())
+			{
 				$arGroups[] = $arResult["GROUP_ID"];
+			}
 
 			$cnt = count($arGroups);
 			for ($i = 0; $i < $cnt; $i++)
+			{
 				CSocNetGroup::SetStat($arGroups[$i]);
+			}
 
-		endif;
+		}
 	}
 	
 	public static function OnBeforeProlog()
@@ -93,7 +106,7 @@ class CAllSocNetUser
 		if (!$USER->IsAuthorized())
 			return;
 
-		CUser::SetLastActivityDate($USER->GetID());
+		CUser::SetLastActivityDate($USER->GetID(), true);
 	}
 
 	public static function OnUserInitialize($user_id, $arFields = array())
@@ -105,7 +118,7 @@ class CAllSocNetUser
 			return false;
 		}
 
-		$bIM = (CModule::IncludeModule("im"));
+		$bIM = CModule::IncludeModule("im");
 
 		$dbRelation = CSocNetUserToGroup::GetList(
 			array(), 
@@ -136,39 +149,15 @@ class CAllSocNetUser
 		}
 	}
 
-	
-	/**
-	* <p>Метод проверяет, находится ли сейчас пользователь на сайте. Пользователь находится на сайте, если он совершал на сайте какие-либо действия за последние 2 минуты. Метод статический.</p>
-	*
-	*
-	* @param int $userID  Код пользователя.
-	*
-	* @return bool <p>True, если пользователь сейчас на сайте. Иначе - false.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/IsOnLine.php
-	* @author Bitrix
-	*/
 	public static function IsOnLine($userID)
 	{
-		$userID = IntVal($userID);
+		$userID = intval($userID);
 		if ($userID <= 0)
 			return false;
-
-		return CUser::IsOnLine($userID, 120);
+		
+		return CUser::IsOnLine($userID); // TODO change to use CUser::GetOnlineStatus see more in docs.bx
 	}
 
-	
-	/**
-	* <p>Проверяет, разрешен ли функционал друзей. Метод статический.</p>
-	*
-	*
-	* @return bool <p>True, если функционал друзей включен на сайте. Иначе - false.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/isfriendsallowed.php
-	* @author Bitrix
-	*/
 	public static function IsFriendsAllowed()
 	{
 		return (COption::GetOptionString("socialnetwork", "allow_frields", "Y") == "Y");
@@ -179,38 +168,6 @@ class CAllSocNetUser
 		return (COption::GetOptionString("socialnetwork", "allow_frields_friends", "Y") == "Y");
 	}
 
-	
-	/**
-	* <p>Метод проверяет, есть ли у текущего пользователя административные права на доступ к модулю социальной сети. Метод статический.</p>
-	*
-	*
-	* @param mixed $mixed);  Идентификатор сайта, необязательный параметр. По умолчанию
-	* подставляется текущий сайт.
-	*
-	* @param string $site_id = SITE_ID Параметр, указывающий использовать текущую сессию авторизации
-	* пользователя. Необязательный параметр. По умолчанию равен true.
-	*
-	* @param bool $bUseSession = true 
-	*
-	* @return bool <p>Если пользователь является администратором или имеет права
-	* записи на модуль социальной сети, то метод возвращает true, иначе -
-	* false.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CSocNetUser::IsCurrentUserModuleAdmin())
-	* {
-	*    // Текущему пользователю можно все
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/iscurrentusermoduleadmin.php
-	* @author Bitrix
-	*/
 	public static function IsCurrentUserModuleAdmin($site_id = SITE_ID, $bUseSession = true)
 	{
 		global $APPLICATION, $USER;
@@ -221,7 +178,7 @@ class CAllSocNetUser
 		if ($bUseSession && !isset($_SESSION["SONET_ADMIN"]))
 			return false;
 
-		if ($USER->IsAdmin())
+		if ($USER->isAdmin())
 			return true;
 
 		if (is_array($site_id))
@@ -267,24 +224,6 @@ class CAllSocNetUser
 		BXClearCache(true, "/sonet/user_admin/");
 	}
 
-	
-	/**
-	* <p>Метод подготавливает имя пользователя для вывода. Метод статический.</p>
-	*
-	*
-	* @param string $name  Имя пользователя.
-	*
-	* @param string $lastName  Фамилия пользователя.
-	*
-	* @param string $login  Логин пользователя.
-	*
-	* @return string <p>Возвращается строка, содержащая отформатированное имя
-	* пользователя.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/formatname.php
-	* @author Bitrix
-	*/
 	public static function FormatName($name, $lastName, $login)
 	{
 		$name = Trim($name);
@@ -292,39 +231,15 @@ class CAllSocNetUser
 		$login = Trim($login);
 
 		$formatName = $name;
-		if (StrLen($formatName) > 0 && StrLen($lastName) > 0)
+		if ($formatName <> '' && $lastName <> '')
 			$formatName .= " ";
 		$formatName .= $lastName;
-		if (StrLen($formatName) <= 0)
+		if ($formatName == '')
 			$formatName = $login;
 
 		return $formatName;
 	}
 
-	
-	/**
-	* <p>Метод подготавливает имя пользователя для вывода в расширенном виде. Метод статический.</p>
-	*
-	*
-	* @param string $name  Имя пользователя.
-	*
-	* @param string $secondName  Отчество пользователя.
-	*
-	* @param string $lastName  Фамилия пользователя.
-	*
-	* @param string $login  Логин пользователя
-	*
-	* @param string $email  E-Mail пользователя.
-	*
-	* @param string $stringid  Код пользователя.
-	*
-	* @return string <p>Возвращается строка, содержащая отформатированное имя
-	* пользователя.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/formatnameex.php
-	* @author Bitrix
-	*/
 	public static function FormatNameEx($name, $secondName, $lastName, $login, $email, $id)
 	{
 		$name = Trim($name);
@@ -332,60 +247,40 @@ class CAllSocNetUser
 		$secondName = Trim($secondName);
 		$login = Trim($login);
 		$email = Trim($email);
-		$id = IntVal($id);
+		$id = intval($id);
 
 		$formatName = $name;
-		if (StrLen($formatName) > 0 && StrLen($secondName) > 0)
+		if ($formatName <> '' && $secondName <> '')
 			$formatName .= " ";
 		$formatName .= $secondName;
-		if (StrLen($formatName) > 0 && StrLen($lastName) > 0)
+		if ($formatName <> '' && $lastName <> '')
 			$formatName .= " ";
 		$formatName .= $lastName;
-		if (StrLen($formatName) <= 0)
+		if ($formatName == '')
 			$formatName = $login;
 
-		if (StrLen($email) > 0)
+		if ($email <> '')
 			$formatName .= " &lt;".$email."&gt;";
 		$formatName .= " [".$id."]";
 
 		return $formatName;
 	}
 
-	
-	/**
-	* <p>Метод ищет пользователя по его имени или коду. Метод статический.</p>
-	*
-	*
-	* @param string $user  Имя или код пользователя. Если параметр является числом или
-	* строкой, в которой содержится число в квадратных скобках, то это
-	* число рассматривается как код пользователя. В противном случае
-	* параметр рассматривается как строка, содержащая ФИО
-	* пользователя.
-	*
-	* @param bool $bIntranet = false Флаг, определяющий, осуществляется ли работа в рамках решения
-	* интранет. Необязательный параметр. По умолчанию равен false.
-	*
-	* @return array <p>Массив пользователей, удовлетворяющих условию поиска.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetuser/searchuser.php
-	* @author Bitrix
-	*/
 	public static function SearchUser($user, $bIntranet = false)
 	{
 		$user = Trim($user);
-		if (StrLen($user) <= 0)
+		if ($user == '')
 			return false;
 
 		$userID = 0;
-		if ($user."|" == IntVal($user)."|")
-			$userID = IntVal($user);
+		if ($user."|" == intval($user)."|")
+			$userID = intval($user);
 
 		if ($userID <= 0)
 		{
 			$arMatches = array();
 			if (preg_match("#\[(\d+)\]#i", $user, $arMatches))
-				$userID = IntVal($arMatches[1]);
+				$userID = intval($arMatches[1]);
 		}
 
 
@@ -422,13 +317,13 @@ class CAllSocNetUser
 			foreach ($arUserTmp as $s)
 			{
 				$s = Trim($s);
-				if (StrLen($s) > 0)
+				if ($s <> '')
 					$arUser[] = $s;
 			}
 
 			if (
 				count($arUser) <= 0
-				&& strlen($email) > 0
+				&& $email <> ''
 			)
 			{
 				$arFilter = array(
@@ -466,7 +361,7 @@ class CAllSocNetUser
 
 	public static function GetByID($ID)
 	{
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 
 		$dbUser = CUser::GetByID($ID);
 		if ($arUser = $dbUser->GetNext())
@@ -490,6 +385,7 @@ class CAllSocNetUser
 			"EMAIL" => GetMessage("SONET_UP1_EMAIL"),
 			"TIME_ZONE" => GetMessage("SONET_UP1_TIME_ZONE"),
 			"LAST_LOGIN" => GetMessage("SONET_UP1_LAST_LOGIN"),
+			"LAST_ACTIVITY_DATE" => GetMessage("SONET_UP1_LAST_ACTIVITY_DATE"),
 			"DATE_REGISTER" => GetMessage("SONET_UP1_DATE_REGISTER"),
 			"LID" => GetMessage("SONET_UP1_LID"),
 			"PASSWORD" => GetMessage("SONET_UP1_PASSWORD"),
@@ -798,3 +694,4 @@ class CAllSocNetUser
 		return false;
 	}
 }
+?>

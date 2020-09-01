@@ -1,6 +1,8 @@
 <?php
 IncludeModuleLangFile(__FILE__);
 
+if (!defined("T_BAD_CHARACTER")) define("T_BAD_CHARACTER", 401);
+
 class CVariableDeclare
 {
 	public $line = 0;
@@ -12,7 +14,7 @@ class CVariableDeclare
 	public $tainted_vars = array();
 	public $id = 0;
 
-	public function __construct($id, $line, $start, $end, $tokens, $comment, $dependencies, $tainted_vars)
+	function __construct($id, $line, $start, $end, $tokens, $comment, $dependencies, $tainted_vars)
 	{
 		$this->line = $line;
 		$this->start = $start;
@@ -33,7 +35,7 @@ class CVariable
 	public $name = '';
 	public $requestInitialization = true;
 
-	public function __construct($name)
+	function __construct($name)
 	{
 		$this->name = $name;
 		$this->have_user_input = false;
@@ -60,7 +62,7 @@ class CVuln
 	public $traverse = '';
 	public $additional_text = '';
 
-	public function __construct($filename, $line, $name, $tokens, $dependencies, $tainted_vars, $comment)
+	function __construct($filename, $line, $name, $tokens, $dependencies, $tainted_vars, $comment)
 	{
 		$this->tokens = $tokens;
 		$this->filename = $filename;
@@ -106,7 +108,7 @@ class CVulnScanner
 	private $search_xss = true;
 	private $global_xss_ignore = false;
 
-	public function __construct($file_name, $arParams, $template = '.default', $component_template = '')
+	function __construct($file_name, $arParams, $template = '.default', $component_template = '')
 	{
 		$this->scanning_file = $file_name;
 		$this->source_functions = array();
@@ -335,7 +337,10 @@ class CVulnScanner
 
 	private function dependencyHave($tokens, $type)
 	{
-
+		if (!is_array($tokens))
+		{
+			return false;
+		}
 		for ($i = 1, $tokens_count = count($tokens) - 1; $i < $tokens_count; $i++)
 		{
 			if(is_array($tokens[$i]))
@@ -358,6 +363,7 @@ class CVulnScanner
 
 	public function process()
 	{
+		$this->objects = array();
 		for ($i = 0, $tokens_count = count($this->tokens); $i < $tokens_count; $i++)
 		{
 		
@@ -374,6 +380,14 @@ class CVulnScanner
 				{
 					if($this->tokens[$i + 1] === '=' || (is_array($this->tokens[$i + 1]) && in_array($this->tokens[$i + 1][0], $this->tokens_type['ASSIGNMENT'])))
 					{
+						if (
+							is_array($this->tokens[$i + 2]) && ($this->tokens[$i + 2][0] === T_NEW)
+							&& ($className = $this->getClassName($i + 3))
+						)
+						{
+							$this->objects[$token_value] = ltrim(strtoupper($className), '\\');
+							$i += $this->getBraceEnd($this->tokens, $i);
+						}
 						if(!(is_array($this->tokens[$i + 2]) && $this->tokens[$i + 2][0] === T_ARRAY))
 							$this->addVariable($this->tokens[$i], $i, $cur_line, $i, $this->getBraceEnd($this->tokens, $i), '');
 						else
@@ -571,11 +585,24 @@ class CVulnScanner
 						&& !(($this->tokens[$i + 1] === '(' && $this->tokens[$i + 2] === ')') || $this->tokens[$i + 1] === ';') //skip function with empty parameter list
 					)
 					{
-
-						if($this->tokens[$i + 1] === '(')
+						//check if query function is NOT belong to CHTTP object
+						if (
+							$token_value === 'query'
+							&& (is_array($this->tokens[$i-2]) && $this->tokens[$i-2][0] === T_VARIABLE)
+							&& isset($this->objects[$this->tokens[$i-2][1]])
+							&& $this->objects[$this->tokens[$i-2][1]] === 'CHTTP'
+						)
+						{
+							$result = false;
+						}
+						elseif($this->tokens[$i + 1] === '(')
+						{
 							$result = $this->getTokensInfo(array_slice($this->tokens, $i + 2, $this->getBraceEnd($this->tokens, $i + 2) - 1), false, $token_value);
+						}
 						else
+						{
 							$result = $this->getTokensInfo(array_slice($this->tokens, $i + 1, $this->getBraceEnd($this->tokens, $i + 1)), false, $token_value);
+						}
 
 						if($result !== false)
 						{
@@ -697,6 +724,23 @@ class CVulnScanner
 				$result .= $token[$i][1];
 		}
 		return $result;
+	}
+
+	private function getClassName($token)
+	{
+		$className = '';
+		while(
+			is_array($this->tokens[$token])
+			&& (
+				($this->tokens[$token][0] === T_STRING)
+				|| ($this->tokens[$token][0] === T_NS_SEPARATOR)
+			)
+		)
+		{
+			$className .= $this->tokens[$token][1];
+			$token++;
+		}
+		return $className;
 	}
 
 	private function getVarName($token, $level = -1)
@@ -1711,13 +1755,13 @@ class CQAACheckListTests
 	static private function defineScanParams()
 	{
 		if(!defined('T_INCLUDE_RESULT_MODIFIER'))
-			// define('T_INCLUDE_RESULT_MODIFIER', 10001);
+			define('T_INCLUDE_RESULT_MODIFIER', 10001);
 		if(!defined('T_INCLUDE_COMPONENTTEMPLATE'))
-			// define('T_INCLUDE_COMPONENTTEMPLATE', 10002);
+			define('T_INCLUDE_COMPONENTTEMPLATE', 10002);
 		if(!defined('T_INCLUDE_COMPONENT'))
-			// define('T_INCLUDE_COMPONENT', 10003);
+			define('T_INCLUDE_COMPONENT', 10003);
 		if(!defined('T_INCLUDE_END'))
-			// define('T_INCLUDE_END', 10004);
+			define('T_INCLUDE_END', 10004);
 		$SKIPDIR = array(// skipping directories
 			'lang',
 			'help',

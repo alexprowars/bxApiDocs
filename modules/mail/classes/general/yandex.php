@@ -5,7 +5,7 @@ IncludeModuleLangFile(__FILE__);
 class CMailYandex
 {
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 

@@ -52,13 +52,15 @@ class PublicAction
 		$info = array();
 
 		// if action exist and is callable
-		if ($action && strpos($action, '::'))
+		if ($action && mb_strpos($action, '::'))
 		{
+			$actionOriginal = $action;
 			$action = self::getNamespacePublicClasses() . '\\' . $action;
 			if (is_callable(explode('::', $action)))
 			{
 				list($class, $method) = explode('::', $action);
 				$info = array(
+					'action' => $actionOriginal,
 					'class' => $class,
 					'method' => $method,
 					'params_init' => array(),
@@ -218,9 +220,25 @@ class PublicAction
 					}
 					else if ($result->isSuccess())
 					{
+						$restResult = $result->getResult();
+						$event = new \Bitrix\Main\Event('landing', 'onSuccessRest', [
+							'result' => $restResult,
+							'action' => $action
+						]);
+						$event->send();
+						foreach ($event->getResults() as $eventResult)
+						{
+							if (($modified = $eventResult->getModified()))
+							{
+								if (isset($modified['result']))
+								{
+									$restResult = $modified['result'];
+								}
+							}
+						}
 						return array(
 							'type' => 'success',
-							'result' => $result->getResult()
+							'result' => $restResult
 						);
 					}
 					else
@@ -399,8 +417,8 @@ class PublicAction
 						if (!isset($static['internal']) || !$static['internal'])
 						{
 							$command = $scope.'.'.
-									   strtolower($className) . '.' .
-									   strtolower($method->getName());
+								mb_strtolower($className).'.'.
+								mb_strtolower($method->getName());
 							$restMethods[$scope][$command] = array(
 								__CLASS__, 'restGateway'
 							);
@@ -430,7 +448,7 @@ class PublicAction
 		self::$restApp = AppTable::getByClientId($server->getClientId());
 		// prepare method and call action
 		$method = $server->getMethod();
-		$method = substr($method, strpos($method, '.') + 1);// delete module-prefix
+		$method = mb_substr($method, mb_strpos($method, '.') + 1);// delete module-prefix
 		$method = preg_replace('/\./', '\\', $method, substr_count($method, '.') - 1);
 		$method = str_replace('.', '::', $method);
 		$result = self::actionProcessing(
@@ -568,7 +586,7 @@ class PublicAction
 		]);
 		while ($row = $res->fetch())
 		{
-			$blockCnt[substr($row['CODE'], 5)] = $row['CNT'];
+			$blockCnt[mb_substr($row['CODE'], 5)] = $row['CNT'];
 		}
 
 		// gets apps for this blocks

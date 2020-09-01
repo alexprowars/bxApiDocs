@@ -6,7 +6,7 @@ use Bitrix\Main\Error;
 use Bitrix\Socialnetwork\UserToGroupTable;
 use Bitrix\Socialnetwork\WorkgroupTable;
 
-class UserToGroup extends \Bitrix\Main\Engine\Controller
+class UserToGroup extends Base
 {
 	public function joinAction(array $params = [])
 	{

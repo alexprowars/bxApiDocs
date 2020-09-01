@@ -18,7 +18,7 @@ class CBitrixCloudMonitoring
 
 		return self::$instance;
 	}
-	static public function getConfiguredDomains()
+	public function getConfiguredDomains()
 	{
 		$result = array();
 		$converter = CBXPunycode::GetConverter();
@@ -47,7 +47,7 @@ class CBitrixCloudMonitoring
 		ksort($result);
 		return $result;
 	}
-	static public function getList()
+	public function getList()
 	{
 		$web_service = new CBitrixCloudMonitoringWebService();
 		$xml = $web_service->actionGetList();
@@ -75,7 +75,7 @@ class CBitrixCloudMonitoring
 			return $result;
 		}
 	}
-	static public function addDevice($domain, $deviceId)
+	public function addDevice($domain, $deviceId)
 	{
 		if ($deviceId != "")
 		{
@@ -85,7 +85,7 @@ class CBitrixCloudMonitoring
 			$option->setArrayValue($devices);
 		}
 	}
-	static public function deleteDevice($domain, $deviceId)
+	public function deleteDevice($domain, $deviceId)
 	{
 		if ($deviceId != "")
 		{
@@ -99,7 +99,7 @@ class CBitrixCloudMonitoring
 			}
 		}
 	}
-	static public function getDevices($domain)
+	public function getDevices($domain)
 	{
 		$result = array();
 		$option = CBitrixCloudOption::getOption('monitoring_devices');
@@ -121,7 +121,7 @@ class CBitrixCloudMonitoring
 	 * @return string
 	 *
 	 */
-	static public function startMonitoring($domain, $is_https, $language_id, $emails, $tests)
+	public function startMonitoring($domain, $is_https, $language_id, $emails, $tests)
 	{
 		try
 		{
@@ -142,7 +142,7 @@ class CBitrixCloudMonitoring
 	 * @return string
 	 *
 	 */
-	static public function stopMonitoring($domain)
+	public function stopMonitoring($domain)
 	{
 		try
 		{
@@ -248,7 +248,7 @@ class CBitrixCloudMonitoring
 		}
 		return $alerts;
 	}
-	static public function getAlertsStored()
+	public function getAlertsStored()
 	{
 		return CBitrixCloudOption::getOption("monitoring_alert")->getArrayValue();
 	}

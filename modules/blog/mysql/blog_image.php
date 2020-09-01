@@ -4,7 +4,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/blog/general/blog_image.
 class CBlogImage extends CAllBlogImage
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -78,7 +78,7 @@ class CBlogImage extends CAllBlogImage
 	}
 
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -119,7 +119,7 @@ class CBlogImage extends CAllBlogImage
 	}
 
 	//*************** SELECT *********************/
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 
@@ -202,9 +202,6 @@ class CBlogImage extends CAllBlogImage
 			}
 
 			$dbRes = new CDBResult();
-
-			//echo "!2.2!=".htmlspecialcharsbx($strSql)."<br>";
-
 			$dbRes->NavQuery($strSql, $cnt, $arNavStartParams);
 		}
 		else

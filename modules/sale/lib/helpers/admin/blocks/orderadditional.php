@@ -269,7 +269,7 @@ class OrderAdditional
 					<tr>
 						<td class="adm-detail-content-cell-l'.($orderLocked ? '' : ' vat').'" width="40%">'.Loc::getMessage('SALE_ORDER_ADDITIONAL_INFO_MANAGER_COMMENT').':</td>
 						<td class="adm-detail-content-cell-r">'.($orderLocked ? '' : '<a href="javascript:void(0);" style="text-decoration: none; border-bottom: 1px dashed" onClick="BX.Sale.Admin.OrderAdditionalInfo.showCommentsDialog(\''.$collection->getField('ID').'\', BX(\'sale-adm-comments-view\'))">'.Loc::getMessage('SALE_ORDER_ADDITIONAL_INFO_COMMENT_TITLE').'</a>').
-							'<p id="sale-adm-comments-view" style="color:gray; max-width:800px; overflow:auto;">'.(strlen($data['COMMENTS']) > 0 ? nl2br(htmlspecialcharsbx($data['COMMENTS'])) : '').'</p>
+							'<p id="sale-adm-comments-view" style="color:gray; max-width:800px; overflow:auto;">'.($data['COMMENTS'] <> '' ? nl2br(htmlspecialcharsbx($data['COMMENTS'])) : '').'</p>
 						</td>
 					</tr>
 				</tbody>
@@ -326,7 +326,7 @@ class OrderAdditional
 
 
 		if(in_array("ADDITIONAL_INFO", $collection->getAvailableFields()))
-			if(strlen($collection->getField("ADDITIONAL_INFO")) > 0)
+			if($collection->getField("ADDITIONAL_INFO") <> '')
 				$data["ADDITIONAL_INFO"] = $collection->getField("ADDITIONAL_INFO");
 		
 		if(in_array("COMPANY_ID", $collection->getAvailableFields()))

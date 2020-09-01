@@ -29,7 +29,7 @@ class ConditionGroup
 			}
 			if (isset($params['items']) && is_array($params['items']))
 			{
-				foreach ($params['items'] as list($item, $joiner))
+				foreach ($params['items'] as [$item, $joiner])
 				{
 					if (!empty($item['field']))
 					{
@@ -47,20 +47,36 @@ class ConditionGroup
 	 */
 	public function evaluate(BaseTarget $target)
 	{
+		$documentType = $target->getDocumentType();
+		$documentId = $documentType;
+		$documentId[2] = $target->getDocumentId();
+
+		return $this->evaluateByDocument($documentType, $documentId);
+	}
+
+	/**
+	 * @param array $documentType
+	 * @param array $documentId
+	 * @param array|null $document
+	 * @return bool
+	 */
+	public function evaluateByDocument(array $documentType, array $documentId, array $document = null): bool
+	{
 		if (empty($this->items))
 		{
 			return true;
 		}
 
-		$documentType = $target->getDocumentType();
-		$documentId = $documentType;
-		$documentId[2] = $target->getDocumentId();
-
 		$documentService = \CBPRuntime::getRuntime(true)->getDocumentService();
-		$document = $documentService->getDocument($documentId, $documentType);
+
+		if ($document === null)
+		{
+			$document = $documentService->getDocument($documentId, $documentType);
+		}
+
 		$documentFields = $documentService->getDocumentFields($documentType);
 
-		$result = array(0 => true);
+		$result = [0 => true];
 		$i = 0;
 		$joiner = static::JOINER_AND;
 
@@ -75,26 +91,19 @@ class ConditionGroup
 			if (array_key_exists($conditionField, $document))
 			{
 				$fld = $document[$conditionField];
-				$type = null;
 				$fieldType = null;
 
 				if (isset($documentFields[$conditionField]))
 				{
-					$type = $documentFields[$conditionField]["BaseType"];
-					if ($documentFields[$conditionField]['Type'] === 'UF:boolean')
-					{
-						$type = 'bool';
-					}
 					$fieldType = $documentService->getFieldTypeObject($documentType, $documentFields[$conditionField]);
 				}
 
 				if (!$fieldType)
 				{
-					$type = 'string';
-					$fieldType = $documentService->getFieldTypeObject($documentType, ['Type' => $type]);
+					$fieldType = $documentService->getFieldTypeObject($documentType, ['Type' => 'string']);
 				}
 
-				if (!$condition->check($fld, $type, $target, $fieldType))
+				if (!$condition->checkValue($fld, $fieldType, $documentId))
 				{
 					$conditionResult = false;
 				}
@@ -163,7 +172,7 @@ class ConditionGroup
 		$itemsArray = [];
 
 		/** @var Condition $condition */
-		foreach ($this->getItems() as list($condition, $joiner))
+		foreach ($this->getItems() as [$condition, $joiner])
 		{
 			$itemsArray[] = [$condition->toArray(), $joiner];
 		}
@@ -186,7 +195,7 @@ class ConditionGroup
 		$documentFields = $documentService->GetDocumentFields($documentType);
 
 		/** @var Condition $condition */
-		foreach ($this->getItems() as list($condition, $joiner))
+		foreach ($this->getItems() as [$condition, $joiner])
 		{
 			$field = $condition->getField();
 			$value = $condition->getValue();

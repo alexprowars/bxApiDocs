@@ -3,7 +3,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/support/classes/general/
 
 class CTicketSLA extends CAllTicketSLA
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "support";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
@@ -11,7 +11,7 @@ class CTicketSLA extends CAllTicketSLA
 	}
 
 	// get SLA list
-	public static function GetList(&$arSort, $arFilter=Array(), &$isFiltered)
+	function GetList(&$arSort, $arFilter=Array(), &$isFiltered)
 	{
 		$err_mess = (CTicketSLA::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB, $USER, $APPLICATION;

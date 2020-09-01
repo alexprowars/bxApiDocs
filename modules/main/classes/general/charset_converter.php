@@ -33,7 +33,7 @@ class CharsetConverter
 	/**
 	 * @deprecated
 	 */
-	static public function Convert($sourceString, $charsetFrom, $charsetTo)
+	public function Convert($sourceString, $charsetFrom, $charsetTo)
 	{
 		return self::ConvertCharset($sourceString, $charsetFrom, $charsetTo);
 	}

@@ -1,11 +1,83 @@
 <?
+use Bitrix\Main\Loader;
+
 class CBlogSearch 
 {
+	public static function fillSearchPermsWithSonetGroupData($sonetPerms, $authorId, &$arSearchIndex = array(), $arParams = array())
+	{
+		if(is_array($sonetPerms))
+		{
+			if (
+				is_array($arParams)
+				&& isset($arParams["INIT_PERMISSIONS"])
+				&& $arParams["INIT_PERMISSIONS"] == "Y"
+			)
+			{
+				$arSearchIndex["PERMISSIONS"] = $sonetPerms;
+			}
+
+			if(!in_array("U".$authorId, $arSearchIndex["PERMISSIONS"]))
+			{
+				$arSearchIndex["PERMISSIONS"][] = "U".$authorId;
+			}
+
+			$sgId = array();
+
+			foreach($sonetPerms as $perm)
+			{
+				if(strpos($perm, "SG") === 0)
+				{
+					$sgIdTmp = str_replace("SG", "", substr($perm, 0, strpos($perm, "_")));
+					if(!in_array($sgIdTmp, $sgId) && IntVal($sgIdTmp) > 0)
+						$sgId[] = $sgIdTmp;
+				}
+				elseif(preg_match("/^OSG[\d]+_([LN])$/", $perm, $matches))
+				{
+					if (
+						$matches[1] == 'N'
+						&& !in_array('G2', $arSearchIndex["PERMISSIONS"])
+					)
+					{
+						$arSearchIndex["PERMISSIONS"][] = 'G2';
+					}
+					if (
+						$matches[1] == 'L'
+						&& !in_array('AU', $arSearchIndex["PERMISSIONS"])
+					)
+					{
+						$arSearchIndex["PERMISSIONS"][] = 'AU';
+					}
+				}
+			}
+
+			if(!empty($sgId))
+			{
+				$arSearchIndex["PARAMS"] = array(
+					"socnet_group" => $sgId,
+					"entity" => "socnet_group",
+				);
+			}
+		}
+	}
+
+	public static function fillSearchParamsWithMentionData($arMentionedUserID = array(), &$arSearchIndex = array())
+	{
+		if (!empty($arMentionedUserID))
+		{
+			if (!isset($arSearchIndex["PARAMS"]))
+			{
+				$arSearchIndex["PARAMS"] = array();
+			}
+			$arSearchIndex["PARAMS"]["mentioned_user_id"] = $arMentionedUserID;
+		}
+	}
+
 	public static function OnSearchReindex($NS=Array(), $oCallback=NULL, $callback_method="")
 	{
-		global $DB;
+		global $DB, $USER_FIELD_MANAGER;
+		static $blogPostEventIdList = null;
+
 		$arResult = array();
-		
 		//CBlogSearch::Trace('OnSearchReindex', 'NS', $NS);
 		if($NS["MODULE"]=="blog" && strlen($NS["ID"])>0)
 		{
@@ -17,6 +89,7 @@ class CBlogSearch
 			$category = 'B';//start with blogs
 			$id = 0;//very first id
 		}
+
 		//CBlogSearch::Trace('OnSearchReindex', 'category+id', array("CATEGORY"=>$category,"ID"=>$id));
 		
 		//Reindex blogs
@@ -107,7 +180,17 @@ class CBlogSearch
 
 			$bSonet = false;
 			if(IsModuleInstalled("socialnetwork"))
+			{
 				$bSonet = true;
+				if (
+					$blogPostEventIdList === null
+					&& Loader::includeModule("socialnetwork")
+				)
+				{
+					$blogPostLivefeedProvider = new \Bitrix\Socialnetwork\Livefeed\BlogPost;
+					$blogPostEventIdList = $blogPostLivefeedProvider->getEventId();
+				}
+			}
 
 			$parserBlog = new blogTextParser(false, "/bitrix/images/blog/smile/");
 
@@ -136,7 +219,7 @@ class CBlogSearch
 					b_blog_post bp
 					INNER JOIN b_blog b ON (bp.BLOG_ID = b.ID)
 					INNER JOIN b_blog_group bg ON (b.GROUP_ID = bg.ID) ".
-					($bSonet ? "LEFT JOIN b_sonet_log BSL ON (BSL.EVENT_ID in ('blog_post', 'blog_post_micro', 'blog_post_important') AND BSL.SOURCE_ID = bp.ID) " : "").
+					($bSonet ? "LEFT JOIN b_sonet_log BSL ON (BSL.EVENT_ID in ('".implode("', '", $blogPostEventIdList)."') AND BSL.SOURCE_ID = bp.ID) " : "").
 				" WHERE
 					bp.DATE_PUBLISH <= ".$DB->CurrentTimeFunction()."
 					AND b.ACTIVE = 'Y'
@@ -146,6 +229,10 @@ class CBlogSearch
 				ORDER BY
 					bp.ID
 			";
+
+			$limit = 1000;
+			$strSql = \Bitrix\Main\Application::getConnection()->getSqlHelper()->getTopSql($strSql, $limit);
+
 			/*		AND bp.PUBLISH_STATUS = '".$DB->ForSQL(BLOG_PUBLISH_STATUS_PUBLISH)."'*/
 			//AND b.SEARCH_INDEX = 'Y'
 			//CBlogSearch::Trace('OnSearchReindex', 'strSql', $strSql);
@@ -185,14 +272,17 @@ class CBlogSearch
 						$arTag[] = $arCategory["NAME"];
 					}
 					$tag =  implode(",", $arTag);
-				}				
+				}
+
+				$searchContent = blogTextParser::killAllTags($ar["DETAIL_TEXT"]);
+				$searchContent .= "\r\n" . $USER_FIELD_MANAGER->OnSearchIndex("BLOG_POST", $ar["ID"]);
 
 				//CBlogSearch::Trace('OnSearchReindex', 'arSite', $arSite);
 				$Result = Array(
 					"ID"		=> "P".$ar["ID"],
 					"LAST_MODIFIED"	=> $ar["DATE_PUBLISH"],
-					"TITLE"		=> CSearch::KillTags(blogTextParser::killAllTags($ar["TITLE"])),
-					"BODY"		=> CSearch::KillTags(blogTextParser::killAllTags($ar["DETAIL_TEXT"])),
+					"TITLE"		=> CSearch::KillTags(blogTextParser::killAllTags($ar["MICRO"] == "Y" ? $ar["TITLE"] : htmlspecialcharsEx($ar["TITLE"]))),
+					"BODY"		=> CSearch::KillTags($searchContent),
 					"SITE_ID"	=> $arSite,
 					"PARAM1"	=> "POST",
 					"PARAM2"	=> $ar["BLOG_ID"],
@@ -423,44 +513,14 @@ class CBlogSearch
 					if($ar["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH)
 					{
 						if(empty($arF["SC_PERM"]))
-							$arF["SC_PERM"] = CBlogPost::GetSocNetPermsCode($ar["ID"]);
-						$Result["PERMISSIONS"] = $arF["SC_PERM"];
-						if(!in_array("U".$ar["AUTHOR_ID"], $Result["PERMISSIONS"]))
-							$Result["PERMISSIONS"][] = "U".$ar["AUTHOR_ID"];
-
-						if(is_array($arF["SC_PERM"]))
 						{
-							$sgId = array();
-							foreach($arF["SC_PERM"] as $perm)
-							{
-								if(strpos($perm, "SG") !== false)
-								{
-									$sgIdTmp = str_replace("SG", "", substr($perm, 0, strpos($perm, "_")));
-									if(!in_array($sgIdTmp, $sgId) && IntVal($sgIdTmp) > 0)
-										$sgId[] = $sgIdTmp;
-								}
-							}
-
-							if(!empty($sgId))
-							{
-								$Result["PARAMS"] = array(
-									"socnet_group" => $sgId,
-									"entity" => "socnet_group",
-								);
-							}
+							$arF["SC_PERM"] = CBlogPost::GetSocNetPermsCode($ar["ID"]);
 						}
+
+						CBlogSearch::fillSearchPermsWithSonetGroupData($arF["SC_PERM"], $ar["AUTHOR_ID"], $Result, array("INIT_PERMISSIONS" => "Y"));
 
 						// get mentions and grats
-						$arMentionedUserID = CBlogPost::GetMentionedUserID($ar);
-
-						if (!empty($arMentionedUserID))
-						{
-							if (!isset($Result["PARAMS"]))
-							{
-								$Result["PARAMS"] = array();
-							}
-							$Result["PARAMS"]["mentioned_user_id"] = $arMentionedUserID;
-						}
+						CBlogSearch::fillSearchParamsWithMentionData(CBlogPost::GetMentionedUserID($ar), $Result);
 
 						$socnetPerms = false;
 
@@ -555,8 +615,15 @@ class CBlogSearch
 					{
 						$arResult[] = $Result;
 					}
+
+					$limit--;
+					if ($limit <= 0)
+					{
+						return $Result["ID"];
+					}
 				}
 			}
+
 			//all blog posts indexed so let's start index users
 			$category='C';
 			$id=0;
@@ -564,6 +631,8 @@ class CBlogSearch
 		}
 		if($category == 'C')
 		{
+			$bSonet = CModule::IncludeModule("socialnetwork");
+
 			$strSql = "
 				SELECT
 					bc.ID
@@ -594,6 +663,10 @@ class CBlogSearch
 				ORDER BY
 					bc.ID
 			";
+
+			$limit = 1000;
+			$strSql = \Bitrix\Main\Application::getConnection()->getSqlHelper()->getTopSql($strSql, $limit);
+
 			//CBlogSearch::Trace('OnSearchReindex', 'strSql', $strSql);
 			$rs = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			while($ar = $rs->Fetch())
@@ -602,7 +675,19 @@ class CBlogSearch
 				$tag = "";
 				$PostPerms = CBlogUserGroup::GetGroupPerms(1, $ar["BLOG_ID"], $ar["POST_ID"], BLOG_PERMS_POST);
 				if($PostPerms < BLOG_PERMS_READ)
+				{
 					continue;
+				}
+
+				if ($bSonet)
+				{
+					$handlerManager = new Bitrix\Socialnetwork\CommentAux\HandlerManager();
+					if($handlerManager->getHandlerByPostText($ar["POST_TEXT"]))
+					{
+						continue;
+					}
+				}
+
 				//CBlogSearch::Trace('OnSearchReindex', 'ar', $ar);
 				if(strlen($ar["PATH"]) > 0)
 				{
@@ -617,6 +702,9 @@ class CBlogSearch
 					);
 				}
 
+				$searchContent = blogTextParser::killAllTags($ar["POST_TEXT"]);
+				$searchContent .= "\r\n" . $USER_FIELD_MANAGER->OnSearchIndex("BLOG_COMMENT", $ar["ID"]);
+
 				$Result = array(
 					"ID" => "C".$ar["ID"],
 					"SITE_ID" => $arSite,
@@ -625,68 +713,25 @@ class CBlogSearch
 					"PARAM2" => $ar["BLOG_ID"]."|".$ar["POST_ID"],
 					"PERMISSIONS" => array(2),
 					"TITLE" => CSearch::KillTags($ar["TITLE"]),
-					"BODY" => CSearch::KillTags(blogTextParser::killAllTags($ar["POST_TEXT"])),
+					"BODY" => CSearch::KillTags($searchContent),
 					"INDEX_TITLE" => false,
 					"USER_ID" => (IntVal($ar["AUTHOR_ID"]) > 0) ? $ar["AUTHOR_ID"] : false,
 					"ENTITY_TYPE_ID" => "BLOG_COMMENT",
 					"ENTITY_ID" => $ar["ID"],
 				);
+
 				if($ar["USE_SOCNET"] == "Y")
 				{
 					$arSp = CBlogComment::GetSocNetCommentPerms($ar["POST_ID"]);
-					if(is_array($arSp))
-					{
-						$Result["PERMISSIONS"] = $arSp;
-					}
-
-					if(!in_array("U".$ar["AUTHOR_ID"], $Result["PERMISSIONS"]))
-					{
-						$Result["PERMISSIONS"][] = "U".$ar["AUTHOR_ID"];
-					}
-
-					if(is_array($arSp))
-					{
-						$sgId = array();
-						foreach($arSp as $perm)
-						{
-							if(strpos($perm, "SG") !== false)
-							{
-								$sgIdTmp = str_replace("SG", "", substr($perm, 0, strpos($perm, "_")));
-								if (
-									!in_array($sgIdTmp, $sgId) 
-									&& IntVal($sgIdTmp) > 0
-								)
-								{
-									$sgId[] = $sgIdTmp;
-								}
-							}
-						}
-
-						if(!empty($sgId))
-						{
-							$Result["PARAMS"] = array(
-								"socnet_group" => $sgId,
-								"entity" => "socnet_group",
-							);
-						}
-					}
+					CBlogSearch::fillSearchPermsWithSonetGroupData($arSp, $ar["AUTHOR_ID"], $Result, array("INIT_PERMISSIONS" => "Y"));
 
 					// get mentions
-					$arMentionedUserID = CBlogComment::GetMentionedUserID($ar);
-
-					if (!empty($arMentionedUserID))
-					{
-						if (!isset($Result["PARAMS"]))
-						{
-							$Result["PARAMS"] = array();
-						}
-						$Result["PARAMS"]["mentioned_user_id"] = $arMentionedUserID;
-					}
+					CBlogSearch::fillSearchParamsWithMentionData(CBlogComment::GetMentionedUserID($ar), $Result);
 				}
 
 				if(strlen($ar["TITLE"]) <= 0)
 				{
-					$Result["TITLE"] = substr($Result["BODY"], 0, 100);
+					$Result["TITLE"] = substr(CSearch::KillTags($searchContent), 0, 100);
 				}
 
 				if($oCallback)
@@ -699,7 +744,14 @@ class CBlogSearch
 				{
 					$arResult[] = $Result;
 				}
+
+				$limit--;
+				if ($limit <= 0)
+				{
+					return $Result["ID"];
+				}
 			}
+
 			//all blog posts indexed so let's start index users
 			$category='U';
 			$id=0;
@@ -783,19 +835,21 @@ class CBlogSearch
 				}
 			}
 		}
+
 		if($oCallback)
 			return false;
+
 		return $arResult;
 	}
-	public static function Trace($method, $varname, $var)
+	function Trace($method, $varname, $var)
 	{
 		//return;
 		ob_start();print_r($var);$m=ob_get_contents();ob_end_clean();
 		$m=" CBlogSearch::$method:$varname:$m\n";$f=fopen($_SERVER["DOCUMENT_ROOT"]."/debug.log", "a");
 		fwrite($f, time().$m);fclose($f);
 	}
-	
-	public static function SetSoNetFeatureIndexSearch($ID, $arFields)
+
+	function SetSoNetFeatureIndexSearch($ID, $arFields)
 	{
 		if(CModule::IncludeModule("socialnetwork"))
 		{
@@ -812,14 +866,18 @@ class CBlogSearch
 						$arFilter["OWNER_ID"] = $feature["ENTITY_ID"];
 						$featureOperationPerms = CSocNetFeaturesPerms::GetOperationPerm(SONET_ENTITY_USER, $feature["ENTITY_ID"], "blog", "view_post");
 						if ($featureOperationPerms == SONET_RELATIONS_TYPE_ALL)
+						{
 							$bRights = true;
+						}
 					}
 					else
 					{
 						$arFilter["SOCNET_GROUP_ID"] = $feature["ENTITY_ID"];
 						$featureOperationPerms = CSocNetFeaturesPerms::GetOperationPerm(SONET_ENTITY_GROUP, $feature["ENTITY_ID"], "blog", "view_post");
 						if ($featureOperationPerms == SONET_ROLES_ALL)
+						{
 							$bRights = true;
+						}
 					}
 
 					$dbBlog = CBlog::GetList(Array(), $arFilter, false, Array("nTopCount" => 1), Array("ID", "SOCNET_GROUP_ID"));
@@ -830,13 +888,19 @@ class CBlogSearch
 							$arSites = array();
 							$rsGroupSite = CSocNetGroup::GetSite($arBlog["SOCNET_GROUP_ID"]);
 							while($arGroupSite = $rsGroupSite->Fetch())
+							{
 								$arSites[] = $arGroupSite["LID"];
+							}
 						}
 						else
+						{
 							$arSites = array(SITE_ID);
+						}
 
 						foreach ($arSites as $site_id_tmp)
+						{
 							BXClearCache(True, "/".$site_id_tmp."/blog/sonet/");
+						}
 
 						if($arFields["ACTIVE"] == "N")
 						{
@@ -845,64 +909,141 @@ class CBlogSearch
 						else
 						{
 							if($bRights)
+							{
 								CBlog::AddSocnetRead($arBlog["ID"]);
+							}
 							else
+							{
 								CBlog::DeleteSocnetRead($arBlog["ID"]);
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	
+
+	public static function OnBeforeSocNetFeaturesPermsAdd($arFields)
+	{
+		self::setSoNetFeaturePermIndexSearchBefore($arFields);
+		return true;
+	}
+
+	public static function OnBeforeSocNetFeaturesPermsUpdate($ID, $arFields)
+	{
+		$permFields = \CSocNetFeaturesPerms::getByID($ID);
+		self::setSoNetFeaturePermIndexSearchBefore($permFields);
+		return true;
+	}
+
+	public static function setSoNetFeaturePermIndexSearchBefore($fields)
+	{
+		if (
+			$fields["OPERATION_ID"] == "view_post"
+			&& Loader::includeModule("socialnetwork")
+		)
+		{
+			$feature = CSocNetFeatures::GetByID($fields["FEATURE_ID"]);
+			if (
+				$feature["FEATURE"] == "blog"
+				&& $feature["ENTITY_TYPE"] == "G"
+			)
+			{
+				$perm = \CSocNetFeaturesPerms::GetOperationPerm('G', $feature["ENTITY_ID"], 'blog', 'view_post');
+				\Bitrix\Blog\Item\PostSocnetRights::set($feature['ENTITY_ID'], $perm);
+			}
+		}
+	}
+
 	public static function SetSoNetFeaturePermIndexSearch($ID, $arFields)
 	{
+		global $DB;
+
 		$featurePerm = CSocNetFeaturesPerms::GetByID($ID);
 		if($featurePerm["OPERATION_ID"] == "view_post")
 		{
 			if(CModule::IncludeModule("socialnetwork"))
 			{
 				$feature = CSocNetFeatures::GetByID($featurePerm["FEATURE_ID"]);
-				if($feature["FEATURE"] == "blog" && IntVal($feature["ENTITY_ID"]) > 0)
+				if(
+					$feature["FEATURE"] == "blog"
+					&& IntVal($feature["ENTITY_ID"]) > 0
+				)
 				{
-					if($feature["ACTIVE"] == "Y" && (($feature["ENTITY_TYPE"] == "U" && $arFields["ROLE"] == "A") || ($feature["ENTITY_TYPE"] == "G" && $arFields["ROLE"] == "N")))
+					if(
+						$feature["ACTIVE"] == "Y"
+						&& (
+							($feature["ENTITY_TYPE"] == "U" && $arFields["ROLE"] == "A")
+							|| ($feature["ENTITY_TYPE"] == "G" && $arFields["ROLE"] == "N")
+						)
+					)
 					{
 						$arFilter = Array("USE_SOCNET" => "Y");
 						if($feature["ENTITY_TYPE"] == "U")
+						{
 							$arFilter["OWNER_ID"] = $feature["ENTITY_ID"];
+						}
 						else
+						{
 							$arFilter["SOCNET_GROUP_ID"] = $feature["ENTITY_ID"];
+						}
 						$dbBlog = CBlog::GetList(Array(), $arFilter, false, Array("nTopCount" => 1), Array("ID", "SOCNET_GROUP_ID"));
 						if($arBlog = $dbBlog->Fetch())
+						{
 							CBlog::AddSocnetRead($arBlog["ID"]);
+						}
 					}
 					else
 					{
 						$arFilter = Array("USE_SOCNET" => "Y");
 						if($feature["ENTITY_TYPE"] == "U")
+						{
 							$arFilter["OWNER_ID"] = $feature["ENTITY_ID"];
+						}
 						else
+						{
 							$arFilter["SOCNET_GROUP_ID"] = $feature["ENTITY_ID"];
+						}
 						$dbBlog = CBlog::GetList(Array(), $arFilter, false, Array("nTopCount" => 1), Array("ID", "SOCNET_GROUP_ID"));
 						if($arBlog = $dbBlog->Fetch())
+						{
 							CBlog::DeleteSocnetRead($arBlog["ID"]);
+						}
 					}
-					
-					if ($arBlog && intval($arBlog["SOCNET_GROUP_ID"]) > 0 && CModule::IncludeModule("socialnetwork") && method_exists("CSocNetGroup", "GetSite"))
+
+					if (
+						$arBlog
+						&& intval($arBlog["SOCNET_GROUP_ID"]) > 0
+					)
 					{
 						$arSites = array();
 						$rsGroupSite = CSocNetGroup::GetSite($arBlog["SOCNET_GROUP_ID"]);
 						while($arGroupSite = $rsGroupSite->Fetch())
+						{
 							$arSites[] = $arGroupSite["LID"];
+						}
 					}
 					else
-						$arSites = array(SITE_ID);					
+					{
+						$arSites = array(SITE_ID);
+					}
 
 					foreach ($arSites as $site_id_tmp)
+					{
 						BXClearCache(True, "/".$site_id_tmp."/blog/sonet/");
+					}
+
+					if ($feature["ENTITY_TYPE"] == "G")
+					{
+						\Bitrix\Blog\PostSocnetRightsTable::recalcGroupPostRights(array(
+							'groupId' => $feature["ENTITY_ID"],
+							'role' => $arFields["ROLE"]
+						));
+					}
 				}
 			}
 		}
 	}
 }
+
 ?>

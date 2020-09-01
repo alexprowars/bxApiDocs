@@ -1,27 +1,16 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CTicketDictionary</b> - класс для работы со справочником обращений.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/support/classes/cticketdictionary/index.php
- * @author Bitrix
- */
 class CAllTicketDictionary
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "support";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
 		return "<br>Module: ".$module_id." <br>Class: CAllTicketDictionary<br>File: ".__FILE__;
 	}
 
-	public static function GetDefault($type, $siteID=SITE_ID)
+	function GetDefault($type, $siteID=SITE_ID)
 	{
 		if ($siteID=="all")
 		{
@@ -34,7 +23,7 @@ class CAllTicketDictionary
 		return $ar["ID"];
 	}
 
-	public static function GetNextSort($typeID)
+	function GetNextSort($typeID)
 	{
 		global $DB;
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: GetNextSort<br>Line: ";
@@ -44,7 +33,7 @@ class CAllTicketDictionary
 		return intval($zr["MAX_SORT"])+100;
 	}
 
-	public static function GetDropDown($type="C", $siteID=false, $sla_id=false)
+	function GetDropDown($type="C", $siteID=false, $sla_id=false)
 	{
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: GetDropDown<br>Line: ";
 		global $DB;
@@ -77,7 +66,7 @@ class CAllTicketDictionary
 	}
 
 
-	public static function GetDropDownArray($siteID = false, $SLA_ID = false, $arUnsetType = Array("F"))
+	function GetDropDownArray($siteID = false, $SLA_ID = false, $arUnsetType = Array("F"))
 	{
 		//M, C, K, S, SR, D, F
 		global $DB;
@@ -140,7 +129,7 @@ class CAllTicketDictionary
 	}
 
 	// get array of languages related to contract
-	public static function GetSiteArray($DICTIONARY_ID)
+	function GetSiteArray($DICTIONARY_ID)
 	{
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: GetSiteArray<br>Line: ";
 		global $DB;
@@ -161,7 +150,7 @@ class CAllTicketDictionary
 		return $arrRes;
 	}
 
-	public static function GetSiteArrayForAllDictionaries()
+	function GetSiteArrayForAllDictionaries()
 	{
 		static $GetSiteArrayForAllDictCache;
 		if(is_array($GetSiteArrayForAllDictCache))
@@ -187,7 +176,7 @@ class CAllTicketDictionary
 		return $GetSiteArrayForAllDictCache;
 	}
 
-	public static function GetTypeList()
+	function GetTypeList()
 	{
 		$arr = array(
 			"reference"=>array(
@@ -211,47 +200,14 @@ class CAllTicketDictionary
 		return $arr;
 	}
 
-	public static function GetTypeNameByID($id)
+	function GetTypeNameByID($id)
 	{
 		$arr = CTicketDictionary::GetTypeList();
 		$KEY = array_search($id, $arr["reference_id"]);
 		return $arr["reference"][$KEY];
 	}
 
-	
-	/**
-	* <p>Метод возвращает данные по одной записи справочника. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  ID записи.
-	*
-	* @return record 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Array
-	* (
-	*     [ID] =&gt; 3
-	*     [LID] =&gt; ru
-	*     [C_TYPE] =&gt; C
-	*     [SID] =&gt; 
-	*     [SET_AS_DEFAULT] =&gt; N
-	*     [C_SORT] =&gt; 500
-	*     [NAME] =&gt; Доставка программного продукта и обновлений
-	*     [DESCR] =&gt; 
-	*     [RESPONSIBLE_USER_ID] =&gt; 2
-	*     [ <code>EVENT1</code>] =&gt; ticket
-	*     [ <code>EVENT2</code>] =&gt; 
-	*     [ <code>EVENT3</code>] =&gt; 
-	* )
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticketdictionary/getbyid.php
-	* @author Bitrix
-	*/
-	public static function GetByID($id)
+	function GetByID($id)
 	{
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: GetByID<br>Line: ";
 		global $DB;
@@ -265,7 +221,7 @@ class CAllTicketDictionary
 		return $res;
 	}
 
-	public static function GetBySID($sid, $type, $siteID=SITE_ID)
+	function GetBySID($sid, $type, $siteID=SITE_ID)
 	{
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: GetBySID<br>Line: ";
 		global $DB;
@@ -274,7 +230,7 @@ class CAllTicketDictionary
 		return $rs;
 	}
 
-	public static function Delete($id, $CHECK_RIGHTS="Y")
+	function Delete($id, $CHECK_RIGHTS="Y")
 	{
 		$err_mess = (CAllTicketDictionary::err_mess())."<br>Function: Delete<br>Line: ";
 		global $DB, $APPLICATION;
@@ -299,7 +255,7 @@ class CAllTicketDictionary
 		}
 	}
 
-	public static function CheckFields($arFields, $id = false)
+	function CheckFields($arFields, $id = false)
 	{
 		$arMsg = Array();
 
@@ -364,7 +320,7 @@ class CAllTicketDictionary
 		return true;
 	}
 
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 		$DB->StartTransaction();
@@ -389,7 +345,7 @@ class CAllTicketDictionary
 		return false;
 	}
 
-	public static function Update($id, $arFields)
+	function Update($id, $arFields)
 	{
 		global $DB;
 		$DB->StartTransaction();
@@ -416,7 +372,7 @@ class CAllTicketDictionary
 		return false;
 	}
 
-	public static function __CleanDefault(&$arFields)
+	function __CleanDefault(&$arFields)
 	{
 		if (
 				array_key_exists('SET_AS_DEFAULT', $arFields) && $arFields['SET_AS_DEFAULT'] == 'Y' &&
@@ -441,7 +397,7 @@ class CAllTicketDictionary
 		}
 	}
 
-	public static function __SetSites($id, $arFields)
+	function __SetSites($id, $arFields)
 	{
 		global $DB;
 		if (!array_key_exists('arrSITE', $arFields))

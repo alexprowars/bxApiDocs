@@ -2,18 +2,19 @@
 IncludeModuleLangFile(__FILE__);
 
 use Bitrix\Im as IM;
+use Bitrix\Main\Loader;
 
 class CIMNotify
 {
 	private $user_id = 0;
 	private $bHideLink = false;
 
-	public function __construct($user_id = false, $arParams = Array())
+	function __construct($user_id = false, $arParams = Array())
 	{
 		global $USER;
 		$this->user_id = intval($user_id);
 		if ($this->user_id == 0)
-			$this->user_id = IntVal($USER->GetID());
+			$this->user_id = intval($USER->GetID());
 		if (isset($arParams['HIDE_LINK']) && $arParams['HIDE_LINK'] == 'Y')
 			$this->bHideLink = true;
 	}
@@ -80,12 +81,12 @@ class CIMNotify
 
 			if ($iNumPage == 0)
 			{
-				$dbType = strtolower($DB->type);
-				if ($dbType== "mysql")
+				$sqlLimit = '';
+				if ($DB->type == "MYSQL")
 					$sqlLimit = " AND M.DATE_CREATE > DATE_SUB(NOW(), INTERVAL 30 DAY)";
-				else if ($dbType == "mssql")
+				elseif ($DB->type == "MSSQL")
 					$sqlLimit = " AND M.DATE_CREATE > dateadd(day, -30, getdate())";
-				else if ($dbType == "oracle")
+				elseif ($DB->type == "ORACLE")
 					$sqlLimit = " AND M.DATE_CREATE > SYSDATE-30";
 
 				$strSql = $DB->TopSql($strSql, 20);
@@ -99,6 +100,7 @@ class CIMNotify
 
 			$arGetUsers = Array();
 			$arNotifyId = Array();
+			$arChatId = Array();
 			while ($arRes = $dbRes->Fetch())
 			{
 				if ($this->bHideLink)
@@ -107,10 +109,12 @@ class CIMNotify
 				$arNotify[$arRes['ID']] = $arRes;
 				$arNotifyId[$arRes['ID']] = $arRes['ID'];
 				$arGetUsers[] = $arRes['FROM_USER_ID'];
+				$arChatId[$arRes['CHAT_ID']] = $arRes['CHAT_ID'];
 			}
 			if (empty($arNotify))
 				return $arNotify;
 
+			$counters = self::GetCounters($arChatId);
 
 			$params = CIMMessageParam::Get(array_keys($arNotifyId));
 			foreach ($params as $notifyId => $param)
@@ -123,6 +127,7 @@ class CIMNotify
 
 			foreach ($arNotify as $key => $value)
 			{
+				$value['COUNTER'] = $counters[$value['CHAT_ID']];
 				$value['FROM_USER_DATA'] = $arGetUsers;
 				$arNotify[$key] = self::GetFormatNotify($value);
 			}
@@ -189,15 +194,17 @@ class CIMNotify
 					M.AUTHOR_ID FROM_USER_ID
 				FROM b_im_message M
 				WHERE M.CHAT_ID = ".$chatId." AND M.NOTIFY_READ = 'N'
+				ORDER BY ID DESC
 			";
 			if (!$bTimeZone)
 				CTimeZone::Enable();
-			$strSql = $DB->TopSql($strSql, 500);
+			$strSql = $DB->TopSql($strSql, 100);
 			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 			$arMark = Array();
 			$arGetUsers = Array();
 			$arNotifyId = Array();
+			$arChatId = Array();
 			while ($arRes = $dbRes->Fetch())
 			{
 				if ($this->bHideLink)
@@ -215,6 +222,7 @@ class CIMNotify
 					$arNotify['maxNotify'] = $arRes['ID'];
 
 				$arGetUsers[] = $arRes['FROM_USER_ID'];
+				$arChatId[$arRes["CHAT_ID"]] = $arRes["CHAT_ID"];
 			}
 
 			$params = CIMMessageParam::Get(array_keys($arNotifyId));
@@ -227,34 +235,40 @@ class CIMNotify
 				CIMNotify::SetLastSendId($chatId, $lastSendId);
 
 			$arNotify['countNotify'] = $this->GetNotifyCounter($arNotify);
-			CIMMessenger::SpeedFileCreate($this->user_id, $arNotify['countNotify'], IM_SPEED_NOTIFY);
+			CIMMessenger::SpeedFileCreate($this->user_id, array('counter' => $arNotify['countNotify'], 'maxId' => $arNotify['maxNotify']), IM_SPEED_NOTIFY);
 
 			$arUsers = CIMContactList::GetUserData(Array('ID' => $arGetUsers, 'DEPARTMENT' => 'N', 'USE_CACHE' => 'Y', 'CACHE_TTL' => 86400));
 			$arGetUsers = $arUsers['users'];
 
+			$counters = self::GetCounters($arChatId);
+
 			if ($bGetOnlyFlash)
 			{
-				foreach ($arNotify['notify'] as $key => $value)
+				$notifyFlash = \Bitrix\Im\NotifyFlash::getInstance();
+
+				foreach ($arNotify['notify'] as $id => $value)
 				{
-					if (isset($_SESSION['IM_FLASHED_NOTIFY'][$key]))
+					if ($notifyFlash->exists(\Bitrix\Im\NotifyFlash::TYPE_NOTIFY, $id))
 					{
-						unset($arNotify['notify'][$key]);
-						unset($arNotify['original_notify'][$key]);
+						unset($arNotify['notify'][$id]);
+						unset($arNotify['original_notify'][$id]);
 						$arNotify['loadNotify'] = true;
 					}
 					else
 					{
 						$value['FROM_USER_DATA'] = $arGetUsers;
-						$arNotify['notify'][$key] = self::GetFormatNotify($value);
+						$value['COUNTER'] = $counters[$value['CHAT_ID']];
+						$arNotify['notify'][$id] = self::GetFormatNotify($value);
 					}
 				}
 			}
 			else
 			{
-				foreach ($arNotify['notify'] as $key => $value)
+				foreach ($arNotify['notify'] as $id => $value)
 				{
 					$value['FROM_USER_DATA'] = $arGetUsers;
-					$arNotify['notify'][$key] = self::GetFormatNotify($value);
+					$value['COUNTER'] = $counters[$value['CHAT_ID']];
+					$arNotify['notify'][$id] = self::GetFormatNotify($value);
 				}
 			}
 
@@ -262,7 +276,9 @@ class CIMNotify
 		}
 		else
 		{
-			$arNotify['countNotify'] = $this->GetNotifyCounter();
+			$cache = CIMMessenger::SpeedFileGet($this->user_id, IM_SPEED_NOTIFY);
+			$arNotify['countNotify'] = $cache? $cache['counter']: 0;
+			$arNotify['maxNotify'] = $cache? $cache['maxId']: 0;
 			if ($arNotify['countNotify'] > 0)
 				$arNotify['loadNotify'] = true;
 		}
@@ -320,7 +336,8 @@ class CIMNotify
 					U2.LOGIN FROM_USER_LOGIN,
 					U2.NAME FROM_USER_NAME,
 					U2.LAST_NAME FROM_USER_LAST_NAME,
-					U2.SECOND_NAME FROM_USER_SECOND_NAME
+					U2.SECOND_NAME FROM_USER_SECOND_NAME,
+					U2.EXTERNAL_AUTH_ID FROM_EXTERNAL_AUTH_ID
 				FROM b_im_message M
 				LEFT JOIN b_user U2 ON U2.ID = M.AUTHOR_ID
 				WHERE M.ID > ".intval($arResRelation['LAST_SEND_ID'])." AND M.CHAT_ID = ".intval($arResRelation['CHAT_ID'])."
@@ -344,33 +361,28 @@ class CIMNotify
 		return $arNotify;
 	}
 
-	public static function GetFlashNotify($arUnreadNotify)
+	public static function GetFlashNotify($unreadNotify)
 	{
-		$arFlashNotify = Array();
-		if (isset($_SESSION['IM_FLASHED_NOTIFY']))
+		$flashed = Array();
+
+		$notifyFlash = \Bitrix\Im\NotifyFlash::getInstance();
+
+		foreach ($unreadNotify as $id)
 		{
-			foreach ($arUnreadNotify as $value)
+			if ($notifyFlash->exists(\Bitrix\Im\NotifyFlash::TYPE_NOTIFY, $id))
 			{
-				if (!isset($_SESSION['IM_FLASHED_NOTIFY'][$value]))
-				{
-					$_SESSION['IM_FLASHED_NOTIFY'][$value] = $value;
-					$arFlashNotify[$value] = true;
-				}
-				else
-					$arFlashNotify[$value] = false;
+				$flashed[$id] = false;
 			}
-		}
-		else
-		{
-			$_SESSION['IM_FLASHED_NOTIFY'] = Array();
-			foreach ($arUnreadNotify as $value)
+			else
 			{
-				$_SESSION['IM_FLASHED_NOTIFY'][$value] = $value;
-				$arFlashNotify[$value] = true;
+				$notifyFlash->set(\Bitrix\Im\NotifyFlash::TYPE_NOTIFY, $id);
+				$flashed[$id] = true;
 			}
 		}
 
-		return $arFlashNotify;
+		$notifyFlash->commit();
+
+		return $flashed;
 	}
 
 	public function GetNotify($ID)
@@ -399,16 +411,21 @@ class CIMNotify
 
 		$CCTP->link_target = "_self";
 		$arNotify = Array(
+			'templateId' => $arFields['TEMPLATE_ID']? $arFields['TEMPLATE_ID']: '',
 			'id' => $arFields['ID'],
 			'type' => $arFields['NOTIFY_TYPE'],
-			'date' => $arFields['DATE_CREATE'],
+			'date' => \Bitrix\Main\Type\DateTime::createFromTimestamp($arFields['DATE_CREATE']),
 			'silent' => $arFields['NOTIFY_SILENT']? 'Y': 'N',
+			'onlyFlash' => (bool)$arFields['NOTIFY_ONLY_FLASH'],
+			'link' => (string)$arFields['NOTIFY_LINK'],
 			'text' => str_replace('#BR#', '<br>', $CCTP->convertText($arFields['MESSAGE'])),
-			'tag' => strlen($arFields['NOTIFY_TAG'])>0? md5($arFields['NOTIFY_TAG']): '',
+			'tag' => $arFields['NOTIFY_TAG'] <> ''? md5($arFields['NOTIFY_TAG']): '',
+			'originalTag' => $arFields['NOTIFY_TAG'],
 			'original_tag' => $arFields['NOTIFY_TAG'],
 			'read' => $arFields['NOTIFY_READ'],
 			'settingName' => $arFields['NOTIFY_MODULE'].'|'.$arFields['NOTIFY_EVENT'],
-			'params' => isset($arFields['PARAMS'])? $arFields['PARAMS']: Array()
+			'params' => isset($arFields['PARAMS'])? $arFields['PARAMS']: Array(),
+			'counter' => isset($arFields['COUNTER'])? (int)$arFields['COUNTER']: 0,
 		);
 		if (!isset($arFields["FROM_USER_DATA"]))
 		{
@@ -434,93 +451,337 @@ class CIMNotify
 		return $arNotify;
 	}
 
-	public function MarkNotifyRead($id = 0, $checkAll = false, $appId = 'Bitrix24')
+	public function MarkNotifyRead($id = 0, $setThisAndHigher = false, $appId = 'Bitrix24')
 	{
 		global $DB;
 
 		$id = intval($id);
-		$chatId = 0;
+		if ($id < 0)
+			return false;
 
-		if ($id > 0)
+		if ($id === 0)
 		{
-			$strSql ="
-				SELECT M.ID, M.CHAT_ID FROM b_im_relation R
-				INNER JOIN b_im_message M ON M.ID = ".$id." AND M.CHAT_ID = R.CHAT_ID AND M.NOTIFY_READ = 'N'
-				WHERE R.USER_ID = ".$this->user_id." AND R.MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."'
-			";
-			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-			if ($arRes = $dbRes->Fetch())
+			$query = [
+				'select' => ['CHAT_ID'],
+				'filter' => [
+					'=USER_ID' => $this->user_id,
+					'=MESSAGE_TYPE' => IM_MESSAGE_SYSTEM
+				]
+			];
+
+			$chatResult = \Bitrix\Im\Model\RelationTable::getList($query)->fetch();
+			$chatId = (int)$chatResult['CHAT_ID'];
+			if (!$chatId)
 			{
-				if ($checkAll)
-				{
-					$id = $arRes['ID'];
-					$chatId = intval($arRes['CHAT_ID']);
-					$strSql ="UPDATE b_im_message SET NOTIFY_READ = 'Y' WHERE CHAT_ID = ".$chatId." AND NOTIFY_READ='N' AND NOTIFY_TYPE > '".IM_NOTIFY_CONFIRM."' AND ID <= ".$id."";
-					$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-					self::SetLastId($chatId, $id);
-				}
-				else
-				{
-					$id = $arRes['ID'];
-					$chatId = intval($arRes['CHAT_ID']);
-					$strSql ="UPDATE b_im_message SET NOTIFY_READ = 'Y' WHERE CHAT_ID = ".$chatId." AND NOTIFY_READ='N' AND NOTIFY_TYPE > '".IM_NOTIFY_CONFIRM."' AND ID = ".$id." ";
-					$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-					self::SetLastId($chatId);
-				}
-				//CUserCounter::Set($this->user_id, 'im_notify_v2', 0, '**', false);
+				return false;
 			}
-			if ($chatId > 0 && CModule::IncludeModule("pull"))
+		}
+		else
+		{
+			$query = [
+				'select' => ['ID', 'CHAT_ID', 'NOTIFY_TAG'],
+				'filter' => [
+					'=RELATION.MESSAGE_TYPE' => IM_MESSAGE_SYSTEM,
+					'=RELATION.USER_ID' => $this->user_id,
+					'=ID' => $id
+				]
+			];
+
+			$message = \Bitrix\Im\Model\MessageTable::getList($query)->fetch();
+			if (!$message)
 			{
-				if ($checkAll)
+				return false;
+			}
+
+			$chatId = (int)$message['CHAT_ID'];
+		}
+
+		$messages = array();
+
+		$filterId = ($setThisAndHigher? '>=': '=').'ID';
+		$orm = \Bitrix\Im\Model\MessageTable::getList(Array(
+			'select' => Array('ID', 'CHAT_ID', 'NOTIFY_TAG'),
+			'filter' => Array(
+				'=CHAT_ID' => $chatId,
+				'=NOTIFY_READ' => 'N',
+				'!=NOTIFY_TYPE' => IM_NOTIFY_CONFIRM,
+				$filterId => $id,
+			)
+		));
+		while ($row = $orm->fetch())
+		{
+			$messages[$row['ID']] = $row;
+		}
+
+		if ($messages)
+		{
+			$DB->Query("UPDATE b_im_message SET NOTIFY_READ = 'Y' WHERE ID IN (".implode(',', array_keys($messages)).")");
+		}
+
+		if (!empty($message['NOTIFY_TAG']))
+		{
+			$orm = \Bitrix\Im\Model\MessageTable::getList(Array(
+				'select' => Array('ID', 'CHAT_ID', 'NOTIFY_TYPE'),
+				'filter' => Array(
+					'=CHAT_ID' => $chatId,
+					'=NOTIFY_READ' => 'N',
+					'=NOTIFY_TAG' => $message['NOTIFY_TAG'],
+				)
+			));
+			$tagIds = Array();
+			while ($row = $orm->fetch())
+			{
+				if ($row['NOTIFY_TYPE'] == IM_NOTIFY_CONFIRM)
+					continue;
+
+				$messages[$row['ID']] = $row;
+				$tagIds[] = $row['ID'];
+			}
+			if ($tagIds)
+			{
+				$DB->Query("UPDATE b_im_message SET NOTIFY_READ = 'Y' WHERE ID IN (".implode(',', $tagIds).")");
+			}
+		}
+
+		if (!$messages)
+		{
+			self::SetLastId($chatId, $this->user_id);
+			return false;
+		}
+
+		$lastId = max(array_keys($messages));
+
+		self::SetLastId($chatId, $this->user_id, $lastId);
+
+		if (CModule::IncludeModule("pull"))
+		{
+			\Bitrix\Pull\Event::add($this->user_id, Array(
+				'module_id' => 'im',
+				'command' => 'readNotifyList',
+				'params' => Array(
+					'chatId' => $chatId,
+					'list' => array_keys($messages),
+					'counter' => (int)self::GetRealCounter($chatId)
+				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
+			));
+
+			\Bitrix\Pull\MobileCounter::send($this->user_id, $appId);
+		}
+
+		CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_NOTIFY);
+
+		return true;
+	}
+
+	public function MarkNotifyReadBySubTag($subTagList = array())
+	{
+		global $DB;
+
+		if (empty($subTagList))
+		{
+			return false;
+		}
+
+		if (!is_array($subTagList))
+		{
+			$subTagList = array($subTagList);
+		}
+
+		$sqlTags = Array();
+		foreach ($subTagList as $value)
+		{
+			$value = (string)$value;
+			$sqlTags[] = "'".$DB->ForSQL($value)."'";
+		}
+
+		$users = array();
+		$chats = array();
+		$messages = array();
+		$messagesByUser = array();
+
+		$strSql ="
+			SELECT M.ID, M.CHAT_ID, R.USER_ID
+			FROM b_im_message M
+			LEFT JOIN b_im_relation R ON R.CHAT_ID = M.CHAT_ID
+			WHERE 
+				M.NOTIFY_SUB_TAG IN (".implode(",", $sqlTags).") 
+				AND M.NOTIFY_READ='N' 
+				AND M.NOTIFY_TYPE != '".IM_NOTIFY_CONFIRM."'";
+		$res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		while ($message = $res->fetch())
+		{
+			$messages[$message["ID"]] = $message;
+			$messagesByUser[$message["CHAT_ID"]][] = $message["ID"];
+			$users[$message["CHAT_ID"]] = $message["USER_ID"];
+			$chats[$message["CHAT_ID"]] = $message["CHAT_ID"];
+		}
+
+		if (!empty($messages))
+		{
+			$strSql ="UPDATE b_im_message SET NOTIFY_READ = 'Y' WHERE ID IN (".implode(",", array_keys($messages)).")";
+			$DB->Query($strSql);
+
+			$counters = \CIMNotify::GetRealCounters($chats);
+			foreach ($counters as $chatId => $counter)
+			{
+				$DB->Query("UPDATE b_im_relation SET COUNTER = {$counter} WHERE CHAT_ID = {$chatId}");
+			}
+
+			$isLoadPull = Loader::includeModule("pull");
+			foreach ($messagesByUser as $chatId => $messagesList)
+			{
+				\Bitrix\Im\Counter::clearCache($users[$chatId]);
+				CIMMessenger::SpeedFileDelete($users[$chatId], IM_SPEED_NOTIFY);
+
+				if ($isLoadPull)
 				{
-					CPullStack::AddByUser($this->user_id, Array(
+					\Bitrix\Pull\Event::add($users[$chatId], Array(
 						'module_id' => 'im',
-						'command' => 'readNotify',
+						'command' => 'readNotifyList',
 						'params' => Array(
 							'chatId' => $chatId,
-							'lastId' => $id
+							'list' => array_values($messagesList),
+							'counter' => (int)$counters[$chatId]
 						),
+						'extra' => \Bitrix\Im\Common::getPullExtra()
 					));
 				}
-				else
-				{
-					CPullStack::AddByUser($this->user_id, Array(
-						'module_id' => 'im',
-						'command' => 'readNotifyOne',
-						'params' => Array(
-							'chatId' => $chatId,
-							'id' => $id
-						),
-					));
-				}
-				$CPushManager = new CPushManager();
-				$CPushManager->AddQueue(Array(
-					'USER_ID' => $this->user_id,
-					'APP_ID' => $appId
-				));
 			}
-			CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_NOTIFY);
 		}
 
 		return true;
 	}
 
-	public static function SetLastId($chatId, $lastId = null)
+	public function MarkNotifyUnRead($id = 0, $setThisAndHigher = false, $appId = 'Bitrix24')
 	{
 		global $DB;
 
-		if (intval($chatId) <= 0)
+		$id = intval($id);
+		if ($id <= 0)
+			return false;
+
+		$message = \Bitrix\Im\Model\MessageTable::getList(Array(
+			'select' => Array('ID', 'CHAT_ID', 'NOTIFY_TAG', 'NOTIFY_READ'),
+			'filter' => Array(
+				'=ID' => $id,
+				'=RELATION.MESSAGE_TYPE' => IM_MESSAGE_SYSTEM,
+				'=RELATION.USER_ID' => $this->user_id,
+			)
+		))->fetch();
+		if (!$message)
+		{
+			return false;
+		}
+
+		$chatId = intval($message['CHAT_ID']);
+		$messages = array();
+
+		$filterId = ($setThisAndHigher? '>=': '=').'ID';
+		$orm = \Bitrix\Im\Model\MessageTable::getList(Array(
+			'select' => Array('ID', 'CHAT_ID', 'NOTIFY_TAG'),
+			'filter' => Array(
+				'=CHAT_ID' => $chatId,
+				'=NOTIFY_READ' => 'Y',
+				'!=NOTIFY_TYPE' => IM_NOTIFY_CONFIRM,
+				$filterId => $id,
+			)
+		));
+		while ($row = $orm->fetch())
+		{
+			$messages[$row['ID']] = $row;
+		}
+
+		if ($messages)
+		{
+			$DB->Query("UPDATE b_im_message SET NOTIFY_READ = 'N' WHERE ID IN (".implode(',', array_keys($messages)).")");
+		}
+
+		if (!empty($message['NOTIFY_TAG']))
+		{
+			$orm = \Bitrix\Im\Model\MessageTable::getList(Array(
+				'select' => Array('ID', 'CHAT_ID', 'NOTIFY_TYPE', 'NOTIFY_READ'),
+				'filter' => Array(
+					'=CHAT_ID' => $chatId,
+					'=NOTIFY_READ' => 'Y',
+					'=NOTIFY_TAG' => $message['NOTIFY_TAG'],
+				)
+			));
+			$tagIds = Array();
+			while ($row = $orm->fetch())
+			{
+				if ($row['NOTIFY_TYPE'] == IM_NOTIFY_CONFIRM)
+					continue;
+
+				$messages[$row['ID']] = $row;
+				$tagIds[] = $row['ID'];
+			}
+
+			if ($tagIds)
+			{
+				$DB->Query("UPDATE b_im_message SET NOTIFY_READ = 'N' WHERE ID IN (".implode(',', $tagIds).")");
+			}
+		}
+
+		if (!$messages)
+		{
+			return false;
+		}
+
+		$lastId = max(array_keys($messages));
+
+		self::SetLastId($chatId, $this->user_id, $lastId);
+
+		if (CModule::IncludeModule("pull"))
+		{
+			\Bitrix\Pull\Event::add($this->user_id, Array(
+				'module_id' => 'im',
+				'command' => 'unreadNotifyList',
+				'params' => Array(
+					'chatId' => $chatId,
+					'list' => array_keys($messages),
+					'counter' => (int)self::GetRealCounter($chatId)
+				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
+			));
+
+			\Bitrix\Pull\MobileCounter::send($this->user_id, $appId);
+		}
+
+		CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_NOTIFY);
+
+		return true;
+	}
+
+	public static function SetLastId($chatId, $userId, $lastId = null)
+	{
+		global $DB;
+
+		if (intval($chatId) <= 0 || intval($userId) <= 0)
 			return false;
 
 		$ssqlLastId = "";
 		if (!is_null($lastId))
 		{
 			$ssqlLastId = "LAST_ID = (case when LAST_ID < ".intval($lastId)." then ".intval($lastId)." else LAST_ID end),";
-			$ssqlLastId .= "LAST_SEND_ID = (case when LAST_SEND_ID < ".intval($lastId)." then ".intval($lastId)." else LAST_SEND_ID end),";
 		}
 
-		$strSql = "UPDATE b_im_relation SET ".$ssqlLastId." STATUS = ".IM_STATUS_READ." WHERE CHAT_ID = ".intval($chatId);
-		$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		$counter = \CIMNotify::GetRealCounter($chatId);
+
+		$status = "STATUS = ".IM_STATUS_READ.", ";
+		if ($counter > 0)
+		{
+			$status = "STATUS = (case when STATUS = ".IM_STATUS_READ." then ".IM_STATUS_UNREAD." else STATUS end), ";
+		}
+
+		$DB->Query("UPDATE b_im_relation SET ".$ssqlLastId." ".$status." COUNTER = ".$counter." WHERE CHAT_ID = ".intval($chatId));
+
+		//if (!is_null($lastId))
+		//{
+		//	CIMNotify::SetLastSendId($chatId, $lastId);
+		//}
+
+		\Bitrix\Im\Counter::clearCache($userId);
 
 		return true;
 	}
@@ -560,7 +821,7 @@ class CIMNotify
 		$arRes['NOTIFY_BUTTONS'] = unserialize($arRes['NOTIFY_BUTTONS']);
 
 		$resultMessages = Array();
-		if (strlen($arRes['NOTIFY_TAG'])>0)
+		if ($arRes['NOTIFY_TAG'] <> '')
 		{
 			$CBXSanitizer = new CBXSanitizer;
 			$CBXSanitizer->AddTags(array(
@@ -582,7 +843,7 @@ class CIMNotify
 					}
 					break;
 				}
-				else if (is_array($resultEvent) && $resultEvent['text'] || is_string($resultEvent) && strlen($resultEvent) > 0)
+				else if (is_array($resultEvent) && $resultEvent['text'] || is_string($resultEvent) && $resultEvent <> '')
 				{
 					$resultMessages[] = $CBXSanitizer->SanitizeHtml(is_string($resultEvent)? $resultEvent: $resultEvent['text']);
 				}
@@ -600,20 +861,9 @@ class CIMNotify
 			}
 		}
 
-		IM\Model\MessageTable::delete($id);
-		$messageParameters = IM\Model\MessageParamTable::getList(array(
-			'select' => array('ID'),
-			'filter' => array(
-				'=MESSAGE_ID' => $id,
-			),
-		));
-		while($ar = $messageParameters->fetch())
-		{
-			IM\Model\MessageParamTable::delete($ar['ID']);
-		}
-		//CUserCounter::Decrement($this->user_id, 'im_notify_v2', '**', false);
+		self::Delete($id);
 
-		if (strlen($arRes['NOTIFY_TAG'])>0)
+		if ($arRes['NOTIFY_TAG'] <> '')
 		{
 			foreach(GetModuleEvents("im", "OnAfterConfirmNotify", true) as $arEvent)
 				ExecuteModuleEventEx($arEvent, array($arRes['NOTIFY_MODULE'], $arRes['NOTIFY_TAG'], $value, $arRes, $resultMessages));
@@ -621,19 +871,21 @@ class CIMNotify
 
 		if (CModule::IncludeModule("pull"))
 		{
-			CPullStack::AddByUser($this->user_id, Array(
+			\Bitrix\Pull\Event::add($this->user_id, Array(
 				'module_id' => 'im',
 				'command' => 'confirmNotify',
 				'params' => Array(
+					'id' => $id,
 					'chatId' => intval($arRes['CHAT_ID']),
-					'messages' => $resultMessages,
-					'id' => $id
+					'confirmMessages' => $resultMessages,
+					'counter' => self::GetRealCounter($arRes['CHAT_ID']),
 				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
 			));
-			CIMMessenger::SendBadges($this->user_id);
 		}
 
 		CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_NOTIFY);
+
 		return $resultMessages;
 	}
 
@@ -643,7 +895,7 @@ class CIMNotify
 
 		$id = intval($id);
 		$text = trim($text);
-		if ($id <= 0 || strlen($text) <= 0)
+		if ($id <= 0 || $text == '')
 			return false;
 
 		$strSql = "
@@ -654,6 +906,12 @@ class CIMNotify
 		$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 		if (!($arRes = $dbRes->Fetch()))
 			return false;
+
+		$mention = \Bitrix\Im\User::getInstance($arRes['AUTHOR_ID']);
+		if ($mention->isExists())
+		{
+			$text = '[USER='.$mention->getId().']'.$mention->getFullName(false).'[/USER] '.$text;
+		}
 
 		$CBXSanitizer = new CBXSanitizer;
 		$CBXSanitizer->AddTags(array(
@@ -675,7 +933,7 @@ class CIMNotify
 				}
 				break;
 			}
-			else if (is_array($resultEvent) && $resultEvent['text'] || is_string($resultEvent) && strlen($resultEvent) > 0)
+			else if (is_array($resultEvent) && $resultEvent['text'] || is_string($resultEvent) && $resultEvent <> '')
 			{
 				$resultMessages[] = $CBXSanitizer->SanitizeHtml(is_string($resultEvent)? $resultEvent: $resultEvent['text']);
 			}
@@ -695,7 +953,7 @@ class CIMNotify
 		$ID = intval($ID);
 
 		$strSql = "
-			SELECT M.*, R.USER_ID
+			SELECT M.*, R.USER_ID RELATION_USER_ID
 			FROM b_im_message M
 			LEFT JOIN b_im_relation R ON R.CHAT_ID = M.CHAT_ID
 			WHERE M.ID = ".$ID." AND R.MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."'
@@ -705,29 +963,28 @@ class CIMNotify
 		if (!$arRes)
 			return false;
 
-		IM\Model\MessageTable::delete($ID);
-		$messageParameters = IM\Model\MessageParamTable::getList(array(
-			'select' => array('ID'),
-			'filter' => array(
-				'=MESSAGE_ID' => $ID,
-			),
-		));
-		while($ar = $messageParameters->fetch())
-		{
-			IM\Model\MessageParamTable::delete($ar['ID']);
-		}
+		CIMMessageParam::DeleteAll($ID, true);
+		\Bitrix\Im\Model\MessageTable::delete($ID);
+
+		$counter = \CIMNotify::GetRealCounter($arRes['CHAT_ID']);
+		$DB->Query("UPDATE b_im_relation SET COUNTER = {$counter} WHERE CHAT_ID = ".intval($arRes['CHAT_ID']));
+
+		\Bitrix\Im\Counter::clearCache($arRes['RELATION_USER_ID']);
 
 		foreach(GetModuleEvents("im", "OnAfterDeleteNotify", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, array($ID));
+			ExecuteModuleEventEx($arEvent, array($ID, $arRes));
+
+		CIMMessenger::SpeedFileDelete($arRes['RELATION_USER_ID'], IM_SPEED_NOTIFY);
 
 		if (CModule::IncludeModule("pull"))
 		{
-			CPullStack::AddByUser($arRes['USER_ID'], Array(
+			\Bitrix\Pull\Event::add($arRes['RELATION_USER_ID'], Array(
 				'module_id' => 'im',
-				'command' => 'massDeleteMessage',
+				'command' => 'deleteNotifies',
 				'params' => Array(
-					'MESSAGE' => Array($ID => $arRes['NOTIFY_TYPE'])
-				)
+					'id' => Array($ID => $arRes['NOTIFY_TYPE'])
+				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
 			));
 		}
 
@@ -744,35 +1001,7 @@ class CIMNotify
 		$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 		if ($arRes = $dbRes->Fetch())
 		{
-			IM\Model\MessageTable::delete($ID);
-			$messageParameters = IM\Model\MessageParamTable::getList(array(
-				'select' => array('ID'),
-				'filter' => array(
-					'=MESSAGE_ID' => $ID,
-				),
-			));
-			while($ar = $messageParameters->fetch())
-			{
-				IM\Model\MessageParamTable::delete($ar['ID']);
-			}
-
-			$arRes['RELATION_USER_ID'] = $this->user_id;
-			foreach(GetModuleEvents("im", "OnAfterDeleteNotify", true) as $arEvent)
-				ExecuteModuleEventEx($arEvent, array($ID, $arRes));
-
-			CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_NOTIFY);
-
-			if (CModule::IncludeModule("pull"))
-			{
-				CPullStack::AddByUser($this->user_id, Array(
-					'module_id' => 'im',
-					'command' => 'massDeleteMessage',
-					'params' => Array(
-						'MESSAGE' => Array($ID => $arRes['NOTIFY_TYPE'])
-					)
-				));
-			}
-
+			self::Delete($arRes['ID']);
 			return true;
 		}
 
@@ -782,15 +1011,17 @@ class CIMNotify
 	public static function DeleteByTag($notifyTag, $authorId = false)
 	{
 		global $DB;
-		if (strlen($notifyTag) <= 0)
+
+		$notifyTag = (string)$notifyTag;
+		if ($notifyTag == '')
+		{
 			return false;
+		}
 
 		$sqlUser = "";
-		$sqlUser2 = "";
 		if ($authorId !== false)
 		{
 			$sqlUser = " AND M.AUTHOR_ID = ".intval($authorId);
-			$sqlUser2 = " AND AUTHOR_ID = ".intval($authorId);
 		}
 
 		$dbRes = $DB->Query("SELECT M.ID, M.NOTIFY_TYPE, R.USER_ID, R.STATUS FROM b_im_relation R, b_im_message M WHERE M.CHAT_ID = R.CHAT_ID AND M.NOTIFY_TAG = '".$DB->ForSQL($notifyTag)."'".$sqlUser, false, "File: ".__FILE__."<br>Line: ".__LINE__);
@@ -816,7 +1047,6 @@ class CIMNotify
 			CIMMessenger::SpeedFileDelete($userId, IM_SPEED_NOTIFY);
 			if ($count > 0)
 			{
-				//CUserCounter::Decrement($userId, 'im_notify_v2', '**', false);
 				$arUsersSend[] = $userId;
 			}
 			if ($pullActive)
@@ -826,32 +1056,89 @@ class CIMNotify
 		}
 		if ($pullActive)
 		{
-			CPullStack::AddByUsers(array_keys($arUsers), Array(
+			\Bitrix\Pull\Event::add(array_keys($arUsers), Array(
 				'module_id' => 'im',
-				'command' => 'massDeleteMessage',
+				'command' => 'deleteNotifies',
 				'params' => Array(
-					'MESSAGE' => $messages
-				)
+					'id' => $messages
+				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
 			));
 		}
 
 		if (count($messages) > 0)
 		{
-			$messageParameters = IM\Model\MessageParamTable::getList(array(
-				'select' => array('ID'),
-				'filter' => array(
-					'=MESSAGE_ID' => array_keys($messages),
-				),
-			));
-			while($ar = $messageParameters->fetch())
+			foreach ($messages as $messageId => $message)
 			{
-				IM\Model\MessageParamTable::delete($ar['ID']);
+				self::Delete($messageId);
 			}
+		}
 
-			$strSql = "DELETE FROM b_im_message WHERE NOTIFY_TAG = '".$DB->ForSQL($notifyTag)."'".$sqlUser2;
-			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		return true;
+	}
 
-			CIMMessenger::SendBadges($arUsersSend);
+	public static function ConfirmBySubTag($notifySubTag, $resultMessages)
+	{
+		global $DB;
+
+		$notifySubTag = (string)$notifySubTag;
+		if ($notifySubTag == '')
+			return false;
+
+		$dbRes = $DB->Query("
+			SELECT M.ID, M.NOTIFY_TYPE, R.USER_ID, R.STATUS, R.CHAT_ID 
+			FROM b_im_relation R, b_im_message M 
+			WHERE M.CHAT_ID = R.CHAT_ID AND M.NOTIFY_SUB_TAG = '".$DB->ForSQL($notifySubTag)."'", false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		$arUsers = Array();
+		$arChatId = Array();
+		$messages = Array();
+		while ($row = $dbRes->Fetch())
+		{
+			$messages[$row['ID']] = $row;
+			$arUsers[$row['USER_ID']] = $row['USER_ID'];
+			$arChatId[$row['CHAT_ID']] = $row['CHAT_ID'];
+		}
+
+		$pullActive = false;
+		if (CModule::IncludeModule("pull"))
+			$pullActive = true;
+
+		$arUsersSend = Array();
+		foreach ($arUsers as $userId => $count)
+		{
+			CIMMessenger::SpeedFileDelete($userId, IM_SPEED_NOTIFY);
+			if ($count > 0)
+			{
+				$arUsersSend[] = $userId;
+			}
+			if ($pullActive)
+			{
+				CPushManager::DeleteFromQueueBySubTag($userId, $notifySubTag);
+			}
+		}
+
+		$counters = self::GetCounters(array_keys($arChatId));
+
+		if (count($messages) > 0)
+		{
+			foreach ($messages as $messageId => $message)
+			{
+				self::Delete($messageId);
+				if ($pullActive)
+				{
+					\Bitrix\Pull\Event::add($message['USER_ID'], Array(
+						'module_id' => 'im',
+						'command' => 'confirmNotify',
+						'params' => Array(
+							'id' => $messageId,
+							'chatId' => $message['CHAT_ID'],
+							'confirmMessages' => $resultMessages,
+							'counter' => $counters[$message['CHAT_ID']],
+						),
+						'extra' => \Bitrix\Im\Common::getPullExtra()
+					));
+				}
+			}
 		}
 
 		return true;
@@ -860,15 +1147,15 @@ class CIMNotify
 	public static function DeleteBySubTag($notifySubTag, $authorId = false)
 	{
 		global $DB;
-		if (strlen($notifySubTag) <= 0)
+
+		$notifySubTag = (string)$notifySubTag;
+		if ($notifySubTag == '')
 			return false;
 
 		$sqlUser = "";
-		$sqlUser2 = "";
 		if ($authorId !== false)
 		{
 			$sqlUser = " AND M.AUTHOR_ID = ".intval($authorId);
-			$sqlUser2 = " AND AUTHOR_ID = ".intval($authorId);
 		}
 
 		$dbRes = $DB->Query("SELECT M.ID, M.NOTIFY_TYPE, R.USER_ID, R.STATUS FROM b_im_relation R, b_im_message M WHERE M.CHAT_ID = R.CHAT_ID AND M.NOTIFY_SUB_TAG = '".$DB->ForSQL($notifySubTag)."'".$sqlUser, false, "File: ".__FILE__."<br>Line: ".__LINE__);
@@ -895,7 +1182,6 @@ class CIMNotify
 			if ($count > 0)
 			{
 				$arUsersSend[] = $userId;
-				//CUserCounter::Decrement($userId, 'im_notify_v2', '**', false);
 			}
 			if ($pullActive)
 			{
@@ -904,32 +1190,23 @@ class CIMNotify
 		}
 		if ($pullActive)
 		{
-			CPullStack::AddByUsers(array_keys($arUsers), Array(
+			\Bitrix\Pull\Event::add(array_keys($arUsers), Array(
 				'module_id' => 'im',
-				'command' => 'massDeleteMessage',
+				'command' => 'deleteNotifies',
 				'params' => Array(
-					'MESSAGE' => $messages
-				)
+					'id' => $messages
+				),
+				'extra' => \Bitrix\Im\Common::getPullExtra()
 			));
 		}
+
 		if (count($messages) > 0)
 		{
-			$messageParameters = IM\Model\MessageParamTable::getList(array(
-				'select' => array('ID'),
-				'filter' => array(
-					'=MESSAGE_ID' => array_keys($messages),
-				),
-			));
-			while($ar = $messageParameters->fetch())
+			foreach ($messages as $messageId => $message)
 			{
-				IM\Model\MessageParamTable::delete($ar['ID']);
+				self::Delete($messageId);
 			}
-
-			$strSql = "DELETE FROM b_im_message WHERE NOTIFY_SUB_TAG = '".$DB->ForSQL($notifySubTag)."'".$sqlUser2;
-			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 		}
-
-		CIMMessenger::SendBadges($arUsersSend);
 
 		return true;
 	}
@@ -937,11 +1214,13 @@ class CIMNotify
 	public static function DeleteByModule($moduleId, $moduleEvent = '')
 	{
 		global $DB;
-		if (strlen($moduleId) <= 0)
+		$moduleId = (string)$moduleId;
+		if ($moduleId == '')
 			return false;
 
 		$sqlEvent = '';
-		if (strlen($moduleEvent) > 0)
+		$moduleEvent = (string)$moduleEvent;
+		if ($moduleEvent <> '')
 			$sqlEvent = " AND NOTIFY_EVENT = '".$DB->ForSQL($moduleEvent)."'";
 
 		$strSql = "DELETE FROM b_im_message WHERE NOTIFY_MODULE = '".$DB->ForSQL($moduleId)."'".$sqlEvent;
@@ -965,35 +1244,30 @@ class CIMNotify
 		}
 		else
 		{
-			$count = CIMMessenger::SpeedFileGet($this->user_id, IM_SPEED_NOTIFY);
+			$cache = CIMMessenger::SpeedFileGet($this->user_id, IM_SPEED_NOTIFY);
+			$count = $cache? $cache['counter']: 0;
 		}
 		return intval($count);
 	}
 
-	public static function SetUnreadCounter($userId)
+	public static function GetRealCounter($chatId)
 	{
-		return false;
-		global $DB;
+		return \Bitrix\Im\Notify::getRealCounter($chatId);
+	}
 
-		$userId = intval($userId);
-		if ($userId <= 0)
-			return false;
+	public static function GetRealCounters($chatId)
+	{
+		return \Bitrix\Im\Notify::getRealCounters($chatId);
+	}
 
-		$strSql ="
-			SELECT COUNT(M.ID) as CNT, M.CHAT_ID
-			FROM b_im_message M
-			INNER JOIN b_im_relation R1 ON M.ID > R1.LAST_ID AND M.CHAT_ID = R1.CHAT_ID
-			WHERE R1.USER_ID = ".$userId." AND R1.MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."' AND R1.STATUS < ".IM_STATUS_READ."
-			GROUP BY M.CHAT_ID
-			ORDER BY M.CHAT_ID ASC
-		";
-		$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		if ($row = $dbRes->Fetch())
-			CUserCounter::Set($userId, 'im_notify_v2', $row['CNT'], '**', false);
-		else
-			CUserCounter::Set($userId, 'im_notify_v2', 0, '**', false);
+	public static function GetCounter($chatId)
+	{
+		return \Bitrix\Im\Notify::getCounter($chatId);
+	}
 
-		return true;
+	public static function GetCounters($chatIds)
+	{
+		return \Bitrix\Im\Notify::getCounters($chatIds);
 	}
 }
 ?>

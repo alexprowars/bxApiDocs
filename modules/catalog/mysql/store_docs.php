@@ -9,7 +9,7 @@ class CCatalogDocs
 	* @param $arFields
 	* @return bool|int
 	*/
-	static function add($arFields)
+	public static function add($arFields)
 	{
 		global $DB;
 
@@ -61,7 +61,7 @@ class CCatalogDocs
 		return $lastId;
 	}
 
-	static function getList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	public static function getList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 		if (empty($arSelectFields))
@@ -160,15 +160,24 @@ class CCatalogDocs
 		return $dbRes;
 	}
 
-	public static function synchronizeStockQuantity($storeId)
+	public static function synchronizeStockQuantity($storeId, $iblockId = 0)
 	{
 		global $DB;
-		$storeId = intval($storeId);
-		if($storeId > 0)
-		{
-			$strSql = "INSERT INTO b_catalog_store_product (AMOUNT, PRODUCT_ID, STORE_ID) (SELECT cp.QUANTITY + CASE WHEN cp.QUANTITY_RESERVED IS NULL THEN 0 ELSE cp.QUANTITY_RESERVED END, cp.ID, ".$storeId." FROM b_catalog_product cp WHERE 1 = 1)";
-			return $DB->Query($strSql, true, "File: ".__FILE__."<br>Line: ".__LINE__);
-		}
-		return false;
+		$storeId = (int)$storeId;
+		if ($storeId <= 0)
+			return false;
+
+		$internalSql = 'select CP.QUANTITY + IFNULL(CP.QUANTITY_RESERVED, 0), CP.ID, '.$storeId.' ';
+		$iblockId = (int)$iblockId;
+		if ($iblockId <= 0)
+			$internalSql .= 'from b_catalog_product CP where 1 = 1';
+		else
+			$internalSql .= 'from b_catalog_product CP inner join b_iblock_element IE on (CP.ID = IE.ID) where IE.IBLOCK_ID = '.$iblockId;
+
+		return $DB->Query(
+			"insert into b_catalog_store_product (AMOUNT, PRODUCT_ID, STORE_ID) (".$internalSql.")",
+			true,
+			"File: ".__FILE__."<br>Line: ".__LINE__
+		);
 	}
 }

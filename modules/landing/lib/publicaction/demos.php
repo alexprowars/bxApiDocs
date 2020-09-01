@@ -21,7 +21,7 @@ class Demos
 		{
 			foreach ($item as $key => $value)
 			{
-				$key = strtoupper($key);
+				$key = mb_strtoupper($key);
 				if (isset($filter[$key]))
 				{
 					$value = (array)$value;
@@ -58,7 +58,7 @@ class Demos
 		$demoCmp = new $className;
 		$demoCmp->initComponent($componentName);
 		$demoCmp->arParams = array(
-			'TYPE' => strtoupper($type)
+			'TYPE' => mb_strtoupper($type)
 		);
 
 		if ($page)
@@ -146,7 +146,7 @@ class Demos
 		$demoCmp = new $className;
 		$demoCmp->initComponent($componentName);
 		$demoCmp->arParams = array(
-			'TYPE' => strtoupper($type)
+			'TYPE' => mb_strtoupper($type)
 		);
 
 		$result->setResult($demoCmp->getUrlPreview($code));
@@ -296,7 +296,7 @@ class Demos
 			}
 			foreach ($fieldCode as $code)
 			{
-				$codel = strtolower($code);
+				$codel = mb_strtolower($code);
 				if (isset($item[$codel]))
 				{
 					$fields[$code] = $item[$codel];

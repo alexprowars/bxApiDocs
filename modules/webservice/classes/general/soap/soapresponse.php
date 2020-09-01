@@ -23,7 +23,7 @@ class CSOAPResponse extends CSOAPEnvelope
 	/// Contains the DOM document for the current SOAP response
 	var $DOMDocument = false;
 
-	public function CSOAPResponse( $name="", $namespace="" )
+	function CSOAPResponse( $name="", $namespace="" )
 	{
 		$this->Name = $name;
 		$this->Namespace = $namespace;
@@ -33,7 +33,7 @@ class CSOAPResponse extends CSOAPEnvelope
 	}
 
 	//	Decodes the SOAP response stream
-	public function decodeStream( $request, $stream )
+	function decodeStream( $request, $stream )
 	{
 		global $APPLICATION;
 
@@ -128,7 +128,7 @@ class CSOAPResponse extends CSOAPEnvelope
 	}
 
 	// Decodes a DOM node and returns the PHP datatype instance of it.
-	public function decodeDataTypes( $node, $complexDataTypeName = "" )
+	function decodeDataTypes( $node, $complexDataTypeName = "" )
 	{
 		global $xsd_simple_type;
 		$returnValue = false;
@@ -308,7 +308,7 @@ class CSOAPResponse extends CSOAPEnvelope
 						if (!$decoded and (!isset($param["strict"]) or
 							(isset($param["strict"]) and $param["strict"] == "strict") ))
 						{
-							return new CSOAPFault("Server Error", "Request has no enought params of strict type to be decoded. " );
+							return new CSOAPFault("Server Error", "Request has not enough params of strict type to be decoded. " );
 						}
 
 						$params[$pname] = $decoded;
@@ -352,7 +352,7 @@ class CSOAPResponse extends CSOAPEnvelope
 	}
 
 	//	  Returns the XML payload for the response.
-	public function payload( )
+	function payload( )
 	{
 		$root = new CXMLCreator("soap:Envelope");
 		$root->setAttribute("xmlns:soap", BX_SOAP_ENV);
@@ -438,7 +438,7 @@ class CSOAPResponse extends CSOAPEnvelope
 	}
 
 	//	 Strips the header information from the HTTP raw response.
-	public static function stripHTTPHeader( $data )
+	function stripHTTPHeader( $data )
 	{
 		$missingxml = false;
 		//$start = strpos( $data, "<"."?xml" );
@@ -448,37 +448,37 @@ class CSOAPResponse extends CSOAPEnvelope
 		return $data;
 	}
 
-	public function value()
+	function value()
 	{
 		return $this->Value;
 	}
 
-	public function setValue( $value )
+	function setValue( $value )
 	{
 		$this->Value = $value;
 	}
 
-	public function setValueName ( $valname )
+	function setValueName ( $valname )
 	{
 		$this->ValueName = $valname;
 	}
 
-	public function isFault()
+	function isFault()
 	{
 		return $this->IsFault;
 	}
 
-	public function faultCode()
+	function faultCode()
 	{
 		return $this->FaultCode;
 	}
 
-	public function faultString()
+	function faultString()
 	{
 		return $this->FaultString;
 	}
 
-	public function setTypensVars($vars)
+	function setTypensVars($vars)
 	{
 		$this->typensVars = $vars;
 	}

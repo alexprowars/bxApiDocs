@@ -129,7 +129,7 @@ class CSupportTableFields
 		return $DEF_VAL;
 	}
 	
-	public function SortMethod($a, $b)
+	function SortMethod($a, $b)
 	{
 		foreach($this->_sortFields as $k => $name)
 		{
@@ -229,9 +229,9 @@ class CSupportTableFields
 		$this->CleanVar();
 	}
 	
-	/* Ð·Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð»Ñ Ð¸Ð· Ð¼Ð°ÑÑÐ¸Ð²Ð°
-		$sf = "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ,Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2,..."
-		$sf = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2",...) */
+	/* çàïîëíèòü ïîëÿ èç ìàññèâà
+		$sf = "Èìÿ ïîëÿ,Èìÿ ïîëÿ2,..."
+		$sf = array("Èìÿ ïîëÿ", "Èìÿ ïîëÿ2",...) */
 	public function SortRow($sf)
 	{
 		$this->_sortFields = CSupportTools::prepareParamArray($sf);
@@ -282,11 +282,11 @@ class CSupportTableFields
 		}
 	}
 	
-	/* Ð·Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð»Ñ Ð¸Ð· Ð¼Ð°ÑÑÐ¸Ð²Ð°
+	/* çàïîëíèòü ïîëÿ èç ìàññèâà
 		$fields = CSupportTableFields::ALL
-		$fields = "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ,Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2,..."
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2",...)
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ2",...)
+		$fields = "Èìÿ ïîëÿ,Èìÿ ïîëÿ2,..."
+		$fields = array("Èìÿ ïîëÿ", "Èìÿ ïîëÿ2",...)
+		$fields = array("Èìÿ ïîëÿ" => "Èìÿ ïîëÿ â ìàññèâå", "Èìÿ ïîëÿ2" => "Èìÿ ïîëÿ â ìàññèâå2",...)
 		$notNull = array(self::NOT_EMTY_STR, self::MORE0, self::NOT_EMTY_STR) */
 	public function FromArray($arr, $fields = self::ALL, $notNull = array(), $row = null) //setFromArr
 	{
@@ -300,11 +300,11 @@ class CSupportTableFields
 		}
 	}
 	
-	/* Ð·Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÑŒ Ð¿Ð¾Ð»Ñ Ð¸Ð· Ð¼Ð°ÑÑÐ¸Ð²Ð°
+	/* çàïîëíèòü ïîëÿ èç ìàññèâà
 		$fields = CSupportTableFields::ALL
-		$fields = "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ,Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2,..."
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2",...)
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ2",...)
+		$fields = "Èìÿ ïîëÿ,Èìÿ ïîëÿ2,..."
+		$fields = array("Èìÿ ïîëÿ", "Èìÿ ïîëÿ2",...)
+		$fields = array("Èìÿ ïîëÿ" => "Èìÿ ïîëÿ â ìàññèâå", "Èìÿ ïîëÿ2" => "Èìÿ ïîëÿ â ìàññèâå2",...)
 		$notNull = array(self::NOT_EMTY_STR, self::MORE0, self::NOT_EMTY_STR) */
 	public function FromTable($table, $fields = self::ALL, $notNull = array(), $removeExistingRows = false) //setFromTable
 	{
@@ -335,12 +335,12 @@ class CSupportTableFields
 		return $this->_arFields[$row][$name];
 	}
 	
-	/*Ð’Ñ‹Ð³Ñ€ÑƒÐ·Ð¸Ñ‚ÑŒ Ð¿ÐµÑ€ÐµÑ‡Ð¸ÑÐ»ÐµÐ½Ð½Ñ‹Ðµ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²
+	/*Âûãðóçèòü ïåðå÷èñëåííûå ïîëÿ â ìàññèâ
 		$notNull = array(self::NOT_NULL, self::NOT_DEFAULT, self::ONLY_CHANGED)
 		$fields = CSupportTableFields::ALL
-		$fields = "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ,Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2,..."
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2",...)
-		$fields = array("Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ", "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ2" => "Ð˜Ð¼Ñ Ð¿Ð¾Ð»Ñ Ð² Ð¼Ð°ÑÑÐ¸Ð²Ðµ2",...)*/
+		$fields = "Èìÿ ïîëÿ,Èìÿ ïîëÿ2,..."
+		$fields = array("Èìÿ ïîëÿ", "Èìÿ ïîëÿ2",...)
+		$fields = array("Èìÿ ïîëÿ" => "Èìÿ ïîëÿ â ìàññèâå", "Èìÿ ïîëÿ2" => "Èìÿ ïîëÿ â ìàññèâå2",...)*/
 	public function ToArray($fields = self::ALL, $notNull = array(), $forSQL = false, $row = null)  //getArr
 	{
 		$row = $this->checkRow($row);

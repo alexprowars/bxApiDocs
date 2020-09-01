@@ -142,7 +142,7 @@ class Speed extends \Bitrix\Landing\Hook\Page
 
 	protected function execLazyLoad(): void
 	{
-		if ($this->fields['USE_LAZY']->getValue() === 'Y')
+		if ($this->fields['USE_LAZY']->getValue() !== 'N')
 		{
 			$assets = Assets\Manager::getInstance();
 			$assets->addAsset(self::LAZYLOAD_EXTENSION_NAME, Assets\Location::LOCATION_BEFORE_ALL);

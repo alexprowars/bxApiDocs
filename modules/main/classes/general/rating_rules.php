@@ -4,7 +4,7 @@ IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/g
 class CAllRatingRulesMain
 {
 	// return configs
-	public static function OnGetRatingRuleConfigs()
+	function OnGetRatingRuleConfigs()
 	{
 		$arConfigs["USER"]["CONDITION_CONFIG"][] = array(
 		    "ID"	=> 'RATING',
@@ -242,7 +242,7 @@ class CAllRatingRulesMain
 		return $arConfigs;
 	}
 
-	public static function ratingCheck($arConfigs)
+	function ratingCheck($arConfigs)
 	{
 		global $DB;
 		$err_mess = "File: ".__FILE__."<br>Function: ratingCheck<br>Line: ";
@@ -276,7 +276,7 @@ class CAllRatingRulesMain
 		return true;
 	}
 
-	public static function ratingCheckInterval($arConfigs)
+	function ratingCheckInterval($arConfigs)
 	{
 		global $DB;
 		$err_mess = "File: ".__FILE__."<br>Function: ratingCheckInterval<br>Line: ";
@@ -310,7 +310,7 @@ class CAllRatingRulesMain
 		return true;
 	}
 
-	public static function addToGroup($arConfigs)
+	function addToGroup($arConfigs)
 	{
 		global $DB;
 		$err_mess = "File: ".__FILE__."<br>Function: addToGroup<br>Line: ";
@@ -339,7 +339,7 @@ class CAllRatingRulesMain
 		return true;
 	}
 
-	public static function removeFromGroup($arConfigs)
+	function removeFromGroup($arConfigs)
 	{
 		global $DB;
 		$err_mess = "File: ".__FILE__."<br>Function: addToGroup<br>Line: ";
@@ -373,7 +373,7 @@ class CAllRatingRulesMain
 		return true;
 	}
 
-	public static function GetUfList()
+	function GetUfList()
 	{
 		$arFields = array();
 		$rsData = CUserTypeEntity::GetList(array(), array('ENTITY_ID' => 'USER', 'LANG' => LANG));
@@ -386,7 +386,7 @@ class CAllRatingRulesMain
 
 	}
 
-	public static function changeUF($arConfigs)
+	function changeUF($arConfigs)
 	{
 		global $DB;
 		$err_mess = "File: ".__FILE__."<br>Function: changeUF<br>Line: ";
@@ -429,7 +429,7 @@ class CAllRatingRulesMain
 	}
 
 	// return support object
-	public static function OnGetRatingRuleObjects()
+	function OnGetRatingRuleObjects()
 	{
 		$arRatingRulesConfigs = CRatingRulesMain::OnGetRatingRuleConfigs();
 		foreach ($arRatingRulesConfigs as $SupportType => $value)
@@ -439,7 +439,7 @@ class CAllRatingRulesMain
 	}
 
 	// check the value which relate to the module
-	public static function OnAfterAddRatingRule($ID, $arFields)
+	function OnAfterAddRatingRule($ID, $arFields)
 	{
 		$arFields = CRatingRulesMain::__CheckFields($arFields['ENTITY_TYPE_ID'], $arFields);
 
@@ -447,7 +447,7 @@ class CAllRatingRulesMain
 	}
 
 	// check the value which relate to the module
-	public static function OnAfterUpdateRatingRule($ID, $arFields)
+	function OnAfterUpdateRatingRule($ID, $arFields)
 	{
 		$arFields = CRatingRulesMain::__CheckFields($arFields['ENTITY_TYPE_ID'], $arFields);
 
@@ -455,7 +455,7 @@ class CAllRatingRulesMain
 	}
 
 	// check input values, if value does not validate, set the default value
-	public static function __CheckFields($entityId, $arConfigs)
+	function __CheckFields($entityId, $arConfigs)
 	{
 		$arDefaultConfig = CRatingRulesMain::__AssembleConfigDefault($entityId);
 
@@ -524,7 +524,7 @@ class CAllRatingRulesMain
 	}
 
 	// assemble config default value
-	public static function __AssembleConfigDefault($objectType = null)
+	function __AssembleConfigDefault($objectType = null)
 	{
 		$arConfigs = array();
 		$arRatingRuleConfigs = CRatingRulesMain::OnGetRatingRuleConfigs();

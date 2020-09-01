@@ -29,7 +29,7 @@ class CSupportHolidays
 		return "<br>Module: " . $module_id . " <br>Class: CSupportHolidays<br>File: " . __FILE__;
 	}
 	
-	public static function Set($arFields, $arFieldsSLA) //$arFields, $arFieldsSLA = array(0 => array("HOLIDAYS_ID" => 1, "SLA_ID" => 1), 1 => array("HOLIDAYS_ID" => 2, "SLA_ID" => 2) ...)
+	function Set($arFields, $arFieldsSLA) //$arFields, $arFieldsSLA = array(0 => array("HOLIDAYS_ID" => 1, "SLA_ID" => 1), 1 => array("HOLIDAYS_ID" => 2, "SLA_ID" => 2) ...)
 	{
 		global $DB, $APPLICATION;
 		$err_mess = (self::err_mess())."<br>Function: Set<br>Line: ";
@@ -137,7 +137,7 @@ class CSupportHolidays
 	}
 
 	// get Holidays list
-	public static function GetList($arSort, $arFilter)
+	function GetList($arSort, $arFilter)
 	{
 	
 		$err_mess = (self::err_mess())."<br>Function: GetList<br>Line: ";
@@ -230,7 +230,7 @@ class CSupportHolidays
 	}
 	
 	// get Holidays list
-	public static function GetSLAByID($id, $needObj = false)
+	function GetSLAByID($id, $needObj = false)
 	{
 		$err_mess = (self::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB, $USER, $APPLICATION;		
@@ -263,7 +263,7 @@ class CSupportHolidays
 		return $f_s;
 	}
 	
-	public static function GetOpenTimeArray()
+	function GetOpenTimeArray()
 	{
 		return array(
 			"GB_1" => "SUP_OPEN_TIME_HOLIDAY_G",
@@ -284,14 +284,14 @@ class CSupportHolidays
 
 	}
 	
-	public static function GetOpenTimeT($v)
+	function GetOpenTimeT($v)
 	{
 		$arr = self::GetOpenTimeArray();
 		return (isset($arr[$v]) ? $arr[$v] : "");
 	}
 	
 	// delete Holiday
-	public static function Delete($id, $checkRights=true)
+	function Delete($id, $checkRights=true)
 	{
 		$err_mess = (self::err_mess())."<br>Function: Delete<br>Line: ";
 		global $DB, $USER, $APPLICATION;

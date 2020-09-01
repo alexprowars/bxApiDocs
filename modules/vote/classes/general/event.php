@@ -8,13 +8,13 @@
 
 class CAllVoteEvent
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "vote";
 		return "<br>Module: ".$module_id."<br>Class: CAllVoteEvent<br>File: ".__FILE__;
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		$ID = intval($ID);
 		if ($ID<=0) return;
@@ -22,7 +22,7 @@ class CAllVoteEvent
 		return $res;
 	}
 
-	public static function GetAnswer($EVENT_ID, $ANSWER_ID)
+	function GetAnswer($EVENT_ID, $ANSWER_ID)
 	{
 		$err_mess = (self::err_mess())."<br>Function: GetAnswer<br>Line: ";
 		global $DB;
@@ -50,147 +50,17 @@ class CAllVoteEvent
 		return false;
 	}
 
-	public static function Delete($EVENT_ID)
+	public static function Delete($eventId)
 	{
-		$err_mess = (self::err_mess())."<br>Function: Delete<br>Line: ";
-		global $DB;
-		$EVENT_ID = intval($EVENT_ID);
-		if ($EVENT_ID <= 0):
-			return;
-		endif;
-		// reset vote validity
-		CVoteEvent::SetValid($EVENT_ID, "N");
-		$DB->StartTransaction();
-		// reset questions and asnwers voting events
-		$DB->Query("DELETE FROM b_vote_event_answer WHERE EVENT_QUESTION_ID IN (".
-			"SELECT VEQ.ID FROM b_vote_event_question VEQ WHERE VEQ.EVENT_ID=".$EVENT_ID.")", false, $err_mess.__LINE__);
-		$DB->Query("DELETE FROM b_vote_event_question WHERE EVENT_ID=".$EVENT_ID, false, $err_mess.__LINE__);
-		$DB->Update("b_vote_user", array("COUNTER" => "COUNTER - 1"), "WHERE ID IN (".
-			"SELECT VOTE_USER_ID FROM b_vote_event WHERE ID=$EVENT_ID)",$err_mess.__LINE__);
-		// reset voting events
-		$res = $DB->Query("DELETE FROM b_vote_event WHERE ID=$EVENT_ID", false, $err_mess.__LINE__);
-		$DB->Commit();
-		return $res;
+		return \Bitrix\Vote\Event::deleteEvent($eventId);
 	}
 
-	public static function SetValid($EVENT_ID, $valid)
+	function SetValid($eventId, $valid)
 	{
-		$err_mess = (self::err_mess())."<br>Function: SetValid<br>Line: ";
-		global $DB;
-		$valid = ($valid == "Y" ? "Y" : "N");
-		$arrQuestion = array();
-		$EVENT_ID = intval($EVENT_ID);
-		if ($EVENT_ID <= 0):
-			return;
-		endif;
-		$arFields = ($valid == "Y" ? array("COUNTER" => "COUNTER + 1") : array("COUNTER" => "COUNTER - 1"));
-		$strSql =
-			"SELECT DISTINCT EA.ANSWER_ID, EQ.QUESTION_ID, E.VALID, E.VOTE_ID ".
-			" FROM b_vote_event E ".
-				" LEFT JOIN b_vote_event_question EQ ON (EQ.EVENT_ID = E.ID) ".
-				" LEFT JOIN b_vote_event_answer EA ON (EA.EVENT_QUESTION_ID = EQ.ID) ".
-			" WHERE E.ID = ".$EVENT_ID." AND E.VALID <> '".$valid."'";
-		//echo $strSql;
-		$db_res = $DB->Query($strSql, false, $err_mess.__LINE__);
-		if ($db_res && ($res = $db_res->Fetch())):
-			$VOTE_ID = $res["VOTE_ID"];
-			$DB->StartTransaction();
-			do {
-				$DB->Update("b_vote_answer", $arFields, "WHERE ID='".$res["ANSWER_ID"]."'",$err_mess.__LINE__);
-				if (!in_array($res["QUESTION_ID"], $arrQuestion)):
-					$DB->Update("b_vote_question", $arFields, "WHERE ID='".$res["QUESTION_ID"]."'", $err_mess.__LINE__);
-					$arrQuestion[] = $res["QUESTION_ID"];
-				endif;
-			} while ($res = $db_res->Fetch());
-			
-			// change valid flag
-			$DB->Update("b_vote_event", array("VALID" => "'".$valid."'"), "WHERE ID=".$EVENT_ID, $err_mess.__LINE__);
-			// decrement vote counter 
-			unset($GLOBALS["VOTE_CACHE_VOTE_".$VOTE_ID]);
-			$DB->Update("b_vote", $arFields, "WHERE ID='".intval($VOTE_ID)."'", $err_mess.__LINE__);
-			$DB->Commit();
-		endif;
+		return \Bitrix\Vote\Event::setValid($eventId, $valid);
 	}
 
-	public static function CheckStat($arParams, $bForseCheckStat = false)
-	{
-		global $DB;
-		$err_mess = (self::err_mess())."<br>Function: CheckStat<br>Line: ";
-		$VOTE_ID = intval($arParams["VOTE_ID"]);
-		$arAnswers = array(); $arQuestions = array();
-
-		if (!is_set($arParams, "ANSWERS") || !is_set($arParams, "QUESTIONS"))
-		{
-			$strSQL = "SELECT A.ID AS ANSWER_ID, Q.ID AS QUESTION_ID ".
-				" FROM b_vote V ".
-				" LEFT JOIN b_vote_question Q ON (V.ID = Q.VOTE_ID) ".
-				" LEFT JOIN b_vote_answer A ON (Q.ID = A.QUESTION_ID ) ".
-				" WHERE V.ID = ".$VOTE_ID;
-			$db_res = $DB->Query($strSQL, false, $err_mess.__LINE__);
-			if ($db_res && ($res = $db_res->Fetch()))
-			{
-				do {
-					$arAnswers[] = $res["ANSWER_ID"];
-					$arQuestions[] = $res["QUESTION_ID"];
-				} while ($res = $db_res->Fetch());
-				$arQuestions = array_unique($arQuestions);
-			}
-		}
-		else
-		{
-			$arQuestions = (is_array($arParams["QUESTIONS"]) ? $arParams["QUESTIONS"] : array($arParams["QUESTIONS"]));
-			$arAnswers = (is_array($arParams["ANSWERS"]) ? $arParams["ANSWERS"] : array($arParams["ANSWERS"]));
-		}
-
-		if (!empty($arAnswers) && !empty($arQuestions))
-		{
-			$strSQL ="SELECT E.ID AS EVENT_ID ".
-				" FROM b_vote_event E ".
-				" LEFT JOIN b_vote_event_question EQ ON (E.ID = EQ.EVENT_ID) ".
-				" LEFT JOIN b_vote_event_answer EA ON (EA.EVENT_QUESTION_ID = EQ.ID) ".
-				" WHERE E.VOTE_ID=".$VOTE_ID." AND (EA.ANSWER_ID NOT IN (".implode(",", $arAnswers).") OR EQ.QUESTION_ID NOT IN (".implode(",", $arQuestions)."))";
-			$db_res = $DB->Query($strSQL, false, $err_mess.__LINE__);
-			if ($db_res && ($res = $db_res->Fetch()))
-			{
-				$arEvetns = array();
-				$bForseCheckStat = true;
-				do {
-					$arEvetns[] = $res["EVENT_ID"];
-				} while ($res = $db_res->Fetch());
-
-				$DB->StartTransaction();
-				// reset questions and asnwers voting events
-				$strSQL = implode(",", $arEvetns);
-				$DB->Query("DELETE FROM b_vote_event_answer WHERE EVENT_QUESTION_ID IN (".
-					"SELECT VEQ.ID FROM b_vote_event_question VEQ WHERE VEQ.EVENT_ID IN (".$strSQL."))", false, $err_mess.__LINE__);
-				$DB->Query("DELETE FROM b_vote_event_question WHERE EVENT_ID IN (".$strSQL.")", false, $err_mess.__LINE__);
-				// reset voting events
-				$DB->Query("DELETE FROM b_vote_event WHERE ID IN (".$strSQL.")", false, $err_mess.__LINE__);
-				$DB->Commit();
-			}
-		}
-		if ($bForseCheckStat)
-		{
-			$DB->Query(
-				"UPDATE b_vote V SET V.COUNTER=(".
-					"SELECT COUNT(VE.ID) FROM b_vote_event VE WHERE VE.VOTE_ID=V.ID".
-				") WHERE V.ID=".$VOTE_ID, false, $err_mess.__LINE__);
-			$DB->Query(
-				"UPDATE b_vote_question VQ SET VQ.COUNTER=(".
-					"SELECT COUNT(VEQ.ID) FROM b_vote_event_question VEQ WHERE VEQ.QUESTION_ID=VQ.ID".
-				") WHERE VQ.VOTE_ID=".$VOTE_ID, false, $err_mess.__LINE__);
-			$DB->Query(
-				"UPDATE b_vote_answer VA, b_vote_question VQ SET VA.COUNTER=(".
-					" SELECT COUNT(VEA.ID) FROM b_vote_event_answer VEA WHERE VEA.ANSWER_ID=VA.ID".
-				") WHERE VQ.ID = VA.QUESTION_ID AND VQ.VOTE_ID=".$VOTE_ID, false, $err_mess.__LINE__);
-			$DB->Query(
-				"UPDATE b_vote_user VU, b_vote_event VE SET VU.COUNTER=(".
-					" SELECT COUNT(VE.ID) FROM b_vote_event VE WHERE VU.ID=VE.VOTE_USER_ID AND VE.VALID='Y' ".
-				") WHERE VU.ID IN (SELECT DISTINCT VEE.VOTE_USER_ID FROM b_vote_event VEE WHERE VOTE_ID=".$VOTE_ID.")", false, $err_mess.__LINE__);
-		}
-	}
-
-	public static function GetList(&$by, &$order, $arFilter=Array(), &$is_filtered, $get_user="N")
+	function GetList(&$by, &$order, $arFilter=Array(), &$is_filtered, $get_user="N")
 	{
 		$err_mess = (self::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB;
@@ -283,7 +153,7 @@ class CAllVoteEvent
 		{
 			$select = " ,
 				U.AUTH_USER_ID, U.STAT_GUEST_ID,
-				A.LOGIN,
+				A.NAME, A.LAST_NAME, A.SECOND_NAME, A.PERSONAL_PHOTO, A.LOGIN, 
 				".$DB->Concat("A.LAST_NAME", "' '", "A.NAME")."	AUTH_USER_NAME
 			";
 			$from = "

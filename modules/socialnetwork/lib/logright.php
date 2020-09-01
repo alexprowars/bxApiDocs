@@ -61,7 +61,7 @@ class LogRightTable extends Entity\DataManager
 		$now = $helper->getCurrentDateTimeFunction();
 		if (
 			!$value
-			|| strtolower($value) == strtolower($now)
+			|| mb_strtolower($value) == mb_strtolower($now)
 		)
 		{
 			$value = new SqlExpression($now);
@@ -80,7 +80,7 @@ class LogRightTable extends Entity\DataManager
 
 	public static function deleteByGroupCode($value = '')
 	{
-		if (strlen($value) <= 0)
+		if ($value == '')
 		{
 			return false;
 		}

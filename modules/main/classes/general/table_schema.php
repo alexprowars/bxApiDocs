@@ -2,7 +2,7 @@
 IncludeModuleLangFile(__FILE__);
 class CTableSchema
 {
-	static public function __construct()
+	public function __construct()
 	{
 	}
 

@@ -57,7 +57,7 @@ class Hook
 			{
 				if ($entry != '.' && $entry != '..')
 				{
-					$classes[] = strtoupper(pathinfo($entry, PATHINFO_FILENAME));
+					$classes[] = mb_strtoupper(pathinfo($entry, PATHINFO_FILENAME));
 				}
 			}
 		}
@@ -101,9 +101,9 @@ class Hook
 			{
 				$data[$row['HOOK']] = array();
 			}
-			if (strpos($row['VALUE'], 'serialized#') === 0)
+			if (mb_strpos($row['VALUE'], 'serialized#') === 0)
 			{
-				$row['VALUE'] = unserialize(substr($row['VALUE'], 11));
+				$row['VALUE'] = unserialize(mb_substr($row['VALUE'], 11));
 			}
 			$data[$row['HOOK']][$row['CODE']] = $asIs ? $row : $row['VALUE'];
 		}
@@ -163,7 +163,7 @@ class Hook
 				{
 					foreach ((array)$customExec as $code => $itemExec)
 					{
-						$code = strtoupper($code);
+						$code = mb_strtoupper($code);
 						if (isset($hooks[$code]) && is_callable($itemExec))
 						{
 							$hooks[$code]->setCustomExec($itemExec);
@@ -412,10 +412,10 @@ class Hook
 
 		foreach ($data as $code => $val)
 		{
-			if (strpos($code, '_') !== false)
+			if (mb_strpos($code, '_') !== false)
 			{
-				$codeHook = substr($code, 0, strpos($code, '_'));
-				$codeVal = substr($code, strpos($code, '_') + 1);
+				$codeHook = mb_substr($code, 0, mb_strpos($code, '_'));
+				$codeVal = mb_substr($code, mb_strpos($code, '_') + 1);
 				if (!isset($newData[$codeHook]))
 				{
 					$newData[$codeHook] = array();
@@ -650,21 +650,18 @@ class Hook
 	{
 		$id = intval($id);
 
-		foreach (self::getData($id, $type, true) as $row)
+		$res = HookData::getList(array(
+			'select' => array(
+				'ID'
+			),
+			'filter' => array(
+				'ENTITY_ID' => $id,
+				'=ENTITY_TYPE' => $type
+			)
+		));
+		while ($row = $res->fetch())
 		{
-			$res = HookData::getList(array(
-				'select' => array(
-					'ID'
-				),
-				'filter' => array(
-					'ENTITY_ID' => $id,
-					'=ENTITY_TYPE' => $type
-				)
-			));
-			while ($row = $res->fetch())
-			{
-				HookData::delete($row['ID']);
-			}
+			HookData::delete($row['ID']);
 		}
 	}
 

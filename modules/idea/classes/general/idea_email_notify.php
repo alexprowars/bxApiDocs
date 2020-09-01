@@ -207,12 +207,12 @@ Class CIdeaManagmentEmailNotify
 		return count($arEmailSubscribe) > 0;
 	}
 
-	static public function Disable()
+	public function Disable()
 	{
 		self::$Enable = false;
 	}
 
-	static public function Enable()
+	public function Enable()
 	{
 		self::$Enable = true;
 	}

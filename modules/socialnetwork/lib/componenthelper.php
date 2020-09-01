@@ -14,8 +14,11 @@ use Bitrix\Main\Update\Stepper;
 use Bitrix\Socialnetwork\Item\Log;
 use Bitrix\Main\DB\SqlExpression;
 use Bitrix\Main\Application;
-use Bitrix\Socialnetwork\Livefeed\LogComment;
 use Bitrix\Socialnetwork\Livefeed\Provider;
+use Bitrix\Disk\Uf\FileUserType;
+use Bitrix\Disk\AttachedObject;
+use Bitrix\Disk\File;
+use Bitrix\Disk\TypeFile;
 
 Loc::loadMessages(__FILE__);
 
@@ -560,11 +563,11 @@ class ComponentHelper
 		$result = false;
 
 		if (
-			strlen($url) > 0
+			$url <> ''
 			&& intval($userId) > 0
-			&& strlen($entityType) > 0
+			&& $entityType <> ''
 			&& intval($entityId) > 0
-			&& strlen($siteId) > 0
+			&& $siteId <> ''
 			&& Loader::includeModule('mail')
 		)
 		{
@@ -609,7 +612,7 @@ class ComponentHelper
 
 		if (
 			!$siteId
-			|| strlen($siteId) <= 0
+			|| $siteId == ''
 		)
 		{
 			$siteId = SITE_ID;
@@ -620,7 +623,7 @@ class ComponentHelper
 
 		foreach ($valueList as $key => $value)
 		{
-			$attachedObject = \Bitrix\Disk\AttachedObject::loadById($value, array('OBJECT'));
+			$attachedObject = AttachedObject::loadById($value, [ 'OBJECT' ]);
 			if(
 				!$attachedObject
 				|| !$attachedObject->getFile()
@@ -637,7 +640,7 @@ class ComponentHelper
 				"NAME" => $attachedObject->getFile()->getName(),
 				"SIZE" => \CFile::formatSize($attachedObject->getFile()->getSize()),
 				"URL" => $attachedObjectUrl,
-				"IS_IMAGE" => \Bitrix\Disk\TypeFile::isImage($attachedObject->getFile())
+				"IS_IMAGE" => TypeFile::isImage($attachedObject->getFile())
 			);
 		}
 
@@ -678,10 +681,10 @@ class ComponentHelper
 			$attachedFileId = false;
 			$attachedObject = false;
 
-			list($type, $realValue) = \Bitrix\Disk\Uf\FileUserType::detectType($value);
-			if ($type == \Bitrix\Disk\Uf\FileUserType::TYPE_NEW_OBJECT)
+			list($type, $realValue) = FileUserType::detectType($value);
+			if ($type == FileUserType::TYPE_NEW_OBJECT)
 			{
-				$attachedObject = \Bitrix\Disk\AttachedObject::load(array(
+				$attachedObject = AttachedObject::load(array(
 					'=ENTITY_TYPE' => $connectorClass,
 					'ENTITY_ID' => $entityId,
 					'=MODULE_ID' => $moduleId,
@@ -714,7 +717,7 @@ class ComponentHelper
 				{
 					if (!$attachedObject)
 					{
-						$attachedObject = \Bitrix\Disk\AttachedObject::loadById($attachedFileId, array('OBJECT'));
+						$attachedObject = AttachedObject::loadById($attachedFileId, array('OBJECT'));
 					}
 
 					if ($attachedObject)
@@ -783,14 +786,14 @@ class ComponentHelper
 			foreach($matches[1] as $inlineFileId)
 			{
 				$attachmentId = false;
-				if (strpos($inlineFileId, 'n') === 0)
+				if (mb_strpos($inlineFileId, 'n') === 0)
 				{
 					$found = false;
 					foreach($attachmentList as $attachmentId => $attachment)
 					{
 						if (
 							isset($attachment["OBJECT_ID"])
-							&& intval($attachment["OBJECT_ID"]) == intval(substr($inlineFileId, 1))
+							&& intval($attachment["OBJECT_ID"]) == intval(mb_substr($inlineFileId, 1))
 						)
 						{
 							$found = true;
@@ -838,10 +841,10 @@ class ComponentHelper
 	public static function convertDiskFileBBCode($text, $entityType, $entityId, $authorId, $attachmentList = array())
 	{
 		if (
-			strlen(trim($text)) <= 0
+			trim($text) == ''
 			|| empty($attachmentList)
 			|| intval($authorId) <= 0
-			|| strlen($entityType) <= 0
+			|| $entityType == ''
 			|| intval($entityId) <= 0
 		)
 		{
@@ -885,6 +888,63 @@ class ComponentHelper
 		}
 
 		return $text;
+	}
+
+	/**
+	 * Calculates if text has inline disk file images
+	 *
+	 * @param string $text text with BB-codes
+	 * @param array $ufData uf of disk type.
+	 * @return boolean
+	 */
+	public static function hasTextInlineImage(string $text = '', array $ufData = []): bool
+	{
+		$result = false;
+
+		if (
+			preg_match_all("#\\[disk file id=(n?\\d+)\\]#is".BX_UTF_PCRE_MODIFIER, $text, $matches)
+			&& Loader::includeModule('disk')
+		)
+		{
+			$userFieldManager = \Bitrix\Disk\Driver::getInstance()->getUserFieldManager();
+
+			foreach($matches[1] as $id)
+			{
+				$fileModel = null;
+				list($type, $realValue) = FileUserType::detectType($id);
+
+				if ($type == FileUserType::TYPE_NEW_OBJECT)
+				{
+					$fileModel = File::loadById($realValue);
+					if(!$fileModel)
+					{
+						continue;
+					}
+				}
+				else
+				{
+					$attachedModel = $userFieldManager->getAttachedObjectById($realValue);
+					if(!$attachedModel)
+					{
+						continue;
+					}
+
+					$attachedModel->setOperableEntity([
+						'ENTITY_ID' => $ufData['ENTITY_ID'],
+						'ENTITY_VALUE_ID' => $ufData['ENTITY_VALUE_ID']
+					]);
+					$fileModel = $attachedModel->getFile();
+				}
+
+				if(TypeFile::isImage($fileModel))
+				{
+					$result = true;
+					break;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -1008,7 +1068,7 @@ class ComponentHelper
 			|| !isset($params["USER_ID"])
 			|| intval($params["USER_ID"]) <= 0
 			|| !isset($params["SITE_ID"])
-			|| strlen($params["SITE_ID"]) <= 0
+			|| $params["SITE_ID"] == ''
 		)
 		{
 			return false;
@@ -1016,7 +1076,7 @@ class ComponentHelper
 
 		if (
 			!isset($params["PATH_TO_BLOG"])
-			|| strlen($params["PATH_TO_BLOG"]) <= 0
+			|| $params["PATH_TO_BLOG"] == ''
 		)
 		{
 			$params["PATH_TO_BLOG"] = "";
@@ -1060,7 +1120,7 @@ class ComponentHelper
 		if ($user = $res->fetch())
 		{
 			$fields["NAME"] = Loc::getMessage("BLG_NAME")." ".(
-				strlen($user["NAME"]."".$user["LAST_NAME"]) <= 0
+				$user["NAME"]."".$user["LAST_NAME"] == ''
 					? $user["LOGIN"]
 					: $user["NAME"]." ".$user["LAST_NAME"]
 			);
@@ -1258,7 +1318,7 @@ class ComponentHelper
 				}
 
 				$res = \Bitrix\Main\UserTable::getList(array(
-					'order' => array(),
+					'order' => [],
 					'filter' => $filter,
 					'select' => array('ID')
 				));
@@ -1267,6 +1327,20 @@ class ComponentHelper
 				{
 					$result[] = $user["ID"];
 				}
+
+				$adminList = [];
+				$res = \Bitrix\Main\UserGroupTable::getList(array(
+					'order' => [],
+					'filter' => [
+						'=GROUP_ID' => 1
+					],
+					'select' => [ 'USER_ID' ]
+				));
+				while($relationFields = $res->fetch())
+				{
+					$adminList[] = $relationFields["USER_ID"];
+				}
+				$result = array_diff($result, $adminList);
 
 				if (defined("BX_COMP_MANAGED_CACHE"))
 				{
@@ -1792,9 +1866,9 @@ class ComponentHelper
 			/* update socnet groupd activity*/
 			foreach($newRights as $v)
 			{
-				if(substr($v, 0, 2) == "SG")
+				if(mb_substr($v, 0, 2) == "SG")
 				{
-					$groupId = intval(substr($v, 2));
+					$groupId = intval(mb_substr($v, 2));
 					if($groupId > 0)
 					{
 						\CSocNetGroup::setLastActivity($groupId);
@@ -2178,7 +2252,7 @@ class ComponentHelper
 
 		if (
 			isset($_GET["entityType"])
-			&& strlen($_GET["entityType"]) > 0
+			&& $_GET["entityType"] <> ''
 		)
 		{
 			$result["ENTITY_TYPE"] = $_GET["entityType"];
@@ -2205,7 +2279,7 @@ class ComponentHelper
 			&& !empty($context["ENTITY_ID"])
 		)
 		{
-			$result = $url.(strpos($url, '?') === false ? '?' : '&').'entityType='.$context["ENTITY_TYPE"].'&entityId='.$context["ENTITY_ID"];
+			$result = $url.(mb_strpos($url, '?') === false ? '?' : '&').'entityType='.$context["ENTITY_TYPE"].'&entityId='.$context["ENTITY_ID"];
 		}
 
 		return $result;
@@ -2293,7 +2367,7 @@ class ComponentHelper
 				|| (
 					!!$value["CHECK_SEF_FOLDER"]
 					&& $sefFolder
-					&& substr($optionValue, 0, strlen($sefFolder)) !== $sefFolder
+					&& mb_substr($optionValue, 0, mb_strlen($sefFolder)) !== $sefFolder
 				)
 			)
 			{
@@ -2436,7 +2510,7 @@ class ComponentHelper
 			elseif (
 				$feature
 				&& array_key_exists("OPERATION_ADD", $commentEvent)
-				&& strlen($commentEvent["OPERATION_ADD"]) > 0
+				&& $commentEvent["OPERATION_ADD"] <> ''
 			)
 			{
 				$canAddComments = \CSocNetFeaturesPerms::canPerformOperation(
@@ -2560,7 +2634,7 @@ class ComponentHelper
 		$result["arComment"] = $comment;
 		foreach($result["arComment"] as $key => $value)
 		{
-			if (strpos($key, "~") === 0)
+			if (mb_strpos($key, "~") === 0)
 			{
 				unset($result["arComment"][$key]);
 			}
@@ -2608,12 +2682,12 @@ class ComponentHelper
 					: $comment["LOG_DATE"]
 			),
 			(
-				stripos($timeFormat, 'a')
-				|| (
-					$timeFormat == 'FULL'
-					&& (strpos(FORMAT_DATETIME, 'T')!==false || strpos(FORMAT_DATETIME, 'TT')!==false)
-				) !== false
-					? (strpos(FORMAT_DATETIME, 'TT')!==false ? 'H:MI TT' : 'H:MI T')
+			mb_stripos($timeFormat, 'a')
+			|| (
+				$timeFormat == 'FULL'
+				&& (mb_strpos(FORMAT_DATETIME, 'T') !== false || mb_strpos(FORMAT_DATETIME, 'TT') !== false)
+			) !== false
+					? (mb_strpos(FORMAT_DATETIME, 'TT') !== false ? 'H:MI TT' : 'H:MI T')
 					: 'HH:MI'
 			)
 		);
@@ -2754,7 +2828,7 @@ class ComponentHelper
 				}
 				else
 				{
-					$entityXMLId = strtoupper($logEntry["EVENT_ID"])."_".$logEntry["ID"];
+					$entityXMLId = mb_strtoupper($logEntry["EVENT_ID"])."_".$logEntry["ID"];
 				}
 			}
 
@@ -2832,7 +2906,7 @@ class ComponentHelper
 				// parse inline disk object ids
 				if (preg_match_all("#\\[disk file id=(n\\d+)\\]#is".BX_UTF_PCRE_MODIFIER, $comment["~MESSAGE"], $matches))
 				{
-					$inlineDiskObjectIdList = array_map(function($a) { return intval(substr($a, 1)); }, $matches[1]);
+					$inlineDiskObjectIdList = array_map(function($a) { return intval(mb_substr($a, 1)); }, $matches[1]);
 				}
 
 				// parse inline disk attached object ids
@@ -2852,7 +2926,7 @@ class ComponentHelper
 				)
 				{
 					$filter = array(
-						'=OBJECT.TYPE_FILE' => \Bitrix\Disk\TypeFile::IMAGE
+						'=OBJECT.TYPE_FILE' => TypeFile::IMAGE
 					);
 
 					$subFilter = [];
@@ -2935,17 +3009,17 @@ class ComponentHelper
 					"MODE" => "PULL_MESSAGE",
 					"VIEW_URL" => (
 						isset($comment["EVENT"]["URL"])
-						&& strlen($comment["EVENT"]["URL"]) > 0
+						&& $comment["EVENT"]["URL"] <> ''
 							? $comment["EVENT"]["URL"]
 							: (
 								isset($params["PATH_TO_LOG_ENTRY"])
-								&& strlen($params["PATH_TO_LOG_ENTRY"]) > 0
+								&& $params["PATH_TO_LOG_ENTRY"] <> ''
 									? \CComponentEngine::makePathFromTemplate(
 										$params["PATH_TO_LOG_ENTRY"],
 										array(
 											"log_id" => $logEntry["ID"]
 										)
-									).(strpos($params["PATH_TO_LOG_ENTRY"], "?") === false ? "?" : "&")."commentId=#ID#"
+									).(mb_strpos($params["PATH_TO_LOG_ENTRY"], "?") === false ? "?" : "&")."commentId=#ID#"
 									: ""
 							)
 					),
@@ -3208,7 +3282,7 @@ class ComponentHelper
 		)
 		{
 			\Bitrix\Main\UI\Selector\Entities::save([
-				'context' => (isset($params['CONTEXT']) && strlen($params['CONTEXT']) > 0 ? $params['CONTEXT'] : 'BLOG_POST'),
+				'context' => (isset($params['CONTEXT']) && $params['CONTEXT'] <> '' ? $params['CONTEXT'] : 'BLOG_POST'),
 				'code' => 'U'.$userId
 			]);
 		}
@@ -3754,8 +3828,8 @@ class ComponentHelper
 				$authorPostUrl = $tmp["URLS"]["URL"];
 
 				$serverName = (
-					strpos($authorPostUrl, "http://") === 0
-					|| strpos($authorPostUrl, "https://") === 0
+				mb_strpos($authorPostUrl, "http://") === 0
+					|| mb_strpos($authorPostUrl, "https://") === 0
 						? ""
 						: $tmp["SERVER_NAME"]
 					);
@@ -3999,9 +4073,9 @@ class ComponentHelper
 
 			foreach ($socnetRights as $right)
 			{
-				if(substr($right, 0, 1) == "U")
+				if(mb_substr($right, 0, 1) == "U")
 				{
-					$rightUserId = intVal(substr($right, 1));
+					$rightUserId = intval(mb_substr($right, 1));
 					if (
 						$rightUserId > 0
 						&& !in_array($rightUserId, $userIdToMailList)
@@ -4165,7 +4239,7 @@ class ComponentHelper
 		foreach ($permList as $v => $k)
 		{
 			if (
-				strlen($v) > 0
+				$v <> ''
 				&& is_array($k)
 				&& !empty($k)
 			)
@@ -4173,7 +4247,7 @@ class ComponentHelper
 				foreach ($k as $vv)
 				{
 					if (
-						strlen($vv) > 0
+						$vv <> ''
 						&& (
 							empty($postFields['AUTHOR_ID'])
 							|| $vv != 'U'.$postFields['AUTHOR_ID']
@@ -4772,7 +4846,7 @@ class ComponentHelper
 				(
 					!empty($params['followDate'])
 						? (
-							strtoupper($params['followDate']) == 'CURRENT'
+					mb_strtoupper($params['followDate']) == 'CURRENT'
 								? ConvertTimeStamp(time() + \CTimeZone::getOffset(), "FULL", $siteId)
 								: $params['followDate']
 						)
@@ -4876,14 +4950,14 @@ class ComponentHelper
 		else
 		{
 			$result = array(
-				"ENTITY_TYPE" => substr(strtoupper($eventFields["EVENT_ID"])."_".$eventFields["ID"], 0, 2),
-				"ENTITY_XML_ID" => strtoupper($eventFields["EVENT_ID"])."_".$eventFields["ID"],
+				"ENTITY_TYPE" => mb_substr(mb_strtoupper($eventFields["EVENT_ID"])."_".$eventFields["ID"], 0, 2),
+				"ENTITY_XML_ID" => mb_strtoupper($eventFields["EVENT_ID"])."_".$eventFields["ID"],
 				"NOTIFY_TAGS" => ""
 			);
 		}
 
 		if (
-			strtoupper($eventFields["ENTITY_TYPE"]) == "CRMACTIVITY"
+			mb_strtoupper($eventFields["ENTITY_TYPE"]) == "CRMACTIVITY"
 			&& Loader::includeModule('crm')
 			&& ($activityFields = \CCrmActivity::getById($eventFields["ENTITY_ID"], false))
 			&& ($activityFields["TYPE_ID"] == \CCrmActivityType::Task)

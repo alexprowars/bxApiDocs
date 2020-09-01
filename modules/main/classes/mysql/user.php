@@ -6,19 +6,10 @@
  * @copyright 2001-2013 Bitrix
  */
 
+use Bitrix\Main;
+
 require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/general/user.php");
 
-
-/**
- * <b>CUser</b> - класс для работы с пользователями.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cuser/index.php
- * @author Bitrix
- */
 class CUser extends CAllUser
 {
 	public static function err_mess()
@@ -26,102 +17,6 @@ class CUser extends CAllUser
 		return "<br>Class: CUser<br>File: ".__FILE__;
 	}
 
-	
-	/**
-	* <p>Метод добавляет нового пользователя. При успешном выполнении возвращает ID нового пользователя, в противном случае - вернет "false", а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Нестатический метод.</p> <p></p> <div class="note"> <b>Примечание</b>: CUser::Add можно вызывать только как метод инициализированного объекта, а не как статический метод класса CUser.</div>
-	*
-	*
-	* @param array $fields  Массив значений полей, в качестве ключей данного массива
-	* допустимо использовать: 	<ul> <li> <b>LOGIN</b><font color="red">*</font> - логин (имя
-	* входа) 		</li> <li> <b>NAME</b> - имя пользователя 		</li> <li> <b>LAST_NAME</b> - фамилия
-	* пользователя 		</li> <li> <b>SECOND_NAME</b> - отчество пользователя 		</li> <li>
-	* <b>EMAIL</b><font color="red">*</font> - E-Mail адрес пользователя 		</li> <li> <b>PASSWORD</b><font
-	* color="red">*</font> - пароль пользователя 		</li> <li> <b>CONFIRM_PASSWORD</b><font
-	* color="red">*</font> - подтверждение пароля (должно быть равным <b>PASSWORD</b>)
-	* 		</li> <li> <b>GROUP_ID</b> - массив ID групп к которым будет приписан
-	* пользователь 		</li> <li> <b>ACTIVE</b> - флаг активности пользователя [Y|N]
-	* 		</li> <li> <b>LID</b> - ID сайта по умолчанию для уведомлений 		</li> <li>
-	* <b>ADMIN_NOTES</b> - заметки администратора 		</li> <li> <b>XML_ID</b> - ID
-	* пользователя для связи с внешними источниками (например, ID
-	* пользователя в какой-либо внешний базе) 		</li> <li> <b>EXTERNAL_AUTH_ID</b> - код
-	* источника [link=89611]внешней  авторизации[/link] 		</li> <li> <b>PERSONAL_PROFESSION</b> -
-	* наименование профессии 		</li> <li> <b>PERSONAL_WWW</b> - персональная
-	* WWW-страница 		</li> <li> <b>PERSONAL_ICQ</b> - ICQ 		</li> <li> <b>PERSONAL_GENDER</b> - пол ["M" -
-	* мужчина; "F" - женщина] 		</li> <li> <b>PERSONAL_BIRTHDAY</b> - дата рождения в
-	* формате текущего сайта (или текущего языка для административной
-	* части) 		</li> <li> <b>PERSONAL_PHOTO</b> - массив описывающий фотографию,
-	* допустимы следующие ключи этого массива: 			<ul> <li> <b>name</b> - имя файла
-	* 				</li> <li> <b>size</b> - размер файла 				</li> <li> <b>tmp_name</b> - временный путь на
-	* сервере 				</li> <li> <b>type</b> - тип загружаемого файла 				</li> <li> <b>del</b> -
-	* если значение равно "Y", то изображение будет удалено 				</li> <li>
-	* <b>MODULE_ID</b> - идентификатор главного модуля - "main" 			</li> </ul> </li> <li>
-	* <b>PERSONAL_PHONE</b> - телефон 		</li> <li> <b>PERSONAL_FAX</b> - факс 		</li> <li> <b>PERSONAL_MOBILE</b> -
-	* мобильный телефон 		</li> <li> <b>PERSONAL_PAGER</b> - пэйджер 		</li> <li>
-	* <b>PERSONAL_STREET</b> - улица, дом 		</li> <li> <b>PERSONAL_MAILBOX</b> - почтовый ящик 		</li>
-	* <li> <b>PERSONAL_CITY</b> - город 		</li> <li> <b>PERSONAL_STATE</b> - область / край 		</li> <li>
-	* <b>PERSONAL_ZIP</b> - индекс 		</li> <li> <b>PERSONAL_COUNTRY</b> - страна 		</li> <li>
-	* <b>PERSONAL_NOTES</b> - личные заметки 		</li> <li> <b>WORK_COMPANY</b>  - наименование
-	* компании 		</li> <li> <b>WORK_DEPARTMENT</b> - департамент / отдел 		</li> <li>
-	* <b>WORK_POSITION</b> - должность 		</li> <li> <b>WORK_WWW</b> - WWW-страница компании 		</li>
-	* <li> <b>WORK_PHONE</b> - рабочий телефон 		</li> <li> <b>WORK_FAX</b> - рабочий факс 		</li>
-	* <li> <b>WORK_PAGER</b> - рабочий пэйджер 		</li> <li> <b>WORK_STREET</b> - улица, дом
-	* компании 		</li> <li> <b>WORK_MAILBOX</b> - почтовый ящик компании 		</li> <li>
-	* <b>WORK_CITY</b> - город компании 		</li> <li> <b>WORK_STATE</b> - область / край
-	* компании 		</li> <li> <b>WORK_ZIP</b> - индекс компании 		</li> <li> <b>WORK_COUNTRY</b> -
-	* страна компании 		</li> <li> <b>WORK_PROFILE</b> - направления деятельности
-	* компании 		</li> <li> <b>WORK_LOGO</b> - массив описывающий логотип компании,
-	* допустимы следующие ключи этого массива: 			<ul> <li> <b>name</b> - имя файла
-	* 				</li> <li> <b>size</b> - размер файла 				</li> <li> <b>tmp_name</b> - временный путь на
-	* сервере 				</li> <li> <b>type</b> - тип загружаемого файла 				</li> <li> <b>del</b> -
-	* если значение равно "Y", то изображение будет удалено 				</li> <li>
-	* <b>MODULE_ID</b> - идентификатор главного модуля - "main" 			</li> </ul> </li> <li>
-	* <b>WORK_NOTES</b> - заметки касаемо работы пользователя 	</li> </ul> <font
-	* color="red">*</font> - обязательные поля.
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* // создадим массив описывающий изображение 
-	* // находящееся в файле на сервере
-	* $arIMAGE = CFile::MakeFileArray($_SERVER["DOCUMENT_ROOT"]."/images/photo.gif");
-	* $arIMAGE["MODULE_ID"] = "main";
-	* 
-	* $user = new CUser;
-	* $arFields = Array(
-	*   "NAME"              =&gt; "Сергей",
-	*   "LAST_NAME"         =&gt; "Иванов",
-	*   "EMAIL"             =&gt; "ivanov@microsoft.com",
-	*   "LOGIN"             =&gt; "ivan",
-	*   "LID"               =&gt; "ru",
-	*   "ACTIVE"            =&gt; "Y",
-	*   "GROUP_ID"          =&gt; array(10,11),
-	*   "PASSWORD"          =&gt; "123456",
-	*   "CONFIRM_PASSWORD"  =&gt; "123456",
-	*   "PERSONAL_PHOTO"    =&gt; $arIMAGE
-	* );
-	* 
-	* $ID = <b>$user-&gt;Add</b>($arFields);
-	* if (intval($ID) &gt; 0)
-	*     echo "Пользователь успешно добавлен.";
-	* else
-	*     echo $user-&gt;LAST_ERROR;
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/index.php#flds">Поля CUser</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/update.php">CUser::Update</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/delete.php">CUser::Delete</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cuser/add.php
-	* @author Bitrix
-	*/
 	public function Add($arFields)
 	{
 		/** @global CUserTypeManager $USER_FIELD_MANAGER */
@@ -136,8 +31,8 @@ class CUser extends CAllUser
 		else
 		{
 			unset($arFields["ID"]);
-			if(is_set($arFields, "ACTIVE") && $arFields["ACTIVE"]!="Y")
-				$arFields["ACTIVE"]="N";
+
+			$arFields['ACTIVE'] = is_set($arFields, 'ACTIVE') && $arFields['ACTIVE'] != 'Y' ? 'N' : 'Y';
 
 			if($arFields["PERSONAL_GENDER"]=="NOT_REF" || ($arFields["PERSONAL_GENDER"]!="M" && $arFields["PERSONAL_GENDER"]!="F"))
 				$arFields["PERSONAL_GENDER"] = "";
@@ -204,11 +99,24 @@ class CUser extends CAllUser
 			$USER_FIELD_MANAGER->Update("USER", $ID, $arFields);
 
 			if(is_set($arFields, "GROUP_ID"))
-				CUser::SetUserGroup($ID, $arFields["GROUP_ID"]);
+				CUser::SetUserGroup($ID, $arFields["GROUP_ID"], true);
+
+			if(isset($arFields["PHONE_NUMBER"]) && $arFields["PHONE_NUMBER"] <> '')
+			{
+				Main\UserPhoneAuthTable::add(array(
+					"USER_ID" => $ID,
+					"PHONE_NUMBER" => $arFields["PHONE_NUMBER"],
+				));
+			}
 
 			//update digest hash for http digest authorization
 			if(COption::GetOptionString('main', 'use_digest_auth', 'N') == 'Y')
 				CUser::UpdateDigest($ID, $original_pass);
+
+			if(Main\Config\Option::get("main", "user_profile_history") === "Y")
+			{
+				Main\UserProfileHistoryTable::addHistory($ID, Main\UserProfileHistoryTable::TYPE_ADD);
+			}
 
 			$Result = $ID;
 			$arFields["ID"] = &$ID;
@@ -222,11 +130,16 @@ class CUser extends CAllUser
 
 		if($ID > 0 && defined("BX_COMP_MANAGED_CACHE"))
 		{
+			$isRealUser = !$arFields['EXTERNAL_AUTH_ID'] || !in_array($arFields['EXTERNAL_AUTH_ID'], \Bitrix\Main\UserTable::getExternalUserTypes());
+
 			$CACHE_MANAGER->ClearByTag("USER_CARD_".intval($ID / TAGGED_user_card_size));
-			$CACHE_MANAGER->ClearByTag("USER_CARD");
+			$CACHE_MANAGER->ClearByTag($isRealUser? "USER_CARD": "EXTERNAL_USER_CARD");
+
 			$CACHE_MANAGER->ClearByTag("USER_NAME_".$ID);
-			$CACHE_MANAGER->ClearByTag("USER_NAME");
+			$CACHE_MANAGER->ClearByTag($isRealUser? "USER_NAME": "EXTERNAL_USER_NAME");
 		}
+
+		\Bitrix\Main\UserTable::indexRecord($ID);
 
 		return $Result;
 	}
@@ -250,167 +163,6 @@ class CUser extends CAllUser
 		return $res;
 	}
 
-	
-	/**
-	* <p>Возвращает список пользователей в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param mixed &$by = "timestamp_x" ссылка на переменную с полем для сортировки, может принимать
-	* значения: 	          <ul> <li> <b>id</b> - ID пользователя 			</li>                     <li>
-	* <b>active</b> - активность 			</li>                     <li> <b>last_login</b> - дата последней
-	* авторизации 			</li>                     <li> <b>login</b> - имя входа 			</li>                    
-	* <li> <b>email</b> - E-Mail адрес 			</li>                     <li> <b>name</b> - имя 			</li>                   
-	*  <li> <b>ntopcount</b> - параметр постраничной навигации, ограничивающий
-	* количество возвращаемых элементов 			</li>                     <li> <b>last_name</b> -
-	* фамилия 			</li>                     <li> <b>timestamp_x</b> - дата изменения 			</li>              
-	*       <li> <b>date_register</b> - дата регистрации 			</li>                     <li>
-	* <b>personal_profession</b> - профессия 			</li>                     <li> <b>personal_www</b> -
-	* WWW-страница 			</li>                     <li> <b>personal_icq</b> - номер ICQ 			</li>                    
-	* <li> <b>personal_gender</b> - пол ("M" - мужской; "F" - женский) 			</li>                     <li>
-	* <b>personal_birthday</b> - день рождения			 			</li>                     <li> <b>personal_photo</b> - ID
-	* файла-фотографии 			</li>                     <li> <b>personal_phone</b> - номер телефона		
-	* 			</li>                     <li> <b>personal_fax</b> - номер факса 			</li>                     <li>
-	* <b>personal_mobile</b> - номер мобильного 			</li>                     <li> <b>personal_pager</b> -
-	* номер пейджера 			</li>                     <li> <b>personal_street</b> - улица 			</li>              
-	*       <li> <b>personal_mailbox</b> - почтовый ящик 			</li>                     <li> <b>personal_city</b> -
-	* город 			</li>                     <li> <b>personal_state</b> - область / край 			</li>                 
-	*    <li> <b>personal_zip</b> - почтовый индекс 			</li>                     <li> <b>personal_country</b> -
-	* код страны 			</li>                     <li> <b>personal_notes</b> - дополнительные
-	* заметки 			</li>                     <li> <b>work_company</b> - наименования компании
-	* 			</li>                     <li> <b>work_department</b> - отдел 			</li>                     <li>
-	* <b>work_position</b> - должность 			</li>                     <li> <b>work_www</b> - WWW-страница
-	* компании 			</li>                     <li> <b>work_phone</b> - рабочий телефон 			</li>           
-	*          <li> <b>work_fax</b> - рабочий факс 			</li>                     <li> <b>work_pager</b> -
-	* рабочий пейджер 			</li>                     <li> <b>work_street</b> - улица компании
-	* 			</li>                     <li> <b>work_mailbox</b> - почтовый ящик компании 			</li>             
-	*        <li> <b>work_city</b> - город компании 			</li>                     <li> <b>work_state</b> -
-	* область / край компании 			</li>                     <li> <b>work_zip</b> - почтовый
-	* индекс компании 			</li>                     <li> <b>work_country</b> - код страны
-	* компании 			</li>                     <li> <b>work_profile</b> - направление деятельности
-	* компании 			</li>                     <li> <b>work_notes</b> - дополнительные заметки
-	* касаемо места работы 			</li>                     <li> <b>admin_notes</b> - комментарий
-	* администратора 		</li>          </ul> <p>Начиная с версии ядра 11.0.13 в
-	* параметре можно передавать массив вида array("field1"=&gt;"asc", "field2"=&gt;"desc")
-	* для множественной сортировки. Значения ключей массива совпадают
-	* с перечисленными выше.</p>
-	*
-	* @param string &$order = "desc" Ссылка на переменную с порядком сортировки, может принимать
-	* значения:          <br><ul> <li> <b>asc</b> - по возрастанию 			</li>                     <li>
-	* <b>desc</b> - по убыванию 		</li>          </ul> <p>При использовании массива в
-	* параметре <em>by</em> данный параметр игнорируется. Значения c <i>nulls</i>
-	* не работают, например: <i>desc,nulls</i>.</p>
-	*
-	* @param array $filter = array() Массив для фильтрации пользователей. (<a
-	* href="http://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&amp;LESSON_ID=2683#types" >Типы
-	* фильтрации</a>) В массиве допустимы следующие индексы: 		          <ul> <li>
-	* <sup>1</sup><b>ID</b> - по ID пользователя 			</li>                     <li> <b>XML_ID</b> - по XML_ID
-	* пользователя 			</li>                     <li> <b>TIMESTAMP_1</b> - дата изменения
-	* профайла пользователя "с" 			</li>                     <li> <b>TIMESTAMP_2</b> - дата
-	* изменения профайла пользователя "по" 			</li>                     <li>
-	* <b>LAST_LOGIN_1</b> - дата последнего логина пользователя "с" 			</li>                 
-	*    <li> <b>LAST_LOGIN_2</b> - дата последнего логина пользователя "по" 			</li>       
-	*              <li> <b>LAST_ACTIVITY</b> - интервал в секундах 			</li>                     <li>
-	* <b>ACTIVE</b> - фильтр по активности (Y|N) 			</li>                     <li>
-	* <sup>1</sup><b>LOGIN_EQUAL</b> - по имени входа (ищет прямое совпадение с
-	* логином) 			</li>                     <li> <sup>1</sup><b>LOGIN</b> - по имени входа (ищет
-	* подстроку в логине) 			</li>                     <li> <sup>1</sup><b>NAME</b> - по имени и
-	* фамилии 			</li>                     <li> <sup>1</sup><b>EMAIL</b> - по E-Mail адресу 			</li>           
-	*          <li> <sup>1</sup><b>COUNTRY_ID</b> - по коду страны, оставлен для обратной
-	* совместимости. Сейчас при его использовании производится
-	* фильтрация по WORK_COUNTRY.</li>                     <li> <b>GROUPS_ID</b> - по группам
-	* (массив с кодами групп пользователей) 			</li>                     <li>
-	* <b>PERSONAL_BIRTHDAY_1</b> - день рождения "с"		 			</li>                     <li>
-	* <b>PERSONAL_BIRTHDAY_2</b> - день рождения "по" 			</li>                     <li>
-	* <sup>1</sup><b>KEYWORDS</b> - по нижеследующим полям профайла помеченных
-	* символом - * 			</li>                     <li> <sup>1</sup>* <b>PERSONAL_PROFESSION</b> - профессия
-	* 			</li>                     <li> <sup>1</sup>* <b>PERSONAL_WWW</b> - WWW-страница 			</li>                    
-	* <li> <sup>1</sup>* <b>PERSONAL_ICQ</b> - номер ICQ 			</li>                     <li> <sup>1</sup>*
-	* <b>PERSONAL_GENDER</b> - пол ("M" - мужской; "F" - женский) 			</li>                     <li>
-	* <sup>1</sup>* <b>PERSONAL_PHOTO</b> - ID файла - фотографии (таблица b_file) 			</li>             
-	*        <li> <sup>1</sup>* <b>PERSONAL_PHONE</b> - номер телефона		 			</li>                     <li>
-	* <sup>1</sup>* <b>PERSONAL_FAX</b> - номер факса 			</li>                     <li> <sup>1</sup>*
-	* <b>PERSONAL_MOBILE</b> - номер мобильного 			</li>                     <li> <sup>1</sup>*
-	* <b>PERSONAL_PAGER</b> - номер пейджера 			</li>                     <li> <sup>1</sup>*
-	* <b>PERSONAL_STREET</b> - улица 			</li>                     <li> <sup>1</sup>* <b>PERSONAL_MAILBOX</b> -
-	* почтовый ящик 			</li>                     <li> <sup>1</sup>* <b>PERSONAL_CITY</b> - город 			</li>    
-	*                 <li> <sup>1</sup>* <b>PERSONAL_STATE</b> - область / край 			</li>                     <li>
-	* <sup>1</sup>* <b>PERSONAL_ZIP</b> - почтовый индекс 			</li>                     <li> <sup>1</sup>*
-	* <b>PERSONAL_COUNTRY</b> - код страны (хранится в файлах \bitrix\modules\main\lang\ru\tools.php,
-	* \bitrix\modules\main\lang\en\tools.php) 			</li>                     <li> <sup>1</sup>* <b>PERSONAL_NOTES</b> -
-	* дополнительные заметки 			</li>                     <li> <sup>1</sup>* <b>WORK_COMPANY</b> -
-	* наименования компании 			</li>                     <li> <sup>1</sup>* <b>WORK_DEPARTMENT</b> -
-	* отдел 			</li>                     <li> <sup>1</sup>* <b>WORK_POSITION</b> - должность 			</li>           
-	*          <li> <sup>1</sup>* <b>WORK_WWW</b> - WWW-страница компании 			</li>                     <li>
-	* <sup>1</sup>* <b>WORK_PHONE</b> - рабочий телефон 			</li>                     <li> <sup>1</sup>*
-	* <b>WORK_FAX</b> - рабочий факс 			</li>                     <li> <sup>1</sup>* <b>WORK_PAGER</b> -
-	* рабочий пейджер 			</li>                     <li> <sup>1</sup>* <b>WORK_STREET</b> - улица
-	* компании 			</li>                     <li> <sup>1</sup>* <b>WORK_MAILBOX</b> - почтовый ящик
-	* компании 			</li>                     <li> <sup>1</sup>* <b>WORK_CITY</b> - город компании 			</li>
-	*                     <li> <sup>1</sup>* <b>WORK_STATE</b> - область / край компании 			</li>          
-	*           <li> <sup>1</sup>* <b>WORK_ZIP</b> - почтовый индекс компании 			</li>                  
-	*   <li> <sup>1</sup>* <b>WORK_COUNTRY</b> - код страны компании (хранится в файлах
-	* \bitrix\modules\main\lang\ru\tools.php, \bitrix\modules\main\lang\en\tools.php) 			</li>                     <li>
-	* <sup>1</sup>* <b>WORK_PROFILE</b> - направление деятельности компании 			</li>           
-	*          <li> <sup>1</sup>* <b>WORK_NOTES</b> - дополнительные заметки касаемо места
-	* работы 			</li>                     <li> <sup>1</sup>* <b>ADMIN_NOTES</b> - комментарий
-	* администратора (доступен для просмотра и редактирования только
-	* администратору сайта) 		</li>          </ul> <sup>1</sup> - в данных полях
-	* допускается <a href="http://dev.1c-bitrix.ru/api_help/main/general/filter.php">сложные
-	* условия</a>. Сложные условия для данного поля работают только при
-	* указании: <b>ID</b>. При указании <b>!ID</b> и <b>&gt;ID</b>, сложные условия
-	* работать не будут.          <br>        	* - поиск по "KEYWORDS" по сути является
-	* поиском по полям отмеченных символом "*"
-	*
-	* @param array $arParams = array() Массив с дополнительными параметрами метода. Может содержать
-	* ключи:          <br><p><strong>SELECT</strong> - массив с идентификаторами
-	* пользовательских полей для их выборки в результат, например
-	* array("UF_TEXT_1", "UF_STRUCTURE"). Для указания выборки всех полей используйте
-	* маску: array("UF_*").</p>                 <p><strong>NAV_PARAMS</strong> - массив с параметрами
-	* навигации, может использоваться для ограничения размера выборки.
-	* Например: array("nPageSize"=&gt;"20"). При указании NAV_PARAMS строится
-	* ограниченный по размеру список результатов, учитывающий номер
-	* страницы в постраничной навигации (для mysql выборка производится с
-	* указанием limit). С версии ядра 11.0.14 в массиве можно указать параметр
-	* "nTopCount" для ограничения выборки по количеству записей.</p>                
-	* <p><strong>FIELDS</strong> (с версии ядра 11.0.13) - массив с идентификаторами
-	* полей для выборки. Если не указан или пустой, то выбираются все
-	* поля. Возможные значения:</p>                 <table height="0" cellspacing="0" cellpadding="0"
-	* bgcolor="" width="100%"><tbody> <tr> <td>ID</td> 	<td>PERSONAL_WWW</td> 	<td>PERSONAL_ZIP</td> <td>IS_ONLINE</td> </tr>
-	* <tr> <td>ACTIVE</td> 	<td>PERSONAL_ICQ</td> 	<td>PERSONAL_COUNTRY</td> <td>WORK_CITY</td> </tr> <tr> <td>LAST_LOGIN</td>
-	* 	<td>PERSONAL_GENDER</td> 	<td>PERSONAL_NOTES</td> <td>WORK_STATE</td> </tr> <tr> <td>LOGIN</td>
-	* 	<td>PERSONAL_PHOTO</td> 	<td>WORK_COMPANY</td> <td>WORK_ZIP</td> </tr> <tr> <td>EMAIL</td> 	<td>PERSONAL_PHONE</td>
-	* 	<td>WORK_DEPARTMENT</td> <td>WORK_COUNTRY</td> </tr> <tr> <td>NAME</td> 	<td>PERSONAL_FAX</td> 	<td>WORK_POSITION</td>
-	* <td>WORK_PROFILE</td> </tr> <tr> <td>LAST_NAME</td> 	<td>PERSONAL_MOBILE</td> 	<td>WORK_WWW</td> <td>WORK_NOTES</td>
-	* </tr> <tr> <td>SECOND_NAME</td> 	<td>PERSONAL_PAGER</td> 	<td>WORK_PHONE</td> <td>ADMIN_NOTES</td> </tr> <tr>
-	* <td>TIMESTAMP_X</td> 	<td>PERSONAL_STREET</td> 	<td>WORK_FAX</td> <td>XML_ID</td> </tr> <tr> <td>PERSONAL_BIRTHDAY</td>
-	* 	<td>PERSONAL_MAILBOX</td> 	<td>WORK_PAGER</td> <td>LAST_NAME</td> </tr> <tr> <td>DATE_REGISTER</td>
-	* 	<td>PERSONAL_CITY</td> 	<td>WORK_STREET</td> <td>SECOND_NAME</td> </tr> <tr> <td>PERSONAL_PROFESSION</td>
-	* 	<td>PERSONAL_STATE</td> 	<td>WORK_MAILBOX</td> <td>STORED_HASH</td> </tr> <tr> <td>CHECKWORD_TIME</td>
-	* 	<td>EXTERNAL_AUTH_ID</td> 	<td>CONFIRM_CODE</td> <td>LOGIN_ATTEMPTS</td> </tr> <tr> <td>LAST_ACTIVITY_DATE</td>
-	* 	<td>AUTO_TIME_ZONE</td> 	<td>TIME_ZONE</td> <td>PASSWORD</td> </tr> <tr> <td>CHECKWORD</td> 	<td>LID</td> 	<td></td>
-	* <td></td> </tr> </tbody></table>
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$filter = Array<br>(<br>    "ID"                  =&gt; "1 | 2",<br>    "TIMESTAMP_1"         =&gt; "04.02.2004", // в формате текущего сайта<br>    "TIMESTAMP_2"         =&gt; "04.02.2005",<br>    "LAST_LOGIN_1"        =&gt; "01.02.2004",<br>    "ACTIVE"              =&gt; "Y",<br>    "LOGIN"               =&gt; "nessy | admin",<br>    "NAME"                 =&gt; "Виталий &amp; Соколов",<br>    "EMAIL"               =&gt; "mail@server.com | mail@server.com",<br>    "KEYWORDS"            =&gt; "www.bitrix.ru",<br>    "PERSONAL_PROFESSION" =&gt; "системотехник",<br>    "PERSONAL_GENDER"     =&gt; "M",<br>    "PERSONAL_COUNTRY"    =&gt; "4 | 1", // Беларусь или Россия<br>    "ADMIN_NOTES"         =&gt; "\"UID = 145\"",<br>    "GROUPS_ID"           =&gt; Array(1,4,10)<br>);<br>$rsUsers = <b>CUser::GetList</b>(($by="personal_country"), ($order="desc"), $filter); // выбираем пользователей<br>$is_filtered = $rsUsers-&gt;is_filtered; // отфильтрована ли выборка ?<br>$rsUsers-&gt;NavStart(50); // разбиваем постранично по 50 записей<br>echo $rsUsers-&gt;NavPrint(GetMessage("PAGES")); // печатаем постраничную навигацию<br>while($rsUsers-&gt;NavNext(true, "f_")) :<br>	echo "[".$f_ID."] (".$f_LOGIN.") ".$f_NAME." ".$f_LAST_NAME."&lt;br&gt;";	<br>endwhile;<br>?&gt;$rsUsers = CUser::GetList(array('sort' =&gt; 'asc'), 'sort');$order = array('sort' =&gt; 'asc');
-	* $tmp = 'sort'; // параметр проигнорируется методом, но обязан быть
-	* $rsUsers = CUser::GetList($order, $tmp);
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/index.php">Поля CUser</a> </li>     <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/getbyid.php">CUser::GetByID</a> </li>     <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cuser/getbylogin.php">CUser::GetByLogin</a> </li>  </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cuser/getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList(&$by, &$order, $arFilter=Array(), $arParams=Array())
 	{
 		/** @global CUserTypeManager $USER_FIELD_MANAGER */
@@ -448,33 +200,31 @@ class CUser extends CAllUser
 		$obUserFieldsSql->SetFilter($arFilter);
 		$obUserFieldsSql->SetOrder($arOrder);
 
-		$arFields_m = array("ID", "ACTIVE", "LAST_LOGIN", "LOGIN", "EMAIL", "NAME", "LAST_NAME", "SECOND_NAME", "TIMESTAMP_X", "PERSONAL_BIRTHDAY", "IS_ONLINE");
+		$arFields_m = array("ID", "ACTIVE", "LAST_LOGIN", "LOGIN", "EMAIL", "NAME", "LAST_NAME", "SECOND_NAME", "TIMESTAMP_X", "PERSONAL_BIRTHDAY", "IS_ONLINE", "IS_REAL_USER");
 		$arFields = array(
 			"DATE_REGISTER", "PERSONAL_PROFESSION", "PERSONAL_WWW", "PERSONAL_ICQ", "PERSONAL_GENDER", "PERSONAL_PHOTO", "PERSONAL_PHONE", "PERSONAL_FAX",
 			"PERSONAL_MOBILE", "PERSONAL_PAGER", "PERSONAL_STREET", "PERSONAL_MAILBOX", "PERSONAL_CITY", "PERSONAL_STATE", "PERSONAL_ZIP", "PERSONAL_COUNTRY", "PERSONAL_NOTES",
 			"WORK_COMPANY", "WORK_DEPARTMENT", "WORK_POSITION", "WORK_WWW", "WORK_PHONE", "WORK_FAX", "WORK_PAGER", "WORK_STREET", "WORK_MAILBOX", "WORK_CITY", "WORK_STATE",
 			"WORK_ZIP", "WORK_COUNTRY", "WORK_PROFILE", "WORK_NOTES", "ADMIN_NOTES", "XML_ID", "LAST_NAME", "SECOND_NAME", "STORED_HASH", "CHECKWORD_TIME", "EXTERNAL_AUTH_ID",
-			"CONFIRM_CODE", "LOGIN_ATTEMPTS", "LAST_ACTIVITY_DATE", "AUTO_TIME_ZONE", "TIME_ZONE", "TIME_ZONE_OFFSET", "PASSWORD", "CHECKWORD", "LID", "TITLE",
+			"CONFIRM_CODE", "LOGIN_ATTEMPTS", "LAST_ACTIVITY_DATE", "AUTO_TIME_ZONE", "TIME_ZONE", "TIME_ZONE_OFFSET", "PASSWORD", "CHECKWORD", "LID", "LANGUAGE_ID", "TITLE",
 		);
 		$arFields_all = array_merge($arFields_m, $arFields);
 
 		$arSelectFields = array();
-		$online_interval = (array_key_exists("ONLINE_INTERVAL", $arParams) && intval($arParams["ONLINE_INTERVAL"]) > 0 ? $arParams["ONLINE_INTERVAL"] : 120);
+		$online_interval = (array_key_exists("ONLINE_INTERVAL", $arParams) && intval($arParams["ONLINE_INTERVAL"]) > 0 ? $arParams["ONLINE_INTERVAL"] : CUser::GetSecondsForLimitOnline());
 		if (isset($arParams['FIELDS']) && is_array($arParams['FIELDS']) && count($arParams['FIELDS']) > 0 && !in_array("*", $arParams['FIELDS']))
 		{
 			foreach ($arParams['FIELDS'] as $field)
 			{
 				$field = strtoupper($field);
-				if ($field == 'TIMESTAMP_X')
-					$arSelectFields[$field] =	$DB->DateToCharFunction("U.TIMESTAMP_X")." TIMESTAMP_X";
-				elseif ($field == 'IS_ONLINE')
-					$arSelectFields[$field] =	"IF(U.LAST_ACTIVITY_DATE > DATE_SUB(NOW(), INTERVAL ".$online_interval." SECOND), 'Y', 'N') IS_ONLINE";
-				elseif ($field == 'DATE_REGISTER')
-					$arSelectFields[$field] =	$DB->DateToCharFunction("U.DATE_REGISTER")." DATE_REGISTER";
-				elseif ($field == 'LAST_LOGIN')
-					$arSelectFields[$field] =	$DB->DateToCharFunction("U.LAST_LOGIN")." LAST_LOGIN";
+				if ($field == 'TIMESTAMP_X' || $field == 'DATE_REGISTER' || $field == 'LAST_LOGIN')
+					$arSelectFields[$field] = $DB->DateToCharFunction("U.".$field)." ".$field.", U.".$field." ".$field."_DATE";
 				elseif ($field == 'PERSONAL_BIRTHDAY')
-					$arSelectFields[$field] =	$DB->DateToCharFunction("U.PERSONAL_BIRTHDAY", "SHORT")." PERSONAL_BIRTHDAY";
+					$arSelectFields[$field] = $DB->DateToCharFunction("U.PERSONAL_BIRTHDAY", "SHORT")." PERSONAL_BIRTHDAY, U.PERSONAL_BIRTHDAY PERSONAL_BIRTHDAY_DATE";
+				elseif ($field == 'IS_ONLINE')
+					$arSelectFields[$field] = "IF(U.LAST_ACTIVITY_DATE > DATE_SUB(NOW(), INTERVAL ".$online_interval." SECOND), 'Y', 'N') IS_ONLINE";
+				elseif ($field == 'IS_REAL_USER')
+					$arSelectFields[$field] = "IF(U.EXTERNAL_AUTH_ID IN ('".join("', '", CUser::GetExternalUserTypes())."'), 'N', 'Y') IS_REAL_USER";
 				elseif (in_array($field, $arFields_all))
 					$arSelectFields[$field] = 'U.'.$field;
 			}
@@ -513,6 +263,7 @@ class CUser extends CAllUser
 					&& $key != "!LAST_LOGIN"
 					&& $key != "EXTERNAL_AUTH_ID"
 					&& $key != "!EXTERNAL_AUTH_ID"
+					&& $key != "IS_REAL_USER"
 				)
 				{
 					if(strlen($val) <= 0 || $val === "NOT_REF")
@@ -709,6 +460,16 @@ class CUser extends CAllUser
 				case "INTRANET_USERS":
 					$arSqlSearch[] = "U.ACTIVE = 'Y' AND U.LAST_LOGIN IS NOT NULL AND EXISTS(SELECT 'x' FROM b_utm_user UF1, b_user_field F1 WHERE F1.ENTITY_ID = 'USER' AND F1.FIELD_NAME = 'UF_DEPARTMENT' AND UF1.FIELD_ID = F1.ID AND UF1.VALUE_ID = U.ID AND UF1.VALUE_INT IS NOT NULL AND UF1.VALUE_INT <> 0)";
 					break;
+				case "IS_REAL_USER":
+					if($val === true || $val === 'Y')
+					{
+						$arSqlSearch[] = "U.EXTERNAL_AUTH_ID NOT IN ('".join("', '", CUser::GetExternalUserTypes())."') OR U.EXTERNAL_AUTH_ID IS NULL";
+					}
+					else
+					{
+						$arSqlSearch[] = "U.EXTERNAL_AUTH_ID IN ('".join("', '", CUser::GetExternalUserTypes())."')";
+					}
+					break;
 				default:
 					if(in_array($key, $arFields))
 						$arSqlSearch[] = GetFilterQuery('U.'.$key, $val, ($arFilter[$key."_EXACT_MATCH"]=="Y" && $match_value_set? "N" : "Y"));
@@ -730,7 +491,7 @@ class CUser extends CAllUser
 			if($field == "CURRENT_BIRTHDAY")
 			{
 				$cur_year = intval(date('Y'));
-				$arSqlOrder[$field] = "IF(ISNULL(PERSONAL_BIRTHDAY), '9999-99-99', IF (
+				$arSqlOrder[$field] = "IF(ISNULL(U.PERSONAL_BIRTHDAY), '9999-99-99', IF (
 					DATE_FORMAT(U.PERSONAL_BIRTHDAY, '".$cur_year."-%m-%d') < DATE_FORMAT(DATE_ADD(".$DB->CurrentTimeFunction().", INTERVAL ".CTimeZone::GetOffset()." SECOND), '%Y-%m-%d'),
 					DATE_FORMAT(U.PERSONAL_BIRTHDAY, '".($cur_year + 1)."-%m-%d'),
 					DATE_FORMAT(U.PERSONAL_BIRTHDAY, '".$cur_year."-%m-%d')
@@ -765,12 +526,17 @@ class CUser extends CAllUser
 						$by = strtolower($field);
 				}
 			}
-			else
+			elseif ($field == 'FULL_NAME')
 			{
-				$field = "TIMESTAMP_X";
-				$arSqlOrder[$field] = "U.".$field." ".$dir;
-				if ($bSingleBy)
-					$by = strtolower($field);
+				$arSqlOrder[$field] = sprintf(
+					"IF(U.LAST_NAME IS NULL OR U.LAST_NAME = '', 1, 0) %1\$s,
+					IF(U.LAST_NAME IS NULL OR U.LAST_NAME = '', 1, U.LAST_NAME) %1\$s,
+					IF(U.NAME IS NULL OR U.NAME = '', 1, 0) %1\$s,
+					IF(U.NAME IS NULL OR U.NAME = '', 1, U.NAME) %1\$s,
+					IF(U.SECOND_NAME IS NULL OR U.SECOND_NAME = '', 1, 0) %1\$s,
+					IF(U.SECOND_NAME IS NULL OR U.SECOND_NAME = '', 1, U.SECOND_NAME) %1\$s,
+					U.LOGIN %1\$s", $dir
+				);
 			}
 		}
 
@@ -854,59 +620,34 @@ class CUser extends CAllUser
 		return $res;
 	}
 
-	
-	/**
-	* <p>Метод предназначен для определения статуса "Сейчас на сайте" по ID пользователя. Статический метод.</p>
-	*
-	*
-	* @param mixed $id  ID пользователя
-	*
-	* @param $i $interval = 120 Время в секундах
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Задать время последней активности пользователя в секундах:GLOBAL $USER;
-	* CUser::SetLastActivityDate( $USER-&gt;GetID() );
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cuser/isonline.php
-	* @author Bitrix
-	*/
-	public static function IsOnLine($id, $interval = 120)
+	public static function IsOnLine($id, $interval = null)
 	{
 		global $DB;
 
 		$id = intval($id);
 		if ($id <= 0)
+		{
 			return false;
+		}
 
-		$interval = intval($interval);
-		if ($interval <= 0)
-			$interval = 120;
+		if (is_null($interval))
+		{
+			$interval = CUser::GetSecondsForLimitOnline();
+		}
+		else
+		{
+			$interval = intval($interval);
+			if ($interval <= 0)
+			{
+				$interval = CUser::GetSecondsForLimitOnline();
+			}
+		}
 
 		$dbRes = $DB->Query("SELECT 'x' FROM b_user WHERE ID = ".$id." AND LAST_ACTIVITY_DATE > DATE_SUB(NOW(), INTERVAL ".$interval." SECOND)");
-		if ($arRes = $dbRes->Fetch())
-			return true;
-		else
-			return false;
+		return $arRes = $dbRes->Fetch()? true: false;
 	}
 }
 
-
-/**
- * <b>CGroup</b> - класс для работы с группами пользователей.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/index.php
- * @author Bitrix
- */
 class CGroup extends CAllGroup
 {
 	public static function err_mess()
@@ -914,46 +655,6 @@ class CGroup extends CAllGroup
 		return "<br>Class: CGroup<br>File: ".__FILE__;
 	}
 
-	
-	/**
-	* <p>Метод добавляет новую группу пользователей. Возвращает ID вставленной группы. При возникновении ошибки метод вернет "false", а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Нестатический метод.</p>
-	*
-	*
-	* @param array $fields  Массив значений <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/index.php#flds">полей</a> вида
-	* array("поле"=&gt;"значение" [, ...]).
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $group = new CGroup;
-	* $arFields = Array(
-	*   "ACTIVE"       =&gt; "Y",
-	*   "C_SORT"       =&gt; 100,
-	*   "NAME"         =&gt; "Имя группы",
-	*   "DESCRIPTION"  =&gt; "Описание группы",
-	*   "USER_ID"      =&gt; array(128, 134),
-	*   "STRING_ID"      =&gt; "GROUP_1"
-	*   );
-	* $NEW_GROUP_ID = <b>$group-&gt;Add</b>($arFields);
-	* if (strlen($group-&gt;LAST_ERROR)&gt;0) ShowError($group-&gt;LAST_ERROR);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/index.php#flds">Поля CGroup</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/delete.php">CGroup::Delete</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/update.php">CGroup::Update</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/add.php
-	* @author Bitrix
-	*/
 	public function Add($arFields)
 	{
 		/** @global CMain $APPLICATION */
@@ -991,9 +692,9 @@ class CGroup extends CAllGroup
 		$DB->Query($strSql);
 		$ID = $DB->LastID();
 
-		if (count($arFields["USER_ID"]) > 0)
+		if (is_array($arFields["USER_ID"]) && !empty($arFields["USER_ID"]))
 		{
-			if (is_array($arFields["USER_ID"][0]) && count($arFields["USER_ID"][0]) > 0)
+			if (is_array($arFields["USER_ID"][0]) && !empty($arFields["USER_ID"][0]))
 			{
 				$arTmp = array();
 				foreach ($arFields["USER_ID"] as $userId)
@@ -1056,87 +757,6 @@ class CGroup extends CAllGroup
 		return $res;
 	}
 
-	
-	/**
-	* <p>Возвращает список групп в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический  метод.</p>
-	*
-	*
-	* @param string &$by = "c_sort" Ссылка на переменную с полем для сортировки, может принимать
-	* следующие значения: 	<ul> <li> <b>id</b> - ID группы 		</li> <li> <b>timestamp_x</b> - дата
-	* изменения 		</li> <li> <b>name</b> - название 		</li> <li> <b>active</b> - активность 		</li>
-	* <li> <b>c_sort</b> - порядок сортировки 		</li> <li> <b>description</b> - описание 		</li> <li>
-	* <b>users</b> - кол-во пользователей входящих в группу 	</li> </ul>
-	*
-	* @param string &$order = "asc" Ссылка на переменную с порядком сортировки, может принимать
-	* следующие значения: 	<ul> <li> <b>asc</b> - по возрастанию 		</li> <li> <b>desc</b> - по
-	* убыванию 	</li> </ul>
-	*
-	* @param array $filter  Массив для фильтрации пользователей. В массиве допустимы
-	* следующие индексы: 	<ul> <li> <b>ID</b> - ID группы (допускается <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>) 		</li> <li>
-	* <b>TIMESTAMP_1</b> - дата изменения настроек группы "с" 		</li> <li> <b>TIMESTAMP_2</b> -
-	* дата изменения настроек группы "по" 		</li> <li> <b>ACTIVE</b> - фильтр по
-	* активности (Y|N) 		</li> <li> <b>ADMIN</b> - фильтр по типу группы ("Y" -
-	* администраторы | "N" - не администраторы) 		</li> <li> <b>NAME</b> - по названию
-	* (допускается <a href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>)
-	* 		</li> <li> <b>DESCRIPTION</b> - по описанию (допускается <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>) 		</li> <li> <b>USERS_1</b>
-	* - кол-во пользователей "с" 		</li> <li> <b>USERS_2</b> - кол-во пользователей
-	* "по" 	</li> </ul>
-	*
-	* @param string $SHOW_USERS_AMOUNT = "N" "Y" - в выборке будет присутствовать поле ("USERS") с количеством
-	* пользователей в каждой группе; "N" - в выборке не будет поля с
-	* количеством пользователей в каждой группе (по умолчанию);
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $filter = Array
-	* (
-	*     "ID"             =&gt; "1 | 2",
-	*     "TIMESTAMP_1"    =&gt; "04.02.2004", // в формате текущего сайта
-	*     "TIMESTAMP_2"    =&gt; "04.02.2005",
-	*     "ACTIVE"         =&gt; "Y",
-	*     "NAME"           =&gt; "Техподдержка",
-	*     "DESCRITION"     =&gt; "специальная | поддержка",
-	*     "USERS_1"        =&gt; "2", // от 2 пользователей
-	*     "USERS_2"        =&gt; "10" // до 10 пользователей
-	* );
-	* $rsGroups = <b>CGroup::GetList</b>(($by="c_sort"), ($order="desc"), $filter); // выбираем группы
-	* $is_filtered = $rsGroups-&gt;is_filtered; // отфильтрована ли выборка ?
-	* $rsGroups-&gt;NavStart(50); // разбиваем постранично по 50 записей
-	* echo $rsGroups-&gt;NavPrint(GetMessage("PAGES")); // печатаем постраничную навигацию
-	* while($rsGroups-&gt;NavNext(true, "f_")) :
-	* 	echo "[".$f_ID."] ".$f_NAME." ".$f_DESCRIPTION."&lt;br&gt;";	
-	* endwhile;
-	* ?&gt;Фильтровать можно по полю "STRING_ID" - символьному идентификатору группы. Например:// Возвращает группу по символьному идентификатору
-	* function GetGroupByCode ($code)
-	* {
-	*    $rsGroups = CGroup::GetList ($by = "c_sort", $order = "asc", Array ("STRING_ID" =&gt; $code));
-	*    return $rsGroups-&gt;Fetch();
-	* } $rsGroups = CGroup::GetList($by = "c_sort", $order = "asc", array("STRING_ID"=&gt;'groupe code|groupe code|groupe code'));
-	* if(intval($rsGroups-&gt;SelectedRowsCount()) &gt; 0)
-	* {
-	*    while($arGroups = $rsGroups-&gt;Fetch())
-	*    {
-	*       $arUsersGroups[] = $arGroups;
-	*    }
-	* }
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/index.php#flds">Поля CGroup</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/getbyid.php">CGroup::GetByID</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList(&$by, &$order, $arFilter=Array(), $SHOW_USERS_AMOUNT="N")
 	{
 		global $DB;
@@ -1705,7 +1325,7 @@ class CGroup extends CAllGroup
 			}
 			else
 			{
-				// ТОЛЬКО ДЛЯ MYSQL!!! ДЛЯ ORACLE ДРУГОЙ КОД
+				// ������ ��� MYSQL!!! ��� ORACLE ������ ���
 				$cnt = $dbRes->SelectedRowsCount();
 			}
 
@@ -1722,39 +1342,6 @@ class CGroup extends CAllGroup
 		return $dbRes;
 	}
 
-	
-	/**
-	* <p>Возвращает группу пользователей по ее коду <i>ID</i> в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический  метод.</p>
-	*
-	*
-	* @param mixed $intid  ID группы.
-	*
-	* @param string $SHOW_USERS_AMOUNT = "N" "Y" - в выборке будет присутствовать поле ("USERS") с количеством
-	* пользователей в группе; "N" - в выборке не будет поля с количеством
-	* пользователей в группе (по умолчанию);
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $rsGroup = <b>CGroup::GetByID</b>(2, "Y");
-	* $arGroup = $rsGroup-&gt;Fetch();
-	* echo "&lt;pre&gt;"; print_r($arGroup); echo "&lt;/pre&gt;";
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/index.php#flds">Поля CGroup</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/getlist.php">CGroup::GetList</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cgroup/getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($ID, $SHOW_USERS_AMOUNT = "N")
 	{
 		global $DB;

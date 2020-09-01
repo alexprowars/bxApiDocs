@@ -1,117 +1,19 @@
 <?
 /***************************************
-		Статус результата веб-формы
+		������ ���������� ���-�����
 ***************************************/
 
-
-/**
- * <b>CFormStatus</b> - класс для работы со <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статусами</a>.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/index.php
- * @author Bitrix
- */
 class CFormStatus extends CAllFormStatus
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "form";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
 		return "<br>Module: ".$module_id." (".$arModuleVersion["VERSION"].")<br>Class: CFormStatus<br>File: ".__FILE__;
 	}
 
-	// список статусов
-	
-	/**
-	* <p>Возвращает список <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статусов</a> в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Метод нестатический.</p>
-	*
-	*
-	* @param int $form_id  ID <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#form">веб-формы</a>.
-	*
-	* @param string &$by = "s_sort" Ссылка на переменную с полем для сортировки результирующего
-	* списка, может принимать значения: 		<ul> <li> <b>s_id</b> - ID <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a>; 			</li> <li> <b>s_sort</b> -
-	* индекс сортировки; 			</li> <li> <b>s_timestamp</b>  - время последнего
-	* изменения <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a>; 			</li> <li>
-	* <b>s_active</b> - флаг активности; 			</li> <li> <b>s_default</b> - флаг установки по
-	* умолчанию; 			</li> <li> <b>s_title</b> - заголовок; 			</li> <li> <b>s_description</b> -
-	* описание; 			</li> <li> <b>s_results</b> - количество результатов находящихся в
-	* данном <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статусе</a>. </li> </ul>
-	*
-	* @param string &$order = "asc" Ссылка на переменную с порядком сортировки, может принимать
-	* значения: 		<ul> <li> <b>asc</b> - по возрастанию; 			</li> <li> <b>desc</b> - по
-	* убыванию. </li> </ul>
-	*
-	* @param array $filter = array() Массив для фильтрации. Необязательный параметр. В массиве
-	* допустимы следующие ключи: 		<ul> <li> <b>ID</b>* - ID <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a> (по умолчанию будет
-	* искаться точное совпадение); 			</li> <li> <b>ID_EXACT_MATCH</b> - если значение
-	* равно "N", при фильтрации по <b>ID</b> будет искаться вхождение; 			</li> <li>
-	* <b>ACTIVE</b> - флаг активности, допустимые следующие значения: 				<ul> <li>
-	* <b>Y</b> - <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статус</a> активен; 					</li>
-	* <li> <b>N</b> - <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статус</a> не активен.
-	* </li> </ul> </li> <li> <b>TITLE</b>* - заголовок <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a> (по умолчанию будет
-	* искаться вхождение); 			</li> <li> <b>TITLE_EXACT_MATCH</b> - если значение равно "Y",
-	* то при фильтрации по <b>TITLE</b> будет искаться точное совпадение;
-	* 			</li> <li> <b>DESCRIPTION</b>* - описание <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a> (по умолчанию будет
-	* искаться вхождение); 			</li> <li> <b>DESCRIPTION_EXACT_MATCH</b> - если значение
-	* равно "Y", то при фильтрации по <b>DESCRIPTION</b> будет искаться точное
-	* совпадение. </li> </ul> 		* - допускается сложная логика
-	*
-	* @param bool &$is_filtered  Ссылка на переменную хранящую флаг отфильтрованности
-	* результирующего списка. Если значение равно "true", то список был
-	* отфильтрован.
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $FORM_ID = 4; // ID веб-формы
-	* 
-	* // сформируем массив фильтра
-	* $arFilter = Array(
-	*     "ID"                       =&gt; "1 | 4",       // ID статуса равен 1 или 4
-	*     "ID_EXACT_MATCH"           =&gt; "Y",           // точное совпадение для ID
-	*     "ACTIVE"                   =&gt; "Y",           // флаг активности
-	*     "TITLE"                    =&gt; "опубликован", // заголовок
-	*     "TITLE_EXACT_MATCH"        =&gt; "N",           // точное совпадение для TITLE
-	*     "DESCRIPTION"              =&gt; "конечный",    // описание
-	*     "DESCRIPTION_EXACT_MATCH"  =&gt; "N",           // точное совпадение для DESCRIPTION
-	* );
-	* 
-	* // получим список всех статусов формы, соответствующих фильтру
-	* $rsStatuses = <b>CFormStatus::GetList</b>(
-	*     $FORM_ID, 
-	*     $by="s_id", 
-	*     $order="desc", 
-	*     $arFilter, 
-	*     $is_filtered
-	*     );
-	* while ($arStatus = $rsStatuses-&gt;Fetch())
-	* {
-	*     echo "&lt;pre&gt;"; print_r($arStatus); echo "&lt;/pre&gt;";
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/index.php">Поля CFormStatus</a> </li>
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/getbyid.php">CFormStatus::GetByID</a> </li>
-	* </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/getlist.php
-	* @author Bitrix
-	*/
-	public static function GetList($FORM_ID, &$by, &$order, $arFilter=array(), &$is_filtered)
+	// ������ ��������
+	function GetList($FORM_ID, &$by, &$order, $arFilter=array(), &$is_filtered)
 	{
 		$err_mess = (CFormStatus::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB, $strError;
@@ -199,37 +101,7 @@ class CFormStatus extends CAllFormStatus
 		return $res;
 	}
 
-	
-	/**
-	* <p>Возвращает <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/index.php">параметры</a> <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a> в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Метод нестатический.</p>
-	*
-	*
-	* @param int $status_id  ID <a href="http://dev.1c-bitrix.ru/api_help/form/terms.php#status">статуса</a>.
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $status_id = 1; // ID статуса
-	* $rsStatus = <b>CFormStatus::GetByID</b>($status_id);
-	* $arStatus = $rsStatus-&gt;Fetch();
-	* echo "&lt;pre&gt;"; print_r($arStatus); echo "&lt;/pre";
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/index.php">Поля CFormStatus</a> </li>
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/getlist.php">CFormStatus::GetList</a> </li>
-	* </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformstatus/getbyid.php
-	* @author Bitrix
-	*/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		$err_mess = (CFormStatus::err_mess())."<br>Function: GetByID<br>Line: ";
 		global $DB, $strError;
@@ -250,7 +122,7 @@ class CFormStatus extends CAllFormStatus
 		return $res;
 	}
 
-	public static function GetDropdown($FORM_ID, $PERMISSION = array("MOVE"), $OWNER_ID=0)
+	function GetDropdown($FORM_ID, $PERMISSION = array("MOVE"), $OWNER_ID=0)
 	{
 		$err_mess = (CFormStatus::err_mess())."<br>Function: GetDropdown<br>Line: ";
 		global $DB, $USER, $strError;

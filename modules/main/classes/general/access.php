@@ -37,13 +37,6 @@ class CAccess
 		}
 	}
 
-	public static function Cmp($a, $b)
-	{
-		if($a["SORT"] == $b["SORT"])
-			return 0;
-		return ($a["SORT"] < $b["SORT"]? -1 : 1);
-	}
-
 	protected static function CheckUserCodes($provider, $USER_ID)
 	{
 		global $DB, $CACHE_MANAGER;
@@ -52,45 +45,39 @@ class CAccess
 
 		if(!isset(self::$arChecked[$provider][$USER_ID]))
 		{
-			if (
-				CACHED_b_user_access_check !== false
-				&& $CACHE_MANAGER->Read(CACHED_b_user_access_check, "access_check".$USER_ID, "access_check")
-			)
+			$cacheId = "access_check_".$provider."_".$USER_ID;
+
+			if (CACHED_b_user_access_check !== false && $CACHE_MANAGER->Read(CACHED_b_user_access_check, $cacheId, "access_check"))
 			{
-				self::$arChecked = $CACHE_MANAGER->Get("access_check".$USER_ID);
+				self::$arChecked[$provider][$USER_ID] = $CACHE_MANAGER->Get($cacheId);
 			}
 			else
 			{
 				$res = $DB->Query("
-					select *
+					select 'x'
 					from b_user_access_check
-					where user_id=".$USER_ID."
+					where USER_ID = ".$USER_ID."
+						and PROVIDER_ID = '".$DB->ForSql($provider)."'
 				");
 
-				while($arRes = $res->Fetch())
-					self::$arChecked[$arRes["PROVIDER_ID"]][$USER_ID] = true;
+				self::$arChecked[$provider][$USER_ID] = ($res->Fetch()? true : false);
 
 				if (CACHED_b_user_access_check !== false)
-					$CACHE_MANAGER->Set("access_check".$USER_ID, self::$arChecked);
+				{
+					$CACHE_MANAGER->Set($cacheId, self::$arChecked[$provider][$USER_ID]);
+				}
 			}
-
-			foreach(self::$arAuthProviders as $provider_id=>$dummy)
-				if(!isset(self::$arChecked[$provider_id][$USER_ID]))
-					self::$arChecked[$provider_id][$USER_ID] = false;
 		}
 
-		if(self::$arChecked[$provider][$USER_ID] === true)
-			return true;
-
-		return false;
+		return (self::$arChecked[$provider][$USER_ID]);
 	}
 
-	static public function UpdateCodes($arParams=false)
+	public function UpdateCodes($arParams=false)
 	{
 		global $USER;
 
 		$USER_ID = 0;
-		if(isset($arParams["USER_ID"]))
+		if(is_array($arParams) && isset($arParams["USER_ID"]))
 			$USER_ID = intval($arParams["USER_ID"]);
 		elseif(is_object($USER) && $USER->IsAuthorized())
 			$USER_ID = intval($USER->GetID());
@@ -129,7 +116,7 @@ class CAccess
 			FROM b_user
 			WHERE ID=".$USER_ID
 		);
-		$CACHE_MANAGER->Clean("access_check".$USER_ID, "access_check");
+		$CACHE_MANAGER->Clean("access_check_".$provider."_".$USER_ID, "access_check");
 		$CACHE_MANAGER->Clean("access_codes".$USER_ID, "access_check");
 
 		self::$arChecked[$provider][$USER_ID] = ($res->AffectedRowsCount() > 0);
@@ -153,25 +140,31 @@ class CAccess
 
 		if($provider === false && $USER_ID === false)
 		{
+			//all users and all providers
 			self::$arChecked = array();
 			$CACHE_MANAGER->CleanDir("access_check");
 		}
 		elseif($USER_ID === false)
 		{
+			//one provider for all users
 			unset(self::$arChecked[$provider]);
 			$CACHE_MANAGER->CleanDir("access_check");
 		}
 		elseif($provider === false)
 		{
-			foreach(self::$arChecked as $pr=>$ar)
+			//all providers for one user
+			foreach(self::$arChecked as $pr => $ar)
+			{
 				unset(self::$arChecked[$pr][$USER_ID]);
-			$CACHE_MANAGER->Clean("access_check".$USER_ID, "access_check");
+				$CACHE_MANAGER->Clean("access_check_".$pr."_".$USER_ID, "access_check");
+			}
 			$CACHE_MANAGER->Clean("access_codes".$USER_ID, "access_check");
 		}
 		else
 		{
+			//one provider for one user
 			unset(self::$arChecked[$provider][$USER_ID]);
-			$CACHE_MANAGER->Clean("access_check".$USER_ID, "access_check");
+			$CACHE_MANAGER->Clean("access_check_".$provider."_".$USER_ID, "access_check");
 			$CACHE_MANAGER->Clean("access_codes".$USER_ID, "access_check");
 		}
 	}
@@ -267,7 +260,7 @@ class CAccess
 		return false;
 	}
 
-	static public function GetNames($arCodes, $bSort=false)
+	public function GetNames($arCodes, $bSort=false)
 	{
 		$arResult = array();
 
@@ -292,11 +285,6 @@ class CAccess
 			}
 		}
 
-		//possible unhandled values
-		foreach($arCodes as $code)
-			if(!array_key_exists($code, $arResult))
-				$arResult[$code] = array("provider"=>"", "name"=>$code);
-
 		if($bSort)
 			uasort($arResult, array('CAccess', 'CmpNames'));
 
@@ -312,7 +300,7 @@ class CAccess
 		return strcmp($a["name"], $b["name"]);
 	}
 
-	static public function GetProviderNames()
+	public function GetProviderNames()
 	{
 		$arResult = array();
 		foreach(self::$arAuthProviders as $ID=>$provider)

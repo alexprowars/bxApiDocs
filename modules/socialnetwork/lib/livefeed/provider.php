@@ -1088,7 +1088,7 @@ abstract class Provider
 
 	final public function setLogEventId($eventId = '')
 	{
-		if (strlen($eventId) <= 0)
+		if ($eventId == '')
 		{
 			return false;
 		}
@@ -1100,7 +1100,7 @@ abstract class Provider
 
 	final private function setLogEntityType($entityType = '')
 	{
-		if (strlen($entityType) <= 0)
+		if ($entityType == '')
 		{
 			return false;
 		}
@@ -1256,7 +1256,7 @@ abstract class Provider
 
 		$siteId = (
 			isset($params["siteId"])
-			&& strlen($params["siteId"]) > 0
+			&& $params["siteId"] <> ''
 				? $params["siteId"]
 				: SITE_ID
 		);

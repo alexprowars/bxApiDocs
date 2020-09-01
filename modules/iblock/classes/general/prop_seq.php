@@ -1,13 +1,49 @@
 <?
-IncludeModuleLangFile(__FILE__);
+use Bitrix\Main\Localization\Loc,
+	Bitrix\Iblock;
+
+Loc::loadMessages(__FILE__);
 
 class CIBlockPropertySequence
 {
+	const USER_TYPE = 'Sequence';
+
+	public static function GetUserTypeDescription()
+	{
+		return array(
+			"PROPERTY_TYPE" => Iblock\PropertyTable::TYPE_NUMBER,
+			"USER_TYPE" => self::USER_TYPE,
+			"DESCRIPTION" => Loc::getMessage("IBLOCK_PROP_SEQUENCE_DESC"),
+			"GetPropertyFieldHtml" => array(__CLASS__, "GetPropertyFieldHtml"),
+			"GetPublicEditHTML" => array(__CLASS__, "GetPropertyFieldHtml"),
+			"PrepareSettings" =>array(__CLASS__, "PrepareSettings"),
+			"GetSettingsHTML" =>array(__CLASS__, "GetSettingsHTML"),
+			"GetAdminFilterHTML" => array(__CLASS__, "GetPublicFilterHTML"),
+			"GetPublicFilterHTML" => array(__CLASS__, "GetPublicFilterHTML"),
+			"AddFilterFields" => array(__CLASS__, "AddFilterFields"),
+			"GetUIFilterProperty" => array(__CLASS__, "GetUIFilterProperty"),
+			'GetUIEntityEditorProperty' => array(__CLASS__, 'GetUIEntityEditorProperty'),
+			'GetUIEntityEditorPropertyEditHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyEditHtml'),
+			'GetUIEntityEditorPropertyViewHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyViewHtml'),
+		);
+	}
+
 	public static function AddFilterFields($arProperty, $strHTMLControlName, &$arFilter, &$filtered)
 	{
 		$from_name = $strHTMLControlName["VALUE"].'_from';
 		$from = isset($_REQUEST[$from_name])? $_REQUEST[$from_name]: "";
-		if($from)
+		if (isset($strHTMLControlName["FILTER_ID"]))
+		{
+			$filterOption = new \Bitrix\Main\UI\Filter\Options($strHTMLControlName["FILTER_ID"]);
+			$filterData = $filterOption->getFilter();
+			$from = (!empty($filterData[$from_name]) ? $filterData[$from_name] : "");
+			if ($from)
+			{
+				$arFilter[">=PROPERTY_".$arProperty["ID"]] = $from;
+				$filtered = true;
+			}
+		}
+		elseif ($from)
 		{
 			$arFilter[">=PROPERTY_".$arProperty["ID"]] = $from;
 			$filtered = true;
@@ -15,7 +51,18 @@ class CIBlockPropertySequence
 
 		$to_name = $strHTMLControlName["VALUE"].'_to';
 		$to = isset($_REQUEST[$to_name])? $_REQUEST[$to_name]: "";
-		if($to)
+		if (isset($strHTMLControlName["FILTER_ID"]))
+		{
+			$filterOption = new \Bitrix\Main\UI\Filter\Options($strHTMLControlName["FILTER_ID"]);
+			$filterData = $filterOption->getFilter();
+			$to = (!empty($filterData[$to_name]) ? $filterData[$to_name] : "");
+			if ($to)
+			{
+				$arFilter["<=PROPERTY_".$arProperty["ID"]] = $to;
+				$filtered = true;
+			}
+		}
+		elseif ($to)
 		{
 			$arFilter["<=PROPERTY_".$arProperty["ID"]] = $to;
 			$filtered = true;
@@ -92,7 +139,7 @@ class CIBlockPropertySequence
 
 		$html = '
 			<tr valign="top">
-				<td>'.GetMessage("IBLOCK_PROP_SEQ_SETTING_WRITABLE").':</td>
+				<td>'.Loc::getMessage("IBLOCK_PROP_SEQ_SETTING_WRITABLE").':</td>
 				<td><input type="checkbox" name="'.$strHTMLControlName["NAME"].'[write]" value="Y" '.($bWritable? 'checked="checked"': '').'></td>
 			</tr>
 		';
@@ -103,7 +150,7 @@ class CIBlockPropertySequence
 			$current_value = $seq->GetCurrent();
 			return $html.'
 			<tr valign="top">
-				<td>'.GetMessage("IBLOCK_PROP_SEQ_SETTING_CURRENT_VALUE").':</td>
+				<td>'.Loc::getMessage("IBLOCK_PROP_SEQ_SETTING_CURRENT_VALUE").':</td>
 				<td><input type="text" size="5" name="'.$strHTMLControlName["NAME"].'[current_value]" value="'.$current_value.'"></td>
 			</tr>
 			';
@@ -113,12 +160,59 @@ class CIBlockPropertySequence
 			$current_value = 1;
 			return $html.'
 			<tr valign="top">
-				<td>'.GetMessage("IBLOCK_PROP_SEQ_SETTING_CURRENT_VALUE").':</td>
+				<td>'.Loc::getMessage("IBLOCK_PROP_SEQ_SETTING_CURRENT_VALUE").':</td>
 				<td><input disabled type="text" size="5" name="'.$strHTMLControlName["NAME"].'[current_value]" value="'.$current_value.'"></td>
 			</tr>
 			';
 		}
 	}
 
+	/**
+	 * @param array $property
+	 * @param array $control
+	 * @param array &$fields
+	 * @return void
+	 */
+	public static function GetUIFilterProperty($property, $control, &$fields)
+	{
+		$fields["type"] = "number";
+		$fields["filterable"] = "";
+		$fields["operators"] = array(
+			"default" => "=",
+			"exact" => "=",
+			"enum" => "@",
+			"range" => "><",
+			"more" => ">",
+			"less" => "<"
+		);
+	}
+
+	public static function GetUIEntityEditorProperty($settings, $value)
+	{
+		return [
+			'type' => 'custom',
+		];
+	}
+
+	public static function GetUIEntityEditorPropertyEditHtml(array $params = []) : string
+	{
+		$settings = $params['SETTINGS'] ?? [];
+		$value = $params['VALUE'] ?? '';
+		$paramsHTMLControl = [
+			'MODE' => 'iblock_element_admin',
+			'VALUE' => $params['FIELD_NAME'] ?? '',
+		];
+		return self::GetPropertyFieldHtml($settings, $value, $paramsHTMLControl);
+	}
+
+	public static function GetUIEntityEditorPropertyViewHtml(array $params = []) : string
+	{
+		$settings = $params['SETTINGS'] ?? [];
+		$value = $params['VALUE'] ?? '';
+		$paramsHTMLControl = [
+			'MODE' => 'iblock_element_admin',
+			'VALUE' => $params['FIELD_NAME'] ?? '',
+		];
+		return self::GetPropertyFieldHtml($settings, $value, $paramsHTMLControl);
+	}
 }
-?>

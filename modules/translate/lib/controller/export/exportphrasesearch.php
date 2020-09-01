@@ -77,7 +77,7 @@ class ExportPhraseSearch
 			if ($this->totalItems > 0)
 			{
 				$this->exportFileName = $this->generateExportFileName($path, $this->languages);
-				$this->createExportTempFile();
+				$this->createExportTempFile($this->exportFileName);
 			}
 
 			$this->saveProgressParameters();
@@ -120,11 +120,11 @@ class ExportPhraseSearch
 
 		foreach ($this->languages as $langId)
 		{
-			$select[] = strtoupper($langId). "_LANG";
+			$select[] = mb_strtoupper($langId)."_LANG";
 		}
 		if (!in_array($this->filter['LANGUAGE_ID'], $this->languages))
 		{
-			$select[] = strtoupper($this->filter['LANGUAGE_ID']). "_LANG";
+			$select[] = mb_strtoupper($this->filter['LANGUAGE_ID'])."_LANG";
 		}
 
 		/** @var Main\ORM\Query\Result $cachePathRes */

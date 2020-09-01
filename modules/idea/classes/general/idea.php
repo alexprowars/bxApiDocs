@@ -2,6 +2,7 @@
 Class CIdeaManagment
 {
 	//User Fields Id
+	const UFBlockPostDocField = 'UF_BLOG_POST_DOC';
 	const UFStatusField = 'UF_STATUS';
 	const UFAnswerIdField = 'UF_ANSWER_ID';
 	const UFCategroryCodeField = 'UF_CATEGORY_CODE';
@@ -20,14 +21,15 @@ Class CIdeaManagment
 	private function __clone(){}
 	private function __construct(){}
 
-	static public function IsAvailable()
+	public function IsAvailable()
 	{
 		return CModule::IncludeModule('blog') && CModule::IncludeModule('iblock');
 	}
 
-	static public function GetUserFieldsArray()
+	public function GetUserFieldsArray()
 	{
 		return array(
+			self::UFBlockPostDocField,
 			self::UFStatusField,
 			self::UFAnswerIdField,
 			self::UFCategroryCodeField,
@@ -36,17 +38,17 @@ Class CIdeaManagment
 	}
 
 	//xAlias
-	static public function Idea($IdeaId = false)
+	public function Idea($IdeaId = false)
 	{
 		return CIdeaManagmentIdea::GetInstance($IdeaId);
 	}
 	//xAlias
-	static public function IdeaComment($CommentId = false)
+	public function IdeaComment($CommentId = false)
 	{
 		return new CIdeaManagmentIdeaComment($CommentId);
 	}
 	//xAlias
-	static public function Notification($arNotification = array())
+	public function Notification($arNotification = array())
 	{
 		return new CIdeaManagmentNotify($arNotification);
 	}
@@ -306,18 +308,18 @@ Class CIdeaManagment
 		return CIdeaManagment::getInstance()->Idea()->GetCategoryList();
 	}
 	//Alias
-	static public function SetCategoryListId($ID)
+	public function SetCategoryListId($ID)
 	{
 		CIdeaManagment::getInstance()->Idea()->SetCategoryListId($ID);
 		return $this;
 	}
 	//Alias
-	static public function GetStatusList()
+	public function GetStatusList()
 	{
 		return CIdeaManagment::getInstance()->Idea()->GetStatusList();
 	}
 	//Alias
-	public static function GetCategorySequenceByCode($CODE, $arCategoryList = false)
+	function GetCategorySequenceByCode($CODE, $arCategoryList = false)
 	{
 		return CIdeaManagment::getInstance()->Idea()->GetCategorySequence($CODE);
 	}

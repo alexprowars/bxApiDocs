@@ -93,6 +93,11 @@ class AgreementTable extends Entity\DataManager
 			'URL' => [
 				'data_type' => 'string',
 			],
+			'IS_AGREEMENT_TEXT_HTML' => [
+				'data_type' => 'boolean',
+				'default_value' => 'N',
+				'values' => ['Y', 'N']
+			],
 		);
 	}
 

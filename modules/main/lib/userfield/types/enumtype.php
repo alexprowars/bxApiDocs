@@ -228,8 +228,8 @@ class EnumType extends BaseType
 			}
 		}
 		return [
-			'id' => $userField['ID'],
-			'name' => $userField['NAME'],
+			'id' => $additionalParameters['ID'],
+			'name' => $additionalParameters['NAME'],
 			'type' => 'list',
 			'items' => $items,
 			'params' => ['multiple' => 'Y'],
@@ -253,8 +253,6 @@ class EnumType extends BaseType
 	 */
 	public static function getEnumList(array &$userField, array $additionalParameters = []): void
 	{
-		$enum = [];
-
 		$showNoValue = (
 			$userField['MANDATORY'] !== 'Y'
 			||
@@ -278,6 +276,8 @@ class EnumType extends BaseType
 		)
 		{
 			$enum = [null => static::getEmptyCaption($userField)];
+			$userField['USER_TYPE']['FIELDS'] = $enum;
+			$userField['USER_TYPE']['~FIELDS'] = $enum;
 		}
 
 		$userFieldEnum = new CUserFieldEnum;
@@ -285,9 +285,9 @@ class EnumType extends BaseType
 
 		while($item = $enumList->Fetch())
 		{
-			$enum[$item['ID']] = HtmlFilter::encode($item['VALUE']);
+			$userField['USER_TYPE']['FIELDS'][$item['ID']] = HtmlFilter::encode($item['VALUE']);
+			$userField['USER_TYPE']['~FIELDS'][$item['ID']] = $item['VALUE'];
 		}
-		$userField['USER_TYPE']['FIELDS'] = $enum;
 	}
 
 	/**

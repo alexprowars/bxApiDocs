@@ -3,97 +3,6 @@
  * Form output class - templates management & final output
  *
  */
-
-/**
- * <p>Если не предполагается использование страниц редактирования результата формы  или просмотра списка результатов, то имеет смысл вставить в шаблон ответ  веб-формы в обход основного шаблона:</p> <pre class="syntax" id="xmp4A9A280C"><buttononclick> &lt;!-- Если есть ответ формы - выведем его в обход шаблона --&gt; &lt;?if($FORM-&gt;isFormNote()):?&gt; &lt;?=$FORM-&gt;ShowFormNote()?&gt; &lt;?else:?&gt; &lt;!-- здесь остальной шаблон веб-формы --&gt; &lt;?endif?&gt; </buttononclick></pre> <br><br>
- *
- *
- * @return mixed 
- *
- * <h4>Example</h4> 
- * <pre bgcolor="#323232" style="padding:5px;">
- * <code><b>$FORM</b></code> - экземпляр класса <code>CFormOutput</code> - 
- * создаётся и инициализируется автоматически вне шаблона. Вызов методов 
- * <code>CFormOutput::ShowFormHeader()</code> и 
- * <code>CFormOutput::ShowFormFooter()</code> также добавляется к шаблону 
- * автоматически.<buttononclick>
- * &lt;!-- Выведем описание формы --&gt;
- * &lt;table width="100%" cellpadding="2" cellspacing="0" border="0"&gt;
- *     &lt;tr&gt;
- *         &lt;td align="center"&gt;&lt;?=$FORM-&gt;ShowFormDescription()?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- * &lt;/table&gt;
- * 
- * &lt;!-- Если есть ошибки валидатора - выведем их --&gt;
- * &lt;?if($FORM-&gt;isFormErrors()):?&gt;
- * &lt;table width="100%" cellpadding="2" cellspacing="0" border="0"&gt;
- *     &lt;tr&gt;
- *         &lt;td&gt;&lt;?=$FORM-&gt;ShowFormErrors()?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- * &lt;/table&gt;
- * &lt;?endif?&gt;
- * 
- * &lt;!-- Выведем поля формы --&gt;
- * &lt;table width="100%" cellpadding="2" cellspacing="0" border="0"&gt;
- *     &lt;tr&gt;
- *         &lt;td width="40%" valign="top" align="right"&gt;&lt;?=$FORM-&gt;ShowInputCaption('test_q')?&gt;: &lt;/td&gt;
- *         &lt;td width="60%" valign="top"&gt;&lt;?=$FORM-&gt;ShowInput('test_q')?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- *     &lt;tr&gt;
- *         &lt;td valign="top" align="right"&gt;&lt;?=$FORM-&gt;ShowInputCaption('test_q_text')?&gt;: &lt;/td&gt;
- *         &lt;td valign="top"&gt;&lt;?=$FORM-&gt;ShowInput('test_q_text')?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- *     &lt;tr&gt;
- *         &lt;td valign="top" align="right"&gt;&lt;?=$FORM-&gt;ShowInputCaption('test_q_textarea')?&gt;: &lt;/td&gt;
- *         &lt;td valign="top"&gt;&lt;?=$FORM-&gt;ShowInput('test_q_textarea')?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- * &lt;/table&gt;
- * 
- * &lt;!-- Если используется CAPTCHA - выведем картинку и поле для ввода --&gt;
- * &lt;?if($FORM-&gt;isUseCaptcha()):?&gt;
- * &lt;table width="100%" cellpadding="2" cellspacing="0" border="0"&gt;
- *     &lt;tr&gt;
- *         &lt;td colspan="2" height="8"&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- *     &lt;tr&gt;
- *         &lt;td width="40%" valign="top" align="right" class="text"&gt;Защита от автоматической регистрации: &lt;/td&gt;
- *         &lt;td width="60%" valign="top"&gt;&lt;?=$FORM-&gt;ShowCaptchaImage()?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- *     &lt;tr&gt;
- *         &lt;td valign="top" align="right" class="text"&gt;Введите слово с картинки&lt;?=$FORM-&gt;ShowRequired()?&gt;: &lt;/td&gt;
- *         &lt;td valign="top"&gt;&lt;?=$FORM-&gt;ShowCaptchaField()?&gt;&lt;/td&gt;
- *     &lt;/tr&gt;
- * &lt;/table&gt;
- * &lt;?endif?&gt;
- * 
- * &lt;!-- Выведем кнопки формы --&gt;
- * &lt;table width="100%" cellpadding="2" cellspacing="0" border="0"&gt;
- *     &lt;tr&gt;
- *         &lt;td width="40%"&gt;&amp;nbsp;&lt;/td&gt;
- *         &lt;td width="60%"&gt;
- *             &lt;?=$FORM-&gt;ShowSubmitButton()?&gt;&amp;nbsp;
- *             &lt;?=$FORM-&gt;ShowApplyButton()?&gt;&amp;nbsp;
- *             &lt;?=$FORM-&gt;ShowResetButton()?&gt;
- *         &lt;/td&gt;
- *     &lt;/tr&gt;
- * &lt;/table&gt;
- * </buttononclick>Если не предполагается использование страниц редактирования результата формы 
- * или просмотра списка результатов, то имеет смысл вставить в шаблон ответ 
- * веб-формы в обход основного шаблона:<buttononclick>
- * &lt;!-- Если есть ответ формы - выведем его в обход шаблона --&gt;
- * &lt;?if($FORM-&gt;isFormNote()):?&gt;
- * &lt;?=$FORM-&gt;ShowFormNote()?&gt;
- * &lt;?else:?&gt;
- * &lt;!-- здесь остальной шаблон веб-формы --&gt;
- * &lt;?endif?&gt;
- * </buttononclick>
- * </pre>
- *
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php
- * @author Bitrix
- */
 class CAllFormOutput extends CFormOutput_old
 {
 	var $__cache_path = "";
@@ -139,12 +48,12 @@ class CAllFormOutput extends CFormOutput_old
 
 	var $bIsFormValidateErrors = false;
 
-	public function CAllFormOutput()
+	function CAllFormOutput()
 	{
 		$this->__cache_path = BX_PERSONAL_ROOT."/tmp/form";
 	}
 
-	public function InitializeTemplate($arParams, $arResult)
+	function InitializeTemplate($arParams, $arResult)
 	{
 		$this->WEB_FORM_ID = $arParams["WEB_FORM_ID"];
 		$this->RESULT_ID = $arParams["RESULT_ID"];
@@ -182,7 +91,7 @@ class CAllFormOutput extends CFormOutput_old
 		}
 	}
 
-	public function IncludeFormCustomTemplate()
+	function IncludeFormCustomTemplate()
 	{
 		if ($this->__check_form_cache())
 		{
@@ -200,7 +109,7 @@ class CAllFormOutput extends CFormOutput_old
 		}
 	}
 
-	public function IncludeFormTemplate()
+	function IncludeFormTemplate()
 	{
 		global $APPLICATION;
 		if ($this->__check_form_cache())
@@ -217,7 +126,7 @@ class CAllFormOutput extends CFormOutput_old
 		}
 	}
 
-	public static function isStatisticIncluded()
+	function isStatisticIncluded()
 	{
 		return CModule::IncludeModule("statistic");
 	}
@@ -229,7 +138,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	public function __check_form_cache()
+	function __check_form_cache()
 	{
 		global $CACHE_MANAGER;
 
@@ -271,7 +180,7 @@ class CAllFormOutput extends CFormOutput_old
 	}
 
 	/*
-	public function __clear_form_cache_files()
+	function __clear_form_cache_files()
 	{
 		$path = $_SERVER['DOCUMENT_ROOT'].$this->__cache_path;
 		$fname_mask = "form_".$this->WEB_FORM_ID;
@@ -293,30 +202,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "есть ли ошибки валидатора формы". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если в процессе обработки результата формы обнаружены
-	* ошибки. <i>false</i> в противном случае.</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?if($FORM-&gt;isFormErrors()):?&gt;Ошибки: &lt;?=$FORM-&gt;ShowFormErrors()?&gt;&lt;?endif?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrors.php">CFormOutput::ShowFormErrors</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrorstext.php">CFormOutput::ShowFormErrorsText</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformerrors.php
-	* @author Bitrix
-	*/
-	public function isFormErrors()
+	function isFormErrors()
 	{
 		if (is_array($this->__form_validate_errors))
 			return count($this->__form_validate_errors) > 0;
@@ -330,29 +216,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод отформатированных ошибок валидатора формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает отфоматированный список ошибок валидатора формы.
-	* Если ошибок нет, возвращается пустая строка.</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowFormErrors()?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrorstext.php">CFormOutput::ShowFormErrorsText</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformerrors.php">CFormOutput::isFormErrors</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrors.php
-	* @author Bitrix
-	*/
-	public function ShowFormErrors()
+	function ShowFormErrors()
 	{
 		ob_start();
 
@@ -373,30 +237,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод неотформатированных ошибок валидатора формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает неотфоматированный список ошибок валидатора формы.
-	* Если ошибок  нет, возвращается пустая строка.</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">&lt;font
-	* color="#FF0000"&gt;&lt;?=$FORM-&gt;ShowFormErrorsText()?&gt;&lt;/font&gt;</pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a> 
-	* 	</li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrors.php">CFormOutput::ShowFormErrors</a> 
-	* 	</li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformerrors.php">CFormOutput::isFormErrors</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrorstext.php
-	* @author Bitrix
-	*/
-	public function ShowFormErrorsText()
+	function ShowFormErrorsText()
 	{
 		if ($this->arParams['USE_EXTENDED_ERRORS'] == 'N')
 			return $this->__form_validate_errors;
@@ -409,29 +250,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод отформатированных информационных сообщений формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает отфоматированные информационные сообщения формы
-	* (напр. "Ваша заявка принята"). Если сообщений нет, возвращается
-	* пустая строка.</p><a name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowFormNote()?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformnotetext.php">CFormOutput::ShowFormNoteText</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformnote.php">CFormOutput::isFormNote</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformnote.php
-	* @author Bitrix
-	*/
-	public function ShowFormNote()
+	function ShowFormNote()
 	{
 		ob_start();
 		ShowNote($this->strFormNote);
@@ -445,29 +264,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод неотформатированных информационных сообщений формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает неотфоматированные информационные сообщения формы
-	* (напр. "Ваша заявка принята"). Если сообщений нет, возвращается
-	* пустая строка.</p><a name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowFormNoteText()?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformnote.php">CFormOutput::ShowFormNoteText</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformnote.php">CFormOutput::isFormNote</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformnotetext.php
-	* @author Bitrix
-	*/
-	public function ShowFormNoteText()
+	function ShowFormNoteText()
 	{
 		return $this->strFormNote;
 	}
@@ -477,42 +274,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "есть ли текстовые заметки". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если у есть текстовые заметки. <i>false</i> в противном 
-	* случае.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?if($FORM-&gt;isFormNote()):?&gt;Ответ: &lt;?=$FORM-&gt;ShowFormNote()?&gt;&lt;?endif?&gt;
-	* 
-	* \\ способ проверить, отправлена ли форма, а затем вывести сообщение об успешной отправке
-	* &lt;? if($FORM-&gt;isFormNote()) //т.е. если сообщение есть, значит нужно его показать, т.е. форма отправлена
-	* {
-	* echo $FORM-&gt;ShowFormNote();?&gt; //выводим сообщение "Ваша заявка успешно отправлена"
-	*  }
-	* else //в противном случает выводим саму форму для заполнения
-	* {
-	* 
-	* шаблон формы
-	* ;}
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <p><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a><br><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformnote.php">CFormOutput::ShowFormNote</a></p>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformnote.php
-	* @author Bitrix
-	*/
-	public function isFormNote()
+	function isFormNote()
 	{
 		return strlen($this->strFormNote) > 0;
 	}
@@ -523,33 +285,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает код ошибки инициализации формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Метод возвращает одну из следующих строк, либо пустую строку,
-	* если ошибок нет</p><table class="tnormal" width="100%"> <tr> <th width="18%">Строка</th> 		<th
-	* width="82%">Описание</th> 	</tr> <tr> <td>FORM_NOT_FOUND</td> 		<td>Формы с переданным
-	* WEB_FORM_ID не существует</td> 	</tr> <tr> <td>FORM_ACCESS_DENIED</td> 		<td>Не хватает прав
-	* доступа к форме</td> 	</tr> </table><p>Проверка наличия ошибки и вывод
-	* соответствующего ей языкового сообщения производится
-	* автоматически при инициализации формы</p>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrors.php">CFormOutput::ShowFormErrors</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformerrorstext.php">CFormOutput::ShowFormErrorsText</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showerrormsg.php
-	* @author Bitrix
-	*/
-	public function ShowErrorMsg()
+	function ShowErrorMsg()
 	{
 		return $this->__error_msg;
 	}
@@ -560,28 +296,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод HTML-заголовка формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает HTML-код заголовка формы. В том числе, тэг &lt;form&gt;,
-	* скрытые поля.</p><a name="examples"></a><h4>Использование</h4><p>При создании
-	* шаблона формы редактором, добавляется в начало шаблона
-	* автоматически.</p><pre class="syntax"> &lt;?=$FORM-&gt;ShowFormHeader()?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformfooter.php">CFormOutput::ShowFormFooter</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformheader.php
-	* @author Bitrix
-	*/
-	public function ShowFormHeader()
+	function ShowFormHeader()
 	{
 		global $APPLICATION;
 
@@ -616,33 +331,12 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Завершение вывода формы. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращает завершающий HTML-код формы. В том числе, тэг &lt;/form&gt;.</p><a
-	* name="examples"></a><h4>Использование</h4><p>При создании шаблона формы
-	* редактором, добавляется в конец шаблона  автоматически.</p><pre
-	* class="syntax">&lt;?=$FORM-&gt;ShowFormFooter()?&gt;</pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a>
-	* 	</li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformheader.php">CFormOutput::ShowFormHeader</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformfooter.php
-	* @author Bitrix
-	*/
-	public static function ShowFormFooter()
+	function ShowFormFooter()
 	{
 		return "</form>";
 	}
 
-	public function __admin_GetInputType($FIELD_SID)
+	function __admin_GetInputType($FIELD_SID)
 	{
 		if (is_array($this->arAnswers[$FIELD_SID]))
 		{
@@ -662,7 +356,7 @@ class CAllFormOutput extends CFormOutput_old
 		else return "none";
 	}
 
-	public function __admin_GetInputAnswersStructure($FIELD_SID)
+	function __admin_GetInputAnswersStructure($FIELD_SID)
 	{
 		if (is_array($this->arAnswers[$FIELD_SID]))
 		{
@@ -719,34 +413,7 @@ class CAllFormOutput extends CFormOutput_old
 	 * @param string $caption_css_class
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вставка в шаблон подписи поля ответа на вопрос. Метод нестатический.</p>
-	*
-	*
-	* @param string $FIELD_SID  Строковой идентификатор поля вопроса. Обязательный параметр.
-	*
-	* @param string $CSSClass = ""] CSS-класс подписи. Необязательный параметр. Если для выставлено
-	* значение "Текст вопроса - HTML", то параметр игнорируется. До версии
-	* 5.1.2 значение по умолчанию - "tablebodytext".
-	*
-	* @return string <p>Возвращается обработанная подпись поля формы.</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowInputCaption('MYFIELD_5')?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinput.php">CFormOutput::ShowInput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaptionimage.php">CFormOutput::ShowInputCaptionImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php
-	* @author Bitrix
-	*/
-	public function ShowInputCaption($FIELD_SID, $css_style = "")
+	function ShowInputCaption($FIELD_SID, $css_style = "")
 	{
 		$ret = "";
 		if (empty($this->arQuestions[$FIELD_SID])) $ret = "";
@@ -778,7 +445,7 @@ class CAllFormOutput extends CFormOutput_old
 	}
 
 
-	public function __admin_ShowInputCaption($FIELD_SID, $caption_css_class = "", $unform = false)
+	function __admin_ShowInputCaption($FIELD_SID, $caption_css_class = "", $unform = false)
 	{
 		if (empty($this->arQuestions[$FIELD_SID])) return "";
 		if ($unform) return $this->arQuestions[$FIELD_SID]["TITLE"];
@@ -816,64 +483,7 @@ class CAllFormOutput extends CFormOutput_old
 
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод изображения, прикрепленного к вопросу формы. Если изображение есть, возвращается HTML-код вставки. В противном случае - пустая строка. Метод нестатический.</p>
-	*
-	*
-	* @param string $FIELD_SID  Строковой идентификатор поля вопроса. Обязательный параметр.
-	*
-	* @param string $sAlign = "" Расположение изображения относительно текста. Может принимать
-	* одно из четырех значений - <code>LEFT</code>, <code>CENTER</code>, <code>RIGHT</code>
-	* (регистр не имеет значения) или пустое. Необязательный параметр.
-	*
-	* @param int $iMaxW = 0 Максимальная ширина изображения. Если ширина картинки больше iMaxW,
-	* то она будет пропорционально смаштабирована.<br> Необязательный.
-	* До версии 5.1.2 значение по умолчанию - "0" - без ограничений.
-	*
-	* @param int $iMaxH = 0 Максимальная высота изображения. Если высота картинки больше iMaxH,
-	* то она будет пропорционально смаштабирована.<br> Необязательный.
-	* До версии 5.1.2 значение по умолчанию - "0" - без ограничений.
-	*
-	* @param string $bPopup = "N" Открывать ли при клике на изображении дополнительное popup окно с
-	* увеличенным изображением.<br> Необязательный. Должен приниметь
-	* одно из двух значений - "Y" или "N" (с учётом регистра). По умолчанию -
-	* "N" (до версии 5.1.2 - "false").
-	*
-	* @param string $strPopupTitle = "" Текст всплывающей подсказки на изображении (только если <i>bPopup</i> =
-	* "Y")<br> Необязательный. По умолчанию выводится фраза "Нажмите чтобы
-	* увеличить" на языке страницы (до версии 5.1.2 - "false").
-	*
-	* @param string $sHSpace = "" Устанавливает вертикальный отступ картинки от окружающего
-	* текста в пикселях.<br> Необязательный. По умолчанию - "0" - без
-	* отступа.
-	*
-	* @param string $sVSpace = "" Устанавливает горизонтальный отступ картинки от окружающего
-	* текста в пикселях.<br> Необязательный. По умолчанию - "0" - без
-	* отступа.
-	*
-	* @param string $sBorder = "" Устанавливает толщину рамки вокруг изображения. Необязательный.
-	* По умолчанию равен "0" - без рамки:
-	*
-	* @return string <p>Возвращает HTML-код для вставки изображения в форму</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowInputCaptionImage('MYFIELD_5', 'LEFT', 50, 50, "N", "", 5, 5)?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/showimage.php">CFile::ShowImage</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinput.php">CFormOutput::ShowInput</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php">CFormOutput::ShowInputCaption</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isinputcaptionimage.php">CFormOutput::isInputCaptionImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaptionimage.php
-	* @author Bitrix
-	*/
-	public function ShowInputCaptionImage($FIELD_SID, $sAlign = "", $iMaxW="", $iMaxH="", $bPopup="N", $strPopupTitle="", $sHSpace = "", $sVSpace = "", $sBorder = "")
+	function ShowInputCaptionImage($FIELD_SID, $sAlign = "", $iMaxW="", $iMaxH="", $bPopup="N", $strPopupTitle="", $sHSpace = "", $sVSpace = "", $sBorder = "")
 	{
 		if ($this->isInputCaptionImage($FIELD_SID))
 		{
@@ -911,34 +521,7 @@ class CAllFormOutput extends CFormOutput_old
 	 * @param string $FIELD_SID
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "прикреплена ли к вопросу с данным идентификатором картинка". Метод нестатический.</p>
-	*
-	*
-	* @param string $FIELD_SID  Строковой идентификатор поля вопроса. Обязательный параметр.
-	*
-	* @return bool <p><i>true</i>, если к вопросу прикреплена картинка. <i>false</i> в противном
-	* случае.</p><a name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowInputCaption('MYFIELD_5')?&gt;: &lt;?=$FORM-&gt;ShowInput('MYFIELD_5')?&gt;&lt;br /&gt;
-	* &lt;?if($FORM-&gt;isInputCaptionImage('MYFIELD_5')):?&gt; 	&lt;?=$FORM-&gt;ShowInputCaptionImage('MYFIELD_5')?&gt;
-	* &lt;?else:?&gt; 	&lt;?=CFile::ShowImage("/myimages/form_field_default.jpg")?&gt; &lt;?endif?&gt;: </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/showimage.php">CFile::ShowImage</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinput.php">CFormOutput::ShowInput</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php">CFormOutput::ShowInputCaption</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaptionimage.php">CFormOutput::ShowInputCaptionImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isinputcaptionimage.php
-	* @author Bitrix
-	*/
-	public function isInputCaptionImage($FIELD_SID)
+	function isInputCaptionImage($FIELD_SID)
 	{
 		return intval($this->arQuestions[$FIELD_SID]["IMAGE_ID"])>0;
 	}
@@ -951,33 +534,7 @@ class CAllFormOutput extends CFormOutput_old
 	 * @param string $caption_css_class
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вставка полей ответа на вопрос в шаблон. Параметры поля ввода задаются в настройках вопроса. Метод нестатический.</p>
-	*
-	*
-	* @param string $FIELD_SID  Строковой идентификатор поля вопроса. Обязательный параметр.
-	*
-	* @param string $CSSClass = ""] CSS-класс для подписи к полю ввода. Необязательный параметр.
-	*
-	* @return string <p>Возвращается HTML-код для вставки полей формы</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowInput('MYFIELD_5')?&gt;
-	* </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php">CFormOutput::ShowInputCaption</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaptionimage.php">CFormOutput::ShowInputCaptionImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinput.php
-	* @author Bitrix
-	*/
-	public function ShowInput($FIELD_SID, $caption_css_class = '')
+	function ShowInput($FIELD_SID, $caption_css_class = '')
 	{
 		$arrVALUES = $this->arrVALUES;
 
@@ -1271,39 +828,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "форма использует CAPTCHA". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если форма использует CAPTCHA. <i>false</i> в противном 
-	* случае.</p><a name="examples"></a><h4>Использование</h4><pre
-	* class="syntax">&lt;?if($FORM-&gt;isUseCaptcha()):?&gt; &lt;tr&gt;     &lt;td colspan="2" height="8"&gt;&lt;/td&gt;
-	* &lt;/tr&gt; &lt;tr&gt;     &lt;td valign="top" align="right" class="text"&gt;Защита от
-	* автоматической регистрации:&lt;/td&gt;     &lt;td
-	* valign="top"&gt;&lt;?=$FORM-&gt;ShowCaptchaImage()?&gt;&lt;/td&gt; &lt;/tr&gt; &lt;tr&gt;     &lt;td valign="top"
-	* align="right" class="text"&gt;Введите слово с
-	* картинки&lt;?=$FORM-&gt;ShowRequired()?&gt;:&lt;/td&gt;     &lt;td
-	* valign="top"&gt;&lt;?=$FORM-&gt;ShowCaptchaField()?&gt;&lt;/td&gt; &lt;/tr&gt; &lt;?endif?&gt;</pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li> <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a> 
-	* 	</li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptcha.php">CFormOutput::ShowCaptcha</a>  	</li>
-	* <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchafield.php">CFormOutput::ShowCaptchaField</a> 
-	* 	</li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchaimage.php">CFormOutput::ShowCaptchaImage</a></li>
-	* </menu><br><br><h4>Смотрите также</h4><ul><li><a
-	* href="http://dev.1c-bitrix.ru/community/webdev/user/61475/blog/updated-without-a-page-reload-captcha/">Обновление
-	* капчи без перезагрузки страницы</a></li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isusecaptcha.php
-	* @author Bitrix
-	*/
-	public function isUseCaptcha()
+	function isUseCaptcha()
 	{
 		return $this->arForm["USE_CAPTCHA"] == "Y" && strlen($this->CAPTCHACode) > 0;
 	}
@@ -1314,33 +839,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает HTML-код для вставки изображения CAPTCHA. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращается HTML-код для вставки изображения CAPTCHA</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowCaptchaImage()?&gt;
-	* </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptcha.php">CFormOutput::ShowCaptcha</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchafield.php">CFormOutput::ShowCaptchaField</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isusecaptcha.php">CFormOutput::isUseCaptcha</a></li>
-	* </menu><br><br><h4>Смотрите также</h4><ul><li><a
-	* href="http://dev.1c-bitrix.ru/community/webdev/user/61475/blog/updated-without-a-page-reload-captcha/">Обновление
-	* капчи без перезагрузки страницы</a></li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchaimage.php
-	* @author Bitrix
-	*/
-	public function ShowCaptchaImage()
+	function ShowCaptchaImage()
 	{
 
 		if ($this->isUseCaptcha())
@@ -1354,33 +853,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает код поля для ввода CAPTCHA. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращается HTML-код поля для ввода CAPTCHA</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowCaptchaField()?&gt;
-	* </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptcha.php">CFormOutput::ShowCaptcha</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchaimage.php">CFormOutput::ShowCaptchaImage</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isusecaptcha.php">CFormOutput::isUseCaptcha</a></li>
-	* </menu><br><br><h4>Смотрите также</h4><ul><li><a
-	* href="http://dev.1c-bitrix.ru/community/webdev/user/61475/blog/updated-without-a-page-reload-captcha/">Обновление
-	* капчи без перезагрузки страницы</a></li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchafield.php
-	* @author Bitrix
-	*/
-	public function ShowCaptchaField()
+	function ShowCaptchaField()
 	{
 		if ($this->isUseCaptcha())
 			return "<input type=\"text\" name=\"captcha_word\" size=\"30\" maxlength=\"50\" value=\"\" class=\"inputtext\" />";
@@ -1392,32 +865,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает комбинацию изображения CAPTCHA и поля для ввода. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращается HTML-код обоих элементов</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowCaptcha()?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchafield.php">CFormOutput::ShowCaptchaField</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptchaimage.php">CFormOutput::ShowCaptchaImage</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isusecaptcha.php">CFormOutput::isUseCaptcha</a></li>
-	* </menu><br><br><h4>Смотрите также</h4><ul><li><a
-	* href="http://dev.1c-bitrix.ru/community/webdev/user/61475/blog/updated-without-a-page-reload-captcha/">Обновление
-	* капчи без перезагрузки страницы</a></li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showcaptcha.php
-	* @author Bitrix
-	*/
-	public function ShowCaptcha()
+	function ShowCaptcha()
 	{
 		return $this->ShowCaptchaImage()."<br />".$this->ShowCaptchaField();
 	}
@@ -1428,36 +876,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает HTML-код кнопки отправки формы создания/редактирования записи. Метод нестатический.</p>
-	*
-	*
-	* @param string $CAPTION = "" Текст, расположенный на кнопке. Если параметр пуст или не указан,
-	* то будет использовано значение параметра "Подпись на кнопке"
-	* вкладки "Свойства" страницы редактирования параметров веб-формы,
-	* либо значение по умолчанию. Необязательный параметр.
-	*
-	* @param string $CSSClass = "" CSS-класс кнопки. Необязательный параметр.
-	*
-	* @return string <p>Возвращается HTML-код кнопки отправки формы</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowSubmitButton("Отправить заявку", "form-button-submit")?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showapplybutton.php">CFormOutput::ShowApplyButton</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showresetbutton.php">CFormOutput::ShowResetButton</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showsubmitbutton.php
-	* @author Bitrix
-	*/
-	public function ShowSubmitButton($caption = "", $css_style = "")
+	function ShowSubmitButton($caption = "", $css_style = "")
 	{
 		$button_value = strlen(trim($caption)) > 0 ? trim($caption) : (strlen(trim($this->arForm["BUTTON"]))<=0 ? GetMessage("FORM_ADD") : $this->arForm["BUTTON"]);
 
@@ -1470,35 +889,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает HTML-код кнопки "Применить" формы создания/редактирования записи. Метод нестатический.</p>
-	*
-	*
-	* @param string $CAPTION = "" Текст, расположенный на кнопке. Необязательный параметр.
-	* Параметр необязательный, и если он пуст или не указан, то будет
-	* использовано значение по умолчанию.
-	*
-	* @param string $CSSClass = "" CSS-класс кнопки. Необязательный параметр.
-	*
-	* @return string <p>Возвращается HTML-код кнопки "Применить"</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowApplyButton("Применить", "form-button-apply")?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showresetbutton.php">CFormOutput::ShowResetButton</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showsubmitbutton.php">CFormOutput::ShowSubmitButton</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showapplybutton.php
-	* @author Bitrix
-	*/
-	public function ShowApplyButton($caption = "", $css_style = "")
+	function ShowApplyButton($caption = "", $css_style = "")
 	{
 		$button_value = strlen(trim($caption)) > 0 ? trim($caption) : GetMessage("FORM_APPLY");
 
@@ -1511,35 +902,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Возвращает HTML-код кнопки "Сбросить" формы создания/редактирования записи. Метод нестатический.</p>
-	*
-	*
-	* @param string $CAPTION = "" Текст, расположенный на кнопке. Если параметр пуст или не указан,
-	* то будет использовано значение по умолчанию. Необязательный
-	* параметр.
-	*
-	* @param string $CSSClass = "" CSS-класс кнопки. Необязательный параметр.
-	*
-	* @return string <p>Возвращается HTML-код кнопки "сбросить".</p><a
-	* name="examples"></a><h4>Использование</h4><pre
-	* class="syntax">&lt;?=$FORM-&gt;ShowResetButton("Отменить изменения", "form-button-reset")?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	*                     <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showapplybutton.php">CFormOutput::ShowApplyButton</a></li>
-	*                     <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showsubmitbutton.php">CFormOutput::ShowSubmitButton</a></li>
-	*          </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showresetbutton.php
-	* @author Bitrix
-	*/
-	public static function ShowResetButton($caption = "", $css_style = "")
+	function ShowResetButton($caption = "", $css_style = "")
 	{
 		$button_value = strlen(trim($caption)) > 0 ? trim($caption) : GetMessage("FORM_RESET");
 
@@ -1552,35 +915,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод описательного текста формы. Метод нестатический.</p>
-	*
-	*
-	* @param string $CSSClass = "" CSS-класс который нужно применить к выводимому тексту.
-	* Необязательный параметр. Если для описания формы выставлено
-	* значение "HTML", то параметр игнорируется.
-	*
-	* @return string <p>Возвращает описательный текст формы</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowFormDescription("form-description-text")?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformtitle.php">CFormOutput::ShowFormTitle</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformimage.php">CFormOutput::ShowFormImage</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformdescription.php">CFormOutput::isFormDescription</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformdescription.php
-	* @author Bitrix
-	*/
-	public function ShowFormDescription($css_style = "")
+	function ShowFormDescription($css_style = "")
 	{
 		$ret = $this->arForm["DESCRIPTION_TYPE"] == "html" ? trim($this->arForm["DESCRIPTION"]) : nl2br(htmlspecialcharsbx(trim($this->arForm["DESCRIPTION"])));
 
@@ -1594,26 +929,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "есть ли у формы текстовое описание". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если у формы есть текстовое описание. <i>false</i> в противном 
-	* случае.</p><a name="examples"></a><h4>Использование</h4><pre
-	* class="syntax">&lt;?if($FORM-&gt;isFormDescription()):?&gt;Описание:
-	* &lt;?=$FORM-&gt;ShowFormDescription()?&gt;&lt;?endif?&gt;</pre>
-	*
-	* <h4>See Also</h4> 
-	* <p><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a><br><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformdescription.php">CFormOutput::ShowFormDescription</a></p><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformdescription.php
-	* @author Bitrix
-	*/
-	public function isFormDescription()
+	function isFormDescription()
 	{
 		return strlen(trim($this->arForm["DESCRIPTION"])) > 0;
 	}
@@ -1632,61 +948,7 @@ class CAllFormOutput extends CFormOutput_old
 	 * @return string
 	 */
 	//function ShowFormImage($iMaxW=0, $iMaxH=0, $sParams="border=\"0\"", $strImageUrl="", $bPopup=false, $strPopupTitle=false)
-	
-	/**
-	* <p>Вывод изображения, прикрепленного к описанию формы. Метод нестатический.</p>
-	*
-	*
-	* @param string $sAlign = "" Необязательный параметр. Значение по умолчанию - "border=\"0\"".
-	*
-	* @param int $iMaxW = 0 Необязательный параметр.
-	*
-	* @param int $iMaxH = 0 Расположение изображения относительно текста. Может принимать
-	* одно из четырех значений - <code>LEFT</code>, <code>CENTER</code>, <code>RIGHT</code>
-	* (регистр не имеет значения) или пустое. Необязательный параметр.
-	*
-	* @param string $bPopup = "N" Максимальная ширина изображения. Если ширина картинки больше iMaxW,
-	* то она будет пропорционально смаштабирована.<br> Необязательный.
-	* По умолчанию - "0" - без ограничений.
-	*
-	* @param string $strPopupTitle = "" Максимальная высота изображения. Если высота картинки больше iMaxH,
-	* то она будет пропорционально смаштабирована.<br> Необязательный.
-	* По умолчанию - "0" - без ограничений.
-	*
-	* @param string $sHSpace = "" Открывать ли при клике на изображении дополнительное popup окно с
-	* увеличенным изображением.<br> Необязательный. Должен приниметь
-	* одно из двух значений - "Y" или "N" (с учётом регистра). По умолчанию -
-	* "N" (до версии 5.1.2 - "false").
-	*
-	* @param string $sVSpace = "" Текст всплывающей подсказки на изображении (только если <i>bPopup</i> =
-	* "Y")<br> Необязательный. По умолчанию выводится фраза "Нажмите чтобы
-	* увеличить" на языке страницы (до версии 5.1.2 значение по умолчанию -
-	* "false").
-	*
-	* @param string $sBorder = "" Устанавливает вертикальный отступ картинки от окружающего
-	* текста в пикселях.<br> Необязательный. По умолчанию - "0" - без
-	* отступа.
-	*
-	* @return string <p>Возвращает HTML-код для вставки изображения в формы</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax"> &lt;?=$FORM-&gt;ShowFormImage("CENTER", 250,
-	* 250, "Y", GetMessage("FORM_ENLARGE"), 0, 0)?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/showimage.php">CFile::ShowImage</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformdescription.php">CFormOutput::ShowFormDescription</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformtitle.php">CFormOutput::ShowFormTitle</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformimage.php">CFormOutput::isFormImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformimage.php
-	* @author Bitrix
-	*/
-	public function ShowFormImage($sAlign = "", $iMaxW="", $iMaxH="", $bPopup="N", $strPopupTitle="", $sHSpace = "", $sVSpace = "", $sBorder = "")
+	function ShowFormImage($sAlign = "", $iMaxW="", $iMaxH="", $bPopup="N", $strPopupTitle="", $sHSpace = "", $sVSpace = "", $sBorder = "")
 	{
 		if ($this->isFormImage())
 		{
@@ -1720,28 +982,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "прикреплена ли к форме картинка". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если к форме прикреплена картинка. <i>false</i> в противном
-	* случае.</p><a name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?if($FORM-&gt;isFormImage()):?&gt; &lt;?=$FORM-&gt;ShowFormImage()?&gt; &lt;?else:?&gt;
-	* &lt;?=CFile::ShowImage("/myimages/form_default.jpg")?&gt; &lt;?endif?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/showimage.php">CFile::ShowImage</a></li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformimage.php">CFormOutput::ShowFormImage</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformimage.php
-	* @author Bitrix
-	*/
-	public function isFormImage()
+	function isFormImage()
 	{
 		return intval($this->arForm["IMAGE_ID"])>0;
 	}
@@ -1751,34 +992,7 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод текстового заголовка формы. Метод нестатический.</p>
-	*
-	*
-	* @param string $CSSClass = "" CSS-класс который нужно применить к выводимому тексту.
-	* Необязательный параметр.
-	*
-	* @return string <p>Возвращает текстовый заголовок (название) формы</p><a
-	* name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?=$FORM-&gt;ShowFormTitle("form-title")?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformdescription.php">CFormOutput::ShowFormDescription</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformimage.php">CFormOutput::ShowFormImage</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformtitle.php">CFormOutput::isFormTitle</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformtitle.php
-	* @author Bitrix
-	*/
-	public function ShowFormTitle($css_style = "")
+	function ShowFormTitle($css_style = "")
 	{
 		$ret = trim(htmlspecialcharsbx($this->arForm["NAME"]));
 
@@ -1792,32 +1006,12 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return bool
 	 */
-	
-	/**
-	* <p>Проверка условия "есть ли у формы текстовый заголовок (название)". Метод нестатический.</p>
-	*
-	*
-	* @return bool <p><i>true</i>, если у формы есть текстовый заголово (название). <i>false</i> в
-	* противном случае.</p><a name="examples"></a><h4>Использование</h4><pre class="syntax">
-	* &lt;?if($FORM-&gt;isFormTitle()):?&gt;Описание: &lt;?=$FORM-&gt;ShowFormTitle()?&gt;&lt;?endif?&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showformtitle.php">CFormOutput::ShowFormTitle</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/isformtitle.php
-	* @author Bitrix
-	*/
-	public function isFormTitle()
+	function isFormTitle()
 	{
 		return strlen(trim($this->arForm["NAME"])) > 0;
 	}
 
-	public function ShowResultStatusForm()
+	function ShowResultStatusForm()
 	{
 		if ($this->isResultStatusChangeAccess())
 		{
@@ -1827,7 +1021,7 @@ class CAllFormOutput extends CFormOutput_old
 			return "";
 	}
 
-	public function ShowResultStatus($bNotShowCSS = "N")
+	function ShowResultStatus($bNotShowCSS = "N")
 	{
 		if (intval($this->RESULT_ID) <= 0) return "";
 		if ($bNotShowCSS != "N")
@@ -1840,22 +1034,22 @@ class CAllFormOutput extends CFormOutput_old
 		}
 	}
 
-	public function ShowResultStatusText()
+	function ShowResultStatusText()
 	{
 		return $this->arResult["STATUS_TITLE"];
 	}
 
-	public function GetResultStatusCSSClass()
+	function GetResultStatusCSSClass()
 	{
 		return $this->arResult["STATUS_CSS"];
 	}
 
-	public function isResultStatusChangeAccess()
+	function isResultStatusChangeAccess()
 	{
 		return (!empty($this->RESULT_ID) && in_array("EDIT", $this->arrRESULT_PERMISSION));
 	}
 
-	public static function ShowDateFormat($css_style = "")
+	function ShowDateFormat($css_style = "")
 	{
 		$format = CLang::GetDateFormat("SHORT");
 
@@ -1869,34 +1063,12 @@ class CAllFormOutput extends CFormOutput_old
 	 *
 	 * @return string
 	 */
-	
-	/**
-	* <p>Вывод пометки "обязательное поле" - <span style="font-family: Verdana, Arial, Helvetica, sans-serif; color:red; font-size:12px; ">*</span>. При выводе подписи к полю посредством <a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php">CFormOutput::ShowInputCaption</a> пометка вставаляется автоматически. Метод нестатический.</p>
-	*
-	*
-	* @return string <p>Возвращается HTML-код пометки</p><a name="examples"></a><h4>Использование</h4><pre
-	* class="syntax"> Первый обязательный вопрос
-	* &lt;?=$FORM-&gt;ShowRequired()?&gt;:&lt;?=$FORM-&gt;ShowInput('REQ_FIELD_1')?&gt;&lt;br /&gt;
-	* &lt;?=$FORM-&gt;ShowInputCaption('REQ_FIELD_2'):&lt;?=$FORM-&gt;ShowInput('REQ_FIELD_2')?&gt;&lt;br /&gt; </pre>
-	*
-	* <h4>See Also</h4> 
-	* <menu> <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/index.php">Класс CFormOutput</a></li>
-	* <li><a href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinput.php">CFormOutput::ShowInput</a></li>
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showinputcaption.php">CFormOutput::ShowInputCaption</a></li>
-	* </menu><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/form/classes/cformoutput/showrequired.php
-	* @author Bitrix
-	*/
-	public static function ShowRequired()
+	function ShowRequired()
 	{
 		return CForm::ShowRequired("Y");
 	}
 
-	public static function CheckTemplate($FORM_TEMPLATE, &$arrFS)
+	function CheckTemplate($FORM_TEMPLATE, &$arrFS)
 	{
 		if (count($arrFS) > 0)
 		{
@@ -1947,7 +1119,7 @@ class CAllFormOutput extends CFormOutput_old
 		return true;
 	}
 
-	public static function PrepareFormData($arrFS)
+	function PrepareFormData($arrFS)
 	{
 		$out = "";
 		$i = 0;
@@ -1993,44 +1165,44 @@ arrInputObjects[<?=$i++?>] = new CFormAnswer(
 		}
 	}
 
-	public function setError($error)
+	function setError($error)
 	{
 		$this->__error_msg = $error;
 	}
 
-	public function isAccessFormParams()
+	function isAccessFormParams()
 	{
 		return $this->F_RIGHT >= 25;
 	}
 
-	public function isAccessForm()
+	function isAccessForm()
 	{
 		return $this->F_RIGHT >= 10;
 	}
 
-	public function isAccessFormResult($arrResult)
+	function isAccessFormResult($arrResult)
 	{
 		global $USER;
 
 		return $this->F_RIGHT>=20 || ($this->F_RIGHT>=15 && $USER->GetID()==$arrResult["USER_ID"]);
 	}
 
-	public function isAccessFormResultEdit()
+	function isAccessFormResultEdit()
 	{
 		return in_array("EDIT",$this->arrRESULT_PERMISSION);
 	}
 
-	public function isAccessFormResultView()
+	function isAccessFormResultView()
 	{
 		return in_array("VIEW",$this->arrRESULT_PERMISSION);
 	}
 
-	public function isAccessFormResultList()
+	function isAccessFormResultList()
 	{
 		return $this->F_RIGHT >= 15;
 	}
 
-	public function getFormImagePath()
+	function getFormImagePath()
 	{
 		if (!$this->isFormImage()) return false;
 		if (empty($this->__form_image_path_cache))
@@ -2039,7 +1211,7 @@ arrInputObjects[<?=$i++?>] = new CFormAnswer(
 		return $this->__form_image_path_cache;
 	}
 
-	public function getInputCaptionImagePath($FIELD_SID)
+	function getInputCaptionImagePath($FIELD_SID)
 	{
 		if (!$this->isInputCaptionImage($FIELD_SID)) return false;
 		if (empty($this->__form_input_caption_image_path_cache[$FIELD_SID]))
@@ -2048,7 +1220,7 @@ arrInputObjects[<?=$i++?>] = new CFormAnswer(
 		return $this->__form_input_caption_image_path_cache[$FIELD_SID];
 	}
 
-	public function setInputDefaultValue($FIELD_SID, $value, $ANSWER_ID = false)
+	function setInputDefaultValue($FIELD_SID, $value, $ANSWER_ID = false)
 	{
 		if (is_array($this->arAnswers) && is_array($this->arAnswers[$FIELD_SID]))
 		{

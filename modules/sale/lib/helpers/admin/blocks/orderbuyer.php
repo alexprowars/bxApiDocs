@@ -147,7 +147,7 @@ class OrderBuyer
 					<tbody>
 						<tr>
 							<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage("SALE_ORDER_BUYER_ORDERCOMMENT").':</td>
-							<td class="adm-detail-content-cell-r"><p id="sale-adm-user-description-view" style="color:gray; max-width:800px; overflow:auto;">'.(strlen($data["USER_DESCRIPTION"]) > 0 ? nl2br(htmlspecialcharsbx($data["USER_DESCRIPTION"])) : Loc::getMessage("SALE_ORDER_BUYER_NO")).'</p></td>
+							<td class="adm-detail-content-cell-r"><p id="sale-adm-user-description-view" style="color:gray; max-width:800px; overflow:auto;">'.($data["USER_DESCRIPTION"] <> '' ? nl2br(htmlspecialcharsbx($data["USER_DESCRIPTION"])) : Loc::getMessage("SALE_ORDER_BUYER_NO")).'</p></td>
 						</tr>
 					</tbody>
 				</table>
@@ -318,7 +318,7 @@ class OrderBuyer
 
 		while($prop = $pRes->fetch())
 		{
-			if(strlen($prop['DEFAULT_VALUE']) > 0)
+			if($prop['DEFAULT_VALUE'] <> '')
 			{
 				$result[$prop['ID']] = $prop['DEFAULT_VALUE'];
 			}
@@ -368,7 +368,7 @@ class OrderBuyer
 
 		while($prop = $pRes->fetch())
 		{
-			if(strlen($prop['DEFAULT_VALUE']) > 0)
+			if($prop['DEFAULT_VALUE'] <> '')
 			{
 				$result[$prop['ID']] = $prop['DEFAULT_VALUE'];
 
@@ -390,7 +390,7 @@ class OrderBuyer
 				if(!empty($user['SECOND_NAME']))
 					$name .= $user['SECOND_NAME'];
 
-				if(strlen($name) > 0)
+				if($name <> '')
 					$result[$prop['ID']] = $name;
 			}
 			elseif($prop['IS_PHONE'] == 'Y' && !empty($user['PERSONAL_MOBILE']))
@@ -486,7 +486,7 @@ class OrderBuyer
 						{
 							$number = str_replace("'", "", htmlspecialcharsbx($number));
 
-							if(strlen($showHtml) > 0)
+							if($showHtml <> '')
 								$showHtml .= ', ';
 
 							$showHtml .= '<a href="javascript:void(0)" onclick="BX.Sale.Admin.OrderEditPage.desktopMakeCall(\''.$number.'\');">'.
@@ -614,7 +614,7 @@ class OrderBuyer
 			$baseTypes = array();
 			foreach ($propertyTypes as $typeName => $typeData)
 			{
-				if (strpos($typeData['CLASS'], 'Bitrix\\Sale\\Internals\\Input') !== false)
+				if (mb_strpos($typeData['CLASS'], 'Bitrix\\Sale\\Internals\\Input') !== false)
 					$baseTypes[] = $typeName;
 			}
 

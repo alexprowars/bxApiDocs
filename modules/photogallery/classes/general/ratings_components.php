@@ -3,7 +3,7 @@ IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/photogallery/g
 
 class CRatingsComponentsPhotogallery
 {
-	public static function BeforeIndex($arParams)
+	function BeforeIndex($arParams)
 	{
 		if (($arParams['MODULE_ID'] == 'iblock' || $arParams['MODULE_ID'] == 'socialnetwork') && $arParams['PARAM1'] == 'photos' && intval($arParams['PARAM2']) > 0 && intval($arParams['ITEM_ID']) > 0)
 		{

@@ -1,26 +1,26 @@
 <?
 /*********************************************
-	РЈСЃС‚Р°СЂРµРІС€РёРµ С„СѓРЅРєС†РёРё (РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё)
+	Устаревшие функции (для совместимости)
 *********************************************/
 
 class CFormResult_old
 {
-	public static function GetDataByIDForWeb($RESULT_ID, $GET_ADDITIONAL="N")
+	function GetDataByIDForWeb($RESULT_ID, $GET_ADDITIONAL="N")
 	{ return CFormResult::GetDataByIDForHTML($RESULT_ID, $GET_ADDITIONAL); }
 
-	public static function GetMaxPermissions()
+	function GetMaxPermissions()
 	{ return CFormStatus::GetMaxPermissions(); }
 
 	/*
-	РІС‹РІРѕРґРёС‚ HTML С„РѕСЂРјС‹ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ СЂРµР·СѓР»СЊС‚Р°С‚Р° СЃ СѓС‡РµС‚РѕРј РїСЂР°РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+	выводит HTML формы редактирования результата с учетом прав пользователя
 
-		RESULT_ID - ID СЂРµР·СѓР»СЊС‚Р°С‚Р°
-		arrVALUES - РјР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РґР»СЏ РїРѕР»РµР№ РІРІРѕРґР°
-		TEMPLATE - С€Р°Р±Р»РѕРЅ РґР»СЏ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ СЂРµР·СѓР»СЊС‚Р°С‚Р°
+		RESULT_ID - ID результата
+		arrVALUES - массив значений для полей ввода
+		TEMPLATE - шаблон для редактирования результата
 	*/
-	public static function Edit($RESULT_ID, $arrVALUES, $TEMPLATE="", $EDIT_ADDITIONAL="N", $EDIT_STATUS="N")
+	function Edit($RESULT_ID, $arrVALUES, $TEMPLATE="", $EDIT_ADDITIONAL="N", $EDIT_STATUS="N")
 	{
-		global $DB, $MESS, $APPLICATION, $USER, $HTTP_POST_VARS, $HTTP_GET_VARS, $arrFIELDS, $arrRESULT_PERMISSION;
+		global $DB, $MESS, $APPLICATION, $USER, $arrFIELDS, $arrRESULT_PERMISSION;
 		$err_mess = (CAllFormResult::err_mess())."<br>Function: Edit<br>Line: ";
 		$z = CFormResult::GetByID($RESULT_ID);
 		if ($zr=$z->Fetch())
@@ -30,13 +30,13 @@ class CFormResult_old
 			$WEB_FORM_ID = $FORM_ID = CForm::GetDataByID($arrResult["FORM_ID"], $arForm, $arQuestions, $arAnswers, $arDropDown, $arMultiSelect, $additional);
 			CForm::GetResultAnswerArray($WEB_FORM_ID, $arrResultColumns, $arrResultAnswers, $arrResultAnswersVarname, array("RESULT_ID" => $RESULT_ID));
 			$arrResultAnswers = $arrResultAnswers[$RESULT_ID];
-			// РїСЂРѕРІРµСЂРёРј РѕР±С‰РёРµ РїСЂР°РІР°
+			// проверим общие права
 			$F_RIGHT = intval(CForm::GetPermission($WEB_FORM_ID));
 			if ($F_RIGHT>=20 || ($F_RIGHT>=15 && $arrResult["USER_ID"]==$USER->GetID()))
 			{
-				// РїСЂРѕРІРµСЂРёРј РїСЂР°РІР° РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЃС‚Р°С‚СѓСЃР° СЂРµР·СѓР»СЊС‚Р°С‚Р°
+				// проверим права в зависимости от статуса результата
 				$arrRESULT_PERMISSION = CFormResult::GetPermissions($RESULT_ID, $v);
-				if (in_array("EDIT",$arrRESULT_PERMISSION)) // РёРјРµРµРј РїСЂР°РІРѕ РЅР° РїСЂРѕСЃРјРѕС‚СЂ
+				if (in_array("EDIT",$arrRESULT_PERMISSION)) // имеем право на просмотр
 				{
 					if (strlen(trim($TEMPLATE))>0) $template = $TEMPLATE;
 					else
@@ -86,17 +86,17 @@ class CFormResult_old
 	}
 
 	/*
-	РІС‹РІРѕРґРёС‚ HTML РїРѕРєР°Р·С‹РІР°СЋС‰РёР№ СЂРµР·СѓР»СЊС‚Р°С‚ СЃ СѓС‡РµС‚РѕРј РїСЂР°РІ РїРѕСЃРµС‚РёС‚РµР»СЏ
+	выводит HTML показывающий результат с учетом прав посетителя
 
-		RESULT_ID - ID СЂРµР·СѓР»СЊС‚Р°С‚Р°
-		TEMPLATE - РёРјСЏ С€Р°Р±Р»РѕРЅР° РґР»СЏ РїРѕРєР°Р·Р° СЂРµР·СѓР»СЊС‚Р°С‚
+		RESULT_ID - ID результата
+		TEMPLATE - имя шаблона для показа результат
 		TEMPLATE_TYPE - 
-			РµСЃР»Рё "show" С‚РѕРіРґР° Р±РµСЂРµС‚СЃСЏ С€Р°Р±Р»РѕРЅ РґР»СЏ РїРѕРєР°Р·Р°,
-			РµСЃР»Рё "print" С‚РѕРіРґР° Р±РµСЂРµС‚СЃСЏ С€Р°Р±Р»РѕРЅ РґР»СЏ РїРµС‡Р°С‚Рё
+			если "show" тогда берется шаблон для показа,
+			если "print" тогда берется шаблон для печати
 	*/
-	public static function Show($RESULT_ID, $TEMPLATE="", $TEMPLATE_TYPE="show", $SHOW_ADDITIONAL="N", $SHOW_ANSWER_VALUE="Y", $SHOW_STATUS="N")
+	function Show($RESULT_ID, $TEMPLATE="", $TEMPLATE_TYPE="show", $SHOW_ADDITIONAL="N", $SHOW_ANSWER_VALUE="Y", $SHOW_STATUS="N")
 	{
-		global $DB, $MESS, $APPLICATION, $USER, $HTTP_POST_VARS, $HTTP_GET_VARS, $arrRESULT_PERMISSION, $arrFIELDS;
+		global $DB, $MESS, $APPLICATION, $USER, $arrRESULT_PERMISSION, $arrFIELDS;
 		$err_mess = (CAllFormResult::err_mess())."<br>Function: Show<br>Line: ";
 		$z = CFormResult::GetByID($RESULT_ID);
 		if ($zr=$z->Fetch())
@@ -107,13 +107,13 @@ class CFormResult_old
 			$WEB_FORM_ID = $FORM_ID = CForm::GetDataByID($arrResult["FORM_ID"], $arForm, $arQuestions, $arAnswers, $arDropDown, $arMultiSelect, $additional);
 			CForm::GetResultAnswerArray($WEB_FORM_ID, $arrResultColumns, $arrResultAnswers, $arrResultAnswersVarname, array("RESULT_ID" => $RESULT_ID));
 			$arrResultAnswers = $arrResultAnswers[$RESULT_ID];
-			// РїСЂРѕРІРµСЂРёРј РѕР±С‰РёРµ РїСЂР°РІР° РЅР° СЂРµР·СѓР»СЊС‚Р°С‚
+			// проверим общие права на результат
 			$F_RIGHT = CForm::GetPermission($WEB_FORM_ID);
 			if (intval($F_RIGHT)>=20 || ($F_RIGHT>=15 && $zr["USER_ID"]==$USER->GetID()))
 			{
-				// РїСЂРѕРІРµСЂРёРј РїСЂР°РІР° РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЃС‚Р°С‚СѓСЃР° СЂРµР·СѓР»СЊС‚Р°С‚Р°
+				// проверим права в зависимости от статуса результата
 				$arrRESULT_PERMISSION = CFormResult::GetPermissions($RESULT_ID, $v);
-				if (in_array("VIEW",$arrRESULT_PERMISSION)) // РёРјРµРµРј РїСЂР°РІРѕ РЅР° РїСЂРѕСЃРјРѕС‚СЂ
+				if (in_array("VIEW",$arrRESULT_PERMISSION)) // имеем право на просмотр
 				{
 					if (strlen(trim($TEMPLATE))>0) $template = $TEMPLATE;
 					else

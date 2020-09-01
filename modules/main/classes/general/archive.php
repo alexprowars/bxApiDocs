@@ -6,12 +6,12 @@ interface IBXArchive
 	const StatusSuccess = 1;
 	const StatusContinue = 2;
 
-	static public function Pack($arFileList, $curFile = "");
-	static public function Unpack($strArchivePath);
+	public function Pack($arFileList, $curFile = "");
+	public function Unpack($strArchivePath);
 	public function GetErrors();
-	static public function GetOptions();
+	public function GetOptions();
 	public function SetOptions($arOptions);
-	static public function GetStartFile();
+	public function GetStartFile();
 }
 
 class CBXArchive

@@ -1,19 +1,8 @@
 <?
 
-
-/**
- * 
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/index.php
- * @author Bitrix
- */
 class CLAnswer
 {
-	public static function CheckFields(&$arFields, $ID = false)
+	function CheckFields(&$arFields, $ID = false)
 	{
 		global $DB;
 		$arMsg = Array();
@@ -51,63 +40,7 @@ class CLAnswer
 	}
 
 
-	
-	/**
-	* <p>Метод добавляет новый ответ на вопрос. Метод нестатический.</p>
-	*
-	*
-	* @param array $arFields  Массив Array("поле"=&gt;"значение", ...). 	Содержит значения <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">всех полей</a> ответа.
-	* Обязательные поля должны быть заполнены. 	<br>
-	*
-	* @return int <p>Метод возвращает идентификатор добавленного ответа, если
-	* добавление прошло успешно. При возникновении ошибки метод вернет
-	* <i>false</i>, а в исключениях будут содержаться ошибки.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 289;
-	* 
-	*     $arFields = Array(
-	*         "ANSWER" =&gt; "Another answer",
-	*         "QUESTION_ID" =&gt; $QUESTION_ID,
-	*     );
-	* 
-	*     $answer = new CLAnswer;
-	*     $ID = $answer-&gt;Add($arFields);
-	*     $success = ($ID&gt;0);
-	* 
-	*     if($success)
-	*     {
-	*         echo "Ok!";
-	*     }
-	*     else
-	*     {
-	*         if($e = $APPLICATION-&gt;GetException())
-	*             echo "Error: ".$e-&gt;GetString();
-	*     }
-	* 
-	* }
-	* 
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/index.php">CLAnswer</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/update.php">Update</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">Поля ответа</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/add.php
-	* @author Bitrix
-	*/
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -124,62 +57,7 @@ class CLAnswer
 	}
 
 
-	
-	/**
-	* <p>Метод изменяет параметры ответа с идентификатором ID. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Идентификатор ответа.
-	*
-	* @param array $arFields  Массив Array("поле"=&gt;"значение", ...). Содержит значения <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">всех полей</a> ответа.
-	* Обязательные        поля должны быть заполнены. <br>
-	*
-	* @return bool <p>Метод возвращает <i>true</i>, если изменение прошло успешно, при 
-	* возникновении ошибки метод вернет <i>false</i>. При возникновении
-	* ошибки в  исключениях будет содержаться текст ошибки.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $ANSWER_ID = 1553;
-	* 
-	*     $arFields = Array(
-	*         "ANSWER" =&gt; "New answer name",
-	*         "SORT" =&gt; "1",
-	*     );
-	* 
-	*     $answer = new CLAnswer;
-	*     $success = $answer-&gt;Update($ANSWER_ID, $arFields);
-	* 
-	*     if($success)
-	*     {
-	*         echo "Ok!";
-	*     }
-	*     else
-	*     {
-	*         if($e = $APPLICATION-&gt;GetException())
-	*             echo "Error: ".$e-&gt;GetString();
-	*     }
-	* 
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">Поля ответа</a>  </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/index.php">CLAnswer</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/add.php">Add</a> </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/update.php
-	* @author Bitrix
-	*/
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -207,46 +85,7 @@ class CLAnswer
 	}
 
 
-	
-	/**
-	* <p>Метод удаляет ответ с идентификатором ID. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Идентификатор ответа.
-	*
-	* @return bool <p>Метод возвращает <i>true</i> в случае успешного удаления ответа, в
-	* противном случае возвращает <i>false</i>.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $COURSE_ID = 97;
-	*     $ANSWER_ID = 1553;
-	* 
-	*     if (CCourse::GetPermission($COURSE_ID) &gt;= 'W')
-	*     {
-	*         @set_time_limit(0);
-	*         $DB-&gt;StartTransaction();
-	*         if (!CLAnswer::Delete($ANSWER_ID))
-	*         {
-	*             echo "Error!";
-	*             $DB-&gt;Rollback();
-	*         }
-	*         else
-	*             $DB-&gt;Commit();
-	*     }
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/delete.php
-	* @author Bitrix
-	*/
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
@@ -262,53 +101,13 @@ class CLAnswer
 	}
 
 
-	
-	/**
-	* <p>Возвращает ответ по его коду ID. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Идентификатор ответа.
-	*
-	* @return CDBResult <p>Возвращается объект <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $ANSWER_ID = 573;
-	*     
-	*     $res = CLAnswer::GetByID($ANSWER_ID);
-	* 
-	*     if ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Name: ".$arAnswer["ANSWER"];
-	*     }
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>  </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">Поля ответа</a>  </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/index.php">CLAnswer</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/getlist.php">GetList</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/getbyid.php
-	* @author Bitrix
-	*/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		return CLAnswer::GetList($arOrder=Array(), $arFilter=Array("ID" => $ID));
 	}
 
 
-	public static function GetFilter($arFilter)
+	function GetFilter($arFilter)
 	{
 		if (!is_array($arFilter))
 			$arFilter = Array();
@@ -346,144 +145,7 @@ class CLAnswer
 	}
 
 
-	
-	/**
-	* <p>Возвращает список ответов по фильтру arFilter, отсортированный в порядке arOrder. Метод нестатический.</p>
-	*
-	*
-	* @param array $arrayarOrder = Array("ID"=>"DESC") Массив для сортировки результата. Массив вида <i>array("поле
-	* сортировки"=&gt;"направление сортировки" [, ...])</i>.<br> 		Поле для
-	* сортировки может принимать значения: 		<ul> <li> <b>ID</b> - идентификатор
-	* ответа;</li> 			<li> <b>SORT</b> - индекс сортировки;</li> 			<li> <b>CORRECT</b> -
-	* правильность ответа;</li> 			<li> <b>ANSWER</b> - текст ответа;</li> 			<li> <b>RAND</b> -
-	* случайный порядок;</li> 		</ul> 		Направление сортировки может
-	* принимать значения: 		<ul> <li> <b>asc</b> - по возрастанию;</li> 		<li> <b>desc</b> -
-	* по убыванию;</li> 		</ul> 	Необязательный. По умолчанию фильтруется по
-	* убыванию идентификатора ответа.
-	*
-	* @param array $arrayarFilter = Array() Массив вида <i> array("фильтруемое поле"=&gt;"значение фильтра" [, ...])</i>.
-	* 		Фильтруемое поле может принимать значения: 		<ul> <li> <b>ID</b> -
-	* идентификатор ответа;</li> 		<li> <b>SORT</b> - индекс сортировки;</li> 		<li>
-	* <b>QUESTION_ID</b> - идентификатор вопроса;</li> 		<li> <b>ANSWER</b> - текст ответа
-	* (можно искать по шаблону [%_]);</li> 		<li> <b>CORRECT</b> - правильность ответа
-	* (Y|N);</li> 		</ul> 		Перед названием фильтруемого поля можно указать тип
-	* фильтрации: 		<ul> <li>"!" - не равно</li> 		<li>"&lt;" - меньше</li> 		<li>"&lt;=" -
-	* меньше либо равно</li> 		<li>"&gt;" - больше</li> 		<li>"&gt;=" - больше либо
-	* равно</li> 		</ul> <br> "<i>значения фильтра</i>" - одиночное значение или
-	* массив.<br><br> Необязательный. По умолчанию записи не фильтруются.
-	*
-	* @return CDBResult <p>Возвращается объект <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 290;
-	*     $res = CLAnswer::GetList(
-	*         Array("SORT"=&gt;"DESC"), 
-	*         Array("QUESTION_ID" =&gt; $QUESTION_ID)
-	*     );
-	* 
-	*     while ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Answer name: ".$arAnswer["ANSWER"]."&lt;br&gt;";
-	*     }
-	* }
-	* 
-	* ?&gt;
-	* 
-	* &lt;?
-	* 
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 290;
-	* 
-	*     $res = CLAnswer::GetList(
-	*         Array("SORT"=&gt;"ASC"), 
-	*         Array("QUESTION_ID" =&gt; $QUESTION_ID, "?ANSWER" =&gt; "sys")
-	*     );
-	* 
-	*     while ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Answer name: ".$arAnswer["ANSWER"]."&lt;br&gt;";
-	*     }
-	* }
-	* ?&gt;
-	* 
-	* &lt;?
-	* 
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 290;
-	* 
-	*     $res = CLAnswer::GetList(
-	*         Array(), 
-	*         Array("QUESTION_ID" =&gt; $QUESTION_ID, "CORRECT" =&gt; "Y")
-	*     );
-	* 
-	*     while ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Answer name: ".$arAnswer["ANSWER"]."&lt;br&gt;";
-	*     }
-	* }
-	* 
-	* ?&gt;
-	* 
-	* &lt;?
-	* 
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 290;
-	* 
-	*     $res = CLAnswer::GetList(
-	*         Array("TIMESTAMP_X" =&gt; "ASC", "SORT"=&gt;"ASC"), 
-	*         Array("QUESTION_ID" =&gt; $QUESTION_ID)
-	*     );
-	* 
-	*     while ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Answer name: ".$arAnswer["ANSWER"]."&lt;br&gt;";
-	*     }
-	* }
-	* 
-	* ?&gt;
-	* 
-	* &lt;?
-	* 
-	* if (CModule::IncludeModule("learning"))
-	* {
-	*     $QUESTION_ID = 290;
-	* 
-	*     $res = CLAnswer::GetList(
-	*         Array("RAND"=&gt;""), 
-	*         Array("QUESTION_ID" =&gt; $QUESTION_ID)
-	*     );
-	* 
-	*     while ($arAnswer = $res-&gt;GetNext())
-	*     {
-	*         echo "Answer name: ".$arAnswer["ANSWER"]."&lt;br&gt;";
-	*     }
-	* }
-	* 
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a></li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/index.php">CLAnswer</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/getbyid.php">GetByID</a> </li> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/learning/fields.php#answer">Поля ответа</a></li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/learning/classes/clanswer/getlist.php
-	* @author Bitrix
-	*/
-	public static function GetList($arOrder=Array(), $arFilter=Array())
+	function GetList($arOrder=Array(), $arFilter=Array())
 	{
 		global $DB, $USER;
 
@@ -543,7 +205,7 @@ class CLAnswer
 	}
 
 
-	public static function GetStats($ID)
+	function GetStats($ID)
 	{
 		global $DB;
 

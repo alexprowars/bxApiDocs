@@ -254,7 +254,11 @@ class Entities
 
 	public static function getProviderByEntityType($entityType)
 	{
-		$result = false;
+		$result = Handler::getProviderByEntityType($entityType);
+		if ($result)
+		{
+			return $result;
+		}
 
 		$event = new Event("main", "OnUISelectorGetProviderByEntityType", array(
 			'entityType' => $entityType

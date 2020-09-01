@@ -6,7 +6,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/forum/classes/general/po
 /**********************************************************************/
 class CForumPoints extends CAllForumPoints
 {
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -33,7 +33,7 @@ class CForumPoints extends CAllForumPoints
 /**********************************************************************/
 class CForumPoints2Post extends CAllForumPoints2Post
 {
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -54,7 +54,7 @@ class CForumPoints2Post extends CAllForumPoints2Post
 /**********************************************************************/
 class CForumUserPoints extends CAllForumUserPoints
 {
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 

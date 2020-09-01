@@ -4,7 +4,7 @@ IncludeModuleLangFile(__FILE__);
 class CBPArgumentException
 	extends Exception
 {
-    private $paramName = "";
+	private $paramName = "";
 
 	public function __construct($message, $paramName = "")
 	{
@@ -23,7 +23,7 @@ class CBPArgumentNullException
 {
 	public function __construct($paramName, $message = "")
 	{
-		if (strlen($message) <= 0)
+		if ($message == '')
 			$message = str_replace("#PARAM#", htmlspecialcharsbx($paramName), GetMessage("BPCGERR_NULL_ARG"));
 
 		parent::__construct($message, $paramName);
@@ -39,7 +39,7 @@ class CBPArgumentOutOfRangeException
 
 	public function __construct($paramName, $actualValue = null, $message = "")
 	{
-		if (strlen($message) <= 0)
+		if ($message == '')
 		{
 			if ($actualValue === null)
 				$message = str_replace("#PARAM#", htmlspecialcharsbx($paramName), GetMessage("BPCGERR_INVALID_ARG"));
@@ -66,7 +66,7 @@ class CBPArgumentTypeException
 
 	public function __construct($paramName, $correctType = null, $message = "")
 	{
-		if (strlen($message) <= 0)
+		if ($message == '')
 		{
 			if ($correctType === null)
 				$message = str_replace("#PARAM#", htmlspecialcharsbx($paramName), GetMessage("BPCGERR_INVALID_TYPE"));
@@ -89,7 +89,7 @@ class CBPArgumentTypeException
 class CBPInvalidOperationException
 	extends Exception
 {
-	static public function __construct($message = "")
+	public function __construct($message = "")
 	{
 		parent::__construct($message, 10006);
 	}
@@ -103,20 +103,3 @@ class CBPNotSupportedException
 		parent::__construct($message, 10004);
 	}
 }
-
-//class CBPStandartException
-//	extends Exception
-//{
-//	public function __construct($message, $errorLevel = 0, $errorFile = '', $errorLine = 0)
-//	{
-//		parent::__construct($message, $errorLevel);
-//		$this->file = $errorFile;
-//		$this->line = $errorLine;
-//	}
-//}
-
-//set_error_handler(
-//	create_function('$c, $m, $f, $l', 'if ($c === E_NOTICE) {echo "This is notice: ".$m;} else {throw new CBPStandartException($m, $c, $f, $l);}'),
-//	E_ALL
-//);
-?>

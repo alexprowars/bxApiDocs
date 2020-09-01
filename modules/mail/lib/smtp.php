@@ -187,7 +187,7 @@ class Smtp
 			$error
 		);
 
-		if ($error)
+		if ($error || !is_array($response))
 		{
 			$error = $error == Smtp::ERR_COMMAND_REJECTED ? null : $error;
 			$error = $this->errorMessage(array(Smtp::ERR_CAPABILITY, $error), $response ? trim(end($response)) : null);
@@ -198,7 +198,7 @@ class Smtp
 		$this->sessCapability = array_map(
 			function ($line)
 			{
-				return trim(substr($line, 4));
+				return trim(mb_substr($line, 4));
 			},
 			$response
 		);
@@ -272,6 +272,7 @@ class Smtp
 	protected function executeCommand($command, &$error)
 	{
 		$error = null;
+		$response = false;
 
 		$chunks = explode("\x00", $command);
 
@@ -282,7 +283,7 @@ class Smtp
 
 			$response = (array) $this->exchange($chunk, $error);
 
-			if ($k > 0 && strpos(end($response), '3') !== 0)
+			if ($k > 0 && mb_strpos(end($response), '3') !== 0)
 			{
 				break;
 			}

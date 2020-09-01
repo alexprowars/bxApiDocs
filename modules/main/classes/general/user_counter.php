@@ -1,42 +1,12 @@
 <?
-
-/**
- * <p>Для мобильной версии:</p> <pre class="syntax">BX.addCustomEvent("onPull", BX.delegate(function(data){    if (data.module_id == "main" &amp;&amp; data.command == 'user_counter' &amp;&amp; data.params[BX.message('SITE_ID')] &amp;&amp; data.params[BX.message('SITE_ID')]['__НАЗВАНИЕ_ВАШЕГО_СЧЕТЧИКА__'])       {       // вызвать код для обновления счетчика       // в data.params[BX.message('SITE_ID')]['__НАЗВАНИЕ_ВАШЕГО_СЧЕТЧИКА__'] будет новое значение счетчика    } }, this));</pre>
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/index.php
- * @author Bitrix
- */
 class CAllUserCounter
 {
 	const ALL_SITES = '**';
+	const LIVEFEED_CODE = '**';
 	const SYSTEM_USER_ID = 0;
 
 	protected static $counters = false;
 
-	
-	/**
-	* <p>Метод предназначена для получения определенного счетчика пользователя. Статический метод.</p>
-	*
-	*
-	* @param  $site_id = SITE_ID Идентификатор пользователя
-	*
-	* @return mixed <p>Возвращаются данные определенного счетчика пользователя.</p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* echo $code = CUserCounter::GetValue($USER-&gt;GetID(), 'code1');
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/getvalue.php
-	* @author Bitrix
-	*/
 	public static function GetValue($user_id, $code, $site_id = SITE_ID)
 	{
 		$user_id = intval($user_id);
@@ -51,27 +21,6 @@ class CAllUserCounter
 			return 0;
 	}
 
-	
-	/**
-	* <p>Метод позволяет получить список всех счетчиков пользователя. Статический метод.</p>
-	*
-	*
-	* @param  $site_id = SITE_ID Идентификатор пользователя, обязательный параметр.
-	*
-	* @return mixed <p>Список счётчиков конкретного пользователя на сайте.</p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $codes = CUserCounter::GetValues($USER-&gt;GetID(), SITE_ID);
-	* echo '&lt;pre&gt;'.print_r($codes, 1).'&lt;/pre&gt;';
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/getvalues.php
-	* @author Bitrix
-	*/
 	public static function GetValues($user_id, $site_id = SITE_ID, &$arLastDate = array())
 	{
 		global $DB, $CACHE_MANAGER;
@@ -101,36 +50,6 @@ class CAllUserCounter
 			)
 			{
 				$arAll = $CACHE_MANAGER->Get("user_counter".$user_id);
-				if(is_array($arAll))
-				{
-					foreach($arAll as $arItem)
-					{
-						if (
-							$arItem["SITE_ID"] == $site_id
-							|| $arItem["SITE_ID"] == self::ALL_SITES
-						)
-						{
-							if (!isset(self::$counters[$user_id][$site_id][$arItem["CODE"]]))
-							{
-								self::$counters[$user_id][$site_id][$arItem["CODE"]] = 0;
-							}
-							self::$counters[$user_id][$site_id][$arItem["CODE"]] += $arItem["CNT"];
-
-							if (isset($arItem["LAST_DATE_TS"]))
-							{
-								if (!isset($arLastDate[$user_id]))
-								{
-									$arLastDate[$user_id] = array();
-								}
-								if (!isset($arLastDate[$user_id][$site_id]))
-								{
-									$arLastDate[$user_id][$site_id] = array();
-								}
-								$arLastDate[$user_id][$site_id][$arItem["CODE"]] = $arItem["LAST_DATE_TS"] - $diff;
-							}
-						}
-					}
-				}
 			}
 			else
 			{
@@ -144,17 +63,31 @@ class CAllUserCounter
 
 				while ($arRes = $dbRes->Fetch())
 				{
-					$code = (strpos($arRes["CODE"], "**") === 0 ? "**" : $arRes["CODE"]);
-					$arRes["CODE"] = $code;
-
+					$arRes["CODE"] = self::getGroupedCode($arRes["CODE"]);
 					$arAll[] = $arRes;
-					if ($arRes["SITE_ID"] == $site_id || $arRes["SITE_ID"] == self::ALL_SITES)
+				}
+
+				if (CACHED_b_user_counter !== false)
+				{
+					$CACHE_MANAGER->Set("user_counter".$user_id, $arAll);
+				}
+			}
+
+			if(is_array($arAll))
+			{
+				foreach($arAll as $arItem)
+				{
+					if (
+						$arItem["SITE_ID"] == $site_id
+						|| $arItem["SITE_ID"] == self::ALL_SITES
+					)
 					{
-						if (!isset(self::$counters[$user_id][$site_id][$arRes["CODE"]]))
+						if (!isset(self::$counters[$user_id][$site_id][$arItem["CODE"]]))
 						{
-							self::$counters[$user_id][$site_id][$arRes["CODE"]] = 0;
+							self::$counters[$user_id][$site_id][$arItem["CODE"]] = 0;
 						}
-						self::$counters[$user_id][$site_id][$arRes["CODE"]] += $arRes["CNT"];
+						self::$counters[$user_id][$site_id][$arItem["CODE"]] += $arItem["CNT"];
+
 						if (!isset($arLastDate[$user_id]))
 						{
 							$arLastDate[$user_id] = array();
@@ -163,12 +96,12 @@ class CAllUserCounter
 						{
 							$arLastDate[$user_id][$site_id] = array();
 						}
-						$arLastDate[$user_id][$site_id][$arRes["CODE"]] = $arRes["LAST_DATE_TS"]  - $diff;
+
+						if (isset($arItem["LAST_DATE_TS"]))
+						{
+							$arLastDate[$user_id][$site_id][$arItem["CODE"]] = $arItem["LAST_DATE_TS"] - $diff;
+						}
 					}
-				}
-				if (CACHED_b_user_counter !== false)
-				{
-					$CACHE_MANAGER->Set("user_counter".$user_id, $arAll);
 				}
 			}
 		}
@@ -176,19 +109,6 @@ class CAllUserCounter
 		return self::$counters[$user_id][$site_id];
 	}
 
-	
-	/**
-	* <p>Метод позволяет получить все значения для всех доступных сайтов. Статический метод.</p>
-	*
-	*
-	* @param  $user_id  Идентификатор пользователя, обязательный параметр.
-	*
-	* @return mixed <p>Возвращает все значения для всех доступных сайтов.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/getallvalues.php
-	* @author Bitrix
-	*/
 	public static function GetAllValues($user_id)
 	{
 		global $DB, $CACHE_MANAGER;
@@ -217,10 +137,15 @@ class CAllUserCounter
 			$dbRes = $DB->Query($strSQL, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			$arAll = array();
 			while ($arRes = $dbRes->Fetch())
+			{
+				$arRes["CODE"] = self::getGroupedCode($arRes["CODE"]);
 				$arAll[] = $arRes;
+			}
 
 			if (CACHED_b_user_counter !== false)
+			{
 				$CACHE_MANAGER->Set("user_counter".$user_id, $arAll);
+			}
 		}
 
 		foreach($arAll as $arItem)
@@ -271,26 +196,6 @@ class CAllUserCounter
 		return $result;
 	}
 
-	
-	/**
-	* <p>Метод позволяет обнулить все счётчики пользователя. Нестатический метод.</p>
-	*
-	*
-	* @param user_id, $sendPull = true Идентификатор пользователя
-	*
-	* @return mixed <p>Возвращает <i>true</i>, если действие успешно, <i>false</i> - если нет.</p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* CUserCounter::ClearAll($user_id)
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/clearall.php
-	* @author Bitrix
-	*/
 	public static function ClearAll($user_id, $site_id = SITE_ID, $sendPull = true)
 	{
 		global $DB, $CACHE_MANAGER;
@@ -325,37 +230,6 @@ class CAllUserCounter
 		return true;
 	}
 
-	
-	/**
-	* <p>Метод производит удаление счетчиков по тегу. Статический метод.</p>
-	*
-	*
-	* @param mixed $tag  Тег, по которому будут удалены счётчики.
-	*
-	* @param ta $code  Код удаляемого счётчика.
-	*
-	* @param cod $site_id = SITE_ID Необязательный. По умолчанию равен SITE_ID.
-	*
-	* @param mixed $sendPull = true Необязательный. Отправлять ли мгновенно данные в модуль
-	* <b>Push&amp;Pull</b>, для работы "живых счетчиков" (отправка доступна при
-	* установке модуля и активации работы с "Сервером очередей", без
-	* сервера очередей работает с версии модуля <b>Push&amp;Pull</b> 12.5.4) Если
-	* данный счетчик не требуется пробрасывать, необходимо указать
-	* <i>false</i>. По умолчанию <i>true</i>.
-	*
-	* @return mixed <p>Возвращает <i>true</i> если успешно, <i>false</i> если какая то ошибка.</p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* CUserCounter:: ClearByTag("task_11", "task");
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cusercounter/clearbytag.php
-	* @author Bitrix
-	*/
 	public static function ClearByTag($tag, $code, $site_id = SITE_ID, $sendPull = true)
 	{
 		global $DB, $CACHE_MANAGER;
@@ -382,10 +256,13 @@ class CAllUserCounter
 			while ($row = $res->Fetch())
 				$arSites[] = $row['ID'];
 
+			$helper = \Bitrix\Main\Application::getConnection()->getSqlHelper();
+
 			$strSQL = "
 				SELECT pc.CHANNEL_ID, pc.CHANNEL_TYPE, uc.USER_ID, uc.SITE_ID, uc.CODE, uc.CNT
 				FROM b_user_counter uc
 				INNER JOIN b_pull_channel pc ON pc.USER_ID = uc.USER_ID
+				INNER JOIN b_user u ON u.ID = uc.USER_ID AND (CASE WHEN u.EXTERNAL_AUTH_ID IN ('".join("', '", \Bitrix\Main\UserTable::getExternalUserTypes())."') THEN 'Y' ELSE 'N' END) = 'N' AND u.LAST_ACTIVITY_DATE > ".$helper->addSecondsToDateTime('(-3600)')."
 				WHERE TAG = '".$DB->ForSQL($tag)."' AND CODE = '".$DB->ForSQL($code)."'
 				AND (SITE_ID = '".$site_id."' OR SITE_ID = '".self::ALL_SITES."')";
 
@@ -419,7 +296,7 @@ class CAllUserCounter
 
 			foreach ($pullMessage as $channelId => $arMessage)
 			{
-				CPullStack::AddByChannel($channelId, Array(
+				\Bitrix\Pull\Event::add($channelId, Array(
 					'module_id' => 'main',
 					'command'   => 'user_counter',
 					'expiry' 	=> 3600,
@@ -433,7 +310,10 @@ class CAllUserCounter
 
 	public static function CheckLiveMode()
 	{
-		return CModule::IncludeModule('pull') && CPullOptions::GetNginxStatus();
+		return (
+			CModule::IncludeModule('pull')
+			&& CPullOptions::GetNginxStatus()
+		);
 	}
 
 	protected static function SendPullEvent($user_id, $code = "", $bMultiple = false)
@@ -451,10 +331,12 @@ class CAllUserCounter
 			while ($row = $res->Fetch())
 				$arSites[] = $row['ID'];
 
+			$helper = \Bitrix\Main\Application::getConnection()->getSqlHelper();
 			$strSQL = "
 				SELECT pc.CHANNEL_ID, pc.CHANNEL_TYPE, uc.USER_ID, uc.SITE_ID, uc.CODE, uc.CNT
 				FROM b_user_counter uc
 				INNER JOIN b_pull_channel pc ON pc.USER_ID = uc.USER_ID
+				INNER JOIN b_user u ON u.ID = uc.USER_ID AND (CASE WHEN u.EXTERNAL_AUTH_ID IN ('".join("', '", \Bitrix\Main\UserTable::getExternalUserTypes())."') THEN 'Y' ELSE 'N' END) = 'N' AND u.LAST_ACTIVITY_DATE > ".$helper->addSecondsToDateTime('(-3600)')."
 				WHERE uc.USER_ID = ".intval($user_id).(
 					strlen($code) > 0
 					? (
@@ -497,7 +379,7 @@ class CAllUserCounter
 
 			foreach ($pullMessage as $channelId => $arMessage)
 			{
-				CPullStack::AddByChannel($channelId, Array(
+				\Bitrix\Pull\Event::add($channelId, Array(
 					'module_id' => 'main',
 					'command'   => 'user_counter',
 					'expiry' 	=> 3600,
@@ -509,7 +391,7 @@ class CAllUserCounter
 
 	public static function addValueToPullMessage($row, $arSites = array(), &$pullMessage = array())
 	{
-		$code = (strpos($row["CODE"], "**") === 0 ? "**" : $row["CODE"]);
+		$code = self::getGroupedCode($row["CODE"]);
 
 		if ($row['SITE_ID'] == self::ALL_SITES)
 		{
@@ -538,14 +420,59 @@ class CAllUserCounter
 		}
 	}
 
+	public static function getGroupedCounters($counters)
+	{
+		$result = array();
+
+		foreach ($counters as $siteId => $data)
+		{
+			$result[$siteId] = self::getGroupedCounterRecords($data);
+		}
+
+		return $result;
+	}
+
+	public static function getGroupedCounterRecords($records)
+	{
+		$result = array();
+
+		foreach ($records as $code => $value)
+		{
+			$code = self::getGroupedCode($code);
+
+			if (isset($result[$code]))
+			{
+				$result[$code] += $value;
+			}
+			else
+			{
+				$result[$code] = $value;
+			}
+		}
+
+		return $result;
+	}
+
+	private static function getGroupedCode($code)
+	{
+		$result = $code;
+
+		if (strpos($code, self::LIVEFEED_CODE) === 0)
+		{
+			$result = self::LIVEFEED_CODE;
+		}
+
+		return $result;
+	}
+
 	public static function OnSocNetLogCommentDelete($commentId)
 	{
-		CUserCounter::DeleteByCode("**LC".intval($commentId));
+		CUserCounter::DeleteByCode(self::LIVEFEED_CODE."LC".intval($commentId));
 	}
 
 	public static function OnSocNetLogDelete($logId)
 	{
-		CUserCounter::DeleteByCode("**L".intval($logId));
+		CUserCounter::DeleteByCode(self::LIVEFEED_CODE."L".intval($logId));
 	}
 
 	// legacy function

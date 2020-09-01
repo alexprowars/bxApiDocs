@@ -40,8 +40,23 @@ class Cache
 		$result = false;
 		$cacheId = $this->getCacheId($ids);
 
-		if(static::$cacheManager->read($this->ttl, $cacheId))
-			$result = static::$cacheManager->get($cacheId);
+		if(static::$cacheManager->read($this->ttl, $this->cacheIdBase))
+		{
+			$res = static::$cacheManager->get($this->cacheIdBase);
+
+			if(!empty($res[$cacheId]))
+				$result = $res[$cacheId];
+		}
+
+		return $result;
+	}
+
+	public function getAll()
+	{
+		$result = array();
+
+		if(static::$cacheManager->read($this->ttl, $this->cacheIdBase))
+			$result = static::$cacheManager->get($this->cacheIdBase);
 
 		return $result;
 	}
@@ -50,19 +65,28 @@ class Cache
 	 * @param mixed $value
 	 * @param string[] $ids
 	 */
-	public function set($value, array $ids = array())
+	public function set($value, array $ids)
 	{
+		$cached = false;
+
+		if(static::$cacheManager->read($this->ttl, $this->cacheIdBase))
+			$cached = static::$cacheManager->get($this->cacheIdBase);
+
+		if(!is_array($cached))
+			$cached = array();
+
 		$cacheId = $this->getCacheId($ids);
-		static::$cacheManager->set($cacheId, $value);
+		$cached[$cacheId] = $value;
+
+		static::$cacheManager->set($this->cacheIdBase, $cached);
 	}
 
 	/**
-	 * @param array $ids
+	 *
 	 */
-	public function clean(array $ids = array())
+	public function clean()
 	{
-		$cacheId = $this->getCacheId($ids);
-		static::$cacheManager->clean($cacheId);
+		static::$cacheManager->clean($this->cacheIdBase);
 	}
 
 	/**
@@ -71,10 +95,10 @@ class Cache
 	 */
 	protected function getCacheId(array $ids = array())
 	{
-		$result = $this->cacheIdBase;
+		$result = "cachePrefixIdx";
 
 		if(!empty($ids))
-			$result .= '_'.implode('_',$ids);
+			$result .= implode('_',$ids);
 
 		return $result;
 	}
@@ -107,10 +131,14 @@ class CacheSession extends Cache
 	 * @param mixed $value
 	 * @param string[] $ids
 	 */
-	public function set($value, array $ids = array())
+	public function set($value, array $ids)
 	{
 		$cacheId = $this->getCacheId($ids);
-		$_SESSION[$cacheId] = $value;
+
+		if(!is_array($_SESSION[$this->cacheIdBase]))
+			$_SESSION[$this->cacheIdBase] = array();
+
+		$_SESSION[$this->cacheIdBase][$cacheId] = $value;
 	}
 
 	/**
@@ -122,8 +150,8 @@ class CacheSession extends Cache
 		$result = false;
 		$cacheId = $this->getCacheId($ids);
 
-		if(isset($_SESSION[$cacheId]))
-			$result = $_SESSION[$cacheId];
+		if(isset($_SESSION[$this->cacheIdBase][$cacheId]))
+			$result = $_SESSION[$this->cacheIdBase][$cacheId];
 
 		return $result;
 	}
@@ -134,19 +162,19 @@ class CacheSession extends Cache
 	public function clean(array $ids = array())
 	{
 		$cacheId = $this->getCacheId($ids);
-		unset($_SESSION[$cacheId]);
+		unset($_SESSION[$this->cacheIdBase][$cacheId]);
 	}
 }
 
 /**
  * Class CacheManager
  * @package Sale\Handlers\Delivery\Additional
- * todo: to clean cache if something changed on server-side.
  */
 class CacheManager
 {
 	protected static $items = array();
 
+	const TYPE_NONE = 0;
 	const TYPE_PROFILES_LIST = 1;
 	const TYPE_DELIVERY_FIELDS = 2;
 	const TYPE_DELIVERY_PRICE = 3;
@@ -161,13 +189,13 @@ class CacheManager
 
 	//Possible cache types & some params
 	protected static $types = array(
-		self::TYPE_PROFILES_LIST => array('TTL' => 604800, 'LOC' => self::LOC_CACHE), // week cache
-		self::TYPE_DELIVERY_FIELDS => array('TTL' => 604800, 'LOC' => self::LOC_CACHE), // week cache
+		self::TYPE_PROFILES_LIST => array('TTL' => 2419200, 'LOC' => self::LOC_CACHE), // month cache
+		self::TYPE_DELIVERY_FIELDS => array('TTL' => 2419200, 'LOC' => self::LOC_CACHE), // month cache
 		self::TYPE_DELIVERY_PRICE => array('TTL' => 0, 'LOC' => self::LOC_SESSION), // session
-		self::TYPE_PROFILE_FIELDS => array('TTL' => 604800, 'LOC' => self::LOC_CACHE), // week cache
+		self::TYPE_PROFILE_FIELDS => array('TTL' => 2419200, 'LOC' => self::LOC_CACHE), // month cache
 		self::TYPE_DELIVERY_LIST => array('TTL' => 2419200, 'LOC' => self::LOC_CACHE), // month cache
 		self::TYPE_PROFILE_CONFIG => array('TTL' => 0, 'LOC' => self::LOC_SESSION), // session
-		self::TYPE_EXTRA_SERVICES => array('TTL' => 604800, 'LOC' => self::LOC_CACHE), // week cache
+		self::TYPE_EXTRA_SERVICES => array('TTL' => 2419200, 'LOC' => self::LOC_CACHE), // month cache
 	);
 
 	/**
@@ -177,6 +205,9 @@ class CacheManager
 	 */
 	public static function getItem($type)
 	{
+		if($type == self::TYPE_NONE)
+			return null;
+
 		if(empty(self::$types[$type]))
 			return null;
 
@@ -192,5 +223,27 @@ class CacheManager
 		}
 
 		return self::$items[$type];
+	}
+
+	public static function cleanAll()
+	{
+		foreach(self::$types as $typeId => $params)
+		{
+			$cache = self::getItem($typeId);
+			$cache->clean();
+		}
+	}
+
+	public static function getAll()
+	{
+		$result = array();
+
+		foreach(self::$types as $typeId => $params)
+		{
+			$cache = self::getItem($typeId);
+			$result[$typeId] = $cache->getAll();
+		}
+
+		return $result;
 	}
 }

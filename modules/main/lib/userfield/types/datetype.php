@@ -167,7 +167,7 @@ class DateType extends BaseType
 	 */
 	public static function onBeforeSave(?array $userField, $value)
 	{
-		if($value !== '' && !($value instanceof Type\Date))
+		if($value != '' && !($value instanceof Type\Date))
 		{
 			// try both site's format - short and full
 			try

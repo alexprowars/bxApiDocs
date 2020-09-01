@@ -735,7 +735,7 @@ class OrderPayment
 		$company = $res->fetch();
 
 		$paymentStatusBlockVoucherNum = '';
-		if (strlen($data['PAY_VOUCHER_NUM']) > 0)
+		if ($data['PAY_VOUCHER_NUM'] <> '')
 		{
 			$paymentStatusBlockVoucherNum = '<tr>
 										<td class="adm-detail-content-cell-l" width="40%"><br>'.Loc::getMessage('SALE_ORDER_PAYMENT_PAY_VOUCHER_NUM').':</td>
@@ -747,7 +747,7 @@ class OrderPayment
 		}
 
 		$paymentStatusBlockVoucherDate = '';
-		if (strlen($data['PAY_VOUCHER_DATE']) > 0)
+		if ($data['PAY_VOUCHER_DATE'] <> '')
 		{
 			$paymentStatusBlockVoucherDate = '<tr>
 												<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage('SALE_ORDER_PAYMENT_PAY_VOUCHER_DATE').':</td>
@@ -758,7 +758,7 @@ class OrderPayment
 		}
 
 		$paymentStatusBlockReturnNum = '';
-		if (strlen($data['PAY_RETURN_NUM']) > 0)
+		if ($data['PAY_RETURN_NUM'] <> '')
 		{
 			$paymentStatusBlockReturnNum = '<tr>
 			<td class="adm-detail-content-cell-l" width="40%"><br>'.Loc::getMessage('SALE_ORDER_PAYMENT_PAY_RETURN_NUM').':</td>
@@ -768,7 +768,7 @@ class OrderPayment
 		}
 
 		$paymentStatusBlockReturnDate = '';
-		if (strlen($data['PAY_RETURN_DATE']) > 0)
+		if ($data['PAY_RETURN_DATE'] <> '')
 		{
 			$paymentStatusBlockReturnDate = '<tr>
 				<td class="adm-detail-content-cell-l" width="40%">'.Loc::getMessage('SALE_ORDER_PAYMENT_PAY_RETURN_DATE').':</td>
@@ -1105,7 +1105,7 @@ class OrderPayment
 		{
 			$result .= '<div>';
 
-			if (strlen($check['LINK']) > 0)
+			if ($check['LINK'] <> '')
 			{
 				$result .= '<a href="'.$check['LINK'].'" target="_blank">'.Loc::getMessage('SALE_ORDER_PAYMENT_CHECK_LINK', array('#CHECK_ID#' => $check['ID'])).'</a>';
 			}

@@ -1,98 +1,57 @@
 <?
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/socialnetwork/classes/general/group_features_perms.php");
 
-
-/**
- * <b>CSocNetFeaturesPerms</b> - класс для управления правами на доступ к дополнительному функционалу групп и пользователей.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/index.php
- * @author Bitrix
- */
 class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 {
 	/***************************************/
 	/********  DATA MODIFICATION  **********/
 	/***************************************/
-	
-	/**
-	* <p>Создает новое право. Метод статический.</p> <p></p> <div class="note"> <b>Примечание</b>: для установки параметров права может так же использоваться метод <a href="http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/SetPerm.php">CSocNetFeaturesPerms::SetPerm</a>.</div>
-	*
-	*
-	* @param array $arFields  Массив значений параметров. Допустимые ключи:<br><b>FEATURE_ID</b> - код
-	* дополнительного функционала,<br><b>OPERATION_ID</b> - код операции,<br><b>ROLE</b>
-	* - роль.
-	*
-	* @return int <p>Код вставленной записи.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/SetPerm.php">CSocNetFeaturesPerms::SetPerm</a></li>
-	*   <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/Update.php">CSocNetFeaturesPerms::Update</a></li>
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/Add.php
-	* @author Bitrix
-	*/
 	public static function Add($arFields)
 	{
-		global $DB;
+		global $DB, $CACHE_MANAGER;
 
-		$arFields1 = array();
-		foreach ($arFields as $key => $value)
-		{
-			if (substr($key, 0, 1) == "=")
-			{
-				$arFields1[substr($key, 1)] = $value;
-				unset($arFields[$key]);
-			}
-		}
+		$arFields1 = \Bitrix\Socialnetwork\Util::getEqualityFields($arFields);
 
 		if (!CSocNetFeaturesPerms::CheckFields("ADD", $arFields))
+		{
 			return false;
+		}
 
 		$db_events = GetModuleEvents("socialnetwork", "OnBeforeSocNetFeaturesPermsAdd");
 		while ($arEvent = $db_events->Fetch())
-			if (ExecuteModuleEventEx($arEvent, array($arFields))===false)
-				return false;
-
-		$arInsert = $DB->PrepareInsert("b_sonet_features2perms", $arFields);
-
-		foreach ($arFields1 as $key => $value)
 		{
-			if (strlen($arInsert[0]) > 0)
-				$arInsert[0] .= ", ";
-			$arInsert[0] .= $key;
-			if (strlen($arInsert[1]) > 0)
-				$arInsert[1] .= ", ";
-			$arInsert[1] .= $value;
+			if (ExecuteModuleEventEx($arEvent, array($arFields)) === false)
+			{
+				return false;
+			}
 		}
 
+		$arInsert = $DB->PrepareInsert("b_sonet_features2perms", $arFields);
+		\Bitrix\Socialnetwork\Util::processEqualityFieldsToInsert($arFields1, $arInsert);
+
 		$ID = false;
-		if (strlen($arInsert[0]) > 0)
+		if ($arInsert[0] <> '')
 		{
 			$strSql =
 				"INSERT INTO b_sonet_features2perms(".$arInsert[0].") ".
 				"VALUES(".$arInsert[1].")";
 			$DB->Query($strSql, False, "File: ".__FILE__."<br>Line: ".__LINE__);
 
-			$ID = IntVal($DB->LastID());
+			$ID = intval($DB->LastID());
 
 			$events = GetModuleEvents("socialnetwork", "OnSocNetFeaturesPermsAdd");
 			while ($arEvent = $events->Fetch())
+			{
 				ExecuteModuleEventEx($arEvent, array($ID, $arFields));
+			}
 
 			if (
 				intval($arFields["FEATURE_ID"]) > 0
 				&& defined("BX_COMP_MANAGED_CACHE")
 			)
-				$GLOBALS["CACHE_MANAGER"]->ClearByTag("sonet_feature_".$arFields["FEATURE_ID"]);
+			{
+				$CACHE_MANAGER->ClearByTag("sonet_feature_".$arFields["FEATURE_ID"]);
+			}
 		}
 
 		return $ID;
@@ -102,51 +61,6 @@ class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 	/***************************************/
 	/**********  DATA SELECTION  ***********/
 	/***************************************/
-	
-	/**
-	* <p>Возвращает список прав. Метод статический.</p>
-	*
-	*
-	* @param array $arOrder = array("ID" Порядок сортировки возвращаемого списка, заданный в виде
-	* массива. Ключами в массиве являются поля для сортировки, а
-	* значениями - ASC/DESC - порядок сортировки. Допустимые ключи: <b>ID</b>,
-	* <b>FEATURE_ID</b>, <b>OPERATION_ID, ROLE</b>, <b>FEATURE_ENTITY_TYPE</b>, <b>FEATURE_ENTITY_ID</b>,
-	* <b>FEATURE_FEATURE</b>, <b>FEATURE_FEATURE_NAME</b>,<b> FEATURE_ACTIVE</b>.
-	*
-	* @param mixed $DESC  Массив, задающий фильтр на возвращаемый список. Ключами в массиве
-	* являются названия полей, а значениями - их значения. Допустимые
-	* поля:<b>ID</b>, <b>FEATURE_ID</b>, <b>OPERATION_ID, ROLE</b>, <b>FEATURE_ENTITY_TYPE</b>, <b>FEATURE_ENTITY_ID</b>,
-	* <b>FEATURE_FEATURE</b>, <b>FEATURE_FEATURE_NAME</b>,<b> FEATURE_ACTIVE</b>.
-	*
-	* @param array $arFilter = array() Массив, задающий группировку результирующего списка. Если
-	* параметр содержит массив названий полей, то по этим полям будет
-	* произведена группировка. Если параметр содержит пустой массив,
-	* то метод вернет количество записей, удовлетворяющих фильтру. По
-	* умолчанию параметр равен false - не группировать.
-	*
-	* @param array $arGroupBy = false Массив, задающий условия выбора для организации постраничной
-	* навигации.
-	*
-	* @param array $arNavStartParams = false Массив, задающий выбираемые поля. Содержит список полей, которые
-	* должны быть возвращены методом. Если массив пустой, то выбираются
-	* поля <b>ID</b>, <b>FEATURE_ID</b>, <b>OPERATION_ID</b>, <b>ROLE</b>. В массиве допустимы любые
-	* поля из списка полей.
-	*
-	* @param array $arSelectFields = array() 
-	*
-	* @return CDBResult <p>Метод возвращает объект типа CDBResult, содержащий записи,
-	* удовлетворяющие условию выборки.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a> </li>   <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/GetByID.php">CSocNetFeaturesPerms::GetById</a>
-	* </li> </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnetfeaturesperms/GetList.php
-	* @author Bitrix
-	*/
 	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
@@ -176,9 +90,9 @@ class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 				"SELECT ".$arSqls["SELECT"]." ".
 				"FROM b_sonet_features2perms GFP ".
 				"	".$arSqls["FROM"]." ";
-			if (strlen($arSqls["WHERE"]) > 0)
+			if ($arSqls["WHERE"] <> '')
 				$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-			if (strlen($arSqls["GROUPBY"]) > 0)
+			if ($arSqls["GROUPBY"] <> '')
 				$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
 
 			//echo "!1!=".htmlspecialcharsbx($strSql)."<br>";
@@ -195,36 +109,36 @@ class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 			"SELECT ".$arSqls["SELECT"]." ".
 			"FROM b_sonet_features2perms GFP ".
 			"	".$arSqls["FROM"]." ";
-		if (strlen($arSqls["WHERE"]) > 0)
+		if ($arSqls["WHERE"] <> '')
 			$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-		if (strlen($arSqls["GROUPBY"]) > 0)
+		if ($arSqls["GROUPBY"] <> '')
 			$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
-		if (strlen($arSqls["ORDERBY"]) > 0)
+		if ($arSqls["ORDERBY"] <> '')
 			$strSql .= "ORDER BY ".$arSqls["ORDERBY"]." ";
 
-		if (is_array($arNavStartParams) && IntVal($arNavStartParams["nTopCount"]) <= 0)
+		if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) <= 0)
 		{
 			$strSql_tmp =
 				"SELECT COUNT('x') as CNT ".
 				"FROM b_sonet_features2perms GFP ".
 				"	".$arSqls["FROM"]." ";
-			if (strlen($arSqls["WHERE"]) > 0)
+			if ($arSqls["WHERE"] <> '')
 				$strSql_tmp .= "WHERE ".$arSqls["WHERE"]." ";
-			if (strlen($arSqls["GROUPBY"]) > 0)
+			if ($arSqls["GROUPBY"] <> '')
 				$strSql_tmp .= "GROUP BY ".$arSqls["GROUPBY"]." ";
 
 			//echo "!2.1!=".htmlspecialcharsbx($strSql_tmp)."<br>";
 
 			$dbRes = $DB->Query($strSql_tmp, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			$cnt = 0;
-			if (strlen($arSqls["GROUPBY"]) <= 0)
+			if ($arSqls["GROUPBY"] == '')
 			{
 				if ($arRes = $dbRes->Fetch())
 					$cnt = $arRes["CNT"];
 			}
 			else
 			{
-				// ТОЛЬКО ДЛЯ MYSQL!!! ДЛЯ ORACLE ДРУГОЙ КОД
+				// ������ ��� MYSQL!!! ��� ORACLE ������ ���
 				$cnt = $dbRes->SelectedRowsCount();
 			}
 
@@ -236,8 +150,8 @@ class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 		}
 		else
 		{
-			if (is_array($arNavStartParams) && IntVal($arNavStartParams["nTopCount"]) > 0)
-				$strSql .= "LIMIT ".IntVal($arNavStartParams["nTopCount"]);
+			if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) > 0)
+				$strSql .= "LIMIT ".intval($arNavStartParams["nTopCount"]);
 
 			//echo "!3!=".htmlspecialcharsbx($strSql)."<br>";
 
@@ -247,19 +161,19 @@ class CSocNetFeaturesPerms extends CAllSocNetFeaturesPerms
 		return $dbRes;
 	}
 	
-	public static function GetAvaibleEntity($entityType, $feature, $role, $operation, $active, $visible, $siteID)
+	function GetAvaibleEntity($entityType, $feature, $role, $operation, $active, $visible, $siteID)
 	{
 		global $DB;
 		
-		if(Strlen($entityType) <= 0 || Strlen($role) <= 0 || Strlen($operation) <= 0)
+		if($entityType == '' || $role == '' || $operation == '')
 			return false;
-		if(Strlen($entityType) <= 0)
+		if($entityType == '')
 			$entityType = "G";
-		if(Strlen($active) <= 0)
+		if($active == '')
 			$active = "Y";
-		if(Strlen($visible) <= 0)
+		if($visible == '')
 			$visible = "Y";
-		if(Strlen($siteID) <= 0)
+		if($siteID == '')
 			$siteID = SITE_ID;		
 			
 		$strSql = "select b.ID as ID,

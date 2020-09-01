@@ -1,4 +1,8 @@
 <?
+
+use Bitrix\Main\Composite\Engine;
+use Bitrix\Main\Composite\Helper;
+
 IncludeModuleLangFile(__FILE__);
 
 class CAdminInformer
@@ -143,7 +147,7 @@ class CAdminInformer
 		if(!$USER->IsAuthorized())
 			return false;
 
-		if ($USER->CanDoOperation("cache_control") && !CHTMLPagesCache::isOn())
+		if ($USER->CanDoOperation("cache_control") && !Helper::isOn() && !Engine::isSelfHostedPortal())
 		{
 			self::AddItem(array(
 				"TITLE" => GetMessage("top_panel_ai_composite_title"),
@@ -197,7 +201,7 @@ class CAdminInformer
 		}
 
 		//Disk space (quota)
-		$maxQuota = COption::GetOptionInt("main", "disk_space", 0)*1048576;
+		$maxQuota = (int)COption::GetOptionInt("main", "disk_space", 0)*1048576;
 		if ($maxQuota > 0)
 		{
 			$quota = new CDiskQuota();

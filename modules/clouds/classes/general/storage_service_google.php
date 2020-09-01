@@ -3,34 +3,24 @@ IncludeModuleLangFile(__FILE__);
 
 class CCloudStorageService_GoogleStorage extends CCloudStorageService
 {
-	protected $status = 0;
-	protected $headers = array();
-	protected $errno = 0;
-	protected $errstr = '';
-	protected $result = '';
 	protected $new_end_point;
 
-	public function GetLastRequestStatus()
-	{
-		return $this->status;
-	}
-
-	public static function GetObject()
+	function GetObject()
 	{
 		return new CCloudStorageService_GoogleStorage();
 	}
 
-	public static function GetID()
+	function GetID()
 	{
 		return "google_storage";
 	}
 
-	public static function GetName()
+	function GetName()
 	{
 		return "Google Storage";
 	}
 
-	public static function GetLocationList()
+	function GetLocationList()
 	{
 		return array(
 			"EU" => "Europe",
@@ -38,7 +28,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		);
 	}
 
-	public function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
+	function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
 	{
 		if($bVarsFromForm)
 			$arSettings = $_POST["SETTINGS"][$this->GetID()];
@@ -71,7 +61,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		return $result;
 	}
 
-	public function CheckSettings($arBucket, &$arSettings)
+	function CheckSettings($arBucket, &$arSettings)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -82,13 +72,13 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 			"SECRET_KEY" => is_array($arSettings)? trim($arSettings["SECRET_KEY"]): '',
 		);
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["PROJECT_ID"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["PROJECT_ID"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_PROJECT_ID", "text" => GetMessage("CLO_STORAGE_GOOGLE_EMPTY_PROJECT_ID"));
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["ACCESS_KEY"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["ACCESS_KEY"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_ACCESS_KEY", "text" => GetMessage("CLO_STORAGE_GOOGLE_EMPTY_ACCESS_KEY"));
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["SECRET_KEY"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["SECRET_KEY"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_SECRET_KEY", "text" => GetMessage("CLO_STORAGE_GOOGLE_EMPTY_SECRET_KEY"));
 
 		if(!empty($aMsg))
@@ -105,7 +95,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		return true;
 	}
 
-	public function CreateBucket($arBucket)
+	function CreateBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -141,7 +131,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function DeleteBucket($arBucket)
+	function DeleteBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -176,7 +166,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function IsEmptyBucket($arBucket)
+	function IsEmptyBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -210,7 +200,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public static function GetFileSRC($arBucket, $arFile)
+	function GetFileSRC($arBucket, $arFile)
 	{
 		global $APPLICATION;
 
@@ -241,25 +231,25 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($URI, 0, strlen($arBucket["PREFIX"])+1) !== $arBucket["PREFIX"]."/")
+			if(mb_substr($URI, 0, mb_strlen($arBucket["PREFIX"]) + 1) !== $arBucket["PREFIX"]."/")
 				$URI = $arBucket["PREFIX"]."/".$URI;
 		}
 
 		$proto = $APPLICATION->IsHTTPS()? "https": "http";
 
-		return $proto."://$host/".CCloudUtil::URLEncode($URI, "UTF-8");
+		return $proto."://$host/".CCloudUtil::URLEncode($URI, "UTF-8", true);
 	}
 
-	public function FileExists($arBucket, $filePath)
+	function FileExists($arBucket, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$response = $this->SendRequest(
 			$arBucket["SETTINGS"]["ACCESS_KEY"],
@@ -285,13 +275,13 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function FileCopy($arBucket, $arFile, $filePath)
+	function FileCopy($arBucket, $arFile, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
 
@@ -300,7 +290,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 			$arBucket["SETTINGS"]["SECRET_KEY"],
 			'PUT',
 			$arBucket["BUCKET"],
-			CCloudUtil::URLEncode($filePath, "UTF-8"),
+			CCloudUtil::URLEncode($filePath, "UTF-8", true),
 			'',
 			'',
 			array(
@@ -321,7 +311,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function DownloadToFile($arBucket, $arFile, $filePath)
+	function DownloadToFile($arBucket, $arFile, $filePath)
 	{
 		$io = CBXVirtualIo::GetInstance();
 		$obRequest = new CHTTP;
@@ -329,16 +319,16 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		return $obRequest->Download($this->GetFileSRC($arBucket, $arFile), $io->GetPhysicalName($filePath));
 	}
 
-	public function DeleteFile($arBucket, $filePath)
+	function DeleteFile($arBucket, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$response = $this->SendRequest(
 			$arBucket["SETTINGS"]["ACCESS_KEY"],
@@ -360,16 +350,17 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function SaveFile($arBucket, $filePath, $arFile)
+	function SaveFile($arBucket, $filePath, $arFile)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = str_replace("%", " ", $filePath);
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$response = $this->SendRequest(
 			$arBucket["SETTINGS"]["ACCESS_KEY"],
@@ -397,7 +388,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public function ListFiles($arBucket, $filePath, $bRecursive = false)
+	function ListFiles($arBucket, $filePath, $bRecursive = false)
 	{
 		global $APPLICATION;
 
@@ -405,18 +396,22 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 			"dir" => array(),
 			"file" => array(),
 			"file_size" => array(),
+			"file_mtime" => array(),
 		);
 
 		$filePath = trim($filePath, '/');
-		if(strlen($filePath))
+		if($filePath <> '')
+		{
 			$filePath .= '/';
+		}
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = $arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
 		$filePath = $APPLICATION->ConvertCharset($filePath, LANG_CHARSET, "UTF-8");
+		$filePath = str_replace(" ", "+", $filePath);
 
 		$marker = '';
 		while(true)
@@ -445,7 +440,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 				{
 					foreach($response["ListBucketResult"]["#"]["CommonPrefixes"] as $a)
 					{
-						$dir_name = substr(rtrim($a["#"]["Prefix"][0]["#"], "/"), strlen($filePath));
+						$dir_name = mb_substr(rtrim($a["#"]["Prefix"][0]["#"], "/"), mb_strlen($filePath));
 						$result["dir"][] = $APPLICATION->ConvertCharset(urldecode($dir_name), "UTF-8", LANG_CHARSET);
 					}
 				}
@@ -457,9 +452,10 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 				{
 					foreach($response["ListBucketResult"]["#"]["Contents"] as $a)
 					{
-						$file_name = substr($a["#"]["Key"][0]["#"], strlen($filePath));
+						$file_name = mb_substr($a["#"]["Key"][0]["#"], mb_strlen($filePath));
 						$result["file"][] = $APPLICATION->ConvertCharset(urldecode($file_name), "UTF-8", LANG_CHARSET);
 						$result["file_size"][] = $a["#"]["Size"][0]["#"];
+						$result["file_mtime"][] = mb_substr($a["#"]["LastModified"][0]["#"], 0, 19);
 					}
 				}
 
@@ -467,7 +463,7 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 					isset($response["ListBucketResult"]["#"]["IsTruncated"])
 					&& is_array($response["ListBucketResult"]["#"]["IsTruncated"])
 					&& $response["ListBucketResult"]["#"]["IsTruncated"][0]["#"] === "true"
-					&& strlen($response["ListBucketResult"]["#"]["NextMarker"][0]["#"]) > 0
+					&& $response["ListBucketResult"]["#"]["NextMarker"][0]["#"] <> ''
 				)
 				{
 					$marker = $response["ListBucketResult"]["#"]["NextMarker"][0]["#"];
@@ -488,15 +484,16 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		return $result;
 	}
 
-	public function InitiateMultipartUpload($arBucket, &$NS, $filePath, $fileSize, $ContentType)
+	protected function StartUpload($arBucket, $filePath, $ContentType)
 	{
 		$filePath = '/'.trim($filePath, '/');
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"].$filePath;
 		}
-		$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = str_replace("%", " ", $filePath);
+		$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$response = $this->SendRequest(
 			$arBucket["SETTINGS"]["ACCESS_KEY"],
@@ -520,12 +517,24 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 			&& preg_match("/upload_id=(.*)\$/", $this->headers["Location"], $match)
 		)
 		{
-			$NS = array(
+			return array(
 				"filePath" => $filePath,
-				"fileSize" => $fileSize,
 				"filePos" => 0,
 				"upload_id" => $match[1],
 			);
+		}
+
+		return false;
+	}
+
+	function InitiateMultipartUpload($arBucket, &$NS, $filePath, $fileSize, $ContentType)
+	{
+		$upload_info = $this->StartUpload($arBucket, $filePath, $ContentType);
+		if ($upload_info)
+		{
+			$upload_info["fileSize"] = $fileSize;
+			$upload_info["ContentType"] = $ContentType;
+			$NS = $upload_info;
 			return true;
 		}
 		else
@@ -534,23 +543,13 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public static function GetMinUploadPartSize()
+	function GetMinUploadPartSize()
 	{
 		return 5*1024*1024; //5MB
 	}
 
-	public function UploadPart($arBucket, &$NS, $data)
+	private function UploadRange($filePathU, $arBucket, &$NS, $data, $pos)
 	{
-		global $APPLICATION;
-
-		$filePath = '/'.trim($NS["filePath"], '/');
-		if($arBucket["PREFIX"])
-		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
-				$filePath = "/".$arBucket["PREFIX"].$filePath;
-		}
-		$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8");
-
 		$response = $this->SendRequest(
 			$arBucket["SETTINGS"]["ACCESS_KEY"],
 			$arBucket["SETTINGS"]["SECRET_KEY"],
@@ -575,11 +574,110 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 			'',
 			$data,
 			array(
-				"Content-Range" => "bytes ".$NS["filePos"]."-".($NS["filePos"]+$data_len-1)."/".$NS["fileSize"],
+				"Content-Range" => "bytes ".$pos."-".($pos+$data_len-1)."/".$NS["fileSize"],
 			)
 		);
+	}
+	
+	function UploadPartNo($arBucket, &$NS, $data, $part_no)
+	{
+		global $APPLICATION;
+		$part_no = intval($part_no);
 
-		if($this->status == 308 && is_array($this->headers) && preg_match("/^bytes=(\\d+)-(\\d+)\$/", $this->headers["Range"], $match))
+		$found = false;
+		if (isset($NS["Parts"]))
+		{
+			foreach ($NS["Parts"] as $first_part_no => $part)
+			{
+				if ($part["part_no"] === ($part_no - 1))
+				{
+					$found = $first_part_no;
+					break;
+				}
+			}
+		}
+		else
+		{
+			$NS["Parts"] = array();
+		}
+
+		if ($found === false)
+		{
+			$partFileName = '/'.trim($NS["filePath"], '/').".tmp".$part_no;
+			if($arBucket["PREFIX"])
+			{
+				if(mb_substr($partFileName, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
+					$partFileName = "/".$arBucket["PREFIX"].$partFileName;
+			}
+			$upload_info = $this->StartUpload($arBucket, $partFileName, $NS["ContentType"]);
+			if ($upload_info)
+			{
+				$upload_info["fileSize"] = "*";
+				$upload_info["part_no"] = $part_no;
+				$found = $part_no;
+				$NS["Parts"][$part_no] = $upload_info;
+				ksort($NS["Parts"]);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		$NS["Parts"][$found]["part_no"] = $part_no;
+		if (
+			(isset($NS["Parts"][$part_no + 1]))
+			|| (($NS["Parts"][$found]["part_no"] * $this->GetMinUploadPartSize() + $this->GetMinUploadPartSize()) >= $NS["fileSize"])
+		)
+		{
+			$data_len = CUtil::BinStrlen($data);
+			$NS["Parts"][$found]["fileSize"] = $NS["Parts"][$found]["filePos"] + $data_len;
+		}
+
+		$filePath = $NS["Parts"][$found]["filePath"];
+		$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8", true);
+
+		$this->UploadRange($filePathU, $arBucket, $NS["Parts"][$found], $data, $NS["Parts"][$found]["filePos"]);
+
+		if(
+			$this->status == 308
+			&& is_array($this->headers)
+			&& preg_match("/^bytes=(\\d+)-(\\d+)\$/", $this->headers["Range"], $match)
+		)
+		{
+			$APPLICATION->ResetException();
+			$NS["Parts"][$found]["filePos"] = $match[2]+1;
+			return true;
+		}
+		elseif($this->status == 200)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	function UploadPart($arBucket, &$NS, $data)
+	{
+		global $APPLICATION;
+
+		$filePath = '/'.trim($NS["filePath"], '/');
+		if($arBucket["PREFIX"])
+		{
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
+				$filePath = "/".$arBucket["PREFIX"].$filePath;
+		}
+		$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8", true);
+
+		$this->UploadRange($filePathU, $arBucket, $NS, $data, $NS["filePos"]);
+
+		if(
+			$this->status == 308
+			&& is_array($this->headers)
+			&& preg_match("/^bytes=(\\d+)-(\\d+)\$/", $this->headers["Range"], $match)
+		)
 		{
 			$APPLICATION->ResetException();
 			$NS["filePos"] = $match[2]+1;
@@ -595,12 +693,58 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public static function CompleteMultipartUpload($arBucket, &$NS)
+	function CompleteMultipartUpload($arBucket, &$NS)
 	{
+		if (isset($NS["Parts"]))
+		{
+			// https://cloud.google.com/storage/docs/xml-api/put-object-compose
+			$filePath = '/'.trim($NS["filePath"], '/');
+			if($arBucket["PREFIX"])
+			{
+				if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
+					$filePath = "/".$arBucket["PREFIX"].$filePath;
+			}
+			$filePathU = CCloudUtil::URLEncode($filePath, "UTF-8", true);
+
+			$xml = "<ComposeRequest>";
+			foreach ($NS["Parts"] as $i => $part)
+			{
+				$xml .= "<Component><Name>".ltrim($part["filePath"], '/')."</Name></Component>";
+			}
+			$xml .= "</ComposeRequest>";
+
+			$response = $this->SendRequest(
+				$arBucket["SETTINGS"]["ACCESS_KEY"],
+				$arBucket["SETTINGS"]["SECRET_KEY"],
+				'PUT',
+				$arBucket["BUCKET"],
+				$filePathU.'?compose',
+				'',
+				$xml,
+				array(
+					"x-goog-acl"=>"public-read",
+					"Content-Type"=>$NS["ContentType"],
+				)
+			);
+
+			if ($this->status == 200)
+			{
+				foreach ($NS["Parts"] as $i => $part)
+				{
+					$this->DeleteFile($arBucket, $part["filePath"]);
+				}
+				return true;
+			}
+			else
+			{
+				AddMessage2Log($this);
+				return false;
+			}
+		}
 		return true;
 	}
 
-	public function SendRequest($access_key, $secret_key, $verb, $bucket, $file_name='/', $params='', $content='', $additional_headers=array())
+	function SendRequest($access_key, $secret_key, $verb, $bucket, $file_name='/', $params='', $content='', $additional_headers=array())
 	{
 		global $APPLICATION;
 		$this->status = 0;
@@ -658,8 +802,16 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		$was_end_point = $this->new_end_point;
 		$this->new_end_point = '';
 
-		$obRequest->Query($RequestMethod, $host, 80, $RequestURI.$params, $content, '', $ContentType);
+		$obRequest->Query(
+			$this->verb = $RequestMethod,
+			$host, 80,
+			$this->url = $RequestURI.$params,
+			$content, '', $ContentType
+		);
 		$this->status = $obRequest->status;
+		$this->host = $host;
+		$this->verb = $verb;
+		$this->url =  $file_name.$params;
 		$this->headers = $obRequest->headers;
 		$this->errno = $obRequest->errno;
 		$this->errstr = $obRequest->errstr;
@@ -736,9 +888,9 @@ class CCloudStorageService_GoogleStorage extends CCloudStorageService
 		}
 	}
 
-	public static function hmacsha1($data, $key)
+	function hmacsha1($data, $key)
 	{
-		if(strlen($key)>64)
+		if(mb_strlen($key) > 64)
 			$key=pack('H*', sha1($key));
 		$key = str_pad($key, 64, chr(0x00));
 		$ipad = str_repeat(chr(0x36), 64);

@@ -2,8 +2,11 @@
 namespace Bitrix\Landing\Transfer;
 
 use \Bitrix\Landing\File;
+use \Bitrix\Landing\Site;
+use \Bitrix\Landing\Manager;
 use \Bitrix\Main\Event;
 use \Bitrix\Main\Localization\Loc;
+use \Bitrix\Rest\Configuration;
 
 Loc::loadMessages(__FILE__);
 
@@ -14,9 +17,21 @@ Loc::loadMessages(__FILE__);
 class AppConfiguration
 {
 	/**
+	 * Block and component for replace unknown rest blocks.
+	 */
+	const SYSTEM_BLOCK_REST_PENDING = 'system.rest.pending';
+	const SYSTEM_COMPONENT_REST_PENDING = 'bitrix:landing.rest.pending';
+
+	/**
 	 * Prefix code.
 	 */
 	const PREFIX_CODE = 'landing_';
+
+	/**
+	 * If transfer are processing.
+	 * @var bool
+	 */
+	protected static $processing = false;
 
 	/**
 	 * With which entities we can work.
@@ -38,6 +53,15 @@ class AppConfiguration
 	];
 
 	/**
+	 * Returns true if transfer are processing.
+	 * @return bool
+	 */
+	public static function inProcess(): bool
+	{
+		return self::$processing;
+	}
+
+	/**
 	 * Returns known entities.
 	 * @return array
 	 */
@@ -48,7 +72,7 @@ class AppConfiguration
 
 	/**
 	 * Builds manifests for each placement.
-	 * @param Event $event
+	 * @param Event $event Event instance.
 	 * @return array
 	 */
 	public static function getManifestList(Event $event): array
@@ -61,7 +85,7 @@ class AppConfiguration
 			{
 				continue;
 			}
-			$langCode = strtoupper(substr($code, strlen(self::PREFIX_CODE)));
+			$langCode = mb_strtoupper(mb_substr($code, mb_strlen(self::PREFIX_CODE)));
 			$manifestList[] = [
 				'CODE' => $code,
 				'VERSION' => 1,
@@ -69,6 +93,7 @@ class AppConfiguration
 				'PLACEMENT' => [$code],
 				'USES' => [$code],
 				'DISABLE_CLEAR_FULL' => 'Y',
+				'DISABLE_NEED_START_BTN' => 'Y',
 				'COLOR' => '#ff799c',
 				'ICON' => '/bitrix/images/landing/landing_transfer.svg',
 				'TITLE' => Loc::getMessage('LANDING_TRANSFER_GROUP_TITLE_' . $langCode),
@@ -96,6 +121,8 @@ class AppConfiguration
 		$code = $event->getParameter('CODE');
 		$type = $event->getParameter('TYPE');
 
+		self::$processing = true;
+
 		if (in_array($code, static::$accessManifest))
 		{
 			if ($type == 'EXPORT')
@@ -122,6 +149,13 @@ class AppConfiguration
 		$manifest = $event->getParameter('MANIFEST');
 		$access = array_intersect($manifest['USES'], static::$accessManifest);
 
+		self::$processing = true;
+
+		if (!Manager::checkFeature(Manager::FEATURE_ALLOW_EXPORT))
+		{
+			return null;
+		}
+
 		if ($access && isset(static::$entityList[$code]))
 		{
 			return Export\Site::nextStep($event);
@@ -139,6 +173,8 @@ class AppConfiguration
 	{
 		$code = $event->getParameter('CODE');
 
+		self::$processing = true;
+
 		if (isset(static::$entityList[$code]))
 		{
 			return Import\Site::nextStep($event);
@@ -149,10 +185,10 @@ class AppConfiguration
 
 	/**
 	 * Final step.
-	 * @param Event $event
-	 * @return void
+	 * @param Event $event Event instance.
+	 * @return array
 	 */
-	public static function onFinish(Event $event): void
+	public static function onFinish(Event $event): array
 	{
 		$type = $event->getParameter('TYPE');
 		$code = $event->getParameter('MANIFEST_CODE');
@@ -161,13 +197,45 @@ class AppConfiguration
 		{
 			if ($type == 'EXPORT')
 			{
-				Export\Site::onFinish($event);
+				// rename file to download
+				$context = $event->getParameter('CONTEXT_USER');
+				$setting = new Configuration\Setting($context);
+				$manifest = $setting->get(Configuration\Setting::SETTING_MANIFEST);
+				if (!empty($manifest['SITE_ID']))
+				{
+					$res = Site::getList([
+						'select' => [
+							'TITLE'
+						],
+						'filter' => [
+							'ID' => $manifest['SITE_ID']
+						]
+					]);
+					if ($row = $res->fetch())
+					{
+						$date = new \Bitrix\Main\Type\DateTime;
+						$structure = new Configuration\Structure($context);
+						$structure->setArchiveName(\CUtil::translit(
+							trim($row['TITLE']),
+							LANGUAGE_ID,
+							[
+								'replace_space' => '_',
+								'replace_other' => '_'
+							]
+						));
+					}
+				}
+				return Export\Site::onFinish($event);
 			}
 			else if ($type == 'IMPORT')
 			{
-				Import\Site::onFinish($event);
+				return Import\Site::onFinish($event);
 			}
 		}
+
+		self::$processing = false;
+
+		return [];
 	}
 
 	/**
@@ -201,24 +269,5 @@ class AppConfiguration
 		}
 
 		return $fileId;
-	}
-
-	/**
-	 * tmp
-	 */
-	public static function ttt($files)
-	{
-		$docRoot = $_SERVER['DOCUMENT_ROOT'];
-		$toDir = $docRoot . '/upload/tmp/files/';
-
-		\checkDirPath($toDir);
-
-		foreach ($files as $file)
-		{
-			copy(
-				$docRoot . \CFile::getPath($file['ID']),
-				$toDir . $file['ID']
-			);
-		}
 	}
 }

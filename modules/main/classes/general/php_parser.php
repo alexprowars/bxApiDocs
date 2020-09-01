@@ -45,39 +45,57 @@ class PHPParser
 	public static function GetParams($params)
 	{
 		$arParams = array();
-		$sk = 0;
+		$brackets = 0;
 		$param_tmp = "";
 		$params_l = strlen($params);
 		for($i=0; $i<$params_l; $i++)
 		{
 			$ch = substr($params, $i, 1);
-			if($ch=="(")
-				$sk++;
-			elseif($ch==")")
-				$sk--;
-			elseif($ch=="," && $sk==0)
+			if($ch == "(" || $ch == "[")
+			{
+				$brackets++;
+			}
+			elseif($ch == ")" || $ch == "]")
+			{
+				$brackets--;
+			}
+			elseif($ch=="," && $brackets == 0)
 			{
 				$arParams[] = $param_tmp;
 				$param_tmp = "";
 				continue;
 			}
 
-			if($sk<0)
+			if($brackets < 0)
 				break;
 
 			$param_tmp .= $ch;
 		}
-		if($param_tmp!="")
+		if($param_tmp <> "")
+		{
 			$arParams[] = $param_tmp;
+		}
 
 		return $arParams;
 	}
 
 	public static function GetParamsRec($params, &$arAllStr, &$arResult)
 	{
+		$found = false;
+		$paramsList = "";
 		if (strtolower(substr($params, 0, 6)) == 'array(')
 		{
-			$arParams = PHPParser::GetParams(substr($params, 6));
+			$found = true;
+			$paramsList = substr($params, 6);
+		}
+		elseif(substr($params, 0, 1) == "[")
+		{
+			$found = true;
+			$paramsList = substr($params, 1);
+		}
+		if($found)
+		{
+			$arParams = PHPParser::GetParams($paramsList);
 			foreach ($arParams as $i => $el)
 			{
 				$p = strpos($el, "=>");
@@ -608,17 +626,17 @@ class PHPParser
 						if($ti)
 						{
 							// begin ($i) and end ($ti) of comment
-							// РїСЂРѕРІРµСЂРёРј С‡С‚Рѕ СЂР°РЅСЊС€Рµ РєРѕРЅРµС† СЃРєСЂРёРїС‚Р° РёР»Рё РєРѕРЅРµС† РєРѕРјРјРµРЅС‚Р°СЂРёСЏ (РЅР°РїСЂРёРјРµСЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ "//comment ? >")
+							// проверим что раньше конец скрипта или конец комментария (например в одной строке "//comment ? >")
 							if($ti>$posnext && substr($filesrc, $i+1, 1)!="*")
 							{
-								// СЃРєСЂРёРїС‚ Р·Р°РєРѕРЅС‡РёР»СЃСЏ СЂР°РЅСЊС€Рµ РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
-								// РІС‹СЂРµР¶РµРј СЃРєСЂРёРїС‚
+								// скрипт закончился раньше комментария
+								// вырежем скрипт
 								$arScripts[] = array($p, $posnext, substr($filesrc, $p, $posnext-$p));
 								break;
 							}
 							else
 							{
-								// РєРѕРјРјРµРЅС‚Р°СЂРёР№ Р·Р°РєРѕРЅС‡РёР»СЃСЏ СЂР°РЅСЊС€Рµ СЃРєСЂРёРїС‚Р°
+								// комментарий закончился раньше скрипта
 								$i = $ti - 1;
 							}
 						}

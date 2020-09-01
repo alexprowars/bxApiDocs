@@ -133,14 +133,8 @@ class CallLog
 
 			if (defined('IM_CALL_LOG_PATH'))
 			{
-				$logFile = IM_CALL_LOG_PATH."{$row['CALL_ID']}_{$row['USER_ID']}.txt";
-				if (file_exists($_SERVER["DOCUMENT_ROOT"].$logFile))
-				{
-					$connection['LOG_URL'] = $logFile;
-				}
+				$connection['LOG_URL'] = IM_CALL_LOG_PATH."{$row['CALL_ID']}-{$row['USER_ID']}.txt";
 			}
-
-//			$list[$row['CALL_ID']]['LOG_URL'] = $connection['LOG_URL'];
 
 			unset($connection['CALL_ID']);
 

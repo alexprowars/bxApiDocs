@@ -14,7 +14,7 @@ class CIBlockPropertyResult extends CDBResult
 	protected $arPropertyValuesID = array();
 	protected $arDescriptions = array();
 
-	public function Fetch()
+	function Fetch()
 	{
 		global $DB;
 
@@ -47,8 +47,10 @@ class CIBlockPropertyResult extends CDBResult
 					$res["DEFAULT_VALUE"] = $value["VALUE"];
 				}
 			}
-			if(strlen($res["USER_TYPE_SETTINGS"]))
+			if($res["USER_TYPE_SETTINGS"] <> '')
+			{
 				$res["USER_TYPE_SETTINGS"] = unserialize($res["USER_TYPE_SETTINGS"]);
+			}
 		}
 
 		if($res && !empty($this->arProperties))
@@ -69,7 +71,7 @@ class CIBlockPropertyResult extends CDBResult
 							$res[$field_name] = $res[$field_name]->load();
 
 						$update = false;
-						if(strlen($res[$field_name]) <= 0)
+						if($res[$field_name] == '')
 						{
 							$update = true;
 						}
@@ -240,7 +242,7 @@ class CIBlockPropertyResult extends CDBResult
 		}
 	}
 
-	public function setIBlock($IBLOCK_ID, $propertyID = array())
+	function setIBlock($IBLOCK_ID, $propertyID = array())
 	{
 		$this->VERSION = CIBlockElement::GetIBVersion($IBLOCK_ID);
 
@@ -293,7 +295,7 @@ class CIBlockPropertyResult extends CDBResult
 		}
 	}
 
-	public function setMode($extMode)
+	function setMode($extMode)
 	{
 		$this->extMode = $extMode;
 		$this->arPropertyValuesID = array();

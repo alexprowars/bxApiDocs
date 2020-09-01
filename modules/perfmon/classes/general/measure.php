@@ -162,7 +162,9 @@ class CPerfomanceMeasure
 			$result[] = new CPerfAccelAPC;
 		if (extension_loaded('xcache'))
 			$result[] = new CPerfAccelXCache;
-		if (extension_loaded('wincache'))
+		// Wincache removed opcode cache since 2.0.0.1
+		// https://pecl.php.net/package-changelog.php?package=WinCache&release=2.0.0.1
+		if (extension_loaded('wincache') && function_exists('wincache_ocache_meminfo'))
 			$result[] = new CPerfAccelWinCache;
 		if (extension_loaded('Zend OPcache'))
 			$result[] = new CPerfAccelZendOpCache;
@@ -180,7 +182,7 @@ class CPerfAccel
 	public $memory_used;
 	public $cache_limit;
 
-	public function __construct($enabled, $cache_ttl, $max_file_size, $check_mtime, $memory_total, $memory_used, $cache_limit = -1)
+	function __construct($enabled, $cache_ttl, $max_file_size, $check_mtime, $memory_total, $memory_used, $cache_limit = -1)
 	{
 		$this->enabled = $enabled;
 		$this->cache_ttl = $cache_ttl;
@@ -191,12 +193,12 @@ class CPerfAccel
 		$this->cache_limit = $cache_limit;
 	}
 
-	public static function GetParams()
+	function GetParams()
 	{
 		return array();
 	}
 
-	public function IsWorking()
+	function IsWorking()
 	{
 		if (!$this->enabled)
 			return false;
@@ -232,7 +234,7 @@ class CPerfAccel
 		return true;
 	}
 
-	public function GetRecommendations()
+	function GetRecommendations()
 	{
 		$arResult = array();
 
@@ -337,9 +339,9 @@ class CPerfAccel
 
 	public static function unformat($str)
 	{
-		$str = strtolower($str);
+		$str = mb_strtolower($str);
 		$res = intval($str);
-		$suffix = substr($str, -1);
+		$suffix = mb_substr($str, -1);
 		if ($suffix == "k")
 			$res *= 1024;
 		elseif ($suffix == "m")
@@ -352,22 +354,22 @@ class CPerfAccel
 
 class CPerfAccelZend extends CPerfAccel
 {
-	public static function __construct()
+	function __construct()
 	{
 		$zend_enable = ini_get('zend_optimizerplus.enable');
 		$zend_mtime = ini_get('zend_optimizerplus.validate_timestamps');
 
 		parent::__construct(
-			strtolower($zend_enable) == "on" || $zend_enable == "1",
+			mb_strtolower($zend_enable) == "on" || $zend_enable == "1",
 			-1,
 			-1,
-			strtolower($zend_mtime) == "on" || $zend_mtime == "1",
+			mb_strtolower($zend_mtime) == "on" || $zend_mtime == "1",
 			intval(ini_get('zend_optimizerplus.memory_consumption')) * 1024 * 1024,
 			-1
 		);
 	}
 
-	public static function GetRecommendations()
+	function GetRecommendations()
 	{
 		$arResult = parent::GetRecommendations();
 
@@ -386,7 +388,7 @@ class CPerfAccelZend extends CPerfAccel
 		return $arResult;
 	}
 
-	public static function GetParams()
+	function GetParams()
 	{
 		return array(
 			"enabled" => array(
@@ -421,13 +423,13 @@ class CPerfAccelAPC extends CPerfAccel
 	var $num_files_hint = null;
 	var $user_entries_hint = null;
 
-	public function __construct()
+	function __construct()
 	{
-		$apc_enabled = strtolower(ini_get('apc.enabled'));
+		$apc_enabled = mb_strtolower(ini_get('apc.enabled'));
 		$this->is_enabled = !($apc_enabled == "0" || $apc_enabled == "off");
-		$apc_cache_by_default = strtolower(ini_get('apc.cache_by_default'));
+		$apc_cache_by_default = mb_strtolower(ini_get('apc.cache_by_default'));
 		$this->is_cache_by_default = !($apc_cache_by_default == "0" || $apc_cache_by_default == "off");
-		$apc_stat = strtolower(ini_get('apc.stat'));
+		$apc_stat = mb_strtolower(ini_get('apc.stat'));
 		$this->num_files_hint = intval(ini_get('apc.num_files_hint'));
 		$this->user_entries_hint = intval(ini_get('apc.user_entries_hint'));
 
@@ -443,7 +445,7 @@ class CPerfAccelAPC extends CPerfAccel
 		);
 	}
 
-	public function GetParams()
+	function GetParams()
 	{
 		$result = array(
 			"enabled" => array(
@@ -503,8 +505,8 @@ class CPerfAccelAPC extends CPerfAccel
 			),
 		);
 
-		$enable_opcode_cache = strtolower(ini_get('apc.enable_opcode_cache'));
-		if (strlen($enable_opcode_cache) > 0)
+		$enable_opcode_cache = mb_strtolower(ini_get('apc.enable_opcode_cache'));
+		if ($enable_opcode_cache <> '')
 		{
 			$result["enabled"][] = array(
 				"PARAMETER" => 'apc.enable_opcode_cache',
@@ -520,7 +522,7 @@ class CPerfAccelAPC extends CPerfAccel
 
 class CPerfAccelXCache extends CPerfAccel
 {
-	public static function __construct()
+	function __construct()
 	{
 		$xcache_stat = ini_get('xcache.stat');
 
@@ -528,7 +530,7 @@ class CPerfAccelXCache extends CPerfAccel
 			ini_get('xcache.cacher') != "0",
 			intval(ini_get('xcache.ttl')),
 			-1,
-			!($xcache_stat == "0" || strtolower($xcache_stat) == "off"),
+			!($xcache_stat == "0" || mb_strtolower($xcache_stat) == "off"),
 			static::unformat(ini_get('xcache.size')),
 			-1
 		);
@@ -585,13 +587,13 @@ class CPerfAccelXCache extends CPerfAccel
 
 class CPerfAccelWinCache extends CPerfAccel
 {
-	public static function __construct()
+	function __construct()
 	{
 		$wincache_enabled = ini_get('wincache.ocenabled');
 		$memory = wincache_ocache_meminfo();
 
 		parent::__construct(
-			!($wincache_enabled == "0" || strtolower($wincache_enabled) == "off"),
+			!($wincache_enabled == "0" || mb_strtolower($wincache_enabled) == "off"),
 			-1,
 			-1,
 			true, //Because there is no way to turn on check file mtime we'll assume it's ok
@@ -600,7 +602,7 @@ class CPerfAccelWinCache extends CPerfAccel
 		);
 	}
 
-	public static function GetParams()
+	function GetParams()
 	{
 		return array(
 			"enabled" => array(
@@ -623,7 +625,7 @@ class CPerfAccelWinCache extends CPerfAccel
 
 class CPerfAccelZendOpCache extends CPerfAccel
 {
-	public static function __construct()
+	function __construct()
 	{
 		$memory = array(
 			"memorySize" => intval(ini_get('opcache.memory_consumption')) * 1024 * 1024,
@@ -641,7 +643,7 @@ class CPerfAccelZendOpCache extends CPerfAccel
 		);
 	}
 
-	public static function GetRecommendations()
+	function GetRecommendations()
 	{
 		$arResult = parent::GetRecommendations();
 
@@ -679,7 +681,7 @@ class CPerfAccelZendOpCache extends CPerfAccel
 		return $arResult;
 	}
 
-	public static function GetParams()
+	function GetParams()
 	{
 		$res = array(
 			"enabled" => array(

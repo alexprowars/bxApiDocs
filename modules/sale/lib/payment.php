@@ -994,9 +994,9 @@ class Payment extends Internals\CollectableEntity implements IBusinessValueProvi
 			$value = PriceMaths::roundPrecision($value);
 		}
 
-		if ($name === 'REASON_MARKED' && strlen($value) > 255)
+		if ($name === 'REASON_MARKED' && mb_strlen($value) > 255)
 		{
-			$value = substr($value, 0, 255);
+			$value = mb_substr($value, 0, 255);
 		}
 
 		return parent::setField($name, $value);
@@ -1064,9 +1064,9 @@ class Payment extends Internals\CollectableEntity implements IBusinessValueProvi
 		}
 
 		if ($name === 'REASON_MARKED'
-			&& strlen($value) > 255)
+			&& mb_strlen($value) > 255)
 		{
-			$value = substr($value, 0, 255);
+			$value = mb_substr($value, 0, 255);
 		}
 
 		parent::setFieldNoDemand($name, $value);

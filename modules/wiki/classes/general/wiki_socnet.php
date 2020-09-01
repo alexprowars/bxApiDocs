@@ -1,17 +1,6 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CWikiSocnet</b> - Класс интеграции с модулем «Социальная сеть».
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/wiki/classes/cwikisocnet/index.php
- * @author Bitrix
- */
 class CWikiSocnet
 {
 	static public $bActive = false;
@@ -24,27 +13,6 @@ class CWikiSocnet
 
 	static public $iSocNetId = 0;
 
-	
-	/**
-	* <p>Метод инициализирует интеграцию. Статический метод.</p>
-	*
-	*
-	* @param int $SOCNET_GROUP_ID  Идентификатор рабочей группы соц. сети
-	*
-	* @param int $IBLOCK_ID  Идентификатор инфо.блока
-	*
-	* @return bool 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>// Инициализируем интеграцию<br>$SOCNET_GROUP_ID = 14;<br>$IBLOCK_ID = 3;<br><br>if (!CWikiSocnet::Init($SOCNET_GROUP_ID, $IBLOCK_ID))<br>	echo 'Ошибка. Не удалось инициализировать интеграцию.';<br>?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/wiki/classes/cwikisocnet/Init.php
-	* @author Bitrix
-	*/
 	static function Init($SOCNET_GROUP_ID, $IBLOCK_ID)
 	{
 		if (self::$bInit)
@@ -104,17 +72,6 @@ class CWikiSocnet
 		return self::$bInit;
 	}
 
-	
-	/**
-	* <p>Метод проверяет включена ли интеграция. Статический метод.</p>  <br><br>
-	*
-	*
-	* @return bool 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/wiki/classes/cwikisocnet/isenabledsocnet.php
-	* @author Bitrix
-	*/
 	static function IsEnabledSocnet()
 	{
 		if (self::$bActive)
@@ -134,35 +91,11 @@ class CWikiSocnet
 		return $bActive;
 	}
 
-	
-	/**
-	* <p>Метод проверяет находится ли модуль в режиме интеграции. Статический метод.</p>  <br><br>
-	*
-	*
-	* @return bool 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/wiki/classes/cwikisocnet/IsSocNet.php
-	* @author Bitrix
-	*/
 	static function IsSocNet()
 	{
 		return self::$bInit;
 	}
 
-	
-	/**
-	* <p>Метод инициализирует интеграцию. Нестатический метод.</p>
-	*
-	*
-	* @param bool $bActive  true – включает интеграцию, false – отключает интеграцию
-	*
-	* @return void 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/wiki/classes/cwikisocnet/enablesocnet.php
-	* @author Bitrix
-	*/
 	static function EnableSocnet($bActive = false)
 	{
 		if($bActive)
@@ -396,6 +329,10 @@ class CWikiSocnet
 			"MESSAGE" => $arFields['MESSAGE']
 		);
 
+		$sanitizer = new CBXSanitizer();
+		$sanitizer->SetLevel(CBXSanitizer::SECURE_LEVEL_LOW);
+		$arResult['EVENT_FORMATTED']['MESSAGE'] = $sanitizer->SanitizeHtml(htmlspecialcharsback($arResult['EVENT_FORMATTED']['MESSAGE']));
+
 		$arResult['HAS_COMMENTS'] = 'N';
 		if (
 			intval($arFields['SOURCE_ID']) > 0
@@ -493,7 +430,7 @@ class CWikiSocnet
 
 		$arResult["EVENT_FORMATTED"] = array(
 			"TITLE" => $title,
-			"MESSAGE" => ($bMail ? CSocNetTextParser::killAllTags($arFields['MESSAGE']) : $arFields['MESSAGE'])
+			"MESSAGE" => ($bMail ? CSocNetTextParser::killAllTags($arFields['MESSAGE']) : htmlspecialcharsBack($arFields['MESSAGE']))
 		);
 
 		if ($bMail)
@@ -824,12 +761,12 @@ class CWikiSocnet
 		return $retText;
 	}
 
-	public static function __ProcessPath($arUrl, $user_id)
+	function __ProcessPath($arUrl, $user_id)
 	{
 		return CSocNetLogTools::ProcessPath($arUrl, $user_id);
 	}
 	
-	public static function BeforeIndexSocNet($bxSocNetSearch, $arFields)
+	function BeforeIndexSocNet($bxSocNetSearch, $arFields)
 	{
 		static $isSonetEnable = false;
 		static $sonetForumId = false;
@@ -862,7 +799,7 @@ class CWikiSocnet
 					$bxSocNetSearch->Url(
 						str_replace(
 							"#wiki_name#",
-							urlencode($arFields["TITLE"]),
+							rawurlencode($arFields["TITLE"]),
 							$bxSocNetSearch->_params["PATH_TO_GROUP_WIKI_POST_COMMENT"]
 						),
 						array(

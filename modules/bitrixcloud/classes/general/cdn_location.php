@@ -208,7 +208,7 @@ class CBitrixCloudCDNLocation
 					/* @var CBitrixCloudCDNClass $file_class */
 					foreach ($file_class->getExtensions() as $extension)
 					{
-						if (strtolower($p_extension) === $extension)
+						if (mb_strtolower($p_extension) === $extension)
 						{
 							/* @var CBitrixCloudCDNServerGroup $server_group */
 							$server_group = $this->server_groups[$i];
@@ -300,27 +300,27 @@ class CBitrixCloudCDNLocations implements Iterator
 		return $this;
 	}
 	
-	public function rewind()
+	function rewind()
 	{
 		reset($this->locations);
 	}
 	
-	public function current()
+	function current()
 	{
 		return current($this->locations);
 	}
 	
-	public function key()
+	function key()
 	{
 		return key($this->locations);
 	}
 	
-	public function next()
+	function next()
 	{
 		next($this->locations);
 	}
 	
-	public function valid()
+	function valid()
 	{
 		return key($this->locations) !== null;
 	}

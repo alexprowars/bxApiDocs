@@ -3,6 +3,7 @@
 namespace Bitrix\Im\Call;
 
 use Bitrix\Im\Model\CallUserTable;
+use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Type\DateTime;
 
 class CallUser
@@ -23,6 +24,10 @@ class CallUser
 
 	public static function create(array $fields)
 	{
+		if(!isset($fields['USER_ID']) || !$fields['USER_ID'])
+		{
+			throw new ArgumentException('USER_ID should be positive integer');
+		}
 		$instance = new static();
 		$instance->setFields($fields);
 		return $instance;

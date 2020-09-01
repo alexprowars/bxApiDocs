@@ -94,7 +94,14 @@ class Task
 			return $result;
 		}
 
-		\CSocNetLogFollow::set($userId, 'L'.$logId, ($added ? 'N' : 'Y'));
+		$followDate = false;
+		if (!$added)
+		{
+			\CSocNetLogFollow::delete($userId, 'L'.$logId);
+			$followDate = ConvertTimeStamp(time() + \CTimeZone::getOffset(), 'FULL', SITE_ID); // compromise, we cannot get it from $logFields because it can have not updated value yet
+		}
+
+		\CSocNetLogFollow::set($userId, 'L'.$logId, ($added ? 'N' : 'Y'), $followDate);
 
 		$result = new EventResult(
 			EventResult::SUCCESS,

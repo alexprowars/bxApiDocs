@@ -1,92 +1,9 @@
 <?
-
-/**
- * <b>CIBlock</b> - класс для работы с информационными блоками
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblock/index.php
- * @author Bitrix
- */
 class CIBlock extends CAllIBlock
 {
 	///////////////////////////////////////////////////////////////////
 	// List of blocks
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Возвращает список информационных блоков по фильтру <i>arFilter</i> отсортированный в порядке <i>arOrder</i>. Нестатический метод.</p>
-	*
-	*
-	* @param array $arOrder = Array("SORT"=>"ASC") Массив для сортировки результата. Содержит пары "<i>поле
-	* сортировки</i>"=&gt;"<i>направление сортировки</i>". 		Поле для
-	* сортировки может принимать значения: 		          <ul> <li> <b>id </b> - код
-	* инфоблока;</li>          		            <li> <b>iblock_type </b> - тип инфоблоков;</li>          		
-	*            <li> <b>name </b> - название инфоблока;</li>          		            <li> <b>active </b> -
-	* активность;</li>                     <li> <b>code</b> - символьный код;</li>          		         
-	*   <li> <b>sort </b> - индекс сортировки;</li>          		            <li> <b>element_cnt </b> -
-	* количество элементов (только если <i>bIncCnt</i> = true);</li>          		            <li>
-	* <b>timestamp_x </b> - дата последнего изменения.</li>          		</ul>
-	*
-	* @param array $arFilter = Array() Массив вида <i> array("фильтруемое поле"=&gt;"значение фильтра" [, ...])</i>.
-	* 		Фильтруемое поле может принимать значения: 		          <ul> <li> <i>ACTIVE</i> -
-	* фильтр по активности (Y|N);</li>          		            <li> <i>NAME</i> - по названию
-	* (можно искать по шаблону [%_]);</li>          		            <li> <i>EXTERNAL_ID</i>, <i>XML_ID </i>
-	* - по внешнему коду (можно искать по шаблону [%_]);</li>          		            <li>
-	* <i>SITE_ID</i> - по сайту;</li>          		            <li> <i>TYPE</i> - по типу инфоблоков
-	* (можно искать по шаблону [%_]);</li>          		            <li> <i>CODE</i> - по
-	* символьному коду (можно искать по шаблону [%_]);</li>          		            <li>
-	* <i>ID</i> - по коду;</li>                     <li> <i>VERSION</i> - по флагу хранения
-	* значений свойств элементов инфоблока;</li>          		            <li>
-	* <i>SOCNET_GROUP_ID</i> - по идентификатору группы социальной сети в которой
-	* используется инфоблок;</li>           <li> <i>CNT_ACTIVE</i> - только если <i>bIncCnt</i>
-	* = true. Если значение Y, то при подсчете элементов будут учитываться
-	* только активные элементы, при любом другом значении все
-	* элементы;</li>          		            <li> <i>CNT_ALL</i> - только если <i>bIncCnt</i> = true.
-	* Если значение Y, то при подсчете элементов будут учитываться и те
-	* элементы, которые ещё не были опубликованы. При любом другом
-	* значении все элементы;</li>                     <li> <i>MIN_PERMISSION</i> - фильтр по
-	* правам доступа, по умолчанию принимает <i>R</i> (уровень доступа
-	* <i>Чтение</i>).</li>                     <li> <i>CHECK_PERMISSIONS</i> - если "N", то права на
-	* доступ не проверяются.              <br><br>            Если проверка прав не
-	* нужна, то для ускорения запроса следует указывать значение "N".
-	* Кроме того, если не указать данный параметр в фильтре или при
-	* создании инфоблока не изменить параметр по умолчанию "нет
-	* доступа", то результат выдачи обычному пользователю будет
-	* пустым.</li>          		</ul>        		Перед названием фильтруемого поля можно
-	* указать тип фильтрации: 		          <ul> <li>"!" - не равно</li>          		           
-	* <li>"&lt;" - меньше</li>          		            <li>"&lt;=" - меньше либо равно</li>          		   
-	*         <li>"&gt;" - больше</li>          		            <li>"&gt;=" - больше либо равно</li>       
-	*   		</ul>        		Все фильтруемые поля кроме (CHECK_PERMISSIONS, MIN_PERMISSION, CNT_ALL и
-	* CNT_ACTIVE) могут содержать перед названием <a
-	* href="http://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&amp;LESSON_ID=2683" >тип проверки
-	* фильтра</a>.          <br>        "<i>значения фильтра</i>" - одиночное значение
-	* или массив.          <br><br>        Необязательное. По умолчанию записи не
-	* фильтруются.
-	*
-	* @param bool $bIncCnt = false Возвращать ли количество элементов в информационном блоке в поле
-	* <i>ELEMENT_CNT</i>. Необязательный параметр, по умолчанию равен false.
-	*
-	* @return CDBResult <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult.</a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* <b>Примечание:</b> при копировании кода в свой проект рекомендуется убрать необязательный параметр bIncCnt (если он не используется), чтобы избежать проблем с производительностью.&lt;?<br>// выберем все активные информационные блоки для текущего сайта типа catalog<br>// у которых символьный код не my_products, со счетчиком активных элементов.<br>$res = CIBlock::GetList(<br>	Array(), <br>	Array(<br>		'TYPE'=&gt;'catalog', <br>		'SITE_ID'=&gt;SITE_ID, <br>		'ACTIVE'=&gt;'Y', <br>		"CNT_ACTIVE"=&gt;"Y", <br>		"!CODE"=&gt;'my_products'<br>	), true<br>);<br>while($ar_res = $res-&gt;Fetch())<br>{<br>	echo $ar_res['NAME'].': '.$ar_res['ELEMENT_CNT'];<br>}<br>?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a> </li>     <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fiblock">Поля CIBlock</a> </li>  </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblock/getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList($arOrder=Array("SORT"=>"ASC"), $arFilter=Array(), $bIncCnt = false)
 	{
 		global $DB, $USER;
@@ -96,7 +13,7 @@ class CIBlock extends CAllIBlock
 		foreach($arFilter as $key => $val)
 		{
 			$res = CIBlock::MkOperationFilter($key);
-			$key = strtoupper($res["FIELD"]);
+			$key = mb_strtoupper($res["FIELD"]);
 			$cOperationType = $res["OPERATION"];
 
 			switch($key)
@@ -107,8 +24,10 @@ class CIBlock extends CAllIBlock
 			case "LID":
 			case "SITE_ID":
 				$sql = CIBlock::FilterCreate("BS.SITE_ID", $val, "string_equal", $cOperationType);
-				if(strlen($sql))
+				if($sql <> '')
+				{
 					$bAddSites = true;
+				}
 				break;
 			case "NAME":
 			case "CODE":
@@ -132,8 +51,10 @@ class CIBlock extends CAllIBlock
 				break;
 			}
 
-			if(strlen($sql))
+			if($sql <> '')
+			{
 				$strSqlSearch .= " AND  (".$sql.") ";
+			}
 		}
 
 		$bCheckPermissions =
@@ -142,20 +63,37 @@ class CIBlock extends CAllIBlock
 			|| array_key_exists("OPERATION", $arFilter)
 		;
 		$bIsAdmin = is_object($USER) && $USER->IsAdmin();
-		if($bCheckPermissions && !$bIsAdmin)
+		$permissionsBy = null;
+		if ($bCheckPermissions && isset($arFilter['PERMISSIONS_BY']))
 		{
-			$min_permission = (strlen($arFilter["MIN_PERMISSION"])==1) ? $arFilter["MIN_PERMISSION"] : "R";
-			if(is_object($USER))
+			$permissionsBy = (int)$arFilter['PERMISSIONS_BY'];
+			if ($permissionsBy < 0)
+				$permissionsBy = null;
+		}
+		if($bCheckPermissions && ($permissionsBy !== null || !$bIsAdmin))
+		{
+			$min_permission = (mb_strlen($arFilter["MIN_PERMISSION"]) == 1) ? $arFilter["MIN_PERMISSION"] : "R";
+
+			if ($permissionsBy !== null)
 			{
-				$iUserID = intval($USER->GetID());
-				$strGroups = $USER->GetGroups();
-				$bAuthorized = $USER->IsAuthorized();
+				$iUserID = $permissionsBy;
+				$strGroups = implode(',', CUser::GetUserGroup($permissionsBy));
+				$bAuthorized = false;
 			}
 			else
 			{
-				$iUserID = 0;
-				$strGroups = "2";
-				$bAuthorized = false;
+				if (is_object($USER))
+				{
+					$iUserID = (int)$USER->GetID();
+					$strGroups = $USER->GetGroups();
+					$bAuthorized = $USER->IsAuthorized();
+				}
+				else
+				{
+					$iUserID = 0;
+					$strGroups = "2";
+					$bAuthorized = false;
+				}
 			}
 
 			$stdPermissions = "
@@ -169,7 +107,7 @@ class CIBlock extends CAllIBlock
 					AND (IBG.PERMISSION='X' OR B.ACTIVE='Y')
 				";
 
-			if (strlen($arFilter["OPERATION"]) > 0)
+			if ($arFilter["OPERATION"] <> '')
 				$operation  = "'".$DB->ForSql($arFilter["OPERATION"])."'";
 			elseif($min_permission >= "X")
 				$operation = "'iblock_edit'";
@@ -183,7 +121,7 @@ class CIBlock extends CAllIBlock
 			if($operation)
 			{
 				$acc = new CAccess;
-				$acc->UpdateCodes();
+				$acc->UpdateCodes($permissionsBy !== null ? array('USER_ID' => $permissionsBy) : false);
 
 				$extPermissions = "
 					SELECT IBLOCK_ID
@@ -193,7 +131,7 @@ class CIBlock extends CAllIBlock
 					".($iUserID > 0? "LEFT": "INNER")." JOIN b_user_access UA ON UA.ACCESS_CODE = IBR.GROUP_CODE AND UA.USER_ID = ".$iUserID."
 					WHERE IBR.ENTITY_TYPE = 'iblock'
 					AND O.NAME in (".$operation.")
-					".($bAuthorized? "AND (UA.USER_ID IS NOT NULL OR IBR.GROUP_CODE = 'AU')": "")."
+					".($bAuthorized || $iUserID > 0? "AND (UA.USER_ID IS NOT NULL OR IBR.GROUP_CODE = 'AU')": "")."
 				";
 				$sqlPermissions = "AND (
 					B.ID IN ($stdPermissions)
@@ -272,8 +210,8 @@ class CIBlock extends CAllIBlock
 		{
 			foreach($arOrder as $by=>$order)
 			{
-				$by = strtolower($by);
-				$order = strtolower($order);
+				$by = mb_strtolower($by);
+				$order = mb_strtolower($order);
 				if ($order!="asc")
 					$order = "desc";
 
@@ -307,13 +245,13 @@ class CIBlock extends CAllIBlock
 		return $str;
 	}
 
-	public static function _Add($ID)
+	function _Add($ID)
 	{
 		global $DB;
 		$err_mess = "FILE: ".__FILE__."<br>LINE: ";
 		$ID = intval($ID);
 
-		if(defined("MYSQL_TABLE_TYPE") && strlen(MYSQL_TABLE_TYPE) > 0)
+		if(defined("MYSQL_TABLE_TYPE") && MYSQL_TABLE_TYPE <> '')
 		{
 			$DB->Query("SET storage_engine = '".MYSQL_TABLE_TYPE."'", true);
 		}

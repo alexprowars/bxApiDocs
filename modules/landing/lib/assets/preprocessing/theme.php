@@ -202,7 +202,7 @@ class Theme
 				$semanticClass = ' ' . $semanticClass . ' ';
 				foreach ($blockClasses as $classesString)
 				{
-					if (strpos($classesString, $semanticClass) !== false)
+					if (mb_strpos($classesString, $semanticClass) !== false)
 					{
 						$contentWasChanged = true;
 						$newClassString = self::removeSiblingsClasses(
@@ -249,7 +249,7 @@ class Theme
 			]);
 			if ($row = $res->fetch())
 			{
-				if (!$row['TPL_CODE'] && strpos($row['XML_ID'], '|'))
+				if (!$row['TPL_CODE'] && mb_strpos($row['XML_ID'], '|'))
 				{
 					[, $row['TPL_CODE']] = explode('|', $row['XML_ID']);
 				}

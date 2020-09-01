@@ -1,4 +1,7 @@
 <?
+
+use Bitrix\Forum\UserTable;
+
 IncludeModuleLangFile(__FILE__);
 /**********************************************************************/
 /************** FORUM USER ********************************************/
@@ -264,201 +267,100 @@ class CAllForumUser
 
 	public static function Add($fields, $strUploadDir = false)
 	{
-		global $DB, $CACHE_MANAGER;
-		$strUploadDir = ($strUploadDir === false ? "forum/avatar" : $strUploadDir);
-
-		if (!CForumUser::CheckFields("ADD", $fields))
-			return false;
-/***************** Event onBeforeUserAdd ***************************/
-		foreach (GetModuleEvents("forum", "onBeforeUserAdd", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, array(&$fields));
-/***************** /Event ******************************************/
-		if (empty($fields))
-			return false;
-/***************** Cleaning cache **********************************/
-		if (is_set($fields, "ALLOW_POST") && $fields["ALLOW_POST"] != "Y")
+		if (!is_array($fields) || empty($fields))
 		{
-			unset($GLOBALS["FORUM_CACHE"]["LOCKED_USERS"]);
-			if (CACHED_b_forum_user !== false)
-				$CACHE_MANAGER->cleanDir("b_forum_user");
+			return false;
 		}
-/***************** Cleaning cache/**********************************/
-		if (
-			array_key_exists("AVATAR", $fields)
-			&& is_array($fields["AVATAR"])
-			&& (
-				!array_key_exists("MODULE_ID", $fields["AVATAR"])
-				|| strlen($fields["AVATAR"]["MODULE_ID"]) <= 0
-			)
-		)
-			$fields["AVATAR"]["MODULE_ID"] = "forum";
 
-		CFile::SaveForDB($fields, "AVATAR", $strUploadDir);
-		$ID = false;
-		if (!array_key_exists("INTERESTS", $fields) || $DB->type != "oracle")
+		if (!array_key_exists("AVATAR", $fields))
 		{
-			static $connection = false;
-			static $helper = false;
-			if (!$connection)
+			$user = CUser::GetByID($fields["USER_ID"])->fetch();
+			if ($user["PERSONAL_PHOTO"] > 0)
 			{
-				$connection = \Bitrix\Main\Application::getConnection();
-				$helper = $connection->getSqlHelper();
-			}
-
-			$fields["LAST_VISIT"] = new \Bitrix\Main\DB\SqlExpression($helper->getCurrentDateTimeFunction());
-			$fields["DATE_REG"] = new \Bitrix\Main\DB\SqlExpression($helper->getCurrentDateTimeFunction());
-			$fields2 = array_diff_key($fields, array("USER_ID" => null, "DATE_REG" => null));
-
-			$merge = $helper->prepareMerge("b_forum_user", array("USER_ID"), $fields, $fields2);
-			if ($merge[0] != "")
-			{
-				$connection->query($merge[0]);
-				$ID = $connection->getInsertedId();
-				if (!$ID)
-					$ID = (($res = $DB->query("SELECT ID FROM b_forum_user where USER_ID=".intval($fields["USER_ID"]))->fetch()) ? $res["ID"] : false);
+				$fields["AVATAR"] = CFile::MakeFileArray($user["PERSONAL_PHOTO"]);
 			}
 		}
-		else
+		$result = \Bitrix\Forum\UserTable::add($fields);
+		if (!$result->isSuccess())
 		{
-			if (!is_set($fields, "LAST_VISIT"))
-				$fields["~LAST_VISIT"] = $DB->GetNowFunction();
-			if (!is_set($fields, "DATE_REG"))
-				$fields["~DATE_REG"] = $DB->GetNowFunction();
-			$ID = $DB->Add("b_forum_user", $fields, array("INTERESTS" => $fields["INTERESTS"]));
+			return false;
 		}
+		unset($GLOBALS["FORUM_CACHE"]["LOCKED_USERS"]);
+		global $CACHE_MANAGER;
+		$CACHE_MANAGER->cleanDir("b_forum_user");
 
-/***************** Event onAfterUserAdd ****************************/
-		foreach (GetModuleEvents("forum", "onAfterUserAdd", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, array($ID, $fields));
-/***************** /Event ******************************************/
-		return $ID;
+		$id = $result->getPrimary();
+		return $id["ID"];
 	}
 
 	public static function Update($ID, $arFields, $strUploadDir = false, $UpdateByUserId = false)
 	{
-		global $DB;
-		$ID = intVal($ID);
-		if ($ID <= 0):
-			return false;
-		endif;
-		$strUploadDir = ($strUploadDir === false ? "forum/avatar" : $strUploadDir);
-		$arFields1 = array();
-
-		foreach ($arFields as $key => $value)
+		if (!is_array($arFields) || empty($arFields))
 		{
-			if (substr($key, 0, 1)=="=")
-			{
-				$arFields1[substr($key, 1)] = $value;
-				unset($arFields[$key]);
-			}
+			return false;
 		}
 
-		if (!CForumUser::CheckFields("UPDATE", $arFields))
-			return false;
-
-		if (
-			array_key_exists("AVATAR", $arFields)
-			&& is_array($arFields["AVATAR"])
-			&& (
-				!array_key_exists("MODULE_ID", $arFields["AVATAR"])
-				|| strlen($arFields["AVATAR"]["MODULE_ID"]) <= 0
-			)
-		)
-			$arFields["AVATAR"]["MODULE_ID"] = "forum";
-
-		CFile::SaveForDB($arFields, "AVATAR", $strUploadDir);
-
-/***************** Event onBeforeUserUpdate ************************/
-		$profileID = null;
-		foreach (GetModuleEvents("forum", "onBeforeUserUpdate", true) as $arEvent)
+		if ($UpdateByUserId)
 		{
-			if ($UpdateByUserId)
+			if ($res = \Bitrix\Forum\UserTable::getList([
+				"select" => ["ID"],
+				"filter" => ["USER_ID" => $ID]
+			])->fetch())
 			{
-				if ($profileID == null)
-				{
-					$arProfile = CForumUser::GetByIDEx($ID);
-					$profileID = $arProfile['ID'];
-				}
+				$ID = intval($res["ID"]);
 			}
-			else
-				$profileID = $ID;
-
-			ExecuteModuleEventEx($arEvent, array($profileID, &$arFields));
 		}
-/***************** /Event ******************************************/
-		if (empty($arFields) && empty($arFields1))
+		if ($ID <= 0)
+		{
 			return false;
-/***************** Cleaning cache **********************************/
+		}
+
 		if (is_set($arFields, "ALLOW_POST"))
 		{
 			unset($GLOBALS["FORUM_CACHE"]["LOCKED_USERS"]);
 			if (CACHED_b_forum_user !== false)
 				$GLOBALS["CACHE_MANAGER"]->CleanDir("b_forum_user");
 		}
-/***************** Cleaning cache/**********************************/
-		$strUpdate = $DB->PrepareUpdate("b_forum_user", $arFields);
-
-		foreach ($arFields1 as $key => $value)
-		{
-			if (strLen($strUpdate)>0) $strUpdate .= ", ";
-			$strUpdate .= $key."=".$value." ";
-		}
-		if (!$UpdateByUserId)
-			$strSql = "UPDATE b_forum_user SET ".$strUpdate." WHERE ID = ".$ID;
-		else
-			$strSql = "UPDATE b_forum_user SET ".$strUpdate." WHERE USER_ID = ".$ID;
-		$arBinds = Array();
-
-		if (is_set($arFields, "INTERESTS"))
-			$arBinds["INTERESTS"] = $arFields["INTERESTS"];
-		$DB->QueryBind($strSql, $arBinds);
-/***************** Event onAfterUserUpdate *************************/
-		foreach(GetModuleEvents("forum", "onAfterUserUpdate", true) as $arEvent)
-		{
-			if ($UpdateByUserId)
-			{
-				if ($profileID == null)
-				{
-					$arProfile = CForumUser::GetByIDEx($ID);
-					$profileID = $arProfile['ID'];
-				}
-			}
-			else
-				$profileID = $ID;
-			ExecuteModuleEventEx($arEvent, array($profileID, $arFields));
-		}
-/***************** /Event ******************************************/
 		unset($GLOBALS["FORUM_CACHE"]["USER"]);
 		unset($GLOBALS["FORUM_CACHE"]["USER_ID"]);
 
+		$entity = \Bitrix\Forum\UserTable::getEntity();
+		$data = [];
+		foreach ($arFields as $k => $v)
+		{
+			$k = (strpos($k, "=") === 0 ? substr($k, 1) : $k);
+			if ($entity->hasField($k))
+			{
+				$field = $entity->getField($k);
+				$data[$k] = $v;
+				if ($field instanceof \Bitrix\Main\ORM\Fields\DateField)
+				{
+					$data[$k] = new \Bitrix\Main\Type\DateTime(\Bitrix\Main\Type\DateTime::isCorrect($v) ? $v : null);
+				}
+				else if (
+					!is_array($v)
+					&& preg_match("/{$k}\s*\\+\s*(\d+)/", $v, $matches)
+				)
+				{
+					$data[$k] = new \Bitrix\Main\DB\SqlExpression("?# + ".$matches[1], $k);
+				}
+			}
+		}
+
+		$result = UserTable::update($ID, $data);
+		if (!$result->isSuccess())
+		{
+			return false;
+		}
 		return $ID;
 	}
 
 	public static function Delete($ID)
 	{
-		global $DB;
-		$ID = intVal($ID);
-		if ($ID <= 0):
-			return false;
-		endif;
-/***************** Event onBeforeUserDelete ************************/
-		foreach(GetModuleEvents("forum", "onBeforeUserDelete", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, array(&$ID));
-/***************** /Event ******************************************/
-		$strSql = "SELECT F.ID FROM b_forum_user FU, b_file F WHERE FU.ID = ".$ID." AND FU.AVATAR = F.ID ";
-		$z = $DB->Query($strSql, false, "FILE: ".__FILE__." LINE:".__LINE__);
-		while ($zr = $z->Fetch())
-			CFile::Delete($zr["ID"]);
-
-		$arForumUser = CForumUser::GetByID($ID);
-		$res = $DB->Query("DELETE FROM b_forum_user WHERE ID = ".$ID, True);
-/***************** Event onAfterUserDelete *************************/
-		foreach(GetModuleEvents("forum", "onAfterUserDelete", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, array($ID));
-/***************** /Event ******************************************/
-		unset($GLOBALS["FORUM_CACHE"]["USER"][$ID]);
-		unset($GLOBALS["FORUM_CACHE"]["USER_ID"][$arForumUser["USER_ID"]]);
-		return $res;
+		$result = \Bitrix\Forum\UserTable::delete($ID);
+		unset($GLOBALS["FORUM_CACHE"]["USER"]);
+		unset($GLOBALS["FORUM_CACHE"]["USER_ID"]);
+		return $result->isSuccess();
 	}
 
 	public static function CountUsers($bActive = False, $arFilter = array())
@@ -572,26 +474,6 @@ class CAllForumUser
 		return False;
 	}
 
-	
-	/**
-	* <p>Возвращает массив параметров профайла, а так же сопутствующие параметры, по его коду <i>ID</i>. Метод статический.</p>
-	*
-	*
-	* @param int $intID  Код профайла.
-	*
-	* @param  $arAddParams = array() Массив параметров.
-	*
-	* @return array 
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cforumuser">Поля профайла</a>
-	* </li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cforumuser/getbyidex.php
-	* @author Bitrix
-	*/
 	public static function GetByIDEx($ID, $arAddParams = array())
 	{
 		global $DB;
@@ -606,7 +488,7 @@ class CAllForumUser
 			"	".$DB->DateToCharFunction("FU.DATE_REG", "SHORT")." as DATE_REG,\n ".
 			"	".$DB->DateToCharFunction("FU.LAST_VISIT", "FULL")." as LAST_VISIT,\n ".
 			"	U.PERSONAL_ICQ, U.PERSONAL_WWW, U.PERSONAL_PROFESSION,\n ".
-			"	U.PERSONAL_CITY, U.PERSONAL_COUNTRY, U.PERSONAL_PHOTO,\n ".
+			"	U.PERSONAL_CITY, U.PERSONAL_COUNTRY, U.EXTERNAL_AUTH_ID, U.PERSONAL_PHOTO,\n ".
 			"	U.PERSONAL_GENDER, FU.POINTS, FU.HIDE_FROM_ONLINE, FU.SUBSC_GROUP_MESSAGE, FU.SUBSC_GET_MY_MESSAGE,\n ".
 			"	".$DB->DateToCharFunction("U.PERSONAL_BIRTHDAY", "SHORT")." as PERSONAL_BIRTHDAY ".
 			(array_key_exists("SHOW_ABC", $arAddParams) || in_array("SHOW_ABC", $arAddParams) ?
@@ -677,7 +559,7 @@ class CAllForumUser
 				"	".$DB->DateToCharFunction("FU.LAST_VISIT", "FULL")." as LAST_VISIT,\n ".
 				"	U.EMAIL, U.NAME, U.SECOND_NAME, U.LAST_NAME, U.LOGIN, U.PERSONAL_BIRTHDATE,\n ".
 				"	U.PERSONAL_ICQ, U.PERSONAL_WWW, U.PERSONAL_PROFESSION,\n ".
-				"	U.PERSONAL_CITY, U.PERSONAL_COUNTRY, U.PERSONAL_PHOTO, U.PERSONAL_GENDER,\n ".
+				"	U.PERSONAL_CITY, U.PERSONAL_COUNTRY, U.EXTERNAL_AUTH_ID, U.PERSONAL_PHOTO, U.PERSONAL_GENDER,\n ".
 				"	".$DB->DateToCharFunction("U.PERSONAL_BIRTHDAY", "SHORT")." as PERSONAL_BIRTHDAY ".
 				(array_key_exists("SHOW_ABC", $arAddParams) || in_array("SHOW_ABC", $arAddParams) ?
 					", \n\t".CForumUser::GetFormattedNameFieldsForSelect(
@@ -1298,9 +1180,11 @@ class CAllForumUser
 	{
 		if ($arFields["RESULT"] &&
 			array_key_exists("PERSONAL_PHOTO", $arFields) && $arFields["PERSONAL_PHOTO"] > 0 &&
-			($user = CForumUser::GetByUSER_ID($arFields["ID"])) && $user)
+			($user = CForumUser::GetByUSER_ID($arFields["ID"])) && $user &&
+			($avatar = CFile::MakeFileArray($arFields["PERSONAL_PHOTO"])) &&
+			is_array($avatar))
 		{
-			self::Update($user["ID"], array( "AVATAR" => CFile::MakeFileArray($arFields["PERSONAL_PHOTO"]) ));
+			self::Update($user["ID"], array( "AVATAR" => $avatar + array("old_file" => $user["AVATAR"])));
 		}
 	}
 }
@@ -1404,37 +1288,6 @@ class CAllForumSubscribe
 		return $ID;
 	}
 
-	
-	/**
-	* <p>Удаляет подписку с кодом <i>ID</i>.  Метод статический.</p>
-	*
-	*
-	* @param int $intID  Код подписки, которую необходимо удалить.
-	*
-	* @return bool <p>Возвращает объект <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* if (CModule::IncludeModule("forum"))
-	* {
-	*    $db_res = CForumSubscribe::Delete(1);
-	*    ?&gt;&lt;pre&gt;&lt;b&gt;$db_res-&gt;AffectedRowsCount(): &lt;/b&gt;&lt;?print_r($db_res-&gt;AffectedRowsCount())?&gt;&lt;/pre&gt;&lt;?
-	* }
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li>Перед удалением подписки следует проверить возможность
-	* удаления методом <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/developer/cforumsubscribe/canuserdeletesubscribe.php">CForumSubscribe::CanUserDeleteSubscribe</a>
-	* </li></ul>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cforumsubscribe/delete.php
-	* @author Bitrix
-	*/
 	public static function Delete($ID)
 	{
 		global $DB;

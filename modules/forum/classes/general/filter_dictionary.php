@@ -7,20 +7,9 @@
 ##############################################
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CFilterDictionary</b> - класс для работы cо словарями нецензурных слов.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterdictionary/index.php
- * @author Bitrix
- */
 class CAllFilterDictionary
 {
-	public static function CheckFields($arFields = array(), $ACTION = "ADD")
+	function CheckFields($arFields = array(), $ACTION = "ADD")
 	{
 		global $APPLICATION, $DB;
 		$strError = "";
@@ -34,45 +23,7 @@ class CAllFilterDictionary
 		$APPLICATION->ThrowException($strError);
 		return false;
 	}
-	
-	/**
-	* <p>Создает новый словарь с параметрами, указанными в массиве <i>arFields</i>. Возвращает код созданного словаря. Метод нестатический.</p>
-	*
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]), где         
-	* <br><br><i>field</i> - название поля;          <br><i>value</i> - значение поля.         
-	* <br><br>       Поля перечислены в списке полей таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterdictionary">"Словарь"</a>.
-	* Обязательные поля должны быть заполнены.
-	*
-	* @return int <p>Возвращает код созданного словаря. В случае ошибки добавления
-	* возвращает False.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arFields = Array(
-	* 	TITLE        - &gt; $TITLE,
-	* 	TYPE      - &gt; $TYPE,     
-	* );
-	* $ID = CFilterDictionary::Add($arFields);
-	* if (IntVal($ID)&lt;=0)
-	*   echo "Error!";
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>поля таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterdictionary">"Словарь"</a>. </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterdictionary/add.php
-	* @author Bitrix
-	*/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 		$arFields["TITLE"] = trim($arFields["TITLE"]);
@@ -83,30 +34,7 @@ class CAllFilterDictionary
 			return $DB->Add("b_forum_dictionary", $arFields);
 		return false;
 	}
-	
-	/**
-	* <p>Изменяет параметры существующего словаря с кодом <i>ID</i> на параметры, указанные в массиве <i>arFields</i>. Возвращает код изменяемого словаря. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Код записи, параметры которой необходимо изменить.
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]), где         
-	* <br><br><i>field</i> - название поля;          <br><i>value</i> - значение поля.         
-	* <br><br>       Поля перечислены в списке полей таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterdictionary">"Словарь"</a>.
-	*
-	* @return int 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>поля таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterdictionary">"Словарь"</a> </li> </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterdictionary/update.php
-	* @author Bitrix
-	*/
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -126,21 +54,7 @@ class CAllFilterDictionary
 		}
 		return false;
 	}
-	
-	/**
-	* <p>Удаляет папку с кодом <i>ID</i>. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Код записи, которую необходимо удалить.
-	*
-	* @return bool <p>Возвращает True в случае успешного удаления, в противном случае
-	* возвращает False. </p><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterdictionary/delete.php
-	* @author Bitrix
-	*/
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB, $USER;
 
@@ -163,7 +77,7 @@ class CAllFilterDictionary
 		return $res;
 	}
 
-	public static function GetFilterOperation($key)
+	function GetFilterOperation($key)
 	{
 		$strNegative = "N";
 		if (substr($key, 0, 1)=="!")
@@ -210,20 +124,9 @@ class CAllFilterDictionary
 	}
 }
 
-
-/**
- * <b>CFilterLetter</b> - класс для работы cо словарями букв.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterletter/index.php
- * @author Bitrix
- */
 class CAllFilterLetter
 {
-	public static function CheckFields($arFields = array())
+	function CheckFields($arFields = array())
 	{
 		global $APPLICATION, $DB;
 		$strError = "";
@@ -238,29 +141,7 @@ class CAllFilterLetter
 		return false;
 	}
 
-	
-	/**
-	* <p>Создает новую запись с параметрами, указанными в массиве <i>arFields</i>. Возвращает код созданной записи. Метод нестатический.</p>
-	*
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]), где         
-	* <br><br><i>field</i> - название поля;          <br><i>value</i> - значение поля.         
-	* <br><br>       Поля перечислены в списке полей таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterletter">"Словарь транслита"</a>.
-	* Обязательные поля должны быть заполнены.
-	*
-	* @return int 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>таблица <a href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterletter">"Словарь
-	* транслита"</a> </li> </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterletter/add.php
-	* @author Bitrix
-	*/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB, $APPLICATION;
 		$arFields["LETTER"] = trim($arFields["LETTER"]);
@@ -278,30 +159,7 @@ class CAllFilterLetter
 		return false;
 	}
 
-	
-	/**
-	* <p>Изменяет параметры существующей записи с кодом <i>ID</i> на параметры, указанные в массиве <i>arFields</i>. Возвращает код изменяемой записи. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Код записи, параметры которой необходимо изменить.
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]), где         
-	* <br><br><i>field</i> - название поля;          <br><i>value</i> - значение поля.         
-	* <br><br>       Поля перечислены в списке полей таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterletter">"Словарь транслита"</a>.
-	*
-	* @return int 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>таблица <a href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterletter">"Словарь
-	* транслита"</a> </li> </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterletter/update.php
-	* @author Bitrix
-	*/
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB, $APPLICATION;
 		$ID = intval($ID);
@@ -345,27 +203,14 @@ class CAllFilterLetter
 		return false;
 	}
 
-	
-	/**
-	* <p>Удаляет запись с кодом <i>ID</i>. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  Код записи, которую необходимо удалить.
-	*
-	* @return bool <br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterletter/delete.php
-	* @author Bitrix
-	*/
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB, $USER;
 		$ID = IntVal($ID);
 		return $DB->Query("DELETE FROM b_forum_letter WHERE ID=".$ID);
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		$res = array();
 		$res = CFilterLetter::GetList(array(), array("ID"=>$ID));
@@ -376,20 +221,9 @@ class CAllFilterLetter
 	}
 }
 
-
-/**
- * <b>CFilterUnquotableWords</b> - класс для работы cо словарями слов.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterunquotablewords/index.php
- * @author Bitrix
- */
 class CAllFilterUnquotableWords
 {
-	public static function CheckPattern($sPattern, &$sError)
+	function CheckPattern($sPattern, &$sError)
 	{
 		$arError = array();
 		$sDelimiter = substr($sPattern, 0, 1);
@@ -419,7 +253,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	public static function CheckFields($action = "INSERT", $ID = false, $arFields = array())
+	function CheckFields($action = "INSERT", $ID = false, $arFields = array())
 	{
 		global $APPLICATION, $DB;
 		$arError = array();
@@ -471,30 +305,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	
-	/**
-	* <p>Создает новую запись с параметрами, указанными в массиве <i>arFields</i>. Возвращает код созданной записи. Метод нестатический.</p>
-	*
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]), где         
-	* <br><br><i>field</i> - название поля;          <br><i>value</i> - значение поля.         
-	* <br><br>       Поля перечислены в списке полей таблицы <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterunquotablewords">"Словарь слов"</a>.
-	* Обязательные поля должны быть заполнены.
-	*
-	* @return int 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li>таблица <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cfilterunquotablewords">"Словарь слов"</a> </li>
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cfilterunquotablewords/add.php
-	* @author Bitrix
-	*/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 		if(CACHED_b_forum_filter !== false)
@@ -515,7 +326,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -560,7 +371,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB, $USER;
 		$ID = IntVal($ID);
@@ -569,14 +380,14 @@ class CAllFilterUnquotableWords
 		return $DB->Query("DELETE FROM b_forum_filter WHERE ID=".$ID);
 	}
 
-	public static function GetById($ID)
+	function GetById($ID)
 	{
 		$ID = intval($ID);
 		$res = CFilterUnquotableWords::GetList(array(), array("ID"=>$ID));
 		return $res->Fetch();
 	}
 
-	public static function GetFilterOperation($key)
+	function GetFilterOperation($key)
 	{
 		$strNegative = "N";
 		if (substr($key, 0, 1)=="!")
@@ -622,7 +433,7 @@ class CAllFilterUnquotableWords
 		return array("FIELD"=>$key, "NEGATIVE"=>$strNegative, "OPERATION"=>$strOperation);
 	}
 
-	public static function GenPattern($ID=false, $DICTIONARY_ID_T=0)
+	function GenPattern($ID=false, $DICTIONARY_ID_T=0)
 	{
 		$DICTIONARY_ID_T = intVal($DICTIONARY_ID_T);
 		if (!$DICTIONARY_ID_T)
@@ -639,7 +450,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	public static function GenPatternAll($DICTIONARY_ID_W=0, $DICTIONARY_ID_T=0)
+	function GenPatternAll($DICTIONARY_ID_W=0, $DICTIONARY_ID_T=0)
 	{
 		$DICTIONARY_ID_W = intVal($DICTIONARY_ID_W);
 		$DICTIONARY_ID_T = intVal($DICTIONARY_ID_T);
@@ -661,7 +472,7 @@ class CAllFilterUnquotableWords
 		return false;
 	}
 
-	public static function CreatePattern($pattern="", $DICTIONARY_ID=0)
+	function CreatePattern($pattern="", $DICTIONARY_ID=0)
 	{
 		$res = "";
 		$NotWord = "\s.,;:!?\#\-\*\|\[\]\(\)";
@@ -759,12 +570,12 @@ class CAllFilterUnquotableWords
 	}
 
 
-	public static function FilterPerm()
+	function FilterPerm()
 	{
 		return CForumUser::IsAdmin();
 	}
 
-	public static function Filter($message)
+	function Filter($message)
 	{
 		global $USER, $DB, $CACHE_MANAGER, $APPLICATION;
 		static $arFilterPattern = array();

@@ -5,6 +5,7 @@ class CBPAllTrackingService
 	extends CBPRuntimeService
 {
 	protected $skipTypes = array();
+	protected $forcedModeWorkflows = array();
 	protected static $userGroupsCache = array();
 
 	public function Start(CBPRuntime $runtime = null)
@@ -16,7 +17,7 @@ class CBPAllTrackingService
 			$this->skipTypes = explode(',', $skipTypes);
 	}
 
-	static public function DeleteAllWorkflowTracking($workflowId)
+	public function DeleteAllWorkflowTracking($workflowId)
 	{
 		self::DeleteByWorkflow($workflowId);
 	}
@@ -26,7 +27,7 @@ class CBPAllTrackingService
 		global $DB;
 
 		$workflowId = trim($workflowId);
-		if (strlen($workflowId) <= 0)
+		if ($workflowId == '')
 			throw new Exception("workflowId");
 
 		$dbResult = $DB->Query(
@@ -64,7 +65,7 @@ class CBPAllTrackingService
 		return $r;
 	}
 
-	static public function LoadReport($workflowId)
+	public function LoadReport($workflowId)
 	{
 		$result = array();
 
@@ -86,13 +87,34 @@ class CBPAllTrackingService
 		global $DB;
 
 		$workflowId = trim($workflowId);
-		if (strlen($workflowId) <= 0)
+		if (!$workflowId)
+		{
 			throw new Exception("workflowId");
+		}
 
 		$DB->Query(
 			"DELETE FROM b_bp_tracking ".
 			"WHERE WORKFLOW_ID = '".$DB->ForSql($workflowId)."' ",
 			true
+		);
+	}
+
+	public function setCompletedByWorkflow($workflowId, $flag = true)
+	{
+		global $DB;
+
+		$workflowId = trim($workflowId);
+
+		if (!$workflowId)
+		{
+			throw new Exception("workflowId");
+		}
+
+		$value1 = $flag ? 'Y' : 'N';
+		$value2 = $DB->ForSql($workflowId, 32);
+
+		$DB->Query(
+			"UPDATE b_bp_tracking SET COMPLETED = '{$value1}' WHERE WORKFLOW_ID = '{$value2}'"
 		);
 	}
 
@@ -125,12 +147,12 @@ class CBPAllTrackingService
 		{
 			$user = $matches[2];
 
-			$l = strlen("user_");
-			if (substr($user, 0, $l) == "user_")
+			$l = mb_strlen("user_");
+			if (mb_substr($user, 0, $l) == "user_")
 			{
-				$result = CBPHelper::ConvertUserToPrintableForm(intval(substr($user, $l)));
+				$result = CBPHelper::ConvertUserToPrintableForm(intval(mb_substr($user, $l)));
 			}
-			elseif (strpos($user, 'group_') === 0)
+			elseif (mb_strpos($user, 'group_') === 0)
 			{
 				$result = htmlspecialcharsbx(CBPHelper::getExtendedGroupName($user));
 			}
@@ -147,7 +169,7 @@ class CBPAllTrackingService
 		}
 		elseif ($matches[1] == "group")
 		{
-			if (strpos($matches[2], 'group_') === 0)
+			if (mb_strpos($matches[2], 'group_') === 0)
 			{
 				$result = htmlspecialcharsbx(CBPHelper::getExtendedGroupName($matches[2]));
 			}
@@ -168,6 +190,160 @@ class CBPAllTrackingService
 		}
 		return $result;
 	}
+
+	public function setForcedMode($workflowId)
+	{
+		$this->forcedModeWorkflows[] = $workflowId;
+		return $this;
+	}
+
+	public function isForcedMode($workflowId)
+	{
+		return in_array($workflowId, $this->forcedModeWorkflows);
+	}
+
+	public function canWrite($type, $workflowId)
+	{
+		return (!in_array($type, $this->skipTypes) || $this->isForcedMode($workflowId));
+	}
+
+	public function Write($workflowId, $type, $actionName, $executionStatus, $executionResult, $actionTitle = "", $actionNote = "", $modifiedBy = 0)
+	{
+		global $DB;
+
+		if (!$this->canWrite($type, $workflowId))
+			return;
+
+		$workflowId = trim($workflowId);
+		if ($workflowId == '')
+			throw new Exception("workflowId");
+
+		$actionName = trim($actionName);
+		if ($actionName == '')
+			throw new Exception("actionName");
+
+		$type = intval($type);
+		$executionStatus = intval($executionStatus);
+		$executionResult = intval($executionResult);
+		$actionNote = trim($actionNote);
+
+		$modifiedBy = intval($modifiedBy);
+
+		$DB->Query(
+			"INSERT INTO b_bp_tracking(WORKFLOW_ID, TYPE, MODIFIED, ACTION_NAME, ACTION_TITLE, EXECUTION_STATUS, EXECUTION_RESULT, ACTION_NOTE, MODIFIED_BY) ".
+			"VALUES('".$DB->ForSql($workflowId, 32)."', ".intval($type).", ".$DB->CurrentTimeFunction().", '".$DB->ForSql($actionName, 128)."', '".$DB->ForSql($actionTitle, 255)."', ".intval($executionStatus).", ".intval($executionResult).", ".($actionNote <> '' ? "'".$DB->ForSql($actionNote)."'" : "NULL").", ".($modifiedBy > 0 ? $modifiedBy : "NULL").")"
+		);
+	}
+
+	public static function GetList($arOrder = array("ID" => "DESC"), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	{
+		global $DB;
+
+		if (count($arSelectFields) <= 0)
+			$arSelectFields = array("ID", "WORKFLOW_ID", "TYPE", "MODIFIED", "ACTION_NAME", "ACTION_TITLE", "EXECUTION_STATUS", "EXECUTION_RESULT", "ACTION_NOTE", "MODIFIED_BY");
+
+		static $arFields = array(
+			"ID" => Array("FIELD" => "T.ID", "TYPE" => "int"),
+			"WORKFLOW_ID" => Array("FIELD" => "T.WORKFLOW_ID", "TYPE" => "string"),
+			"TYPE" => Array("FIELD" => "T.TYPE", "TYPE" => "int"),
+			"ACTION_NAME" => Array("FIELD" => "T.ACTION_NAME", "TYPE" => "string"),
+			"ACTION_TITLE" => Array("FIELD" => "T.ACTION_TITLE", "TYPE" => "string"),
+			"MODIFIED" => Array("FIELD" => "T.MODIFIED", "TYPE" => "datetime"),
+			"EXECUTION_STATUS" => Array("FIELD" => "T.EXECUTION_STATUS", "TYPE" => "int"),
+			"EXECUTION_RESULT" => Array("FIELD" => "T.EXECUTION_RESULT", "TYPE" => "int"),
+			"ACTION_NOTE" => Array("FIELD" => "T.ACTION_NOTE", "TYPE" => "string"),
+			"MODIFIED_BY" => Array("FIELD" => "T.MODIFIED_BY", "TYPE" => "int"),
+		);
+
+		$arSqls = CBPHelper::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
+
+		$arSqls["SELECT"] = str_replace("%%_DISTINCT_%%", "", $arSqls["SELECT"]);
+
+		if (is_array($arGroupBy) && count($arGroupBy)==0)
+		{
+			$strSql =
+				"SELECT ".$arSqls["SELECT"]." ".
+				"FROM b_bp_tracking T ".
+				"	".$arSqls["FROM"]." ";
+			if ($arSqls["WHERE"] <> '')
+				$strSql .= "WHERE ".$arSqls["WHERE"]." ";
+			if ($arSqls["GROUPBY"] <> '')
+				$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+
+			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			if ($arRes = $dbRes->Fetch())
+				return $arRes["CNT"];
+			else
+				return False;
+		}
+
+		$strSql =
+			"SELECT ".$arSqls["SELECT"]." ".
+			"FROM b_bp_tracking T ".
+			"	".$arSqls["FROM"]." ";
+		if ($arSqls["WHERE"] <> '')
+			$strSql .= "WHERE ".$arSqls["WHERE"]." ";
+		if ($arSqls["GROUPBY"] <> '')
+			$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+		if ($arSqls["ORDERBY"] <> '')
+			$strSql .= "ORDER BY ".$arSqls["ORDERBY"]." ";
+
+		if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) <= 0)
+		{
+			$strSql_tmp =
+				"SELECT COUNT('x') as CNT ".
+				"FROM b_bp_tracking T ".
+				"	".$arSqls["FROM"]." ";
+			if ($arSqls["WHERE"] <> '')
+				$strSql_tmp .= "WHERE ".$arSqls["WHERE"]." ";
+			if ($arSqls["GROUPBY"] <> '')
+				$strSql_tmp .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+
+			$dbRes = $DB->Query($strSql_tmp, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			$cnt = 0;
+			if ($arSqls["GROUPBY"] == '')
+			{
+				if ($arRes = $dbRes->Fetch())
+					$cnt = $arRes["CNT"];
+			}
+			else
+			{
+				// only for MySQL
+				$cnt = $dbRes->SelectedRowsCount();
+			}
+
+			$dbRes = new CDBResult();
+			$dbRes->NavQuery($strSql, $cnt, $arNavStartParams);
+		}
+		else
+		{
+			if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) > 0)
+				$strSql .= "LIMIT ".intval($arNavStartParams["nTopCount"]);
+
+			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		}
+
+		return $dbRes;
+	}
+
+	public static function ClearOld($days = 0)
+	{
+		global $DB;
+
+		$days = intval($days);
+		if ($days <= 0)
+		{
+			$days = 90;
+		}
+
+		$strSql = "DELETE t FROM b_bp_tracking t".
+			" WHERE t.COMPLETED = 'Y' ".
+			" AND t.MODIFIED < DATE_SUB(NOW(), INTERVAL ".$days." DAY)".
+			" AND t.TYPE IN (0,1,2,3,4,5,7,8,9)";
+		$bSuccess = $DB->Query($strSql, true);
+
+		return $bSuccess;
+	}
 }
 
 class CBPTrackingType
@@ -179,5 +355,10 @@ class CBPTrackingType
 	const FaultActivity = 4;
 	const Custom = 5;
 	const Report = 6;
+	const AttachedEntity = 7;
+	const Trigger = 8;
+	const Error = 9;
 }
-?>
+
+//Compatibility
+class CBPTrackingService extends CBPAllTrackingService {}

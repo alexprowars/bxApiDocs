@@ -1,101 +1,38 @@
 <?
 namespace Sale\Handlers\Delivery\Spsr;
 
-use Bitrix\Main\Text\Encoding;
-use Bitrix\Sale\Location\ExternalServiceTable;
-use Bitrix\Sale\Location\ExternalTable;
+use Bitrix\Main\Error;
+use Bitrix\Main\Loader;
 use Bitrix\Sale\Result;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale\Location\LocationTable;
+use Bitrix\Sale\Location\Comparator\Mapper;
+use Bitrix\Sale\Location\Comparator\TmpTable;
+use Bitrix\Sale\Location\Comparator\MapResult;
 
 Loc::loadMessages(__FILE__);
 
-class Location
+Loader::registerAutoLoadClasses(
+	'sale',
+	array(
+		'Sale\Handlers\Delivery\Spsr\Replacement' => 'handlers/delivery/spsr/replacement/ru/replacement.php'
+	)
+);
+
+final class Location extends Mapper
 {
 	const EXTERNAL_SERVICE_CODE = 'SPSR';
+	const CSV_FILE_PATH = '/bitrix/modules/sale/handlers/delivery/spsr/location.csv';
 
-	public static function getInner($externalCode)
+	protected $tmpTable = null;
+	protected $serviceId = 0;
+
+	public function __construct()
 	{
-		if(strlen($externalCode) <= 0)
-			return 0;
-
-		$srvId = self::getExternalServiceId();
-
-		if($srvId <= 0)
-			return 0;
-
-		$res = ExternalTable::getList(array(
-			'filter' => array(
-				'=XML_ID' => $externalCode,
-				'=SERVICE_ID' => $srvId
-				)
-		));
-
-		if($loc = $res->fetch())
-			return $loc['ID'];
-
-		return 0;
+		$this->serviceId = $this->getExternalServiceId();
+		$this->tmpTable = new TmpTable($this->serviceId);
 	}
 
-	public static function getExternal($locationId)
-	{
-		if(strlen($locationId) <= 0)
-			return '';
-
-		$srvId = self::getExternalServiceId();
-
-		if($srvId <= 0)
-			return 0;
-
-		$res = LocationTable::getList(array(
-			'filter' => array(
-				array(
-					'LOGIC' => 'OR',
-					'=CODE' => $locationId,
-					'=ID' => $locationId
-				),
-				'=EXTERNAL.SERVICE_ID' => $srvId
-			),
-			'select' => array(
-				'ID', 'CODE',
-				'XML_ID' => 'EXTERNAL.XML_ID'
-			)
-		));
-
-		if($loc = $res->fetch())
-			return $loc['XML_ID'];
-
-		return '';
-	}
-
-	protected static function getExternalServiceId()
-	{
-		static $result = null;
-
-		if($result !== null)
-			return $result;
-
-		$res = ExternalServiceTable::getList(array(
-			'filter' => array('=CODE' => self::EXTERNAL_SERVICE_CODE)
-		));
-
-		if($srv = $res->fetch())
-		{
-			$result = $srv['ID'];
-			return $result;
-		}
-
-		$res = ExternalServiceTable::add(array('CODE' => self::EXTERNAL_SERVICE_CODE));
-
-		if($res->isSuccess())
-			$result =  $res->getId();
-		else
-			$result = 0;
-
-		return $result;
-	}
-
-	static public function getLocationsRequest($cityName = '', $countryName = '')
+	protected function getLocationsRequest($cityName = '', $countryName = '')
 	{
 		set_time_limit(0);
 		$result = new Result();
@@ -103,7 +40,7 @@ class Location
 		$requestData = '
 			<root xmlns="http://spsr.ru/webapi/Info/GetCities/1.0">
 				<p:Params Name="WAGetCities" Ver="1.0" xmlns:p="http://spsr.ru/webapi/WA/1.0" />
-				<GetCities CityName="'.strtolower($cityName).'" CountryName="'.strtolower($countryName).'" />
+				<GetCities CityName="'.mb_strtolower($cityName).'" CountryName="'.mb_strtolower($countryName).'" />
 			</root>';
 
 		$request = new Request();
@@ -130,7 +67,9 @@ class Location
 			}
 
 			if(!empty($cities))
-				self::setMap($cities);
+			{
+				$result->setData($cities);
+			}
 		}
 		else
 		{
@@ -140,249 +79,276 @@ class Location
 		return $result;
 	}
 
-	protected static function utfDecode($str)
+	protected function mapByNames($startId = 0, $timeout = 0)
 	{
-		if(strtolower(SITE_CHARSET) != 'utf-8')
-			$str = Encoding::convertEncoding($str, 'UTF-8', SITE_CHARSET);
+		$startTime = mktime(true);
+		$result = new MapResult;
+		\Bitrix\Sale\Location\Comparator::setVariants(Replacement::getVariants());
+		$dbRes = $this->tmpTable->getUnmappedLocations($startId);
 
-		return $str;
-	}
-
-	protected static function setMap(array $cities)
-	{
-		if(empty($cities))
-			return;
-
-		$srvId = self::getExternalServiceId();
-
-		$res = ExternalTable::getList(array(
-			'filter' => array(
-				'=XML_ID' => array_keys($cities),
-				'=SERVICE_ID' => $srvId
-			)
-		));
-
-		while($map = $res->fetch())
-			unset($cities[$map['XML_ID']]);
-
-		if(empty($cities))
-			return;
-
-		foreach($cities as $xmlId => $city)
+		while($loc = $dbRes->fetch())
 		{
-			$locId = self::getLocationIdByNames($city['CityName'], $city['RegionName']);
+			/**
+			 * Extract city name and subregion name from
+			 * Abramtsevo (Balashihinskiy)
+			 * Abramtsevo (Dmitrovskiy,  141880)
+			 * Aborino
+			 */
+			$matches = array();
+			preg_match('/([^(]*)(\(([^\,\s]*)(\s*\,\s*\d*){0,1}\)){0,1}/i', $loc['CityName'], $matches);
 
-			if($locId > 0)
+			if(empty($matches[1]))
 			{
-				ExternalTable::add(array(
-					'SERVICE_ID' => $srvId,
-					'LOCATION_ID' => $locId,
-					'XML_ID' => $city['City_ID']."|".$city['City_owner_ID']
-				));
+				if($this->collectNotFound)
+					$result->addNotFound($loc['XML_ID'], $loc['CityName'].' : '.$loc['RegionName']);
+
+				continue;
 			}
 
-			unset($cities[$xmlId]);
-		}
-	}
+			$cityName = !empty($matches[1]) ? trim($matches[1]) : '';
+			$subRegionName = !empty($matches[3]) ? trim($matches[3]) : '';
+			$locId = 0;
 
-	protected static function getLocationIdByNames($cityName, $regionName)
-	{
-		$regionName1 = ToUpper(str_replace('.', '', trim($regionName)));
-		$regionName2 = '';
-		$regionName3 = '';
-
-		$resp = Loc::getMessage("SALE_DLV_SRV_SPSR_RESP");
-		$republic = Loc::getMessage("SALE_DLV_SRV_SPSR_REPUBLIC");
-		$aut = Loc::getMessage("SALE_DLV_SRV_SPSR_AUT");
-		$autonomous = Loc::getMessage("SALE_DLV_SRV_SPSR_AUTONOMOUS");
-
-		if($regionName == Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_CHUV_1'))
-		{
-			$regionName1 = Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_CHUV_2');
-		}
-		elseif($regionName == Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_KR_1'))
-		{
-			$regionName1 = Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_KR_2');
-		}
-		elseif($regionName == Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_HM_1'))
-		{
-			$regionName1 = Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_HM_2');
-		}
-		elseif($regionName == Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_EAO_1'))
-		{
-			$regionName1 = Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_EX_EAO_2');
-		}
-		elseif(strpos($regionName1, $resp))
-		{
-			$regionName2 = ToUpper(preg_replace('/(.*)\s('.$resp.')$/i'.BX_UTF_PCRE_MODIFIER, $republic.' $1', $regionName1));
-			$regionName3 = ToUpper(preg_replace('/(.*)\s('.$resp.')$/i'.BX_UTF_PCRE_MODIFIER, '$1 '.$republic, $regionName1));
-		}
-		elseif(strpos($regionName1, $aut))
-		{
-			$regionName2 = ToUpper(preg_replace('/(.*)\s('.$aut.')\s(.*)$/i'.BX_UTF_PCRE_MODIFIER, '$1 '.$autonomous.' $3', $regionName1));
-		}
-
-		$ids = array();
-
-		$cityName = ToUpper(
-			trim(
-				preg_replace('/\(.*\)/i'.BX_UTF_PCRE_MODIFIER, '', $cityName)
-			)
-		);
-
-		$res = LocationTable::getList(array(
-			'filter' => array(
-				'=NAME.NAME_UPPER' => ToUpper($cityName),
-				'=NAME.LANGUAGE_ID' => LANGUAGE_ID,
-				'=PARENTS.NAME.LANGUAGE_ID' => LANGUAGE_ID
-			),
-			'select' => array(
-				'ID',
-				'NAME_UPPER' => 'NAME.NAME_UPPER',
-				'PARENTS_TYPE_CODE' => 'PARENTS.TYPE.CODE' ,
-				'PARENTS_NAME_UPPER' => 'PARENTS.NAME.NAME_UPPER'
-			)
-		));
-
-		while($loc = $res->fetch())
-		{
-			if(!in_array($loc['ID'], $ids))
-				$ids[] = $loc['ID'];
-
-			if($loc['PARENTS_TYPE_CODE'] == 'REGION')
+			if($cityName <> '')
 			{
-				if(
-					strpos($loc['PARENTS_NAME_UPPER'], ToUpper($regionName1)) !== false
-					|| (strlen($regionName2) > 0 && strpos($loc['PARENTS_NAME_UPPER'], ToUpper($regionName2)) !== false)
-					|| (strlen($regionName3) > 0 && strpos($loc['PARENTS_NAME_UPPER'], ToUpper($regionName3)) !== false)
-				)
+				$locId = self::getLocationIdByNames($cityName, "", $subRegionName, $loc['RegionName'], "", true);
+
+				if(intval($locId) <= 0)
+					$locId = self::getLocationIdByNames($cityName, "", $subRegionName, $loc['RegionName'], "", false);
+			}
+
+			if(intval($locId) > 0)
+			{
+				$res = self::setExternalLocation2($this->serviceId, $locId, $loc['XML_ID'], false);
+
+				if($res->isSuccess())
 				{
-					return $loc['ID'];
+					if($this->collectMapped)
+						$result->addMapped($loc['XML_ID'], $loc['CityName'].', '.$loc['RegionName'], $locId);
+
+					$this->tmpTable->markMapped($locId, $loc['XML_ID']);
+				}
+				elseif($this->collectDuplicated)
+				{
+					foreach($res->getErrors() as $error)
+					{
+						if($error->getCode() == 'EXTERNAL_LOCATION_EXISTS')
+						{
+							$result->addDuplicated($loc['XML_ID'], $loc['CityName'].':'.$loc['RegionName'], $locId);
+							break;
+						}
+					}
 				}
 			}
+			else
+			{
+				if($this->collectNotFound)
+					$result->addNotFound($loc['XML_ID'], $loc['CityName'].':'.$loc['RegionName']);
+			}
+
+			$result->setLastProcessedId($loc['ID']);
+
+			if($timeout > 0 && (mktime(true)-$startTime) >= $timeout)
+				return $result;
 		}
 
-		return current($ids);
-	}
-
-	public static function exportToCsv($path)
-	{
-		set_time_limit(0);
-		$srvId = self::getExternalServiceId();
-
-		if($srvId <= 0)
-			return false;
-
-		$res = LocationTable::getList(array(
-			'filter' => array(
-				'=EXTERNAL.SERVICE_ID' => $srvId
-			),
-			'select' => array(
-				'CODE',
-				'XML_ID' => 'EXTERNAL.XML_ID'
-			)
-		));
-
-		$content = '';
-
-		while($row = $res->fetch())
-			if(strlen($row['CODE']) > 0)
-				$content .= $row['CODE'].";".$row['XML_ID']."\n";
-
-
-		return file_put_contents($path, $content);
-	}
-
-	public static function importFromCsv($path)
-	{
-		set_time_limit(0);
-		$imported  = 0;
-
-		$content = file_get_contents($path);
-
-		if($content === false)
-			return false;
-
-		$lines = explode("\n", $content);
-
-		if(!is_array($lines))
-			return false;
-
-		$srvId = self::getExternalServiceId();
-
-		if($srvId <= 0)
-			return false;
-
-		foreach($lines as $line)
-		{
-			$codes = explode(';', $line);
-
-			if(!is_array($codes) || count($codes) != 2)
-				continue;
-
-			$res = LocationTable::getList(array(
-				'filter' => array('=CODE' => $codes[0]),
-				'select' => array('ID')
-			));
-
-			if(!$loc = $res->fetch())
-				continue;
-
-			$res = ExternalTable::add(array(
-				'SERVICE_ID' => $srvId,
-				'LOCATION_ID' => $loc['ID'],
-				'XML_ID' => $codes[1]
-			));
-
-			if($res->isSuccess())
-				$imported++;
-		}
-
-		return $imported;
+		return $result;
 	}
 
 	public static function install()
 	{
-		$imported = self::importFromCsv($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/handlers/delivery/spsr/location.csv');
+		return new Result();
+	}
 
-		if(intval($imported) <= 0)
+	public function mapStepless()
+	{
+		set_time_limit(0);
+		$result = new Result();
+
+		$res = $this->getLocationsRequest('', Loc::getMessage('SALE_DLV_SRV_SPSR_RUSSIA'));
+
+		if(!$res->isSuccess())
+			return $res;
+
+		$locationsData = $res->getData();
+		$locationsCount = count($locationsData);
+
+		if($this->tmpTable->isExist())
+			$this->tmpTable->drop();
+
+		$this->tmpTable->create($locationsData);
+		$tmpImported = $this->tmpTable->saveData($locationsData);
+		unset($locationsData);
+
+		if($tmpImported <= 0)
 		{
-			$res = self::getLocationsRequest('', Loc::getMessage('SALE_DLV_SRV_SPSR_RUSSIA'));
-
-			if(!$res->isSuccess())
-			{
-				$eventLog = new \CEventLog;
-				$eventLog->Add(array(
-					"SEVERITY" => $eventLog::SEVERITY_ERROR,
-					"AUDIT_TYPE_ID" => "SALE_DELIVERY_HANDLER_SPSR_LOCATION_INSTALL_ERROR",
-					"MODULE_ID" => "sale",
-					"ITEM_ID" => 'LOCATION',
-					"DESCRIPTION" => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_INST_ERROR').": ".implode('. ', $res->getErrorMessages()),
-				));
-			}
+			$result->addError(new Error(Loc::getMessage('SALE_DLV_SRV_SPSR_TMP_TBL_ERROR')));
+			return $result;
 		}
+
+		$this->importFromCsv($_SERVER["DOCUMENT_ROOT"].self::CSV_FILE_PATH);
+		$this->fillNormalizedTable();
+		$this->tmpTable->markAllMapped();
+		$mapRes = $this->mapByNames();
+		$mapRes->setSupportedCount($locationsCount);
+		$this->tmpTable->drop();
+		$result->setData(array('MAP_RESULT' => $mapRes));
+		return $result;
 	}
 
-	public static function unInstall()
+	public function map($stage, $step = '', $progress = 0, $timeout = 0)
 	{
-		$con = \Bitrix\Main\Application::getConnection();
-		$sqlHelper = $con->getSqlHelper();
-		$srvId = $sqlHelper->forSql(self::getExternalServiceId());
-		$con->queryExecute("DELETE FROM b_sale_loc_ext WHERE SERVICE_ID=".$srvId);
-		ExternalServiceTable::delete($srvId);
-		return true;
+		$result = new Result();
+		set_time_limit(0);
+
+		switch($stage)
+		{
+			case 'start':
+
+				$res = self::getLocationsRequest('', Loc::getMessage('SALE_DLV_SRV_SPSR_RUSSIA'));
+
+				if(!$res->isSuccess())
+					return $res;
+
+				$data = $res->getData();
+
+				if($this->tmpTable->isExist())
+					$this->tmpTable->drop();
+
+				$this->tmpTable->create($data);
+				$tmpImported = $this->tmpTable->saveData($data);
+
+				if($tmpImported <= 0)
+				{
+					$result->addError(new Error(Loc::getMessage('SALE_DLV_SRV_SPSR_TMP_TBL_ERROR')));
+					return $result;
+				}
+
+				$_SESSION['SALE_HNDL_SPSR_DLV_TMP_MAX_ID'] = $this->tmpTable->getMaxId();
+
+				$res = \Bitrix\Sale\Location\LocationTable::getList(array(
+					'runtime' => array(new \Bitrix\Main\Entity\ExpressionField('MAX', 'MAX(ID)')),
+					'select' => array('MAX')
+				));
+
+				if($loc = $res->fetch())
+					$_SESSION['SALE_HNDL_SPSR_DLV_LOC_MAX_ID'] = $loc['MAX'];
+				else
+					$_SESSION['SALE_HNDL_SPSR_DLV_LOC_MAX_ID'] = 0;
+
+				$result->setData(array(
+					'STAGE' => 'import_from_csv',
+					'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_CSV'),
+					'PROGRESS' => $progress + 5
+				));
+
+				break;
+
+			case 'import_from_csv':
+
+				$this->importFromCsv($_SERVER["DOCUMENT_ROOT"].self::CSV_FILE_PATH);
+
+				$result->setData(array(
+					'STAGE' => 'fill_normalized_table',
+					'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_NORM'),
+					'PROGRESS' => $progress + 5
+				));
+
+				break;
+
+			case 'fill_normalized_table':
+
+				$lastId = self::fillNormalizedTable($step, $timeout);
+				$progress = $this->calculateProgress($lastId, $_SESSION['SALE_HNDL_SPSR_DLV_LOC_MAX_ID'], $progress, 11, 30);
+
+				if($lastId > 0 && $lastId <  $_SESSION['SALE_HNDL_SPSR_DLV_LOC_MAX_ID'])
+				{
+					$result->setData(array(
+						'STAGE' => 'fill_normalized_table',
+						'STEP' => $lastId,
+						'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_NORM'),
+						'PROGRESS' => $progress
+					));
+				}
+				else
+				{
+					unset($_SESSION['SALE_HNDL_SPSR_DLV_LOC_MAX_ID']);
+
+					$result->setData(array(
+						'STAGE' => 'mark_unmapped',
+						'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_CHECK_MAPPED'),
+						'PROGRESS' => 30
+					));
+				}
+				break;
+
+			case 'mark_unmapped':
+
+				$this->tmpTable->markAllMapped();
+				$result->setData(array(
+					'STAGE' => 'map_by_names',
+					'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_MAP_BY_NAME'),
+					'PROGRESS' => $progress + 5
+				));
+				break;
+
+			case 'map_by_names':
+
+				$mapResult = $this->mapByNames($step, $timeout);
+				$lastProcessedId = $mapResult->getLastProcessedId();
+
+				if($lastProcessedId > 0 && $lastProcessedId < $_SESSION['SALE_HNDL_SPSR_DLV_TMP_MAX_ID'])
+				{
+					$progress = $this->calculateProgress($lastProcessedId, $_SESSION['SALE_HNDL_SPSR_DLV_TMP_MAX_ID'], $progress, 36, 100);
+
+					$result->setData(array(
+						'STAGE' => 'map_by_names',
+						'STEP' => $lastProcessedId,
+						'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_MAP_BY_NAME'),
+						'PROGRESS' => $progress,
+						'MAP_RESULT' => $mapResult
+					));
+				}
+				else
+				{
+					unset($_SESSION['SALE_HNDL_SPSR_DLV_TMP_MAX_ID']);
+					$this->tmpTable->drop();
+
+					$result->setData(array(
+						'STAGE' => 'finish',
+						'MESSAGE' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_MAP_FINISHED'),
+						'PROGRESS' => 100,
+						'MAP_RESULT' => $mapResult
+					));
+				}
+
+				break;
+
+			default:
+				$result->addError(new Error(Loc::getMessage('SALE_DLV_SRV_SPSR_LOC_MAP_STAGE_ERROR')));
+		}
+
+		return $result;
 	}
 
-	public static function isInstalled()
+	protected function calculateProgress($id, $maxId, $progress, $minProgress, $maxProgress)
 	{
-		$res = ExternalServiceTable::getList(array(
-			'filter' => array('=CODE' => self::EXTERNAL_SERVICE_CODE)
-		));
+		if($maxId <= 0)
+		{
+			$progress = $progress < $maxProgress ? ($progress + 1) : $progress;
+		}
+		elseif($id >= $maxId)
+		{
+			$progress = $maxProgress;
+		}
+		else
+		{
+			$progress = $minProgress + round(($maxProgress-$minProgress) * $id / $maxId);
 
-		if($res->fetch())
-			return true;
+			if($progress >= $maxProgress && $id < $maxId)
+				$progress--;
+		}
 
-		return false;
+		return $progress;
 	}
-
 }

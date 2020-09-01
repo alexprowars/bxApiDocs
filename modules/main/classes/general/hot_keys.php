@@ -655,7 +655,7 @@ class CHotKeys
 		return $retHtml;
 	}
 
-	static public function PrintJSExecs($execs, $controlName = "", $scriptTags = true, $checkHK = false)
+	public function PrintJSExecs($execs, $controlName = "", $scriptTags = true, $checkHK = false)
 	{
 		$retStr = "";
 
@@ -912,7 +912,7 @@ class CHotKeys
 		return !(strcmp(intval($keyCode), $keyCode));
 	}
 
-	static public function PrintPhpToJSVars()
+	public function PrintPhpToJSVars()
 	{
 		if(!self::$optUse)
 			return false;
@@ -944,7 +944,7 @@ class CHotKeys
 		return $htmlOut;
 	}
 
-	static public function IsActive()
+	public function IsActive()
 	{
 		return self::$optUse;
 	}

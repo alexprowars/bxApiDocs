@@ -14,9 +14,8 @@ abstract class CBPRuntimeService
 			$this->SetRuntime($runtime);
 	}
 
-	static public function Stop()
+	public function Stop()
 	{
 		
 	}
 }
-?>

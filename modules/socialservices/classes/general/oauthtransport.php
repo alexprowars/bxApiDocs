@@ -108,15 +108,15 @@ class CSocServOAuthTransport
 		$accessToken = '';
 		if($this->userId > 0)
 		{
-			$dbSocservUser = CSocServAuthDB::GetList(
-				array(),
-				array(
-					'USER_ID' => $this->userId,
-					"EXTERNAL_AUTH_ID" => static::SERVICE_ID
-				), false, false, array("USER_ID", "XML_ID", "OATOKEN", "OATOKEN_EXPIRES", "REFRESH_TOKEN", "PERMISSIONS")
-			);
+			$dbSocservUser = \Bitrix\Socialservices\UserTable::getList([
+				'filter' => [
+					'=USER_ID' => $this->userId,
+					"=EXTERNAL_AUTH_ID" => static::SERVICE_ID
+				],
+				'select' => ["USER_ID", "XML_ID", "OATOKEN", "OATOKEN_EXPIRES", "REFRESH_TOKEN", "PERMISSIONS"]
+			]);
 
-			$accessToken = $dbSocservUser->Fetch();
+			$accessToken = $dbSocservUser->fetch();
 		}
 		return $accessToken;
 	}
@@ -143,5 +143,10 @@ class CSocServOAuthTransport
 	public function checkAccessToken()
 	{
 		return (($this->accessTokenExpires - 30) < time()) ? false : true;
+	}
+
+	public function getResult()
+	{
+		return array();
 	}
 }

@@ -48,7 +48,6 @@ class Up extends \Bitrix\Landing\Hook\Page
 			return;
 		}
 
-		Manager::setPageView('BodyClass', 'g-upper-show');
 		$assets = Assets\Manager::getInstance();
 		$assets->addAsset('landing_upper');
 	}

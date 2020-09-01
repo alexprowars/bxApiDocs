@@ -6,17 +6,6 @@ use Bitrix\Main,
 
 Loc::loadMessages(__FILE__);
 
-
-/**
- * <b>CCatalogDiscountCoupon</b> - класс для работы с купонами скидок.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/index.php
- * @author Bitrix
- */
 class CAllCatalogDiscountCoupon
 {
 	const TYPE_ONE_TIME = 'Y';
@@ -33,90 +22,16 @@ class CAllCatalogDiscountCoupon
 	* @param bool $boolFull			Get full description.
 	* @return array
 	*/
-	
-	/**
-	* <p>Возвращает массив имеющихся на сайте типов купонов. Нестатический метод.</p>
-	*
-	*
-	* @param boolean $boolFull = false Параметр определяет в каком виде возвращать массив типов
-	* купонов: в кратком (<i>false</i>) или в развернутом (<i>true</i>).
-	*
-	* @return array <p>Возвращает массив типов купонов:</p><ul> <li>если <b>$boolFull == false</b>, то
-	* вернется массив, содержащий типы купонов в качестве элементов
-	* массива;<br><br> </li>   <li>если <b>$boolFull == true</b>, типы купонов будут ключами
-	* массива, а значениями - названия типов:  <ul> [Y] =&gt; Купон на одну
-	* позицию заказа <br> [O] =&gt; Купон на один заказ <br> [N] =&gt; Многоразовый
-	* купон</ul> </li> </ul><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/getcouponttypes.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 15.0.7  ->  \Bitrix\Catalog\DiscountCouponTable::getCouponTypes
-	*/
 	public static function GetCoupontTypes($boolFull = false)
 	{
 		return Catalog\DiscountCouponTable::getCouponTypes($boolFull);
 	}
 
-	
-	/**
-	* <p>Метод служит для проверки (и корректировки, если это возможно) параметров, переданных в методы <a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/add.php">CCatalogDiscountCoupon::Add</a> и <a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/update.php">CCatalogDiscountCoupon::Update</a>. Нестатический метод.</p>
-	*
-	*
-	* @param string $ACTION  указывает, для какого метода идет проверка. Возможные значения: 
-	* 			<br><ul> <li> <b>ADD</b> - для метода <a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/add.php">CCatalogDiscountCoupon::Add</a>;</li>
-	* 				<li> <b>UPDATE</b> - для метода <a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/update.php">CCatalogDiscountCoupon::Update</a>.</li>
-	* 			</ul>
-	*
-	* @param array &$arFields  Ассоциативный массив параметров купона. Массив передается по
-	* ссылке и его значения могут быть изменены методом. 			<br>
-	* 			Допустимые ключи:  			<ul> <li> <b>DISCOUNT_ID</b> - код (ID) скидки;</li> 				<li>
-	* <b>ACTIVE</b> - флаг активности купона (Y/N);</li> 				<li> <b>ONE_TIME</b> - флаг
-	* однократного использования купона (Y|N);</li> 				<li> <b>COUPON</b> - код
-	* купона;</li> 				<li> <b>DATE_APPLY</b> - дата применения купона;</li> 				<li>
-	* <b>DESCRIPTION</b> - комментарий.</li> 			</ul>
-	*
-	* @param int $ID = 0 код (ID) купона (только для CCatalogDiscountCoupon::Update).
-	*
-	* @return boolean <p> В случае корректности переданных параметров возвращает true,
-	* иначе - false. Если метод вернул false, с помощью $APPLICATION-&gt;GetException() можно
-	* получить текст ошибок.</p><p><b>Обязательные проверки</b></p><ul> <li>для
-	* <b>CCatalogDiscountCoupon::Add</b>  	<ul> <li>поле DISCOUNT_ID присутствует и содержит код
-	* (ID) существующей скидки;</li> 		<li>если поле ACTIVE не существует или не
-	* равно N, ему присваивается значение Y;</li> 		<li>если поле ONE_TIME не
-	* существует или не равно N, ему присваивается значение Y;</li> 		<li>поле
-	* COUPON существует и содержит уникальный код, отсутствующий в списке
-	* купонов;</li> 		<li>если поле DATE_APPLY не существует или не содержит
-	* корректную дату, ему присваивается значение false.</li> 	</ul> <br> </li>
-	* 	<li>для <b>CCatalogDiscountCoupon::Update</b>  	<ul> <li>если поле DISCOUNT_ID присутствует,
-	* оно должно содержать код (ID) существующей скидки;</li> 		<li>если поле
-	* ACTIVE существует и не равно N, ему присваивается значение Y;</li>
-	* 		<li>если поле ONE_TIME существует и не равно N, ему присваивается
-	* значение Y;</li> 		<li>если поле COUPON существует, оно содержит
-	* уникальный код, заданный только для этого купона (с таким ID);</li>
-	* 		<li>если поле DATE_APPLY существует и содержит некорректную дату, ему
-	* присваивается значение false.</li> 	</ul> </li> </ul>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_help/catalog/fields.php">Структура таблицы</a></li>
-	* 	<li><a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/add.php">CCatalogDiscountCoupon::Add</a></li>
-	* 	<li><a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/update.php">CCatalogDiscountCoupon::Update</a></li>
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/checkfields.php
-	* @author Bitrix
-	*/
 	public static function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		global $DB, $APPLICATION, $USER;
 
-		$ACTION = strtoupper($ACTION);
+		$ACTION = mb_strtoupper($ACTION);
 		if ('UPDATE' != $ACTION && 'ADD' != $ACTION)
 			return false;
 
@@ -149,7 +64,7 @@ class CAllCatalogDiscountCoupon
 			return false;
 		}
 
-		if ((is_set($arFields, "COUPON") || $ACTION=="ADD") && strlen($arFields["COUPON"]) <= 0)
+		if ((is_set($arFields, "COUPON") || $ACTION=="ADD") && $arFields["COUPON"] == '')
 		{
 			$APPLICATION->ThrowException(Loc::getMessage("KGDC_EMPTY_COUPON"), "EMPTY_COUPON");
 			return false;
@@ -157,7 +72,7 @@ class CAllCatalogDiscountCoupon
 		elseif(is_set($arFields, "COUPON"))
 		{
 			$currentId = ($ACTION == 'UPDATE' ? $ID : 0);
-			$arFields['COUPON'] = substr($arFields['COUPON'], 0, 32);
+			$arFields['COUPON'] = mb_substr($arFields['COUPON'], 0, 32);
 			if (self::$existCouponsManager)
 			{
 				$existCoupon = DiscountCouponsManager::isExist($arFields['COUPON']);
@@ -220,26 +135,28 @@ class CAllCatalogDiscountCoupon
 	}
 
 	/**
+	 * @deprecated deprecated since catalog 17.6.7
+	 * @see \Bitrix\Catalog\DiscountCouponTable::deleteByDiscount()
+	 *
+	 * @param int $ID
+	 * @param bool $bAffectDataFile
+	 * @return bool
+	 */
+	public static function DeleteByDiscountID($ID, $bAffectDataFile = true)
+	{
+		$ID = (int)$ID;
+		if ($ID <= 0)
+			return false;
+		Catalog\DiscountCouponTable::deleteByDiscount($ID);
+		return true;
+	}
+
+	/**
 	* @deprecated deprecated since catalog 15.0.4
 	* @see \Bitrix\Sale\DiscountCouponsManager::add
 	*
 	* @param string $coupon			Coupon code.
 	* @return bool
-	*/
-	
-	/**
-	* <p>Метод добавляет код купона <i> coupon</i> в массив доступных для получения скидки купонов текущего покупателя. Система вычисляет минимальную для данного покупателя цену товара с учётом всех его скидок и купонов. Нестатический метод.</p>
-	*
-	*
-	* @param string $coupon  Код купона.
-	*
-	* @return bool <p>Метод возвращает <i>true</i> в случае успешного добавления кода
-	* купона и <i>false</i> в случае ошибки.</p><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/setcoupon.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 15.0.4  ->  \Bitrix\Sale\DiscountCouponsManager::add
 	*/
 	public static function SetCoupon($coupon)
 	{
@@ -280,18 +197,6 @@ class CAllCatalogDiscountCoupon
 	/**
 	* @deprecated deprecated since catalog 15.0.4
 	* @see \Bitrix\Sale\DiscountCouponsManager::get
-	*/
-	
-	/**
-	* <p>Метод возвращает массив доступных для получения скидки купонов текущего покупателя. Система вычисляет минимальную для данного покупателя цену товара с учётом всех его скидок и купонов. Нестатический метод.</p>
-	*
-	*
-	* @return array <p>Метод возвращает массив купонов текущего пользователя.</p><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/getcoupons.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 15.0.4  ->  \Bitrix\Sale\DiscountCouponsManager::get
 	*/
 	public static function GetCoupons()
 	{
@@ -356,18 +261,6 @@ class CAllCatalogDiscountCoupon
 	/**
 	* @deprecated deprecated since catalog 15.0.4
 	* @see \Bitrix\Sale\DiscountCouponsManager::clear
-	*/
-	
-	/**
-	* <p>Метод очищает массив купонов, введенных текущим покупателем. Система вычисляет минимальную для данного покупателя цену товара с учётом всех его скидок и купонов. Нестатический метод.</p>
-	*
-	*
-	* @return void <p>Метод не возвращает значений.</p><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/clearcoupon.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 15.0.4  ->  \Bitrix\Sale\DiscountCouponsManager::clear
 	*/
 	public static function ClearCoupon()
 	{
@@ -440,7 +333,7 @@ class CAllCatalogDiscountCoupon
 	* @see \Bitrix\Sale\DiscountCouponsManager::get
 	*
 	* @param int $intUserID			User id.
-	* @return bool
+	* @return bool|array
 	*/
 	public static function GetCouponsByManage($intUserID)
 	{
@@ -739,20 +632,6 @@ class CAllCatalogDiscountCoupon
 	*
 	* @param string $strCoupon			Coupon code.
 	* @return bool
-	*/
-	
-	/**
-	* <p>Метод проверяет существование купона. Нестатический метод.</p>
-	*
-	*
-	* @param string $strCoupon  Код купона.
-	*
-	* @return bool <p> В случае наличия купона возвращает true, иначе - false.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogdiscountcoupon/isexistcoupon.php
-	* @author Bitrix
-	* @deprecated deprecated since catalog 15.0.4  ->  \Bitrix\Sale\DiscountCouponsManager::isExist
 	*/
 	public static function IsExistCoupon($strCoupon)
 	{

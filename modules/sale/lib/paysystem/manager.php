@@ -191,9 +191,9 @@ final class Manager
 	 */
 	public static function getFolderFromClassName($className)
 	{
-		$pos = strrpos($className, '\\');
+		$pos = mb_strrpos($className, '\\');
 		if ($pos !== false)
-			$className = substr($className, $pos + 1);
+			$className = mb_substr($className, $pos + 1);
 
 		$folder = str_replace('Handler', '', $className);
 		$folder = self::sanitize($folder);
@@ -369,7 +369,7 @@ final class Manager
 						$isAvailable = null;
 						$isIndependent = null;
 
-						if (strpos($item->getName(), '.description') !== false)
+						if (mb_strpos($item->getName(), '.description') !== false)
 						{
 							$handlerName = $handler->getName();
 
@@ -401,7 +401,7 @@ final class Manager
 
 								$handlerName = str_replace(Path::normalize($documentRoot), '', $handler->getPath());
 							}
-							$group = (strpos($type, 'SYSTEM') !== false) ? 'SYSTEM' : 'USER';
+							$group = (mb_strpos($type, 'SYSTEM') !== false) ? 'SYSTEM' : 'USER';
 
 							if (!isset($result[$group][$handlerName]))
 							{
@@ -429,7 +429,7 @@ final class Manager
 
 				if (!$isDescriptionExist)
 				{
-					$group = (strpos($type, 'SYSTEM') !== false) ? 'SYSTEM' : 'USER';
+					$group = (mb_strpos($type, 'SYSTEM') !== false) ? 'SYSTEM' : 'USER';
 					$handlerName = str_replace($documentRoot, '', $handler->getPath());
 					$result[$group][$handlerName] = $handler->getName();
 				}
@@ -447,16 +447,16 @@ final class Manager
 	 */
 	public static function getClassNameFromPath($path)
 	{
-		$pos = strrpos($path, '/');
+		$pos = mb_strrpos($path, '/');
 
-		if ($pos == strlen($path))
+		if ($pos == mb_strlen($path))
 		{
-			$path = substr($path, 0, $pos - 1);
-			$pos = strrpos($path, '/');
+			$path = mb_substr($path, 0, $pos - 1);
+			$pos = mb_strrpos($path, '/');
 		}
 
 		if ($pos !== false)
-			$path = substr($path, $pos+1);
+			$path = mb_substr($path, $pos + 1);
 
 		return "Sale\\Handlers\\PaySystem\\".$path.'Handler';
 	}
@@ -496,7 +496,7 @@ final class Manager
 	{
 		$documentRoot = Application::getDocumentRoot();
 
-		if (strpos($folder, '/') !== false)
+		if (mb_strpos($folder, '/') !== false)
 		{
 			return $folder;
 		}

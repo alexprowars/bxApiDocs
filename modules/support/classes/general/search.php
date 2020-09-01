@@ -51,7 +51,7 @@ class CSupportSearch
 	/**
 	 * @deprecated
 	 */
-	public static function GetFilterQuery($q, $idName, $titleName, $messageName, &$error)
+	function GetFilterQuery($q, $idName, $titleName, $messageName, &$error)
 	{
 		if(!self::CheckModule()) return "";
 		$res = self::ParseQ(HTMLToTxt($q));
@@ -62,7 +62,7 @@ class CSupportSearch
 	/**
 	 * @deprecated
 	 */
-	public static function PrepareQuery($q, $idName, $titleName, $messageName, &$error)
+	function PrepareQuery($q, $idName, $titleName, $messageName, &$error)
 	{
 		global $DB;
 		$state = 0;
@@ -170,7 +170,7 @@ class CSupportSearch
 	/**
 	 * @deprecated
 	 */
-	public static function ParseQ($q)
+	function ParseQ($q)
 	{
 		$q = trim($q);
 		if(strlen($q) <= 0)
@@ -193,7 +193,7 @@ class CSupportSearch
 	/**
 	 * @deprecated
 	 */
-	public static function ParseStr($qwe, $default_op = "&")
+	function ParseStr($qwe, $default_op = "&")
 	{
 		$qwe=trim($qwe);
 
@@ -352,7 +352,7 @@ class CSupportSearch
 		}
 
 		// select language for stemming
-		if ($ticket['SITE_ID'] === SITE_ID) // Ñ‡ÐµÐ¼Ñƒ Ð¾Ð½ Ñ€Ð°Ð²ÐµÐ½ Ð² Ð°Ð´Ð¼Ð¸Ð½ÐºÐµ?
+		if ($ticket['SITE_ID'] === SITE_ID) // ÷åìó îí ðàâåí â àäìèíêå?
 		{
 			$langId = LANGUAGE_ID;
 		}

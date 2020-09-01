@@ -4,12 +4,12 @@ IncludeModuleLangFile(__FILE__);
 
 class CRatingRulesMain extends CAllRatingRulesMain
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		return "<br>Class: CRatingRulesMain<br>File: ".__FILE__;
 	}
 
-	public static function voteCheck($arConfigs)
+	function voteCheck($arConfigs)
 	{
 		global $DB;
 			

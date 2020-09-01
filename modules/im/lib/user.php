@@ -538,7 +538,7 @@ class User
 				{
 					$result[$key] = date('c', $value->getTimestamp());
 				}
-				else if (is_string($value) && is_string($key) && in_array($key, ['AVATAR', 'AVATAR_HR']) && is_string($value) && $value && strpos($value, 'http') !== 0)
+				else if (is_string($value) && is_string($key) && in_array($key, ['AVATAR', 'AVATAR_HR']) && is_string($value) && $value && mb_strpos($value, 'http') !== 0)
 				{
 					$result[$key] = \Bitrix\Im\Common::getPublicDomain().$value;
 				}
@@ -739,7 +739,7 @@ class User
 			}
 
 			$color = false;
-			if (isset($user['COLOR']) && strlen($user['COLOR']) > 0)
+			if (isset($user['COLOR']) && $user['COLOR'] <> '')
 			{
 				$color = \Bitrix\Im\Color::getColor($user['COLOR']);
 			}
@@ -817,7 +817,7 @@ class User
 					{
 						$users[$key][$field] = date('c', $value->getTimestamp());
 					}
-					else if (is_string($value) && $value && is_string($field) &&  in_array($field, Array('AVATAR', 'AVATAR_HR')) && strpos($value, 'http') !== 0)
+					else if (is_string($value) && $value && is_string($field) &&  in_array($field, Array('AVATAR', 'AVATAR_HR')) && mb_strpos($value, 'http') !== 0)
 					{
 						$users[$key][$field] = \Bitrix\Im\Common::getPublicDomain().$value;
 					}
@@ -1143,7 +1143,7 @@ class User
 				foreach (['urlPreview', 'urlShow', 'urlDownload'] as $field)
 				{
 					$url = $result['FILES'][$key][$field];
-					if (is_string($url) && $url && strpos($url, 'http') !== 0)
+					if (is_string($url) && $url && mb_strpos($url, 'http') !== 0)
 					{
 						$result['FILES'][$key][$field] = \Bitrix\Im\Common::getPublicDomain().$url;
 					}

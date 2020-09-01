@@ -5,7 +5,7 @@ class CSocServMyMailRu extends CSocServAuth
 {
 	const ID = "MyMailRu";
 
-	static public function GetSettings()
+	public function GetSettings()
 	{
 		return array(
 			array("mailru_id", GetMessage("socserv_mailru_id"), "", Array("text", 40)),
@@ -29,7 +29,7 @@ class CSocServMyMailRu extends CSocServAuth
 		return "BX.util.popup('".CUtil::JSEscape($url)."', 580, 400)";
 	}
 
-	static public function getUrl()
+	public function getUrl()
 	{
 		$appID = trim(self::GetOption("mailru_id"));
 		$appSecret = trim(self::GetOption("mailru_secret_key"));

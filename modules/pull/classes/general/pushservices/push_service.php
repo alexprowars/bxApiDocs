@@ -1,5 +1,7 @@
 <?php
 
+use Bitrix\Main\Text\Encoding;
+
 abstract class CPushService
 {
 	protected $allowEmptyMessage = true;
@@ -31,30 +33,27 @@ abstract class CPushService
 					 */
 
 					$messageArray = $messages[$mess];
-					if (!$this->allowEmptyMessage && strlen(trim($messageArray["MESSAGE"])) <= 0)
+					if (
+						(!$this->allowEmptyMessage && trim($messageArray["MESSAGE"]) == '')
+						|| !static::shouldBeSent($messageArray)
+					)
 					{
-						$mess++;
+							$mess++;
 						continue;
 					}
 
 					$message = static::getMessageInstance($token);
-					$id = rand(1, 10000);
+					$id = random_int(1, 10000);
 					$message->setCustomIdentifier($id);
-					if ("UTF-8" != toupper(SITE_CHARSET))
-					{
-						$text = $APPLICATION->ConvertCharset($messageArray["MESSAGE"], SITE_CHARSET, "utf-8");
-					}
-					else
-					{
-						$text = $messageArray["MESSAGE"];
-					}
+					$text = \Bitrix\Main\Text\Encoding::convertEncoding($messageArray["MESSAGE"], SITE_CHARSET, "utf-8");
+					$title = \Bitrix\Main\Text\Encoding::convertEncoding($messageArray["TITLE"], SITE_CHARSET, "utf-8");
 					$message->setSound('');
 					$message->setText($text);
-					$message->setTitle($messageArray["TITLE"]);
-					if (strlen($text) > 0)
+					$message->setTitle($title);
+					if ($text <> '')
 					{
 						$message->setSound(
-							(strlen($messageArray["SOUND"]) > 0)
+							($messageArray["SOUND"] <> '')
 								? $messageArray["SOUND"]
 								: "default"
 						);
@@ -74,43 +73,43 @@ abstract class CPushService
 						);
 					}
 
-
 					if ($messageArray["PARAMS"])
 					{
 						$message->setCustomProperty(
 							'params',
-							(is_array($messageArray["PARAMS"]))
+							is_array($messageArray["PARAMS"])
 								? json_encode($messageArray["PARAMS"])
 								: $messageArray["PARAMS"]
 						);
 					}
 
-
-					if ($messageArray["ADVANCED_PARAMS"] && is_array($messageArray["ADVANCED_PARAMS"]))
+					if (is_array($messageArray["ADVANCED_PARAMS"]))
 					{
-//						$messageArray["ADVANCED_PARAMS"] = array_change_key_case($messageArray["ADVANCED_PARAMS"], CASE_LOWER);
+						$messageArray["ADVANCED_PARAMS"] = \Bitrix\Main\Text\Encoding::convertEncoding($messageArray["ADVANCED_PARAMS"], SITE_CHARSET, "UTF-8");
+						if(array_key_exists("senderMessage",$messageArray["ADVANCED_PARAMS"]))
+						{
+							$message->setText("");
+						}
+						
 						foreach ($messageArray["ADVANCED_PARAMS"] as $param => $value)
 						{
 							$message->setCustomProperty($param, $value);
 						}
 					}
-
 					$message->setCustomProperty('target', md5($messages[$mess]["USER_ID"] . CMain::GetServerUniqID()));
-
-					$badge = intval($messages[$mess]["BADGE"]);
+					$badge = (int)$messages[$mess]["BADGE"];
 					if (array_key_exists("BADGE", $messages[$mess]) && $badge >= 0)
 					{
 						$message->setBadge($badge);
 					}
 
-
-					if (strlen($batch) > 0)
+					if ($batch <> '')
 					{
 						$batch .= ";";
 					}
 
 					$messageBatch = $message->getBatch();
-					if($messageBatch && strlen($messageBatch)>0)
+					if($messageBatch && $messageBatch <> '')
 					{
 						$batch .= $messageBatch;
 					}
@@ -121,7 +120,7 @@ abstract class CPushService
 			$batch = $appModifier . $batch;
 		}
 
-		if (strlen($batch) == 0)
+		if ($batch == '')
 		{
 			return $batch;
 		}
@@ -166,7 +165,6 @@ abstract class CPushService
 	}
 
 	abstract function getMessageInstance($token);
-
+	abstract static function shouldBeSent($messageRowData);
 	abstract function getBatch($messages);
-
 }

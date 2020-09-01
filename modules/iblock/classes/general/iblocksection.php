@@ -1,17 +1,8 @@
 <?
+use Bitrix\Main\Loader;
+
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CIBlockSection</b> - класс для работы с разделами (группами) информационных блоков.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php
- * @author Bitrix
- */
 class CAllIBlockSection
 {
 	var $LAST_ERROR;
@@ -31,7 +22,7 @@ class CAllIBlockSection
 			$key = $res["FIELD"];
 			$cOperationType = $res["OPERATION"];
 
-			$key = strtoupper($key);
+			$key = mb_strtoupper($key);
 			switch($key)
 			{
 			case "ACTIVE":
@@ -44,7 +35,7 @@ class CAllIBlockSection
 			case "LID":
 			case "SITE_ID":
 				$str = CIBlock::FilterCreate("BS.SITE_ID", $val, "string_equal", $cOperationType);
-				if(strlen($str) > 0)
+				if($str <> '')
 				{
 					$arIBlockFilter[] = $str;
 					$bSite = true;
@@ -85,19 +76,21 @@ class CAllIBlockSection
 			case "MODIFIED_BY":
 			case "CREATED_BY":
 			case "SOCNET_GROUP_ID":
+			case "PICTURE":
+			case "DETAIL_PICTURE":
 				$arSqlSearch[] = CIBlock::FilterCreate("BS.".$key, $val, "number", $cOperationType);
 				break;
 			case "SECTION_ID":
-				if(!is_array($val) && IntVal($val)<=0)
+				if(!is_array($val) && (int)$val<=0)
 					$arSqlSearch[] = CIBlock::FilterCreate("BS.IBLOCK_SECTION_ID", "", "number", $cOperationType, false);
 				else
 					$arSqlSearch[] = CIBlock::FilterCreate("BS.IBLOCK_SECTION_ID", $val, "number", $cOperationType);
 				break;
 			case "RIGHT_MARGIN":
-				$arSqlSearch[] = "BS.RIGHT_MARGIN ".($cOperationType=="N"?">":"<=").IntVal($val);
+				$arSqlSearch[] = "BS.RIGHT_MARGIN ".($cOperationType=="N"?">":"<=").(int)$val;
 				break;
 			case "LEFT_MARGIN":
-				$arSqlSearch[] = "BS.LEFT_MARGIN ".($cOperationType=="N"?"<":">=").IntVal($val);
+				$arSqlSearch[] = "BS.LEFT_MARGIN ".($cOperationType=="N"?"<":">=").(int)$val;
 				break;
 			case "LEFT_BORDER":
 				$arSqlSearch[] = CIBlock::FilterCreate("BS.LEFT_MARGIN", $val, "number", $cOperationType);
@@ -127,7 +120,7 @@ class CAllIBlockSection
 			{
 				$sIBlockFilter = "";
 				foreach($arIBlockFilter as $val)
-					if(strlen($val)>0)
+					if($val <> '')
 						$sIBlockFilter .= "  AND ".$val;
 
 				if(!array_key_exists($sIBlockFilter, $IBlockFilter_cache))
@@ -156,77 +149,23 @@ class CAllIBlockSection
 		else
 		{
 			foreach($arIBlockFilter as $val)
-				if(strlen($val) > 0)
+				if($val <> '')
 					$arSqlSearch[] = $val;
 		}
 
 		return $arSqlSearch;
 	}
 
-	
-	/**
-	* <p>Метод возвращает список разделов, отсортированный в порядке "полного развернутого дерева". Метод статический. По сути является оберткой метода <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php">CIBlockSection</a>::<a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getlist.php">GetList</a>() с предустановленным параметром сортировки:</p>   <pre class="syntax" id="xmpF1F83FB0"> CIBlockSection::GetList(Array("left_margin"=&gt;"asc"), $arFilter);</pre>
-	*
-	*
-	* @param array $arrayarFilter = Array() 
-	*
-	* @param array $arrayarSelect = Array() 
-	*
-	* @return CDBResult 
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php">CIBlockSection</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getlist.php">GetList</a> </li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/gettreelist.php
-	* @author Bitrix
-	*/
 	public static function GetTreeList($arFilter = array(), $arSelect = array())
 	{
-		return CIBlockSection::GetList(Array("left_margin"=>"asc"), $arFilter, false, $arSelect);
+		return CIBlockSection::GetList(array("left_margin"=>"asc"), $arFilter, false, $arSelect);
 	}
 
-	
-	/**
-	* Метод возвращает путь по дереву от корня до раздела <i>SECTION_ID</i> (пользовательские поля не возвращаются). Метод статический.
-	*
-	*
-	* @param int $IBLOCK_ID  Код информационного блока, служит для проверки что раздел
-	* <i>SECTION_ID</i>, находится в заданном информационном блоке. Если
-	* значение <i>IBLOCK_ID</i> ноль, то проверка не будет выполнена и код
-	* информационного блока не будет учитываться.
-	*
-	* @param int $SECTION_ID  Код раздела информационного раздела, путь до которого будет
-	* выбран.
-	*
-	* @param array $arSelect = array() Массив возвращаемых полей раздела. Необязательный параметр. По
-	* умолчанию будут возвращены все доступные поля.
-	*
-	* @return CIBlockResult <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockresult/index.php">CIBlockResult</a><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fiblocksection">раздела информационного
-	* блока.</a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$nav = CIBlockSection::GetNavChain(false, $SECTION_ID);<br>while($nav-&gt;ExtractFields("nav_")):<br>?&gt; &amp;raquo; <br>  &lt;?if($SECTION_ID == $nav_ID):?&gt;<br>    &lt;?echo $nav_NAME?&gt;<br>  &lt;?else:?&gt;<br>    &lt;a class="navchain" href="&lt;?=$application-&gt;getcurpage()?&gt;?iblock_id=&lt;?=$iblock_id?&gt;&amp;section_id=&lt;?=$nav_id?&gt;#tb"&gt;&lt;?echo $nav_NAME?&gt;&lt;/a&gt;<br>  &lt;?endif?&gt;<br>&lt;?endwhile;?&gt;<br>
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockresult/index.php">CIBlockResult</a> </li>  
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fiblocksection">Поля раздела
-	* информационного блока </a> </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getnavchain.php
-	* @author Bitrix
-	*/
-	public static function GetNavChain($IBLOCK_ID, $SECTION_ID, $arSelect = array())
+	public static function GetNavChain($IBLOCK_ID, $SECTION_ID, $arSelect = array(), $arrayResult = false)
 	{
 		global $DB;
+
+		$arrayResult = ($arrayResult === true);
 
 		$IBLOCK_ID = (int)$IBLOCK_ID;
 
@@ -264,7 +203,7 @@ class CAllIBlockSection
 		$arSqlSelect = array();
 		foreach($arSelect as $field)
 		{
-			$field = strtoupper($field);
+			$field = mb_strtoupper($field);
 			if (isset($arFields[$field]))
 				$arSqlSelect[$field] = $arFields[$field]." AS ".$field;
 		}
@@ -339,8 +278,12 @@ class CAllIBlockSection
 		}
 		while ($SECTION_ID > 0);
 
+		$sectionPath = array_reverse($sectionPath);
+		if ($arrayResult)
+			return $sectionPath;
+
 		$res = new CDBResult;
-		$res->InitFromArray(array_reverse($sectionPath));
+		$res->InitFromArray($sectionPath);
 		$res = new CIBlockResult($res);
 		$res->bIBlockSection = true;
 		return $res;
@@ -349,91 +292,15 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// Function returns section by ID
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Возвращает параметры раздела по его коду <i>ID</i>. Метод статический.</p>
-	*
-	*
-	* @param int $intID  Код раздела.
-	*
-	* @return CIBlockResult <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockresult/index.php">CIBlockResult</a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$res = CIBlockSection::GetByID($_GET["GID"]);<br>if($ar_res = $res-&gt;GetNext())<br>  echo $ar_res['NAME'];<br>?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockresult/index.php">CIBlockResult</a> </li>  
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fsection">Поля раздела</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($ID)
 	{
-		return CIBlockSection::GetList(Array(), Array("ID"=>IntVal($ID)));
+		return CIBlockSection::GetList(Array(), Array("ID"=>(int)$ID));
 	}
 
 	///////////////////////////////////////////////////////////////////
 	// New section
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Метод добавляет новый раздел в информационный блок. Перед добавлением раздела вызываются обработчики события <a href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectionadd.php">OnBeforeIBlockSectionAdd</a> из которых можно изменить значения полей или отменить добавление раздела вернув сообщение об ошибке. После добавления раздела вызывается событие <a href="http://dev.1c-bitrix.ru/api_help/iblock/events/onafteriblocksectionadd.php">OnAfterIBlockSectionAdd</a>. Нестатический метод.</p>
-	*
-	*
-	* @param array $arFields  Массив вида Array("поле"=&gt;"значение", ...), содержащий значения <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fsection">полей раздела</a> инфоблоков. 
-	* <br><br> Пользовательские свойства UF_XXX можно тоже занести в массив и
-	* они будут добавляться.
-	*
-	* @param bool $bResort = true Флаг, указывающий пересчитывать ли правую и левую границы после
-	* изменения (поля <i>LEFT_MARGIN</i> и <i>RIGHT_MARGIN</i>). Установите значение в
-	* <i>false</i>, если необходимо выполнить большое количество добавлений
-	* при небольшом исходном количестве разделов (например
-	* автоматизированное создание дерева разделов "с нуля"), в этом
-	* случае для повышения производительности можно установить
-	* параметр в <i>false</i>, а после всех изменений вызвать метод <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php">CIBlockSection</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/resort.php">ReSort</a>()
-	*
-	* @param bool $bUpdateSearch = true Флаг, указывающий, что раздел должен быть проиндексирован для
-	* поиска сразу же после сохранения.
-	*
-	* @param bool $bResizePictures = false Использовать настройки инфоблока для обработки изображений. По
-	* умолчанию настройки не применяются. Если этот параметр имеет
-	* значение true, то к полям PICTURE и DETAIL_PICTURE будут применены правила
-	* генерации и масштабирования в соответствии с настройками
-	* информационного блока.
-	*
-	* @return int 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$bs = new CIBlockSection;<br>$arFields = Array(<br>  "ACTIVE" =&gt; $ACTIVE,<br>  "IBLOCK_SECTION_ID" =&gt; $IBLOCK_SECTION_ID,<br>  "IBLOCK_ID" =&gt; $IBLOCK_ID,<br>  "NAME" =&gt; $NAME,<br>  "SORT" =&gt; $SORT,<br>  "PICTURE" =&gt; $_FILES["PICTURE"],<br>  "DESCRIPTION" =&gt; $DESCRIPTION,<br>  "DESCRIPTION_TYPE" =&gt; $DESCRIPTION_TYPE<br>  );<br><br>if($ID &gt; 0)<br>{<br>  $res = $bs-&gt;Update($ID, $arFields);<br>}<br>else<br>{<br>  $ID = $bs-&gt;Add($arFields);<br>  $res = ($ID&gt;0);<br>}<br><br>if(!$res)<br>  echo $bs-&gt;LAST_ERROR;<br>?&gt;<br>
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/update.php">CIBlockSection::Update</a></li>  
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectionadd.php">OnBeforeIBlockSectionAdd</a></li>  
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/events/onafteriblocksectionadd.php">OnAfterIBlockSectionAdd</a></li>
-	* </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/add.php
-	* @author Bitrix
-	*/
-	public function Add($arFields, $bResort=true, $bUpdateSearch=true, $bResizePictures=false)
+	function Add($arFields, $bResort=true, $bUpdateSearch=true, $bResizePictures=false)
 	{
 		global $USER, $DB, $APPLICATION;
 
@@ -443,6 +310,8 @@ class CAllIBlockSection
 		Unset($arFields["DEPTH_LEVEL"]);
 		Unset($arFields["LEFT_MARGIN"]);
 		Unset($arFields["RIGHT_MARGIN"]);
+
+		$strWarning = '';
 
 		$arIBlock = CIBlock::GetArrayByID($arFields["IBLOCK_ID"]);
 		if($bResizePictures && is_array($arIBlock))
@@ -491,7 +360,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["PICTURE"]["tmp_name"]) > 0
+					$arFields["PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["PICTURE"]["tmp_name"] === $arFields["DETAIL_PICTURE"]["tmp_name"]
 						|| ($arFields["PICTURE"]["COPY_FILE"] == "Y" && !$arFields["PICTURE"]["copy"])
@@ -505,7 +374,7 @@ class CAllIBlockSection
 					$arFields["PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_FILE_POSITION"],
 					"type" => "file",
@@ -522,7 +391,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["PICTURE"]["tmp_name"]) > 0
+					$arFields["PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["PICTURE"]["tmp_name"] === $arFields["DETAIL_PICTURE"]["tmp_name"]
 						|| ($arFields["PICTURE"]["COPY_FILE"] == "Y" && !$arFields["PICTURE"]["copy"])
@@ -536,7 +405,7 @@ class CAllIBlockSection
 					$arFields["PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_TEXT_POSITION"],
 					"type" => "text",
@@ -575,7 +444,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["DETAIL_PICTURE"]["tmp_name"]) > 0
+					$arFields["DETAIL_PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["DETAIL_PICTURE"]["tmp_name"] === $arFields["PICTURE"]["tmp_name"]
 						|| ($arFields["DETAIL_PICTURE"]["COPY_FILE"] == "Y" && !$arFields["DETAIL_PICTURE"]["copy"])
@@ -589,7 +458,7 @@ class CAllIBlockSection
 					$arFields["DETAIL_PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_FILE_POSITION"],
 					"type" => "file",
@@ -606,7 +475,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["DETAIL_PICTURE"]["tmp_name"]) > 0
+					$arFields["DETAIL_PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["DETAIL_PICTURE"]["tmp_name"] === $arFields["PICTURE"]["tmp_name"]
 						|| ($arFields["DETAIL_PICTURE"]["COPY_FILE"] == "Y" && !$arFields["DETAIL_PICTURE"]["copy"])
@@ -620,7 +489,7 @@ class CAllIBlockSection
 					$arFields["DETAIL_PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_TEXT_POSITION"],
 					"type" => "text",
@@ -635,7 +504,7 @@ class CAllIBlockSection
 		$ipropTemplates = new \Bitrix\Iblock\InheritedProperty\SectionTemplates($arFields["IBLOCK_ID"], 0);
 		if(is_set($arFields, "PICTURE"))
 		{
-			if(strlen($arFields["PICTURE"]["name"]) <= 0 && strlen($arFields["PICTURE"]["del"]) <= 0)
+			if($arFields["PICTURE"]["name"] == '' && $arFields["PICTURE"]["del"] == '')
 			{
 				unset($arFields["PICTURE"]);
 			}
@@ -653,7 +522,7 @@ class CAllIBlockSection
 
 		if(is_set($arFields, "DETAIL_PICTURE"))
 		{
-			if(strlen($arFields["DETAIL_PICTURE"]["name"]) <= 0 && strlen($arFields["DETAIL_PICTURE"]["del"]) <= 0)
+			if($arFields["DETAIL_PICTURE"]["name"] == '' && $arFields["DETAIL_PICTURE"]["del"] == '')
 			{
 				unset($arFields["DETAIL_PICTURE"]);
 			}
@@ -792,7 +661,7 @@ class CAllIBlockSection
 						//Look up GLOBAL_ACTIVE of the parent
 						//if none then take our own
 						if($arParent)//We must inherit active from the parent
-							$arUpdate["GLOBAL_ACTIVE"] = $arParent["ACTIVE"] == "Y"? "Y": "N";
+							$arUpdate["GLOBAL_ACTIVE"] = $arParent["GLOBAL_ACTIVE"] == "Y"? "Y": "N";
 						else //No parent was found take our own
 							$arUpdate["GLOBAL_ACTIVE"] = "Y";
 					}
@@ -933,57 +802,7 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// Update section properties
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Метод изменяет параметры раздела с кодом <i>ID</i>.  Перед изменением раздела вызываются обработчики события <a href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectionupdate.php">OnBeforeIBlockSectionUpdate</a> из которых можно изменить значения полей или отменить изменение параметров раздела вернув сообщение об ошибке. После изменения раздела вызывается событие <a href="http://dev.1c-bitrix.ru/api_help/iblock/events/onafteriblocksectionupdate.php">OnAfterIBlockSectionUpdate</a>. Нестатический метод.</p> <p></p> <div class="note"> <b>Примечание</b>: Изменить значения полей GLOBAL_ACTIVE, DEPTH_LEVEL, LEFT_MARGIN, RIGHT_MARGIN, IBLOCK_ID, DATE_CREATE и CREATED_BY нельзя. Значение первого определяется флагом активности раздела и его родителей. DEPTH_LEVEL, LEFT_MARGIN и RIGHT_MARGIN расчитываются автоматически в зависимости от положения раздела в дереве.</div>
-	*
-	*
-	* @param int $intID  Код изменяемой записи.
-	*
-	* @param array $arFields  Массив вида Array("поле"=&gt;"значение", ...), содержащий значения <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/fields.php#fsection">полей раздела</a> инфоблоков.
-	*
-	* @param bool $bResort = true Флаг, указывающий пересчитывать ли правую и левую границы после
-	* изменения (поля <i>LEFT_MARGIN</i> и <i>RIGHT_MARGIN</i>). Установите значение в
-	* <i>false</i>, в случае если поля которые влияют на значения границ не
-	* изменяются или необходимо выполнить серию изменений приводящих
-	* к полной перестройке дерева разделов, в последнем случае для
-	* повышения производительности можно установить параметр в
-	* <i>false</i>, а после всех изменений вызвать метод <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php">CIBlockSection</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/resort.php">ReSort</a>()
-	*
-	* @param bool $bUpdateSearch = true Флаг, указывающий, что раздел должен 	быть проиндексирован для
-	* поиска сразу же 	после сохранения.
-	*
-	* @param bool $bResizePictures = false Использовать настройки инфоблока для обработки изображений. По
-	* умолчанию настройки не применяются. Если этот параметр имеет
-	* значение true, то к полям PICTURE и DETAIL_PICTURE будут применены правила
-	* генерации и масштабирования в соответствии с настройками
-	* информационного блока.
-	*
-	* @return bool 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$bs = new CIBlockSection;<br><br>$arPICTURE = $_FILES["PICTURE"];<br>$arPICTURE["MODULE_ID"] = "iblock";<br><br>$arFields = Array(<br>  "ACTIVE" =&gt; $ACTIVE,<br>  "IBLOCK_SECTION_ID" =&gt; $IBLOCK_SECTION_ID,<br>  "IBLOCK_ID" =&gt; $IBLOCK_ID,<br>  "NAME" =&gt; $NAME,<br>  "SORT" =&gt; $SORT,<br>  "PICTURE" =&gt; $arPICTURE,<br>  "DESCRIPTION" =&gt; $DESCRIPTION,<br>  "DESCRIPTION_TYPE" =&gt; $DESCRIPTION_TYPE<br>  );<br><br>if($ID &gt; 0)<br>{<br>  $res = $bs-&gt;Update($ID, $arFields);<br>}<br>else<br>{<br>  $ID = $bs-&gt;Add($arFields);<br>  $res = ($ID&gt;0);<br>}<br>?&gt;<br>
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/add.php">CIBlockSection::Add</a></li>  
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectionupdate.php">OnBeforeIBlockSectionUpdate</a></li>
-	*   <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/events/onafteriblocksectionupdate.php">OnAfterIBlockSectionUpdate</a></li>
-	* </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/update.php
-	* @author Bitrix
-	*/
-	public function Update($ID, $arFields, $bResort=true, $bUpdateSearch=true, $bResizePictures=false)
+	function Update($ID, $arFields, $bResort=true, $bUpdateSearch=true, $bResizePictures=false)
 	{
 		global $USER, $DB, $APPLICATION;
 
@@ -1003,6 +822,8 @@ class CAllIBlockSection
 		unset($arFields["IBLOCK_ID"]);
 		unset($arFields["DATE_CREATE"]);
 		unset($arFields["CREATED_BY"]);
+
+		$strWarning = '';
 
 		$arIBlock = CIBlock::GetArrayByID($db_record["IBLOCK_ID"]);
 		if($bResizePictures)
@@ -1075,7 +896,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["PICTURE"]["tmp_name"]) > 0
+					$arFields["PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["PICTURE"]["tmp_name"] === $arFields["DETAIL_PICTURE"]["tmp_name"]
 						|| ($arFields["PICTURE"]["COPY_FILE"] == "Y" && !$arFields["PICTURE"]["copy"])
@@ -1089,7 +910,7 @@ class CAllIBlockSection
 					$arFields["PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_FILE_POSITION"],
 					"type" => "file",
@@ -1106,7 +927,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["PICTURE"]["tmp_name"]) > 0
+					$arFields["PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["PICTURE"]["tmp_name"] === $arFields["DETAIL_PICTURE"]["tmp_name"]
 						|| ($arFields["PICTURE"]["COPY_FILE"] == "Y" && !$arFields["PICTURE"]["copy"])
@@ -1120,7 +941,7 @@ class CAllIBlockSection
 					$arFields["PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_TEXT_POSITION"],
 					"type" => "text",
@@ -1159,7 +980,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["DETAIL_PICTURE"]["tmp_name"]) > 0
+					$arFields["DETAIL_PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["DETAIL_PICTURE"]["tmp_name"] === $arFields["PICTURE"]["tmp_name"]
 						|| ($arFields["DETAIL_PICTURE"]["COPY_FILE"] == "Y" && !$arFields["DETAIL_PICTURE"]["copy"])
@@ -1173,7 +994,7 @@ class CAllIBlockSection
 					$arFields["DETAIL_PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_FILE_POSITION"],
 					"type" => "file",
@@ -1191,7 +1012,7 @@ class CAllIBlockSection
 			)
 			{
 				if(
-					strlen($arFields["DETAIL_PICTURE"]["tmp_name"]) > 0
+					$arFields["DETAIL_PICTURE"]["tmp_name"] <> ''
 					&& (
 						$arFields["DETAIL_PICTURE"]["tmp_name"] === $arFields["PICTURE"]["tmp_name"]
 						|| ($arFields["DETAIL_PICTURE"]["COPY_FILE"] == "Y" && !$arFields["DETAIL_PICTURE"]["copy"])
@@ -1205,7 +1026,7 @@ class CAllIBlockSection
 					$arFields["DETAIL_PICTURE"]["tmp_name"] = $tmp_name;
 				}
 
-				CIBLock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
+				CIBlock::FilterPicture($arFields["DETAIL_PICTURE"]["tmp_name"], array(
 					"name" => "watermark",
 					"position" => $arDef["WATERMARK_TEXT_POSITION"],
 					"type" => "text",
@@ -1220,7 +1041,11 @@ class CAllIBlockSection
 		$ipropTemplates = new \Bitrix\Iblock\InheritedProperty\SectionTemplates($db_record["IBLOCK_ID"], $db_record["ID"]);
 		if(is_set($arFields, "PICTURE"))
 		{
-			if(strlen($arFields["PICTURE"]["name"])<=0 && strlen($arFields["PICTURE"]["del"])<=0)
+			if (
+				(!isset($arFields["PICTURE"]["name"]) || $arFields["PICTURE"]["name"] === '')
+				&& (!isset($arFields["PICTURE"]["del"]) || $arFields["PICTURE"]["del"] === '')
+				&& !array_key_exists("description", $arFields["PICTURE"])
+			)
 			{
 				unset($arFields["PICTURE"]);
 			}
@@ -1239,7 +1064,11 @@ class CAllIBlockSection
 
 		if(is_set($arFields, "DETAIL_PICTURE"))
 		{
-			if(strlen($arFields["DETAIL_PICTURE"]["name"])<=0 && strlen($arFields["DETAIL_PICTURE"]["del"])<=0)
+			if (
+				(!isset($arFields["DETAIL_PICTURE"]["name"]) || $arFields["DETAIL_PICTURE"]["name"] === '')
+				&& (!isset($arFields["DETAIL_PICTURE"]["del"]) || $arFields["DETAIL_PICTURE"]["del"] === '')
+				&& !array_key_exists("description", $arFields["DETAIL_PICTURE"])
+			)
 			{
 				unset($arFields["DETAIL_PICTURE"]);
 			}
@@ -1320,7 +1149,7 @@ class CAllIBlockSection
 
 			CIBlock::_transaction_lock($db_record["IBLOCK_ID"]);
 
-			if(strlen($strUpdate) > 0)
+			if($strUpdate <> '')
 			{
 				$strSql = "UPDATE b_iblock_section SET ".$strUpdate." WHERE ID = ".$ID;
 				$arBinds=Array();
@@ -1333,6 +1162,7 @@ class CAllIBlockSection
 
 			if($bResort)
 			{
+				$move_distance = 0;
 				//Move inside the tree
 				if((isset($arFields["SORT"]) && $arFields["SORT"]!=$db_record["SORT"])
 					|| (isset($arFields["NAME"]) && $arFields["NAME"]!=$db_record["NAME"])
@@ -1466,8 +1296,18 @@ class CAllIBlockSection
 				//Check if parent was changed
 				if(isset($arFields["IBLOCK_SECTION_ID"]) && $arFields["IBLOCK_SECTION_ID"]!=$db_record["IBLOCK_SECTION_ID"])
 				{
-					$rsSection = CIBlockSection::GetByID($ID);
+					$rsSection = CIBlockSection::GetList(
+						array(),
+						array("ID" => $ID, "CHECK_PERMISSIONS" => "N"),
+						false,
+						array(
+							"ID", "IBLOCK_ID", "IBLOCK_SECTION_ID",
+							"LEFT_MARGIN", "RIGHT_MARGIN",
+							"ACTIVE", "GLOBAL_ACTIVE"
+						)
+					);
 					$arSection = $rsSection->Fetch();
+					unset($rsSection);
 
 					$strSql = "
 						SELECT ID, GLOBAL_ACTIVE
@@ -1544,7 +1384,7 @@ class CAllIBlockSection
 						//and we changed
 						//so need to recalc
 						if(!$arParent || $arParent["GLOBAL_ACTIVE"] == "Y")
-							$this->RecalcGlobalActiveFlag($db_record);
+							$this->RecalcGlobalActiveFlag($db_record, -$move_distance);
 					}
 				}
 			}
@@ -1643,33 +1483,6 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// Function delete section by its ID
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Метод удаляет раздел с кодом <i>ID</i>, вместе со всеми подразделами и элементами, которые привязаны только к этому разделу. Также удаляются значения свойств типа "Привязка к разделу" указывающие на удаляемый. При установленном модуле поиска раздел удаляется из поискового индекса. Перед удалением раздела вызываются обработчики события <a href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectiondelete.php">OnBeforeIBlockSectionDelete</a> из которых можно отменить это действие. После удаления вызывается обработчик события OnAfterIBlockSectionDelete. Метод статический.   <br></p>
-	*
-	*
-	* @param int $intID  Код раздела.
-	*
-	* @param bool $bCheckPermissions = true Флаг проверки прав доступа. Необязательный параметр.
-	*
-	* @return bool <br>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>if(CIBlock::GetPermission($IBLOCK_ID)&gt;='W')<br>{<br>	$DB-&gt;StartTransaction();<br>	if(!CIBlockSection::Delete($SECTION_ID))<br>	{<br>		$strWarning .= 'Error.';<br>		$DB-&gt;Rollback();<br>	}<br>	else<br>		$DB-&gt;Commit();<br>}<br>?&gt;<br>
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/events/onbeforeiblocksectiondelete.php">OnBeforeIBlockSectionDelete</a></li>
-	*   <li>OnAfterIBlockSectionDelete     <br> </li> </ul><br><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/delete.php
-	* @author Bitrix
-	*/
 	public static function Delete($ID, $bCheckPermissions = true)
 	{
 		$err_mess = "FILE: ".__FILE__."<br>LINE: ";
@@ -1684,7 +1497,7 @@ class CAllIBlockSection
 				$err = GetMessage("MAIN_BEFORE_DEL_ERR").' '.$arEvent['TO_NAME'];
 				if($ex = $APPLICATION->GetException())
 					$err .= ': '.$ex->GetString();
-				$APPLICATION->throwException($err);
+				$APPLICATION->ThrowException($err);
 				return false;
 			}
 		}
@@ -1694,14 +1507,21 @@ class CAllIBlockSection
 		{
 			CIBlock::_transaction_lock($s["IBLOCK_ID"]);
 
-			$iblockelements = CIBlockElement::GetList(Array(), Array("SECTION_ID"=>$ID, "SHOW_HISTORY"=>"Y", "IBLOCK_ID"=>$s["IBLOCK_ID"]), false, false, array("ID", "IBLOCK_ID", "WF_PARENT_ELEMENT_ID"));
+			$iblockelements = CIBlockElement::GetList(
+				array(),
+				array("SECTION_ID" => $ID, "SHOW_HISTORY" => "Y", "IBLOCK_ID" => $s["IBLOCK_ID"]),
+				false,
+				false,
+				array("ID", "IBLOCK_ID", "WF_PARENT_ELEMENT_ID", "IBLOCK_SECTION_ID")
+			);
 			while($iblockelement = $iblockelements->Fetch())
 			{
+				$elementId = (int)$iblockelement["ID"];
 				$strSql = "
 					SELECT IBLOCK_SECTION_ID
 					FROM b_iblock_section_element
 					WHERE
-						IBLOCK_ELEMENT_ID = ".$iblockelement["ID"]."
+						IBLOCK_ELEMENT_ID = ".$elementId."
 						AND IBLOCK_SECTION_ID<>".$ID."
 						AND ADDITIONAL_PROPERTY_ID IS NULL
 					ORDER BY
@@ -1710,13 +1530,16 @@ class CAllIBlockSection
 				$db_section_element = $DB->Query($strSql);
 				if($ar_section_element = $db_section_element->Fetch())
 				{
-					$DB->Query("
-						UPDATE b_iblock_element
-						SET IBLOCK_SECTION_ID=".$ar_section_element["IBLOCK_SECTION_ID"]."
-						WHERE ID=".IntVal($iblockelement["ID"])."
-					", false, $err_mess.__LINE__);
+					if ((int)$iblockelement["IBLOCK_SECTION_ID"] == $ID)
+					{
+						$DB->Query("
+							UPDATE b_iblock_element
+							SET IBLOCK_SECTION_ID=".$ar_section_element["IBLOCK_SECTION_ID"]."
+							WHERE ID=".$elementId."
+						", false, $err_mess . __LINE__);
+					}
 				}
-				elseif(IntVal($iblockelement["WF_PARENT_ELEMENT_ID"])<=0)
+				elseif((int)$iblockelement["WF_PARENT_ELEMENT_ID"]<=0)
 				{
 					if(!CIBlockElement::Delete($iblockelement["ID"]))
 						return false;
@@ -1726,9 +1549,10 @@ class CAllIBlockSection
 					$DB->Query("
 						UPDATE b_iblock_element
 						SET IBLOCK_SECTION_ID=NULL, IN_SECTIONS='N'
-						WHERE ID=".IntVal($iblockelement["ID"])."
+						WHERE ID=".$elementId."
 					", false, $err_mess.__LINE__);
 				}
+				unset($elementId);
 			}
 
 			$iblocksections = CIBlockSection::GetList(
@@ -1817,7 +1641,7 @@ class CAllIBlockSection
 			}
 
 			CIBlockSectionPropertyLink::DeleteBySection($ID);
-			$DB->Query("DELETE FROM b_iblock_section_element WHERE IBLOCK_SECTION_ID=".IntVal($ID), false, $err_mess.__LINE__);
+			$DB->Query("DELETE FROM b_iblock_section_element WHERE IBLOCK_SECTION_ID=".$ID, false, $err_mess.__LINE__);
 
 			if(CModule::IncludeModule("search"))
 				CSearch::DeleteIndex("iblock", "S".$ID);
@@ -1899,7 +1723,7 @@ class CAllIBlockSection
 				}
 			}
 
-			$res = $DB->Query("DELETE FROM b_iblock_section WHERE ID=".IntVal($ID), false, $err_mess.__LINE__);
+			$res = $DB->Query("DELETE FROM b_iblock_section WHERE ID=".$ID, false, $err_mess.__LINE__);
 
 			if($res)
 			{
@@ -1918,12 +1742,12 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// Check function called from Add and Update
 	///////////////////////////////////////////////////////////////////
-	public function CheckFields(&$arFields, $ID=false)
+	function CheckFields(&$arFields, $ID=false)
 	{
 		global $DB, $APPLICATION;
 		$this->LAST_ERROR = "";
 
-		if(($ID===false || is_set($arFields, "NAME")) && strlen($arFields["NAME"])<=0)
+		if(($ID===false || is_set($arFields, "NAME")) && $arFields["NAME"] == '')
 			$this->LAST_ERROR .= GetMessage("IBLOCK_BAD_SECTION")."<br>";
 
 		if(
@@ -1941,7 +1765,7 @@ class CAllIBlockSection
 		)
 		{
 			$error = CFile::CheckImageFile($arFields["PICTURE"]);
-			if (strlen($error) > 0)
+			if ($error <> '')
 				$this->LAST_ERROR .= $error."<br>";
 		}
 
@@ -1960,7 +1784,7 @@ class CAllIBlockSection
 		)
 		{
 			$error = CFile::CheckImageFile($arFields["DETAIL_PICTURE"]);
-			if (strlen($error) > 0)
+			if ($error <> '')
 				$this->LAST_ERROR .= $error."<br>";
 		}
 
@@ -1999,7 +1823,7 @@ class CAllIBlockSection
 		$arParent = false;
 		$IBLOCK_SECTION_ID = isset($arFields["IBLOCK_SECTION_ID"])? intval($arFields["IBLOCK_SECTION_ID"]): 0;
 
-		if(($IBLOCK_SECTION_ID > 0) && (strlen($this->LAST_ERROR) <= 0))
+		if(($IBLOCK_SECTION_ID > 0) && ($this->LAST_ERROR == ''))
 		{
 			$rsParent = $DB->Query("SELECT ID, IBLOCK_ID FROM b_iblock_section WHERE ID = ".$IBLOCK_SECTION_ID);
 			$arParent = $rsParent->Fetch();
@@ -2013,7 +1837,7 @@ class CAllIBlockSection
 				$this->LAST_ERROR .= GetMessage("IBLOCK_BAD_BLOCK_SECTION_ID_PARENT")."<br>";
 		}
 
-		if($arParent && (strlen($this->LAST_ERROR) <= 0))
+		if($arParent && ($this->LAST_ERROR == ''))
 		{
 			$rch = $DB->Query("
 				SELECT 'x'
@@ -2034,7 +1858,7 @@ class CAllIBlockSection
 		{
 			if(
 				array_key_exists("CODE", $arFields)
-				&& strlen($arFields["CODE"])
+				&& mb_strlen($arFields["CODE"])
 				&& is_array($arIBlock["FIELDS"]["SECTION_CODE"]["DEFAULT_VALUE"])
 				&& $arIBlock["FIELDS"]["SECTION_CODE"]["DEFAULT_VALUE"]["UNIQUE"] == "Y"
 			)
@@ -2106,7 +1930,7 @@ class CAllIBlockSection
 								$val = implode("", $arFields[$FIELD_ID]);
 							else
 								$val = $arFields[$FIELD_ID];
-							if(strlen($val) <= 0)
+							if($val == '')
 								$this->LAST_ERROR .= GetMessage("IBLOCK_BAD_SECTION_FIELD", array("#FIELD_NAME#" => $field["NAME"]))."<br>";
 						}
 						break;
@@ -2150,7 +1974,7 @@ class CAllIBlockSection
 			}
 		}
 
-		if(strlen($this->LAST_ERROR)>0)
+		if($this->LAST_ERROR <> '')
 			return false;
 
 		return true;
@@ -2159,7 +1983,7 @@ class CAllIBlockSection
 	public static function TreeReSort($IBLOCK_ID, $ID=0, $cnt=0, $depth=0, $ACTIVE="Y")
 	{
 		global $DB;
-		$IBLOCK_ID = IntVal($IBLOCK_ID);
+		$IBLOCK_ID = (int)$IBLOCK_ID;
 
 		if($ID==0)
 		{
@@ -2173,10 +1997,10 @@ class CAllIBlockSection
 					b_iblock_section
 				SET
 					TIMESTAMP_X=".($DB->type=="ORACLE"?"NULL":"TIMESTAMP_X")."
-					,RIGHT_MARGIN=".IntVal($cnt)."
-					,LEFT_MARGIN=".IntVal($cnt)."
+					,RIGHT_MARGIN=".(int)$cnt."
+					,LEFT_MARGIN=".(int)$cnt."
 				WHERE
-					ID=".IntVal($ID)
+					ID=".(int)$ID
 			);
 		}
 
@@ -2184,7 +2008,7 @@ class CAllIBlockSection
 			SELECT BS.ID, BS.ACTIVE
 			FROM b_iblock_section BS
 			WHERE BS.IBLOCK_ID = ".$IBLOCK_ID."
-			AND ".($ID>0? "BS.IBLOCK_SECTION_ID=".IntVal($ID): "BS.IBLOCK_SECTION_ID IS NULL")."
+			AND ".($ID>0? "BS.IBLOCK_SECTION_ID=".(int)$ID: "BS.IBLOCK_SECTION_ID IS NULL")."
 			ORDER BY BS.SORT, BS.NAME
 		";
 
@@ -2203,11 +2027,11 @@ class CAllIBlockSection
 				b_iblock_section
 			SET
 				TIMESTAMP_X=".($DB->type=="ORACLE"?"NULL":"TIMESTAMP_X")."
-				,RIGHT_MARGIN=".IntVal($cnt)."
-				,DEPTH_LEVEL=".IntVal($depth)."
+				,RIGHT_MARGIN=".(int)$cnt."
+				,DEPTH_LEVEL=".(int)$depth."
 				,GLOBAL_ACTIVE='".$ACTIVE."'
 			WHERE
-				ID=".IntVal($ID)
+				ID=".(int)$ID
 		);
 
 		return $cnt+1;
@@ -2222,12 +2046,12 @@ class CAllIBlockSection
 		return $cnt;
 	}
 
-	public static function UpdateSearch($ID, $bOverWrite=false)
+	function UpdateSearch($ID, $bOverWrite=false)
 	{
 		if(!CModule::IncludeModule("search")) return;
 
 		global $DB;
-		$ID = Intval($ID);
+		$ID = intval($ID);
 
 		static $arGroups = array();
 		static $arSITE = array();
@@ -2332,294 +2156,200 @@ class CAllIBlockSection
 	 * @param bool|array $arSelectedFields
 	 * @return CDBResult
 	 */
-	
-	/**
-	* <p>Возвращает список разделов и элементов, отсортированных в порядке <i>arOrder</i> по фильтру <i>arFilter</i>. Нестатический метод.</p>
-	*
-	*
-	* @param array $arOrder = Array("SORT"=>"ASC") Массив для сортировки, имеющий вид <i>by1</i>=&gt;<i>order1</i>[,
-	* <i>by2</i>=&gt;<i>order2</i> [, ..]], где <i> by1, ... </i> - поле сортировки, может
-	* принимать значения: <br><br> для элементов:   <ul> <li> <b>id</b> - ID элемента;
-	* 				</li>                     <li> <b>sort</b> - индекс сортировки; 				</li>                     <li>
-	* <b>timestamp_x</b> - дата изменения; 				</li>                     <li> <b>name</b> - название;
-	* 				</li>                     <li> <b>active_from</b> или <span style="font-weight: bold;">date_active_from</span> -
-	* начало периода действия элемента; 				</li>                     <li> <b>active_to</b>
-	* или <span style="font-weight: bold;">date_active_to</span> - окончание периода действия
-	* элемента; 				</li>                     <li> <b>status</b> - код статуса элемента в
-	* документообороте; 				</li>                     <li> <b>code</b> - символьный код
-	* элемента; 				</li>                     <li> <b>iblock_id</b> - числовой код
-	* информационного блока; 				</li>                     <li> <b>modified_by</b> - код
-	* последнего изменившего пользователя; 				</li>                     <li> <b>active</b> -
-	* признак активности элемента; 				</li>                     <li> <i>show_counter </i>-
-	* количество показов элемента (учитывается методом <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/index.php">CIBlockElement</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/counterinc.php">CounterInc</a>); 				</li>         
-	*            <li> <b>show_counter_start</b> - время первого показа элемента
-	* (учитывается методом <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/index.php">CIBlockElement</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/counterinc.php">CounterInc</a>); 				</li>         
-	*            <li> <b>shows</b> - усредненное количество показов (количество
-	* показов / продолжительность показа); 				</li>                     <li> <b>rand</b> -
-	* случайный порядок;</li>                     <li> <span style="font-weight: bold;">xml_id</span> или
-	* <span style="font-weight: bold;">external_id</span> - внешний код;</li>                     <li> <span
-	* style="font-weight: bold;">tags</span> - теги;</li>                     <li> <span style="font-weight:
-	* bold;">created</span> - время создания;</li>                     <li> <span style="font-weight:
-	* bold;">created_date</span> - дата создания без учета времени;</li>                     <li>
-	* <span style="font-weight: bold;">cnt</span> - количество элементов (только при
-	* заданной группировке);              <br> </li>                     <li>
-	* <b>property_&lt;PROPERTY_CODE&gt;</b> - по значению свойства с числовым или
-	* символьным кодом <i>PROPERTY_CODE</i> (например, PROPERTY_123 или PROPERTY_NEWS_SOURCE);
-	* 				</li>                     <li> <b>propertysort_&lt;PROPERTY_CODE&gt;</b> - по индексу сортировки
-	* варианта значения свойства. Только для свойств типа "Список" ;
-	* 				</li>                     <li> <b>catalog_&lt;CATALOG_FIELD&gt;_&lt;PRICE_TYPE&gt;</b> - по полю CATALOG_FIELD
-	* (может быть PRICE - цена или CURRENCY - валюта) из цены с типом <i>PRICE_TYPE</i>
-	* (например, catalog_PRICE_1 или CATALOG_CURRENCY_3);</li>           <li> <b>CATALOG_QUANTITY</b> - общее
-	* количество товара;</li>           <li> <b>CATALOG_WEIGHT</b> - вес товара;</li>           <li>
-	* <b>CATALOG_AVAILABLE</b> - признак доступности к покупке (Y|N). Товар считается
-	* недоступным, если его количество меньше либо равно нулю, включен
-	* количественный учет и запрещена покупка при нулевом
-	* количестве;</li>                     <li> <span style="font-weight:
-	* bold;">PROPERTY_&lt;PROPERTY_CODE&gt;.&lt;FIELD&gt;</span> - по значению поля элемента
-	* указанного в качестве привязки. PROPERTY_CODE - символьный код свойства
-	* типа привязка к элементам. FIELD может принимать значения:</li>             
-	*        <ul> <li>ID                <br> </li>                         <li>TIMESTAMP_X                <br> </li>          
-	*               <li>MODIFIED_BY                <br> </li>                         <li>CREATED                <br> </li>   
-	*                      <li>CREATED_DATE                <br> </li>                         <li>CREATED_BY               
-	* <br> </li>                         <li>IBLOCK_ID                <br> </li>                         <li>ACTIVE           
-	*     <br> </li>                         <li>ACTIVE_FROM                <br> </li>                         <li>ACTIVE_TO  
-	*              <br> </li>                         <li>SORT                <br> </li>                         <li>NAME     
-	*           <br> </li>                         <li>SHOW_COUNTER                <br> </li>                        
-	* <li>SHOW_COUNTER_START                <br> </li>                         <li>CODE                <br> </li>             
-	*            <li>TAGS                <br> </li>                         <li>XML_ID                <br> </li>              
-	*           <li>STATUS </li>            </ul> <li> <span style="font-weight:
-	* bold;">PROPERTY_&lt;PROPERTY_CODE&gt;.PROPERTY_&lt;</span><span style="font-weight: bold;">PROPERTY_CODE2</span><span
-	* style="font-weight: bold;">&gt;</span> - по значению свойства элемента указанного в
-	* качестве привязки. PROPERTY_CODE - символьный код свойства типа
-	* привязки к элементам. PROPERTY_CODE2- код свойства связанных элементов.
-	* </li>                     <li> <b>HAS_PREVIEW_PICTURE</b> и <b>HAS_DETAIL_PICTURE</b> - сортировка по
-	* наличию и отсутствию картинок.</li> </ul> <br><br> для разделов:          <ul> <li>
-	* <b>id</b> - код группы;</li>          	            <li> <b>section</b> - код родительской
-	* группы;</li>          	            <li> <b>name</b> - название группы;</li>                     <li>
-	* <b>code</b> - символьный код группы;</li>          	            <li> <b>active</b> -
-	* активности группы;</li>          	            <li> <b>left_margin</b> - левая граница;</li> 
-	*         	            <li> <b>depth_level</b> - глубина вложенности (начинается с 1);</li>  
-	*        	            <li> <b>sort</b> - индекс сортировки;</li>                     <li> <b>created</b> -
-	* по времени создания группы;</li>                     <li> <b>created_by</b> - по
-	* идентификатору создателя группы;</li>                     <li> <b>modified_by</b> - по
-	* идентификатору пользователя изменившего группу;</li>          	           
-	* <li> <b>element_cnt</b> - количество элементов в группе, работает только
-	* если <b>bIncCnt</b> = true;</li>          	            <li> <b>timestamp_x</b> - по времени
-	* последнего изменения.</li>          </ul> <i>order1, ... </i> - порядок сортировки,
-	* может принимать значения:          <ul> <li> <b>asc</b> - по возрастанию;</li>       
-	*   	            <li> <b>desc</b> - по убыванию.</li>          </ul> <br> Значение по
-	* умолчанию Array("SORT"=&gt;"ASC") означает, что результат выборки будет
-	* отсортирован по возрастанию. Если задать пустой массив Array(), то
-	* результат отсортирован не будет.
-	*
-	* @param array $arFilter = Array() Массив вида array("фильтруемое поле"=&gt;"значение" [, ...]).
-	* 	<i>Фильтруемое поле</i> может принимать значения: <br><br> для
-	* элементов:         <ul> <li> <b>ID_1</b>, <b>ID_2</b> - по числовому коду (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>) от ID_1 до ID_2; 				</li>        
-	*             <li> <b>ACTIVE</b> - фильтр по активности (Y|N); передача пустого
-	* значения (<i>"ACTIVE"=&gt;""</i>) выводит все элементы без учета их
-	* состояния (<a href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string_equal.php">Строка</a>);
-	* 				</li>                     <li> <b>NAME</b> - по названию (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>); 				</li>                     <li>
-	* <b>CODE</b> - по символьному идентификатору (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>); 				</li>                     <li>
-	* <b>TAGS</b> - по тегам (<a href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>);
-	* 				</li>                     <li> <b> EXTERNAL_ID</b> - по внешнему коду (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>); 				</li>                            
-	* <li> <b>TIMESTAMP_X_1</b>, <b>TIMESTAMP_X_2</b> - по времени изменения (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/date.php">Дата</a>) от TIMESTAMP_X_1 до
-	* TIMESTAMP_X_2;</li>                        <li> <b>DATE_CREATE_1</b>, <b>DATE_CREATE_2</b> - по времени
-	* создания (<a href="http://dev.1c-bitrix.ru/api_help/iblock/filters/date.php">Дата</a>) от DATE_CREATE_1
-	* до DATE_CREATE_2; 				</li>                     <li> <b>CREATED_USER_ID </b>или<b> CREATED_BY</b> - по коду
-	* пользователя, добавившего элемент (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>); 				</li>                     <li>
-	* <b>DATE_ACTIVE_FROM_1</b>, <b>DATE_ACTIVE_FROM_2</b> - по дате начала активности (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/date.php">Дата</a>) от DATE_ACTIVE_FROM_1 до
-	* DATE_ACTIVE_FROM_2. Формат даты должен соответствовать <a
-	* href="http://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=35&amp;LESSON_ID=1992">формату даты</a>,
-	* установленному на сайте.; 				</li>                     <li> <b>DATE_ACTIVE_TO_1</b>,
-	* <b>DATE_ACTIVE_TO_2</b> - по дате окончания активности (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/date.php">Дата</a>) от DATE_ACTIVE_TO_1 до
-	* DATE_ACTIVE_TO_2. Формат даты должен соответствовать <a
-	* href="http://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=35&amp;LESSON_ID=1992">формату даты</a>,
-	* установленному на сайте.; 				</li>                             <li> <b>IBLOCK_ID</b> - по
-	* коду информационного блока (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>); 				</li>                            
-	* <li> <b>CATALOG_AVAILABLE</b> - признак доступности к покупке (Y|N). Товар
-	* считается недоступным, если его количество меньше либо равно
-	* нулю, включен количественный учет и запрещена покупка при
-	* нулевом количестве;                      </li>           <li> <b>CATALOG_CATALOG_GROUP_ID_N</b> - по
-	* типу цен;             </li>           <li> <b>CATALOG_SHOP_QUANTITY_N</b> - фильтрация по
-	* диапазону количества в цене;                        </li>           <li> <b>CATALOG_QUANTITY</b>
-	* - по общему количеству товара;                         </li>     <li> <b>CATALOG_WEIGHT</b> -
-	* по весу товара;                         </li>           <li> <b>SHOW_COUNTER</b> - по количеству
-	* показов (<a href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>); 				</li>         
-	*            <li> <b>SHOW_COUNTER_START</b> - по времени первого показа (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/date.php">Дата</a>); 				</li>                     <li>
-	* <b>WF_COMMENTS</b> - по комментарию документооборота (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>); 				</li>                     <li>
-	* <b>WF_STATUS_ID</b> или <span style="font-weight: bold;">WF_STATUS</span> - по коду статуса
-	* документооборота (<a href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>);
-	* 				</li>                             <li> <b>SHOW_NEW</b> - если <b>SHOW_HISTORY</b> не установлен
-	* или не равен Y и <b>SHOW_NEW</b>=Y, то будут показываться ещё
-	* неопубликованные элементы вместе с опубликованными; 				</li>             
-	*                <li> <b>PROPERTY_&lt;PROPERTY_CODE</b><b>&gt;</b> - фильтр по значениям свойств,
-	* где PROPERTY_CODE - код свойства или символьный код. Для свойств типа
-	* "Список", "Число", "Привязка к элементам" и "Привязка к разделам"  - <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/number.php">Число</a>. Для прочих - <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>; 				</li>                     <li> <b
-	* style="font-weight: bold;">PROPERTY_&lt;</b><b>PROPERTY_CODE<span style="font-weight: bold;">&gt;_VALUE</span></b> -
-	* фильтр по значениям списка для свойств типа "список" (<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/filters/string.php">Маска</a>), поиск будет
-	* осуществляться по строковому значению списка, а не по
-	* идентификатору; 				</li>                     <li> <b>CATALOG_&lt;CATALOG_FIELD&gt;_&lt;PRICE_TYPE&gt;</b>
-	* - по полю 				<i>CATALOG_FIELD</i> из цены типа <i>PRICE_TYPE</i> (ID типа цены), где
-	* 				<i>CATALOG_FIELD</i> может быть: PRICE - цена, CURRENCY - валюта.</li>                     <li>
-	* <span style="font-weight: bold;">PROPERTY_&lt;PROPERTY_CODE&gt;.&lt;FIELD&gt;</span> - фильтр по
-	* значениям полей связанных элементов. , где PROPERTY_CODE - ID или
-	* символьный код свойства привязки, а FIELD - поле указанного в
-	* привязке элемента.</li>          </ul> для разделов:  <ul> <li> <b>IBLOCK_ID</b> - по
-	* коду родительского информационного блока;</li>          	        	            <li>
-	* <b>NAME</b> - по названию (можно искать по шаблону [%_]);</li>          	            <li>
-	* <b>CODE</b> - по символьному коду (по шаблону [%_]);</li>          	            <li>
-	* <b>EXTERNAL_ID</b> - по внешнему коду (по шаблону [%_]);</li>          	            <li>
-	* <b>SECTION_ID</b> - по коду раздела-родителя;</li>          	            <li> <b>ID_1</b>,
-	* <b>ID_2</b> - по кодам разделов от ID_1 до ID_2;</li>          	            <li>
-	* <b>TIMESTAMP_X_1</b>, <b>TIMESTAMP_X_2</b> - по времени последнего изменения от
-	* TIMESTAMP_X_1 до TIMESTAMP_X_2;</li>                     <li> <b>DATE_CREATE_1</b>, <b>DATE_CREATE_2</b> - по
-	* времени создания от DATE_CREATE_1 до DATE_CREATE_2;</li>                     <li> <b>MODIFIED_BY
-	* </b>- по коду пользователя изменившему раздел;              <br> </li>               
-	*      <li> <b>CREATED_BY</b> - по создателю;              <br> </li>                 	            <li>
-	* <b>PROPERTY </b><i> - </i>по значениям свойств внутрилежащих элементов, PROPERTY
-	* - массив вида Array("код свойства"=&gt;"значение", ...).</li>          </ul> <br>       
-	* Необязательное. По умолчанию записи не фильтруются.
-	*
-	* @param bool $bIncCnt = false Возвращать ли поле <i>ELEMENT_CNT</i> - количество элементов в разделе.
-	* При этом arFilter дополнительно обрабатывает следующие фильтруемые
-	* поля:<b>            <br></b>          <ul> <li> <b>ELEMENT_SUBSECTIONS</b> - подсчитывать
-	* элементы вложенных подразделов или нет (Y|N). По умолчанию Y;</li>         
-	*            <li> <b>CNT_ALL</b> - подсчитывать еще неопубликованные элементы
-	* (Y|N). По умолчанию N. Актуально при установленном модуле
-	* документооборота;</li>                     <li> <b>CNT_ACTIVE</b> - при подсчете
-	* учитывать активность элементов (Y|N). По умолчанию N. Учитывается
-	* флаг активности элемента ACTIVE и даты начала и окончания
-	* активности.              <br> </li>          </ul>        Необязательный параметр, по
-	* умолчанию равен false.
-	*
-	* @param array $arSelectedFields = false Массив для выборки. Задается только для элементов.
-	*
-	* @return CIBlockResult <p>Возвращается объект <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockresult/index.php">CIBlockResult</a>.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getlist.php">CIBlockSection::GetList</a></li>  
-	* <li><a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/getlist.php">CIBlockElement::GetList</a></li> 
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getmixedlist.php
-	* @author Bitrix
-	*/
-	public static function GetMixedList($arOrder=Array("SORT"=>"ASC"), $arFilter=Array(), $bIncCnt = false, $arSelectedFields = false)
+	public static function GetMixedList($arOrder=array("SORT"=>"ASC"), $arFilter=array(), $bIncCnt = false, $arSelectedFields = false)
 	{
-		global $DB;
-
 		$arResult = array();
 
-		$arSectionFilter = array (
-			"IBLOCK_ID"		=>$arFilter["IBLOCK_ID"],
-			"?NAME"			=>$arFilter["NAME"],
-			">=ID"			=>$arFilter["ID_1"],
-			"<=ID"			=>$arFilter["ID_2"],
-			">=TIMESTAMP_X"		=>$arFilter["TIMESTAMP_X_1"],
-			"<=TIMESTAMP_X"		=>$arFilter["TIMESTAMP_X_2"],
-			"MODIFIED_BY"		=>$arFilter["MODIFIED_USER_ID"]? $arFilter["MODIFIED_USER_ID"]: $arFilter["MODIFIED_BY"],
-			">=DATE_CREATE"		=>$arFilter["DATE_CREATE_1"],
-			"<=DATE_CREATE"		=>$arFilter["DATE_CREATE_2"],
-			"CREATED_BY"		=>$arFilter["CREATED_USER_ID"]? $arFilter["CREATED_USER_ID"]: $arFilter["CREATED_BY"],
-			"CODE"			=>$arFilter["CODE"],
-			"EXTERNAL_ID"		=>$arFilter["EXTERNAL_ID"],
-			"ACTIVE"		=>$arFilter["ACTIVE"],
+		if (!is_array($arOrder))
+			$arOrder = array("SORT"=>"ASC");
 
-			"CNT_ALL"		=>$arFilter["CNT_ALL"],
-			"ELEMENT_SUBSECTIONS"	=>$arFilter["ELEMENT_SUBSECTIONS"],
-		);
-		if (isset($arFilter["CHECK_PERMISSIONS"]))
-		{
-			$arSectionFilter['CHECK_PERMISSIONS'] = $arFilter["CHECK_PERMISSIONS"];
-			$arSectionFilter['MIN_PERMISSION'] = (isset($arFilter['MIN_PERMISSION']) ? $arFilter['MIN_PERMISSION'] : 'R');
-		}
-		if(array_key_exists("SECTION_ID", $arFilter))
-			$arSectionFilter["SECTION_ID"] = $arFilter["SECTION_ID"];
+		$validatedSelect = is_array($arSelectedFields);
+		$emptySelect = empty($arSelectedFields) || !$validatedSelect || ($validatedSelect && in_array('*', $arSelectedFields));
 
-		$obSection = new CIBlockSection;
-		$rsSection = $obSection->GetList($arOrder, $arSectionFilter, $bIncCnt);
-		while($arSection = $rsSection->Fetch())
+		if (!empty($arFilter))
 		{
-			$arSection["TYPE"]="S";
-			$arResult[]=$arSection;
+			$arFilter = array_change_key_case($arFilter, CASE_UPPER);
 		}
 
-		$arElementFilter = array (
-			"IBLOCK_ID"		=>$arFilter["IBLOCK_ID"],
-			"?NAME"			=>$arFilter["NAME"],
-			"SECTION_ID"		=>$arFilter["SECTION_ID"],
-			">=ID"			=>$arFilter["ID_1"],
-			"<=ID"			=>$arFilter["ID_2"],
-			"=ID"			=> $arFilter["ID"],
-			">=TIMESTAMP_X"		=>$arFilter["TIMESTAMP_X_1"],
-			"<=TIMESTAMP_X"		=>$arFilter["TIMESTAMP_X_2"],
-			"CODE"			=>$arFilter["CODE"],
-			"EXTERNAL_ID"		=>$arFilter["EXTERNAL_ID"],
-			"MODIFIED_USER_ID"	=>$arFilter["MODIFIED_USER_ID"],
-			"MODIFIED_BY"		=>$arFilter["MODIFIED_BY"],
-			">=DATE_CREATE"		=>$arFilter["DATE_CREATE_1"],
-			"<=DATE_CREATE"		=>$arFilter["DATE_CREATE_2"],
-			"CREATED_BY"		=>$arFilter["CREATED_BY"],
-			"CREATED_USER_ID"	=>$arFilter["CREATED_USER_ID"],
-			">=DATE_ACTIVE_FROM"	=>$arFilter["DATE_ACTIVE_FROM_1"],
-			"<=DATE_ACTIVE_FROM"	=>$arFilter["DATE_ACTIVE_FROM_2"],
-			">=DATE_ACTIVE_TO"	=>$arFilter["DATE_ACTIVE_TO_1"],
-			"<=DATE_ACTIVE_TO"	=>$arFilter["DATE_ACTIVE_TO_2"],
-			"ACTIVE"		=>$arFilter["ACTIVE"],
-			"?SEARCHABLE_CONTENT"	=>$arFilter["DESCRIPTION"],
-			"?TAGS"			=>$arFilter["?TAGS"],
-			"WF_STATUS"		=>$arFilter["WF_STATUS"],
+		$elementInherentFilter = self::getElementInherentFilter($arFilter);
 
-			"SHOW_NEW"		=> ($arFilter["SHOW_NEW"] !== "N"? "Y": "N"),
-			"SHOW_BP_NEW"		=> $arFilter["SHOW_BP_NEW"]
+		$filterById = self::getPreparedFilterById($arFilter);
+
+		if (static::checkLoadSections($elementInherentFilter))
+		{
+			$arSectionFilter = array();
+			$simpleFilter = array(
+				"IBLOCK_ID" => "IBLOCK_ID",
+				"NAME" => "?NAME",
+				"TIMESTAMP_X_1" => ">=TIMESTAMP_X",
+				"TIMESTAMP_X_2" => "<=TIMESTAMP_X",
+				"DATE_CREATE_1" => ">=DATE_CREATE",
+				"DATE_CREATE_2" => "<=DATE_CREATE",
+				"CODE" => "CODE",
+				"EXTERNAL_ID" => "EXTERNAL_ID",
+				"ACTIVE" => "ACTIVE",
+				"CNT_ACTIVE" => "CNT_ACTIVE",
+				"CNT_ALL" => "CNT_ALL",
+				"ELEMENT_SUBSECTIONS" => "ELEMENT_SUBSECTIONS"
+			);
+			foreach ($simpleFilter as $source => $dest)
+			{
+				if (isset($arFilter[$source]))
+				{
+					$arSectionFilter[$dest] = $arFilter[$source];
+				}
+			}
+			unset($source);
+			unset($dest);
+			unset($simpleFilter);
+			if (isset($arFilter["MODIFIED_USER_ID"]) || isset($arFilter["MODIFIED_BY"]))
+			{
+				$arSectionFilter["MODIFIED_BY"] = (isset($arFilter["MODIFIED_USER_ID"])
+					? $arFilter["MODIFIED_USER_ID"]
+					: $arFilter["MODIFIED_BY"]
+				);
+			}
+			if (isset($arFilter["CREATED_USER_ID"]) || isset($arFilter["CREATED_BY"]))
+			{
+				$arSectionFilter["CREATED_BY"] = (isset($arFilter["CREATED_USER_ID"])
+					? $arFilter["CREATED_USER_ID"]
+					: $arFilter["CREATED_BY"]
+				);
+			}
+
+			if (isset($arFilter["CHECK_PERMISSIONS"]))
+			{
+				$arSectionFilter['CHECK_PERMISSIONS'] = $arFilter["CHECK_PERMISSIONS"];
+				$arSectionFilter['MIN_PERMISSION'] = (isset($arFilter['MIN_PERMISSION']) ? $arFilter['MIN_PERMISSION'] : 'R');
+			}
+			if (isset($arFilter['SECTION_ID']) && (string)$arFilter['SECTION_ID'] != '')
+			{
+				$arSectionFilter["SECTION_ID"] = $arFilter["SECTION_ID"];
+			}
+			if (!empty($filterById))
+				$arSectionFilter = $filterById + $arSectionFilter;
+
+			$sectionFields = array(
+				"ID" => true,
+				"CODE" => true,
+				"XML_ID" => true,
+				"EXTERNAL_ID" => true,
+				"IBLOCK_ID" => true,
+				"IBLOCK_SECTION_ID" => true,
+				"TIMESTAMP_X" => true,
+				"TIMESTAMP_X_UNIX" => true,
+				"SORT" => true,
+				"NAME" => true,
+				"ACTIVE" => true,
+				"GLOBAL_ACTIVE" => true,
+				"PICTURE" => true,
+				"DESCRIPTION" => true,
+				"DESCRIPTION_TYPE" => true,
+				"LEFT_MARGIN" => true,
+				"RIGHT_MARGIN" => true,
+				"DEPTH_LEVEL" => true,
+				"SEARCHABLE_CONTENT" => true,
+				"MODIFIED_BY" => true,
+				"DATE_CREATE" => true,
+				"DATE_CREATE_UNIX" => true,
+				"CREATED_BY" => true,
+				"DETAIL_PICTURE" => true,
+				"TMP_ID" => true,
+
+				"LIST_PAGE_URL" => true,
+				"SECTION_PAGE_URL" => true,
+				"IBLOCK_TYPE_ID" => true,
+				"IBLOCK_CODE" => true,
+				"IBLOCK_EXTERNAL_ID" => true,
+				"SOCNET_GROUP_ID" => true,
+			);
+
+			if ($emptySelect)
+			{
+				$sectionSelect = $sectionFields;
+			}
+			else
+			{
+				$sectionSelect = array();
+				foreach ($arSelectedFields as $field)
+				{
+					if (!isset($sectionFields[$field]))
+						continue;
+					$sectionSelect[$field] = $field;
+				}
+				unset($field);
+				if (!empty($sectionSelect))
+					$sectionSelect = array_values($sectionSelect);
+			}
+
+			$obSection = new CIBlockSection;
+			$rsSection = $obSection->GetList($arOrder, $arSectionFilter, $bIncCnt, $sectionSelect);
+			while ($arSection = $rsSection->Fetch())
+			{
+				$arSection["TYPE"] = "S";
+				$arResult[] = $arSection;
+			}
+			unset($arSection);
+			unset($rsSection);
+			unset($obSection);
+		}
+
+		$arElementFilter = array();
+		$simpleElementFilter = array(
+			"IBLOCK_ID" => "IBLOCK_ID",
+			"NAME" => "?NAME",
+			"TIMESTAMP_X_1" => ">=TIMESTAMP_X",
+			"TIMESTAMP_X_2" => "<=TIMESTAMP_X",
+			"CODE" => "CODE",
+			"EXTERNAL_ID" => "EXTERNAL_ID",
+			"MODIFIED_USER_ID" => "MODIFIED_USER_ID",
+			"MODIFIED_BY" => "MODIFIED_BY",
+			"DATE_CREATE_1" => ">=DATE_CREATE",
+			"DATE_CREATE_2" => "<=DATE_CREATE",
+			"CREATED_BY" => "CREATED_BY",
+			"CREATED_USER_ID" => "CREATED_USER_ID",
+			"DATE_ACTIVE_FROM_1" => ">=DATE_ACTIVE_FROM",
+			"DATE_ACTIVE_FROM_2" => "<=DATE_ACTIVE_FROM",
+			"DATE_ACTIVE_TO_1" => ">=DATE_ACTIVE_TO",
+			"DATE_ACTIVE_TO_2" => "<=DATE_ACTIVE_TO",
+			"ACTIVE" => "ACTIVE",
+			"DESCRIPTION" => "?SEARCHABLE_CONTENT",
+			"?TAGS" => "?TAGS",
+			"WF_STATUS" => "WF_STATUS",
+			"SHOW_BP_NEW" => "SHOW_BP_NEW"
 		);
+		foreach ($simpleElementFilter as $source => $dest)
+		{
+			if (isset($arFilter[$source]))
+			{
+				$arElementFilter[$dest] = $arFilter[$source];
+			}
+		}
+		unset($source);
+		unset($dest);
+		unset($simpleElementFilter);
+		$arElementFilter["SHOW_NEW"] = (isset($arFilter["SHOW_NEW"]) && $arFilter["SHOW_NEW"] == "N" ? "N" : "Y");
+
 		if (isset($arFilter["CHECK_PERMISSIONS"]))
 		{
 			$arElementFilter['CHECK_PERMISSIONS'] = $arFilter["CHECK_PERMISSIONS"];
 			$arElementFilter['MIN_PERMISSION'] = (isset($arFilter['MIN_PERMISSION']) ? $arFilter['MIN_PERMISSION'] : 'R');
 		}
 
-		foreach($arFilter as $key=>$value)
+		if (isset($arFilter['SECTION_ID']) && (string)$arFilter['SECTION_ID'] != '')
 		{
-			$op = CIBlock::MkOperationFilter($key);
-			$newkey = strtoupper($op["FIELD"]);
-			if(
-				substr($newkey, 0, 9) == "PROPERTY_"
-				|| substr($newkey, 0, 8) == "CATALOG_"
-			)
-			{
-				$arElementFilter[$key] = $value;
-			}
+			$arElementFilter["SECTION_ID"] = $arFilter["SECTION_ID"];
 		}
 
-		if(strlen($arFilter["SECTION_ID"])<= 0)
-			unset($arElementFilter["SECTION_ID"]);
+		if (!empty($elementInherentFilter))
+			$arElementFilter = $arElementFilter + $elementInherentFilter;
+		unset($elementInherentFilter);
 
-		if(!is_array($arSelectedFields))
-			$arSelectedFields = Array("*");
+		if (!empty($filterById))
+			$arElementFilter = $filterById + $arElementFilter;
+
+		if(!$validatedSelect)
+			$arSelectedFields = array("*");
 
 		if(isset($arFilter["CHECK_BP_PERMISSIONS"]))
 			$arElementFilter["CHECK_BP_PERMISSIONS"] = $arFilter["CHECK_BP_PERMISSIONS"];
@@ -2632,9 +2362,13 @@ class CAllIBlockSection
 			$arElement["TYPE"]="E";
 			$arResult[]=$arElement;
 		}
+		unset($arElement);
+		unset($rsElement);
+		unset($obElement);
 
 		$rsResult = new CDBResult;
 		$rsResult->InitFromArray($arResult);
+		unset($arResult);
 
 		return $rsResult;
 	}
@@ -2642,36 +2376,9 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// GetSectionElementsCount($ID, $arFilter=Array())
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Метод считает количество элементов внутри раздела <i>ID</i>, учитывая фильтр <i>arFilter</i>. Нестатический метод.</p>
-	*
-	*
-	* @param mixed $intID  Код раздела.
-	*
-	* @param array $arFilter = Array() Массив вида Array("фильтруемое поле"=&gt;"значение", ...), где
-	* фильтруемое поле может принимать значения:          <br><i>CNT_ACTIVE</i> -
-	* активные элементы (Y|N),<i>            <br>          CNT_ALL</i> - учитывать ещё не
-	* опубликованные элементы (если установлен модуль
-	* документооборота), <i>            <br>          PROPERTY</i> - массив для фильтрации
-	* элементов по значениям свойств, вида Array("код
-	* свойства"=&gt;"значение", ...),
-	*
-	* @return int 
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockelement/getlist.php">CIBlockElement::GetList</a>  
-	* </li></ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getsectionelementscount.php
-	* @author Bitrix
-	*/
-	public static function GetSectionElementsCount($ID, $arFilter=Array())
+	function GetSectionElementsCount($ID, $arFilter=Array())
 	{
-		global $DB, $USER;
+		global $DB;
 
 		$arJoinProps = array();
 		$bJoinFlatProp = false;
@@ -2721,7 +2428,7 @@ class CAllIBlockSection
 							$r = CIBlock::FilterCreate("FPV".$iPropCnt.".VALUE", $propVAL, "string", $cOperationType);
 					}
 
-					if(strlen($r)>0)
+					if($r <> '')
 					{
 						if($bSave)
 						{
@@ -2736,7 +2443,7 @@ class CAllIBlockSection
 
 		$strSqlSearch = "";
 		foreach($arSqlSearch as $r)
-			if(strlen($r)>0)
+			if($r <> '')
 				$strSqlSearch .= "\n\t\t\t\tAND  (".$r.") ";
 
 		$strSqlSearchProp = "";
@@ -2749,7 +2456,7 @@ class CAllIBlockSection
 			$i = $db_prop["iPropCnt"];
 			$strSqlSearchProp .= "
 				INNER JOIN b_iblock_property FP".$i." ON FP".$i.".IBLOCK_ID=BS.IBLOCK_ID AND
-				".(IntVal($propID)>0?" FP".$i.".ID=".IntVal($propID)." ":" FP".$i.".CODE='".$DB->ForSQL($propID, 200)."' ")."
+				".(intval($propID)>0?" FP".$i.".ID=".intval($propID)." ":" FP".$i.".CODE='".$DB->ForSQL($propID, 200)."' ")."
 				INNER JOIN ".$strTable." FPV".$i." ON FP".$i.".ID=FPV".$i.".IBLOCK_PROPERTY_ID AND FPV".$i.".IBLOCK_ELEMENT_ID=BE.ID
 			";
 		}
@@ -2768,7 +2475,7 @@ class CAllIBlockSection
 				INNER JOIN b_iblock_section_element BSE ON BSE.IBLOCK_SECTION_ID=BSTEMP.ID
 				INNER JOIN b_iblock_element BE ON BE.ID=BSE.IBLOCK_ELEMENT_ID AND BE.IBLOCK_ID=BS.IBLOCK_ID
 			".$strSqlSearchProp."
-			WHERE BS.ID=".IntVal($ID)."
+			WHERE BS.ID=".intval($ID)."
 				AND ((BE.WF_STATUS_ID=1 AND BE.WF_PARENT_ELEMENT_ID IS NULL )
 				".($arFilter["CNT_ALL"]=="Y"?" OR BE.WF_NEW='Y' ":"").")
 				".($arFilter["CNT_ACTIVE"]=="Y"?
@@ -2783,22 +2490,36 @@ class CAllIBlockSection
 		return $res["CNT"];
 	}
 
-	public static function _check_rights_sql($min_permission)
+	protected static function _check_rights_sql($min_permission, $permissionsBy = null)
 	{
 		global $DB, $USER;
-		$min_permission = (strlen($min_permission)==1) ? $min_permission : "R";
+		$min_permission = (mb_strlen($min_permission) == 1) ? $min_permission : "R";
 
-		if(is_object($USER))
+		if ($permissionsBy !== null)
+			$permissionsBy = (int)$permissionsBy;
+		if ($permissionsBy < 0)
+			$permissionsBy = null;
+
+		if ($permissionsBy !== null)
 		{
-			$iUserID = intval($USER->GetID());
-			$strGroups = $USER->GetGroups();
-			$bAuthorized = $USER->IsAuthorized();
+			$iUserID = $permissionsBy;
+			$strGroups = implode(',', CUser::GetUserGroup($permissionsBy));
+			$bAuthorized = false;
 		}
 		else
 		{
-			$iUserID = 0;
-			$strGroups = "2";
-			$bAuthorized = false;
+			if (is_object($USER))
+			{
+				$iUserID = (int)$USER->GetID();
+				$strGroups = $USER->GetGroups();
+				$bAuthorized = $USER->IsAuthorized();
+			}
+			else
+			{
+				$iUserID = 0;
+				$strGroups = "2";
+				$bAuthorized = false;
+			}
 		}
 
 		$stdPermissions = "
@@ -2824,7 +2545,7 @@ class CAllIBlockSection
 		if($operation)
 		{
 			$acc = new CAccess;
-			$acc->UpdateCodes();
+			$acc->UpdateCodes($permissionsBy !== null ? array('USER_ID' => $permissionsBy) : false);
 		}
 
 		if($operation == "section_read")
@@ -2881,59 +2602,7 @@ class CAllIBlockSection
 		return $strResult;
 	}
 
-	
-	/**
-	* <p>Возвращает количество разделов, удовлетворяющих фильтру <i>arFilter</i>. Нестатический метод.</p>
-	*
-	*
-	* @param array $arrayarFilter = Array() Массив вида array("фильтруемое поле"=&gt;"значение" [, ...])<br>
-	* "фильтруемое поле" может принимать значения:<br>     <i>ACTIVE</i> -
-	* фильтр по активности (Y|N);<br>     <i>GLOBAL_ACTIVE</i> - фильтр по активности,
-	* учитывая активность вышележащих разделов (Y|N);<br>     <i>NAME</i> - по
-	* названию (можно искать по шаблону [%_]);<br>     <i>CODE</i> - по
-	* символьному коду (по шаблону [%_]);<br>     <i>EXTERNAL_ID</i> - по внешнему
-	* коду (по шаблону [%_]);<br>     <i>SECTION_ID</i> - по коду раздела-родителя;<br>
-	*     <i>DEPTH_LEVEL</i> - по уровню вложенности;<br>     <i>LEFT_BORDER, RIGHT_BORDER</i> -
-	* по левой и правой границе (поля <i>LEFT_MARGIN</i> и <i>RIGHT_MARGIN</i>, см.
-	* примечание);<br>     <i>ID</i> - по коду раздела;<br>     <i>IBLOCK_ID</i> - по
-	* коду родительского информационного блока;<br>     <i>IBLOCK_ACTIVE</i> - по
-	* активности родительского информационного блока;<br>
-	*     <i>IBLOCK_NAME</i> - по названию информационного блока (по шаблону
-	* [%_]);<br>     <i>IBLOCK_TYPE</i> - по типу информационного блока; <br>
-	*     <i>IBLOCK_CODE - </i>по символьному коду информационного блока (по
-	* шаблону [%_]);<br>     <i>IBLOCK_EXTERNAL_ID</i> - по внешнему коду
-	* информационного блока (по шаблону [%_]);<br><br> Перед названием
-	* фильтруемого поля можно указать тип фильтрации:<br> "!" - не равно<br>
-	* "&lt;" - меньше<br> "&lt;=" - меньше либо равно<br> "&gt;" - больше<br> "&gt;=" -
-	* больше либо равно<br><br> "значения фильтра" одиночное значение или
-	* массив.<br><br> Необязательное. По умолчанию записи не фильтруются.
-	*
-	* @return int 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* 	$arFilter = Array(
-	* 		"IBLOCK_ID"=&gt;$IBLOCK_ID,
-	* 		"SECTION_ID"=&gt;$f_ID
-	* 		);
-	* 
-	* 	echo CIBlockSection::GetCount($arFilter);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/index.php">CIBlockSection</a>::<a
-	* href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getlist.php">GetList()</a> </li></ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblocksection/getcount.php
-	* @author Bitrix
-	*/
-	public static function GetCount($arFilter=Array())
+	function GetCount($arFilter=Array())
 	{
 		global $DB, $USER;
 
@@ -2941,15 +2610,20 @@ class CAllIBlockSection
 
 		$bCheckPermissions = !array_key_exists("CHECK_PERMISSIONS", $arFilter) || $arFilter["CHECK_PERMISSIONS"]!=="N";
 		$bIsAdmin = is_object($USER) && $USER->IsAdmin();
-		if($bCheckPermissions && !$bIsAdmin)
+		$permissionsBy = null;
+		if ($bCheckPermissions && isset($arFilter['PERMISSIONS_BY']))
 		{
-			$min_permission = (strlen($arFilter["MIN_PERMISSION"])==1) ? $arFilter["MIN_PERMISSION"] : "R";
-			$arSqlSearch[] = CIBlockSection::_check_rights_sql($min_permission);
+			$permissionsBy = (int)$arFilter['PERMISSIONS_BY'];
+			if ($permissionsBy < 0)
+				$permissionsBy = null;
 		}
+		if($bCheckPermissions && ($permissionsBy !== null || !$bIsAdmin))
+			$arSqlSearch[] = self::_check_rights_sql($arFilter["MIN_PERMISSION"], $permissionsBy);
+		unset($permissionsBy);
 
 		$strSqlSearch = "";
 		foreach($arSqlSearch as $i=>$strSearch)
-			if(strlen($strSearch)>0)
+			if($strSearch <> '')
 				$strSqlSearch .= "\n\t\t\tAND  (".$strSearch.") ";
 
 		$strSql = "
@@ -2962,10 +2636,10 @@ class CAllIBlockSection
 
 		$res = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
 		$res_cnt = $res->Fetch();
-		return IntVal($res_cnt["C"]);
+		return (int)$res_cnt["C"];
 	}
 
-	public static function UserTypeRightsCheck($entity_id)
+	function UserTypeRightsCheck($entity_id)
 	{
 		if(preg_match("/^IBLOCK_(\d+)_SECTION$/", $entity_id, $match))
 		{
@@ -2975,9 +2649,13 @@ class CAllIBlockSection
 			return "D";
 	}
 
-	public static function RecalcGlobalActiveFlag($arSection)
+	function RecalcGlobalActiveFlag($arSection, $distance = 0)
 	{
 		global $DB;
+
+		$distance = (int)$distance;
+		$arSection['LEFT_MARGIN'] += $distance;
+		$arSection['RIGHT_MARGIN'] += $distance;
 
 		//Make all children globally active
 		$DB->Query("
@@ -3025,17 +2703,17 @@ class CAllIBlockSection
 
 	public static function getSectionCodePath($sectionId)
 	{
-		if (!array_key_exists($sectionId, self::$arSectionPathCache))
+		if (!isset(self::$arSectionPathCache[$sectionId]))
 		{
 			self::$arSectionPathCache[$sectionId] = "";
-			$res = CIBlockSection::GetNavChain(0, $sectionId, array("ID", "CODE"));
-			while ($a = $res->Fetch())
+			$res = CIBlockSection::GetNavChain(0, $sectionId, array("ID", "CODE"), true);
+			foreach ($res as $a)
 			{
-				self::$arSectionCodeCache[$a["ID"]] = urlencode($a["CODE"]);
-				self::$arSectionPathCache[$sectionId] .= urlencode($a["CODE"])."/";
+				self::$arSectionCodeCache[$a["ID"]] = rawurlencode($a["CODE"]);
+				self::$arSectionPathCache[$sectionId] .= rawurlencode($a["CODE"])."/";
 			}
+			unset($a, $res);
 			self::$arSectionPathCache[$sectionId] = rtrim(self::$arSectionPathCache[$sectionId], "/");
-
 		}
 		return self::$arSectionPathCache[$sectionId];
 	}
@@ -3051,11 +2729,123 @@ class CAllIBlockSection
 			$res = $DB->Query("SELECT IBLOCK_ID, CODE FROM b_iblock_section WHERE ID = ".$sectionId);
 			while ($a = $res->Fetch())
 			{
-				self::$arSectionCodeCache[$sectionId] = urlencode($a["CODE"]);
+				self::$arSectionCodeCache[$sectionId] = rawurlencode($a["CODE"]);
 			}
 		}
 		return self::$arSectionCodeCache[$sectionId];
 	}
-}
 
-?>
+	/**
+	 * Returns a filter by element properties and product fields.
+	 *
+	 * @param array $filter
+	 * @return array
+	 */
+	public static function getElementInherentFilter(array $filter): array
+	{
+		$result = array();
+		$filter = array_filter($filter, [__CLASS__, 'clearNull']);
+		if (!empty($filter))
+		{
+			$prepared = array();
+			foreach ($filter as $index => $value)
+			{
+				if (
+					preg_match('/^(>=|<=|>|<|=|!=|)ID$/', $index, $prepared)
+					&& $value instanceof \CIBlockElement
+				)
+				{
+					if ($index == 'ID')
+						$index = '=ID';
+					$result[$index] = $value;
+				}
+			}
+			unset($index, $value);
+			$catalogIncluded = Loader::includeModule('catalog');
+			foreach($filter as $index => $value)
+			{
+				$op = CIBlock::MkOperationFilter($index);
+				if (
+					strncmp($op['FIELD'], 'PROPERTY_', 9) == 0
+					|| ($catalogIncluded && \CProductQueryBuilder::isValidField($op['FIELD']))
+				)
+				{
+					$result[$index] = $value;
+				}
+			}
+			unset($op);
+		}
+		return $result;
+	}
+
+	/**
+	 * @param array $filter
+	 * @return bool
+	 */
+	public static function checkLoadSections(array $filter): bool
+	{
+		$result = true;
+		if (!empty($filter))
+		{
+			$catalogIncluded = Loader::includeModule('catalog');
+			foreach($filter as $index => $value)
+			{
+				if ($value instanceof \CIBlockElement)
+				{
+					$result = false;
+					break;
+				}
+				$op = CIBlock::MkOperationFilter($index);
+				if (
+					strncmp($op['FIELD'], 'PROPERTY_', 9) == 0
+					|| ($catalogIncluded && \CProductQueryBuilder::isRealFilterField($op['FIELD']))
+				)
+				{
+					$result = false;
+					break;
+				}
+			}
+			unset($op);
+		}
+		return $result;
+	}
+
+	/**
+	 * @param array $filter
+	 * @return array
+	 */
+	protected static function getPreparedFilterById(array $filter): array
+	{
+		$result = array();
+		if (isset($filter['ID_1']) || isset($filter['ID_2']))
+		{
+			if (isset($filter['ID_1']))
+				$result['>=ID'] = $filter['ID_1'];
+			if (isset($filter['ID_2']))
+				$result['<=ID'] = $filter['ID_2'];
+		}
+		else
+		{
+			$prepared = array();
+			foreach (array_keys($filter) as $index)
+			{
+				if ($filter[$index] === null || is_object($filter[$index]))
+					continue;
+				if (preg_match('/^(>=|<=|>|<|=|!=)ID$/', $index, $prepared))
+					$result[$index] = $filter[$index];
+			}
+			unset($index);
+			unset($prepared);
+		}
+		return $result;
+	}
+
+	/**
+	 * @param mixed $value
+	 * @return bool
+	 */
+	protected static function clearNull($value): bool
+	{
+		return $value !== null;
+	}
+}

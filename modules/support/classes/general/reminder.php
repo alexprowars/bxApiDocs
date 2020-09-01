@@ -5,7 +5,7 @@ IncludeModuleLangFile(__FILE__);
 class CAllTicketReminder
 {
 		
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "support";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
@@ -13,7 +13,7 @@ class CAllTicketReminder
 	}
 	
 
-	public static function ConvertResponseTimeUnit($rt, $rtu)
+	function ConvertResponseTimeUnit($rt, $rtu)
 	{
 		switch($rtu)
 		{
@@ -24,7 +24,7 @@ class CAllTicketReminder
 		return 0;
 	}
 
-	public static function RecalculateLastMessageDeadline($RSD = true)
+	function RecalculateLastMessageDeadline($RSD = true)
 	{
 		global $DB, $DBType;
 		$err_mess = (self::err_mess())."<br>Function: RecalculateLastMessage<br>Line: ";
@@ -144,7 +144,7 @@ class CAllTicketReminder
 	}
 
 
-	public static function RecalculateSupportDeadline($arFilter = array())
+	function RecalculateSupportDeadline($arFilter = array())
 	{
 		global $DB;
 		$err_mess = (CAllTicketReminder::err_mess())."<br>Function: RecalculateSupportDeadline<br>Line: ";	
@@ -197,7 +197,7 @@ class CAllTicketReminder
 	
 	/*$arTicket = ID,SLA_ID,RESPONSE_TIME, D_1_USER_M_AFTER_SUP_M, RESPONSE_TIME_UNIT, NOTICE_TIME, NOTICE_TIME_UNIT,DEADLINE_SOURCE_DATE
 	$dateType = CTicket::ADD, CTicket::UPDATE CTicket::DELETE, CTicket::IGNORE, CTicket::REOPEN, CTicket::NEW_SLA*/
-	public static function RecalculateSupportDeadlineForOneTicket($arTicket, $arFields = array(), $dateType = array("EVENT"=>array(CTicket::IGNORE)))
+	function RecalculateSupportDeadlineForOneTicket($arTicket, $arFields = array(), $dateType = array("EVENT"=>array(CTicket::IGNORE)))
 	{
 		global $DB;
 		$err_mess = (CAllTicketReminder::err_mess())."<br>Function: RecalculateSupportDeadlineForOneTicket<br>Line: ";	
@@ -318,7 +318,7 @@ class CAllTicketReminder
 	}
 
 
-	public static function SupportDeadline($arrTicket)
+	function SupportDeadline($arrTicket)
 	{
 
 		global $MESS, $DB;
@@ -382,7 +382,7 @@ class CAllTicketReminder
 	}
 
 
-	public static function SupportDeadlineNotify($arrTicket0)
+	function SupportDeadlineNotify($arrTicket0)
 	{
 		//SUPPORT_DEADLINE_NOTIFY
 		//SUPPORT_DEADLINE			= EXPIRATION_DATE
@@ -575,7 +575,7 @@ class CAllTicketReminder
 		$DB->Update("b_ticket_message", $arFields, "WHERE ID='" . $arMessage["ID"] . "'", $err_mess . __LINE__);
 	}
 
-	public static function AgentFunction()
+	function AgentFunction()
 	{
 		//IS_OVERDUE
 		//IS_NOTIFIED
@@ -640,7 +640,7 @@ class CAllTicketReminder
 	}
 
 
-	public static function StartAgent()
+	function StartAgent()
 	{
 		CAgent::RemoveModuleAgents("support");
 		CAgent::AddAgent("CTicketReminder::AgentFunction();", "support", "N", 60);

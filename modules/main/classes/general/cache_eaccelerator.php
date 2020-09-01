@@ -6,12 +6,12 @@ class CPHPCacheEAccelerator implements ICacheBackend
 	var $written = false;
 	var $read = false;
 
-	public function __construct()
+	function __construct()
 	{
 		$this->CPHPCacheEAccelerator();
 	}
 
-	public function CPHPCacheEAccelerator()
+	function CPHPCacheEAccelerator()
 	{
 		if(defined("BX_CACHE_SID"))
 			$this->sid = BX_CACHE_SID;
@@ -19,12 +19,12 @@ class CPHPCacheEAccelerator implements ICacheBackend
 			$this->sid = "BX";
 	}
 
-	public static function IsAvailable()
+	function IsAvailable()
 	{
 		return function_exists('eaccelerator_get');
 	}
 
-	public function clean($basedir, $initdir = false, $filename = false)
+	function clean($basedir, $initdir = false, $filename = false)
 	{
 		if(strlen($filename))
 		{
@@ -63,7 +63,7 @@ class CPHPCacheEAccelerator implements ICacheBackend
 		return true;
 	}
 
-	public function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
+	function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		$basedir_version = eaccelerator_get($this->sid.$basedir);
 		if($basedir_version === null)
@@ -95,7 +95,7 @@ class CPHPCacheEAccelerator implements ICacheBackend
 		return true;
 	}
 
-	public function write($arAllVars, $basedir, $initdir, $filename, $TTL)
+	function write($arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		$basedir_version = eaccelerator_get($this->sid.$basedir);
 		if($basedir_version === null)
@@ -126,7 +126,7 @@ class CPHPCacheEAccelerator implements ICacheBackend
 		eaccelerator_put($basedir_version."|".$initdir_version."|".$filename, $arAllVars, intval($TTL));
 	}
 
-	public static function IsCacheExpired($path)
+	function IsCacheExpired($path)
 	{
 		return false;
 	}

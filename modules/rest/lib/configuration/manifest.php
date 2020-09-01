@@ -36,12 +36,13 @@ class Manifest
 		$result = [];
 		$manifest = static::get($code);
 
-		if($manifest !== false && isset($params['TYPE']))
+		if($manifest !== false && isset($params['TYPE']) && isset($params['CONTEXT_USER']))
 		{
 			$step = intval($params['STEP']);
+			$setting = new Setting($params['CONTEXT_USER']);
 			if($step === 0)
 			{
-				Helper::getInstance()->deleteSetting();
+				$setting->delete(Setting::SETTING_MANIFEST);
 			}
 
 			$event = new Event(
@@ -51,11 +52,12 @@ class Manifest
 					'CODE' => $manifest['CODE'],
 					'MANIFEST' => $manifest,
 					'TYPE' => $params['TYPE'],
-					'CONTEXT' => $params['CONTEXT'] ? : [],
+					'CONTEXT' => $params['CONTEXT'] ? : false,
+					'CONTEXT_USER' => $params['CONTEXT_USER'],
 					'STEP' => $step,
 					'NEXT' => isset($params['NEXT']) ? $params['NEXT'] : null,
 					'ITEM_CODE' => $params['ITEM_CODE'] ? : null,
-					'SETTING' => Helper::getInstance()->getSetting()
+					'SETTING' => $setting->get(Setting::SETTING_MANIFEST)
 				]
 			);
 			EventManager::getInstance()->send($event);
@@ -64,7 +66,7 @@ class Manifest
 				$parameters = $eventResult->getParameters();
 				if(isset($parameters['SETTING']))
 				{
-					Helper::getInstance()->saveSetting($parameters['SETTING']);
+					$setting->set(Setting::SETTING_MANIFEST, $parameters['SETTING']);
 				}
 
 				$result[] = [

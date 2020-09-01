@@ -1,19 +1,19 @@
 <?
 
-// define("BX_WIZARD_WELCOME_ID", "__welcome");
-// define("BX_WIZARD_LICENSE_ID", "__license");
-// define("BX_WIZARD_SELECT_SITE_ID", "__select_site");
-// define("BX_WIZARD_SELECT_GROUP_ID", "__select_group");
-// define("BX_WIZARD_SELECT_TEMPLATE_ID", "__select_template");
-// define("BX_WIZARD_SELECT_SERVICE_ID", "__select_service");
-// define("BX_WIZARD_SELECT_STRUCTURE_ID", "__select_structure");
-// define("BX_WIZARD_START_INSTALL_ID", "__start_install");
-// define("BX_WIZARD_INSTALL_SITE_ID", "__install_site");
-// define("BX_WIZARD_INSTALL_TEMPLATE_ID", "__install_template");
-// define("BX_WIZARD_INSTALL_SERVICE_ID", "__install_service");
-// define("BX_WIZARD_INSTALL_STRUCTURE_ID", "__install_structure");
-// define("BX_WIZARD_FINISH_ID", "__finish");
-// define("BX_WIZARD_CANCEL_ID", "__install_cancel");
+define("BX_WIZARD_WELCOME_ID", "__welcome");
+define("BX_WIZARD_LICENSE_ID", "__license");
+define("BX_WIZARD_SELECT_SITE_ID", "__select_site");
+define("BX_WIZARD_SELECT_GROUP_ID", "__select_group");
+define("BX_WIZARD_SELECT_TEMPLATE_ID", "__select_template");
+define("BX_WIZARD_SELECT_SERVICE_ID", "__select_service");
+define("BX_WIZARD_SELECT_STRUCTURE_ID", "__select_structure");
+define("BX_WIZARD_START_INSTALL_ID", "__start_install");
+define("BX_WIZARD_INSTALL_SITE_ID", "__install_site");
+define("BX_WIZARD_INSTALL_TEMPLATE_ID", "__install_template");
+define("BX_WIZARD_INSTALL_SERVICE_ID", "__install_service");
+define("BX_WIZARD_INSTALL_STRUCTURE_ID", "__install_structure");
+define("BX_WIZARD_FINISH_ID", "__finish");
+define("BX_WIZARD_CANCEL_ID", "__install_cancel");
 
 class CWizard
 {
@@ -78,12 +78,12 @@ class CWizard
 	}
 
 	/** @deprecated */
-	static public function CWizard($wizardName)
+	public function CWizard($wizardName)
 	{
 		self::__construct($wizardName);
 	}
 
-	public function Install()
+	function Install()
 	{
 		if ($this->__bInited)
 			return;
@@ -141,7 +141,7 @@ class CWizard
 		}
 	}
 
-	public function __Install()
+	function __Install()
 	{
 		//Create wizard
 		$wizardName = (array_key_exists("NAME", $this->arDescription) ? $this->arDescription["NAME"] : "");
@@ -461,7 +461,7 @@ class CWizard
 		$wizard->Display();
 	}
 
-	public function __SetTemplate()
+	function __SetTemplate()
 	{
 		if (!array_key_exists("TEMPLATES", $this->arDescription) || !is_array($this->arDescription["TEMPLATES"]))
 			return;
@@ -514,7 +514,7 @@ class CWizard
 
 	}
 
-	public function __InitVariables()
+	function __InitVariables()
 	{
 		$this->licenseExists = ($this->__GetLicensePath() !== false);
 		$this->siteExists = (count($this->arSites)>0);
@@ -537,7 +537,7 @@ class CWizard
 		$this->structureSelected = ($this->structureExists && strlen($this->structureID) > 0);
 	}
 
-	public function _SetNextStep($obStep, $currentStep, $stepType = "select")
+	function _SetNextStep($obStep, $currentStep, $stepType = "select")
 	{
 		if ($stepType == "select")
 			$arWizardStep = Array(
@@ -580,7 +580,7 @@ class CWizard
 		$obStep->SetNextStep($nextStepID);
 	}
 
-	public function _InitSubStep($stepType, &$arInstallation, $bInitStep = true)
+	function _InitSubStep($stepType, &$arInstallation, $bInitStep = true)
 	{
 		if (!is_array($arInstallation))
 			return false;
@@ -668,7 +668,7 @@ class CWizard
 		return ($firstStepExists && $lastStepExists);
 	}
 
-	public function __GetUserStep($stepName, &$step)
+	function __GetUserStep($stepName, &$step)
 	{
 		$stepName = strtoupper($stepName);
 
@@ -699,7 +699,7 @@ class CWizard
 		return true;
 	}
 
-	public function __SetStepDescription($obStep, $stepName)
+	function __SetStepDescription($obStep, $stepName)
 	{
 		if (!array_key_exists("STEPS_SETTINGS", $this->arDescription) || !array_key_exists($stepName, $this->arDescription["STEPS_SETTINGS"]))
 			return;
@@ -714,7 +714,7 @@ class CWizard
 			$obStep->content .= $this->arDescription["STEPS_SETTINGS"][$stepName]["CONTENT"];
 	}
 
-	public function __GetLicensePath()
+	function __GetLicensePath()
 	{
 		$path = false;
 
@@ -727,7 +727,7 @@ class CWizard
 		return $path;
 	}
 
-	public function __PackageError()
+	function __PackageError()
 	{
 		echo '<span style="color:red;">';
 		foreach ($this->arErrors as $arError)
@@ -735,7 +735,7 @@ class CWizard
 		echo "</span>";
 	}
 
-	public function __GetDescription()
+	function __GetDescription()
 	{
 		$descFile = $_SERVER["DOCUMENT_ROOT"].$this->path."/.description.php";
 
@@ -752,7 +752,7 @@ class CWizard
 		return true;
 	}
 
-	public function __CheckDepends()
+	function __CheckDepends()
 	{
 		$success = true;
 		if (array_key_exists("DEPENDENCIES", $this->arDescription) && is_array($this->arDescription["DEPENDENCIES"]))
@@ -790,7 +790,7 @@ class CWizard
 		return $success;
 	}
 
-	public function __GetSites()
+	function __GetSites()
 	{
 		$siteFile = $_SERVER["DOCUMENT_ROOT"].$this->path."/.sites.php";
 		if (!is_file($siteFile))
@@ -803,7 +803,7 @@ class CWizard
 		$this->arSites = $arWizardSites;
 	}
 
-	public function __GetTemplatesPath()
+	function __GetTemplatesPath()
 	{
 		$templatesPath = $this->path."/templates";
 		if (file_exists($_SERVER["DOCUMENT_ROOT"].$templatesPath."/".LANGUAGE_ID))
@@ -811,7 +811,7 @@ class CWizard
 		return $templatesPath;
 	}
 
-	public function __GetTemplates()
+	function __GetTemplates()
 	{
 		$settingFile = $_SERVER["DOCUMENT_ROOT"].$this->path."/.templates.php";
 		$arWizardTemplates = Array();
@@ -881,7 +881,7 @@ class CWizard
 			$this->arTemplateGroups = $arWizardTemplates["GROUPS"];
 	}
 
-	public function __GetInstallationScript()
+	function __GetInstallationScript()
 	{
 		$instScript = $_SERVER["DOCUMENT_ROOT"].$this->path."/wizard.php";
 
@@ -892,7 +892,7 @@ class CWizard
 		return true;
 	}
 
-	public function __GetServices()
+	function __GetServices()
 	{
 		$serviceFile = $_SERVER["DOCUMENT_ROOT"].$this->path."/.services.php";
 		if (!is_file($serviceFile))
@@ -905,7 +905,7 @@ class CWizard
 		$this->arServices = $arWizardServices;
 	}
 
-	public function __GetStructure()
+	function __GetStructure()
 	{
 		$structureFile = $_SERVER["DOCUMENT_ROOT"].$this->path."/.structure.php";
 		if (!is_file($structureFile))
@@ -918,7 +918,7 @@ class CWizard
 		$this->arStructure = $arWizardStructure;
 	}
 
-	public function __InstallSite($siteID)
+	function __InstallSite($siteID)
 	{
 		if (!array_key_exists($siteID, $this->arSites))
 			return;
@@ -931,7 +931,7 @@ class CWizard
 		$this->__MoveDirFiles($this->arSites[$siteID]);
 	}
 
-	public function __InstallTemplate($templateID)
+	function __InstallTemplate($templateID)
 	{
 		if (!array_key_exists($templateID, $this->arTemplates))
 			return;
@@ -989,7 +989,7 @@ class CWizard
 		$this->__MoveDirFiles($this->arTemplates[$templateID]);
 	}
 
-	public function __InstallService($serviceID)
+	function __InstallService($serviceID)
 	{
 		if (!array_key_exists($serviceID, $this->arServices))
 			return;
@@ -1002,7 +1002,7 @@ class CWizard
 		$this->__MoveDirFiles($this->arServices[$serviceID]);
 	}
 
-	public function __InstallStructure()
+	function __InstallStructure()
 	{
 		global $APPLICATION;
 
@@ -1024,7 +1024,7 @@ class CWizard
 
 		//echo "<pre>".print_r($arStructure,true)."</pre>";exit;
 
-		public static function __CreateMenuItem($arPage)
+		function __CreateMenuItem($arPage)
 		{
 			return "\n".
 						"	Array(\n".
@@ -1036,7 +1036,7 @@ class CWizard
 						"	),";
 		}
 
-		public function __GetFileName($fileName, $postFix)
+		function __GetFileName($fileName, $postFix)
 		{
 			if ($postFix == "")
 				return $fileName;
@@ -1151,7 +1151,7 @@ class CWizard
 	}
 
 
-	public static function __GetPageProperties($pageID, &$arStructure)
+	function __GetPageProperties($pageID, &$arStructure)
 	{
 		$arPageIDs = explode("-", $pageID);
 		$arResult = Array();
@@ -1173,7 +1173,7 @@ class CWizard
 		return $arResult;
 	}
 
-	public function __GetNewStructure($structureID, &$arStructure)
+	function __GetNewStructure($structureID, &$arStructure)
 	{
 		$arNewStructure = Array();
 		$rootPageCnt = Array();
@@ -1247,7 +1247,7 @@ class CWizard
 
 
 
-	public function __MoveDirFiles(&$arFiles)
+	function __MoveDirFiles(&$arFiles)
 	{
 		if (!is_array($arFiles) || !array_key_exists("FILES", $arFiles))
 			return;
@@ -1284,56 +1284,56 @@ class CWizard
 
 	/* Public methods */
 
-	public function GetID()
+	function GetID()
 	{
 		return $this->name;
 	}
 
-	public function GetPath()
+	function GetPath()
 	{
 		return $this->path;
 	}
 
 
-	public function SetError($strError, $id = false)
+	function SetError($strError, $id = false)
 	{
 		$this->arErrors[] = Array($strError, $id);
 	}
 
-	public function GetErrors()
+	function GetErrors()
 	{
 		return $this->arErrors;
 	}
 
 	/* Public site builder methods*/
 
-	public function GetSiteTemplateID()
+	function GetSiteTemplateID()
 	{
 		return $this->templateID;
 	}
 
-	public function GetSiteGroupID()
+	function GetSiteGroupID()
 	{
 		return $this->groupID;
 	}
 
-	public function GetSiteID()
+	function GetSiteID()
 	{
 		return $this->siteID;
 	}
 
-	public function GetSiteServiceID()
+	function GetSiteServiceID()
 	{
 		return $this->serviceID;
 	}
 
-	public function GetDescription()
+	function GetDescription()
 	{
 		return $this->arDescription;
 	}
 
 
-	public function GetTemplateGroups($arFilter = Array())
+	function GetTemplateGroups($arFilter = Array())
 	{
 		$arResult = Array();
 		$siteID = (array_key_exists("SITE_ID", $arFilter) ? $arFilter["SITE_ID"] : null);
@@ -1352,7 +1352,7 @@ class CWizard
 		return $arResult;
 	}
 
-	public function GetTemplates($arFilter = Array())
+	function GetTemplates($arFilter = Array())
 	{
 		$arResult = Array();
 		$siteID = (array_key_exists("SITE_ID", $arFilter) ? $arFilter["SITE_ID"] : null);
@@ -1377,7 +1377,7 @@ class CWizard
 	}
 
 
-	public function GetServices($arFilter = Array())
+	function GetServices($arFilter = Array())
 	{
 		$siteID = (array_key_exists("SITE_ID", $arFilter) ? $arFilter["SITE_ID"] : null);
 
@@ -1400,7 +1400,7 @@ class CWizard
 	}
 
 
-	public function GetStructure($arFilter = Array())
+	function GetStructure($arFilter = Array())
 	{
 		$arResult = Array();
 
@@ -1445,7 +1445,7 @@ class CWizard
 		return $arResult;
 	}
 
-	public function IncludeWizardLang($relativePath = "", $lang = false)
+	function IncludeWizardLang($relativePath = "", $lang = false)
 	{
 		if ($lang === false)
 			$lang = LANGUAGE_ID;
@@ -1454,12 +1454,21 @@ class CWizard
 
 		if ($lang != "en" && $lang != "ru")
 		{
-			if (file_exists(($fname = $wizardPath."/lang/".LangSubst($lang)."/".$relativePath)))
+			$subst_lang = LangSubst($lang);
+			$fname = $wizardPath."/lang/".$subst_lang."/".$relativePath;
+			$fname = \Bitrix\Main\Localization\Translation::convertLangPath($fname, $subst_lang);
+			if (file_exists($fname))
+			{
 				__IncludeLang($fname, false, true);
+			}
 		}
 
-		if (file_exists(($fname = $wizardPath."/lang/".$lang."/".$relativePath)))
+		$fname = $wizardPath."/lang/".$lang."/".$relativePath;
+		$fname = \Bitrix\Main\Localization\Translation::convertLangPath($fname, $lang);
+		if (file_exists($fname))
+		{
 			__IncludeLang($fname, false, true);
+		}
 	}
 
 }

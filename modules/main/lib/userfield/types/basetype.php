@@ -2,6 +2,9 @@
 
 namespace Bitrix\Main\UserField\Types;
 
+use Bitrix\Main\UserField\Access\ActionDictionary;
+use Bitrix\Main\UserField\Access\UserFieldAccessController;
+
 abstract class BaseType
 {
 	public const

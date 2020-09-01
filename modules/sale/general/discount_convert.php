@@ -12,7 +12,7 @@ class CSaleDiscountConvert
 	public static $arErrors = array();
 	public static $strSessID = '';
 
-	static public function __construct()
+	public function __construct()
 	{
 
 	}

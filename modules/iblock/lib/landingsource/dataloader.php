@@ -288,7 +288,7 @@ if (Loader::includeModule('landing'))
 				}
 				elseif (strncmp($field, 'PROPERTY_', 9) == 0)
 				{
-					$propertyId = (int)substr($field, 9);
+					$propertyId = (int)mb_substr($field, 9);
 					if ($propertyId > 0)
 						$settings['element_properties'][$propertyId] = $propertyId;
 					unset($select[$index]);
@@ -782,7 +782,7 @@ if (Loader::includeModule('landing'))
 						$this->loadPrices($result);
 						if (!empty($settings['sortByPrice']))
 						{
-							$sortPrice = strtoupper($settings['sortByPrice']);
+							$sortPrice = mb_strtoupper($settings['sortByPrice']);
 							$sortPrice = ($sortPrice === 'ASC' ? SORT_ASC : SORT_DESC);
 							Main\Type\Collection::sortByColumn($result, ['SORT_ORDER' => $sortPrice]);
 						}

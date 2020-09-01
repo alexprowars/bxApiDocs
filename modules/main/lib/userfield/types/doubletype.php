@@ -173,5 +173,4 @@ class DoubleType extends BaseType
 		}
 		return null;
 	}
-
 }

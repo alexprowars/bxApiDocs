@@ -73,8 +73,12 @@ class CListFieldTypeList
 			$type = CIBlockProperty::GetUserType();
 			if ($type)
 			{
+				$ignoreTypes = array('directory', 'SectionAuto', 'SKU', 'EAutocomplete');
 				foreach($type as  $ar)
 				{
+					if(in_array($ar['USER_TYPE'], $ignoreTypes))
+						continue;
+
 					if($ar && array_key_exists("GetPublicEditHTML", $ar))
 					{
 						$typeId = $ar["PROPERTY_TYPE"].":".$ar["USER_TYPE"];

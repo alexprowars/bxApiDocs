@@ -125,6 +125,35 @@ namespace Bitrix\Rest\Marketplace\Urls
 			}
 			return $url;
 		}
+
+		public function getPlacementViewUrl($appCode, $params)
+		{
+			$replace = null;
+			$subject = null;
+			if ($appCode)
+			{
+				$replace = [
+					'#APP#'
+				];
+				$subject = [
+					$appCode
+				];
+			}
+			$url = $this->getReplaced($this->pages["placement_view"], $replace, $subject);
+
+			if (is_array($params))
+			{
+				$uri = new \Bitrix\Main\Web\Uri($url);
+				$uri->addParams(
+					[
+						'params' => $params
+					]
+				);
+				$url = $uri->getUri();
+			}
+
+			return $url;
+		}
 	}
 	class Application extends Templates
 	{
@@ -157,7 +186,7 @@ namespace Bitrix\Rest\Marketplace\Urls
 			'section' => 'section/#MANIFEST_CODE#/',
 			'import' => 'import/',
 			'import_app' => 'import/#APP_CODE#/',
-			'import_rollback' => 'import_rollback/',
+			'import_rollback' => 'import_rollback/#APP#/',
 			'import_manifest' => 'import_#MANIFEST_CODE#/',
 			'export' => 'export_#MANIFEST_CODE#/',
 			'export_element' => 'export_#MANIFEST_CODE#/#ITEM_CODE#/'
@@ -244,9 +273,16 @@ namespace Bitrix\Rest\Marketplace\Urls
 			return $this->getReplaced($this->pages["import_app"], $replace, $subject);
 		}
 
-		public function getImportRollback()
+		public function getImportRollback($appCode)
 		{
-			return $this->getReplaced($this->pages["import_rollback"]);
+			$replace = [
+				'#APP#'
+			];
+			$subject = [
+				$appCode
+			];
+
+			return $this->getReplaced($this->pages["import_rollback"], $replace, $subject);
 		}
 
 		public function getExport($manifestCode = null)
@@ -328,6 +364,12 @@ namespace Bitrix\Rest\Marketplace
 		{
 			return MarketplaceUrls::getInstance()->getPlacementUrl($placementId, $params);
 		}
+
+		public static function getApplicationPlacementViewUrl($appCode = null, $params = null)
+		{
+			return MarketplaceUrls::getInstance()->getPlacementViewUrl($appCode, $params);
+		}
+
 		public static function getMarketplaceUrl()
 		{
 			return MarketplaceUrls::getInstance()->getIndexUrl();
@@ -364,9 +406,9 @@ namespace Bitrix\Rest\Marketplace
 			return Configuration::getInstance()->getImportApp($code);
 		}
 
-		public static function getConfigurationImportRollbackUrl()
+		public static function getConfigurationImportRollbackUrl($appCode)
 		{
-			return Configuration::getInstance()->getImportRollback();
+			return Configuration::getInstance()->getImportRollback($appCode);
 		}
 
 		public static function getConfigurationExportUrl($manifestCode = null)

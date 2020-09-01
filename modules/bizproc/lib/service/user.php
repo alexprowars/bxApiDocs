@@ -34,10 +34,14 @@ class User extends \CBPRuntimeService
 
 	public function getUserInfo(int $userId): ?array
 	{
+		$sortBy = 'id';
+		$sortOrder = 'asc';
 		$dbUsers = \CUser::GetList(
-			($sortBy = 'id'), ($sortOrder = 'asc'),
+			$sortBy, $sortOrder,
 			['ID_EQUAL_EXACT' => $userId],
-			['SELECT' => [
+			[
+				'FIELDS' => ['ID', 'EMAIL'],
+				'SELECT' => [
 					'EMAIL',
 					'UF_SKYPE',
 					'UF_TWITTER',

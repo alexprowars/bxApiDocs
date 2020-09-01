@@ -1,12 +1,15 @@
 <?
 namespace Bitrix\Calendar\Sync;
 
+use Bitrix\Main\Loader;
 use Bitrix\Main\Type;
 use Bitrix\Main\Localization\Loc;
 use \Bitrix\Main\Web\Uri;
 use Bitrix\Main\Application;
 use \Bitrix\Main\Web;
 use Bitrix\Calendar\Util;
+use CDavConnection;
+
 /**
  * Class GoogleApiSync
  *
@@ -17,6 +20,9 @@ final class GoogleApiSync
 	const MAXIMUM_CONNECTIONS_TO_SYNC = 3;
 	const ONE_DAY = 86400; //60*60*24;
 	const ENABLE_ATTENDEE_DESC = true;
+	const CONNECTION_CHANNEL_TYPE = 'BX_CONNECTION';
+	const SECTION_CHANNEL_TYPE = 'BX_SECTION';
+
 	/**
 	 * @var GoogleApiTransport
 	 */
@@ -34,6 +40,10 @@ final class GoogleApiSync
 //				'DESCRIPTION'	=>	'description',
 				'CAL_DAV_LABEL'	=>	'etag'
 			);
+	/**
+	 * @var int
+	 */
+	private $connectionId;
 
 	/**
 	 * Closes watch channel and asking google to stop pushes
@@ -44,6 +54,15 @@ final class GoogleApiSync
 	public function stopChannel($channelId, $resourceId)
 	{
 		$this->syncTransport->stopChannel($channelId, $resourceId);
+
+		$error = $this->getTransportConnectionError();
+		if (is_string($error))
+		{
+			$this->updateLastResultConnection($error);
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -53,12 +72,21 @@ final class GoogleApiSync
 	 */
 	public function startWatchCalendarList($name)
 	{
-		$channel = $this->syncTransport->openCalendarListChannel($this->makeChannelParams($name, 'BX_CALENDAR_CON_'));
+		$channel = $this->syncTransport->openCalendarListChannel($this->makeChannelParams($name, self::CONNECTION_CHANNEL_TYPE));
 		if (!$this->syncTransport->getErrors())
 		{
 			$channel['expiration'] = Type\DateTime::createFromTimestamp($channel['expiration']/1000);
 			return $channel;
 		}
+		else
+		{
+			$error = $this->getTransportConnectionError();
+			if (is_string($error))
+			{
+				$this->updateLastResultConnection($error);
+			}
+		}
+
 		return array();
 	}
 
@@ -75,13 +103,12 @@ final class GoogleApiSync
 			$externalUrl = 'https://' . $domain . '/bitrix/tools/calendar/push.php';
 		}
 
-		$channelId = $type . md5($inputSecretWord . strtotime('now'));
-
-		$requestParams = array(
-			'id' => $channelId,
+		$requestParams = [
+			'id' => $type.'_'.$this->userId.'_'.md5($inputSecretWord.strtotime('now')),
 			'type' => 'web_hook',
 			'address' => $externalUrl,
-		);
+		];
+
 		return $requestParams;
 	}
 
@@ -93,12 +120,21 @@ final class GoogleApiSync
 	 */
 	public function startWatchEventsChannel($calendarId = 'primary')
 	{
-		$channel = $this->syncTransport->openEventsWatchChannel($calendarId, $this->makeChannelParams($calendarId, 'BX_CALENDAR_SECT_'));
+		$channel = $this->syncTransport->openEventsWatchChannel($calendarId, $this->makeChannelParams($calendarId, self::SECTION_CHANNEL_TYPE));
 		if (!$this->syncTransport->getErrors())
 		{
 			$channel['expiration'] = Type\DateTime::createFromTimestamp($channel['expiration']/1000);
 			return $channel;
 		}
+		else
+		{
+			$error = $this->getTransportConnectionError();
+			if (is_string($error))
+			{
+				$this->updateLastResultConnection($error);
+			}
+		}
+
 		return false;
 	}
 
@@ -106,16 +142,17 @@ final class GoogleApiSync
 	 * GoogleApiSync constructor.
 	 *
 	 * @param int $userId
+	 * @param int $connectionId
 	 */
-	public function __construct($userId = 0)
+	public function __construct($userId = 0, $connectionId = 0)
 	{
 		if (!$userId)
 		{
 			$userId = \CCalendar::GetUserId();
 		}
 		$this->userId = $userId;
+		$this->connectionId = $connectionId;
 		$this->syncTransport = new GoogleApiTransport($userId);
-
 	}
 
 	/**
@@ -445,6 +482,22 @@ final class GoogleApiSync
 		return $responseFields;
 	}
 
+	public function updateLastResultConnection(string $lastResult)
+	{
+		if (Loader::includeModule('dav') && !empty($this->connectionId))
+		{
+			CDavConnection::Update($this->connectionId, [
+				"LAST_RESULT" => $lastResult,
+				"SYNCHRONIZED" => ConvertTimeStamp(time(), "FULL"),
+			]);
+		}
+
+		if (GoogleApiPush::isConnectionError($lastResult))
+		{
+			AddMessage2Log("Bad interaction with Google calendar: ".$lastResult, "calendar");
+		}
+	}
+
 	/**
 	 * Prepearing event for future use
 	 *
@@ -702,7 +755,7 @@ final class GoogleApiSync
 	{
 		$newEvent = array();
 		$newEvent['summary'] = $eventData['NAME'];
-		if (isset($eventData['ATTENDEES_CODES'])  && self::ENABLE_ATTENDEE_DESC)
+		if (isset($eventData['ATTENDEES_CODES']) && self::ENABLE_ATTENDEE_DESC)
 		{
 			$users = $this->getAttendees($eventData['ATTENDEES_CODES']);
 			$newEvent['description'] = Loc::getMessage('ATTENDEES_EVENT').': '.$users.' =#=#=#= '.$eventData["DESCRIPTION"];
@@ -974,5 +1027,24 @@ final class GoogleApiSync
 		}
 
 		return implode(', ', $userList);
+	}
+
+	/**
+	 * Get owner of the channel
+	 * @param string $channelId
+	 * @return number or null
+	 */
+	public static function getChannelOwner($channelId = null)
+	{
+		$userId = null;
+		$matches = [];
+		if ($channelId
+			&& preg_match('/('.self::CONNECTION_CHANNEL_TYPE.'|'.self::SECTION_CHANNEL_TYPE.')_(\d+)_.+/', $channelId, $matches)
+			&& $matches
+			&& intval($matches[2]) > 0)
+		{
+			$userId = intval($matches[2]);
+		}
+		return $userId;
 	}
 }

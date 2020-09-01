@@ -4,13 +4,13 @@ IncludeModuleLangFile(__FILE__);
 class CAllSocNetEventUserView
 {
 
-	public static function SetUser($entityID, $feature = false, $permX = false, $bSetFeatures = false)
+	function SetUser($entityID, $feature = false, $permX = false, $bSetFeatures = false)
 	{
 		global $APPLICATION, $DB;
 
 		$CacheRelatedUsers = array();
 
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
@@ -36,7 +36,7 @@ class CAllSocNetEventUserView
 
 			if (
 				array_key_exists("OPERATION", $arLogEventTmp["ENTITIES"][SONET_ENTITY_USER])
-				&& strlen($arLogEventTmp["ENTITIES"][SONET_ENTITY_USER]["OPERATION"]) <= 0
+				&& $arLogEventTmp["ENTITIES"][SONET_ENTITY_USER]["OPERATION"] == ''
 			)
 				continue;
 
@@ -47,8 +47,8 @@ class CAllSocNetEventUserView
 				&& is_array($arLogEventTmp["COMMENT_EVENT"])
 				&& array_key_exists("OPERATION", $arLogEventTmp["COMMENT_EVENT"])				
 				&& array_key_exists("EVENT_ID", $arLogEventTmp["COMMENT_EVENT"])
-				&& strlen($arLogEventTmp["COMMENT_EVENT"]["OPERATION"]) > 0
-				&& strlen($arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"]) > 0
+				&& $arLogEventTmp["COMMENT_EVENT"]["OPERATION"] <> ''
+				&& $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"] <> ''
 				&& $arLogEventTmp["ENTITIES"][SONET_ENTITY_USER]["OPERATION"] != $arLogEventTmp["COMMENT_EVENT"]["OPERATION"]
 			)
 				$event_id[$arLogEventTmp["COMMENT_EVENT"]["OPERATION"]] = $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"];
@@ -159,7 +159,7 @@ class CAllSocNetEventUserView
 							$errorMessage = "";
 							if ($e = $APPLICATION->GetException())
 								$errorMessage = $e->GetString();
-							if (StrLen($errorMessage) <= 0)
+							if ($errorMessage == '')
 								$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 							$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -181,7 +181,7 @@ class CAllSocNetEventUserView
 						$errorMessage = "";
 						if ($e = $APPLICATION->GetException())
 							$errorMessage = $e->GetString();
-						if (StrLen($errorMessage) <= 0)
+						if ($errorMessage == '')
 							$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 						$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -203,11 +203,11 @@ class CAllSocNetEventUserView
 		return true;
 	}
 	
-	public static function SetGroup($entityID, $bSetFeatures = false)
+	function SetGroup($entityID, $bSetFeatures = false)
 	{
 		global $APPLICATION, $DB;
 
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
@@ -244,7 +244,7 @@ class CAllSocNetEventUserView
 				array_key_exists("COMMENT_EVENT", $arLogEventTmp)
 				&& is_array($arLogEventTmp["COMMENT_EVENT"])
 				&& array_key_exists("EVENT_ID", $arLogEventTmp["COMMENT_EVENT"])
-				&& strlen($arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"]) > 0
+				&& $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"] <> ''
 			)
 				$arLogEvent[] = $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"];
 		}
@@ -286,7 +286,7 @@ class CAllSocNetEventUserView
 					$errorMessage = "";
 					if ($e = $APPLICATION->GetException())
 						$errorMessage = $e->GetString();
-					if (StrLen($errorMessage) <= 0)
+					if ($errorMessage == '')
 						$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 					$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -307,7 +307,7 @@ class CAllSocNetEventUserView
 		return true;
 	}
 
-	public static function SetFeature($entityType, $entityID, $feature, $op = false, $permX = false, $bCheckEmpty = false)
+	function SetFeature($entityType, $entityID, $feature, $op = false, $permX = false, $bCheckEmpty = false)
 	{
 		global $APPLICATION, $DB, $arSocNetAllowedEntityTypes;
 
@@ -323,7 +323,7 @@ class CAllSocNetEventUserView
 			return false;
 		}
 		
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
@@ -360,7 +360,7 @@ class CAllSocNetEventUserView
 							array_key_exists("COMMENT_EVENT", $arEventIDTmp)
 							&& is_array($arEventIDTmp["COMMENT_EVENT"])
 							&& array_key_exists("OPERATION", $arEventIDTmp["COMMENT_EVENT"])
-							&& strlen($arEventIDTmp["COMMENT_EVENT"]["OPERATION"]) > 0
+							&& $arEventIDTmp["COMMENT_EVENT"]["OPERATION"] <> ''
 						)
 							$event_id[$arEventIDTmp["OPERATION"]][] = $arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"];
 					}
@@ -392,7 +392,7 @@ class CAllSocNetEventUserView
 
 						if (
 							!array_key_exists("OPERATION", $arEventIDTmp)
-							|| strlen($arEventIDTmp["OPERATION"]) <= 0
+							|| $arEventIDTmp["OPERATION"] == ''
 						)
 							continue;
 							
@@ -402,7 +402,7 @@ class CAllSocNetEventUserView
 							array_key_exists("COMMENT_EVENT", $arEventIDTmp)
 							&& is_array($arEventIDTmp["COMMENT_EVENT"])
 							&& array_key_exists("OPERATION", $arEventIDTmp["COMMENT_EVENT"])
-							&& strlen($arEventIDTmp["COMMENT_EVENT"]["OPERATION"]) > 0
+							&& $arEventIDTmp["COMMENT_EVENT"]["OPERATION"] <> ''
 						)
 							$arOpTmp[] = $arEventIDTmp["COMMENT_EVENT"]["OPERATION"];
 					}
@@ -621,7 +621,7 @@ class CAllSocNetEventUserView
 										$errorMessage = "";
 										if ($e = $APPLICATION->GetException())
 											$errorMessage = $e->GetString();
-										if (StrLen($errorMessage) <= 0)
+										if ($errorMessage == '')
 											$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 										$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -642,7 +642,7 @@ class CAllSocNetEventUserView
 										$errorMessage = "";
 										if ($e = $APPLICATION->GetException())
 											$errorMessage = $e->GetString();
-										if (StrLen($errorMessage) <= 0)
+										if ($errorMessage == '')
 											$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 										$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -665,7 +665,7 @@ class CAllSocNetEventUserView
 								$errorMessage = "";
 								if ($e = $APPLICATION->GetException())
 									$errorMessage = $e->GetString();
-								if (StrLen($errorMessage) <= 0)
+								if ($errorMessage == '')
 									$errorMessage = GetMessage("SONET_EUV_ERROR_SET");
 
 								$APPLICATION->ThrowException($errorMessage, "ERROR_SET");
@@ -684,7 +684,7 @@ class CAllSocNetEventUserView
 		return true;
 	}
 
-	public static function Entity2UserAdd($entityType, $entityID, $userID, $role)
+	function Entity2UserAdd($entityType, $entityID, $userID, $role)
 	{
 		global $APPLICATION, $DB, $arSocNetAllowedEntityTypes;
 
@@ -697,14 +697,14 @@ class CAllSocNetEventUserView
 			return false;
 		}
 		
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$APPLICATION->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
 			return false;
 		}
 		
-		$userID = IntVal($userID);
+		$userID = intval($userID);
 		if ($userID <= 0)
 		{
 			$APPLICATION->ThrowException(GetMessage("SONET_EUV_EMPTY_USER_ID"), "ERROR_EMPTY_USER_ID");
@@ -722,7 +722,7 @@ class CAllSocNetEventUserView
 		else
 		{
 			$role = trim($role);
-			if (strlen($role) <= 0)
+			if ($role == '')
 			{
 				$APPLICATION->ThrowException(GetMessage("SONET_EUV_EMPTY_ROLE"), "ERROR_EMPTY_ROLE");
 				return false;
@@ -755,7 +755,7 @@ class CAllSocNetEventUserView
 					array_key_exists("COMMENT_EVENT", $arLogEventTmp)
 					&& is_array($arLogEventTmp["COMMENT_EVENT"])
 					&& array_key_exists("EVENT_ID", $arLogEventTmp["COMMENT_EVENT"])
-					&& strlen($arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"]) > 0
+					&& $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"] <> ''
 				)
 					$arEvents[] = $arLogEventTmp["COMMENT_EVENT"]["EVENT_ID"];
 			}
@@ -778,7 +778,7 @@ class CAllSocNetEventUserView
 
 					if (
 						!array_key_exists("OPERATION", $arEventIDTmp)
-						|| strlen($arEventIDTmp["OPERATION"]) <= 0
+						|| $arEventIDTmp["OPERATION"] == ''
 					)
 						continue;
 
@@ -791,8 +791,8 @@ class CAllSocNetEventUserView
 						&& is_array($arEventIDTmp["COMMENT_EVENT"])
 						&& array_key_exists("EVENT_ID", $arEventIDTmp["COMMENT_EVENT"])
 						&& array_key_exists("OPERATION", $arEventIDTmp["COMMENT_EVENT"])
-						&& strlen($arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"]) > 0
-						&& strlen($arEventIDTmp["COMMENT_EVENT"]["OPERATION"]) > 0
+						&& $arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"] <> ''
+						&& $arEventIDTmp["COMMENT_EVENT"]["OPERATION"] <> ''
 						&& ($arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"] != $event_id_tmp)
 					)
 					{
@@ -822,7 +822,7 @@ class CAllSocNetEventUserView
 			CSocNetEventUserView::SetUser($entityID, false, false, true);
 	}
 
-	public static function CheckFields($ACTION, &$arFields)
+	function CheckFields($ACTION, &$arFields)
 	{
 		global $DB;
 
@@ -870,7 +870,7 @@ class CAllSocNetEventUserView
 		return True;
 	}
 
-	public static function Delete($entityType, $entityID, $feature = false, $event = false)	
+	function Delete($entityType, $entityID, $feature = false, $event = false)	
 	{
 		global $DB;
 
@@ -886,7 +886,7 @@ class CAllSocNetEventUserView
 			return false;
 		}
 
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
@@ -924,7 +924,7 @@ class CAllSocNetEventUserView
 							array_key_exists("COMMENT_EVENT", $arSocNetLogEvents[$feature])
 							&& is_array($arSocNetLogEvents[$feature]["COMMENT_EVENT"])
 							&& array_key_exists("EVENT_ID", $arSocNetLogEvents[$feature]["COMMENT_EVENT"])
-							&& strlen($arSocNetLogEvents[$feature]["COMMENT_EVENT"]["EVENT_ID"]) > 0
+							&& $arSocNetLogEvents[$feature]["COMMENT_EVENT"]["EVENT_ID"] <> ''
 						)
 							$event_id[] = $arSocNetLogEvents[$feature]["COMMENT_EVENT"]["EVENT_ID"];
 					}	
@@ -951,7 +951,7 @@ class CAllSocNetEventUserView
 								array_key_exists("COMMENT_EVENT", $arEventIDTmp)
 								&& is_array($arEventIDTmp["COMMENT_EVENT"])
 								&& array_key_exists("EVENT_ID", $arEventIDTmp["COMMENT_EVENT"])
-								&& strlen($arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"]) > 0
+								&& $arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"] <> ''
 							)
 								$event_id[] = $arEventIDTmp["COMMENT_EVENT"]["EVENT_ID"];
 						}
@@ -976,7 +976,7 @@ class CAllSocNetEventUserView
 		return $bSuccess;
 	}
 
-	public static function IsEntityEmpty($entityType, $entityID)
+	function IsEntityEmpty($entityType, $entityID)
 	{
 		global $arSocNetAllowedEntityTypes;
 
@@ -987,7 +987,7 @@ class CAllSocNetEventUserView
 			return false;
 		}
 		
-		$entityID = IntVal($entityID);
+		$entityID = intval($entityID);
 		if ($entityID <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_EUV_EMPTY_ENTITY_ID"), "ERROR_EMPTY_ENTITY_ID");
@@ -1001,14 +1001,14 @@ class CAllSocNetEventUserView
 			return true;	
 	}
 	
-	public static function CheckPermissions($table, $user_id)
+	function CheckPermissions($table, $user_id)
 	{
 		if ($user_id === false)
 			$strUser = " AND EUV.USER_ANONYMOUS = 'Y' AND EUV.USER_ID = 0";
 		else
 			$strUser = " AND EUV.USER_ID IN (".intval($user_id).", 0)";
 
-		return "INNER JOIN b_sonet_event_user_view EUV ".(strtolower($GLOBALS["DB"]->type) == "mysql" ? "USE INDEX (IX_SONET_EVENT_USER_VIEW_2)" : "")." ON
+		return "INNER JOIN b_sonet_event_user_view EUV ".($GLOBALS["DB"]->type == "MYSQL" ? "USE INDEX (IX_SONET_EVENT_USER_VIEW_2)" : "")." ON
 						EUV.ENTITY_TYPE = ".$table.".ENTITY_TYPE 
 						AND ( 
 							EUV.ENTITY_ID = ".$table.".ENTITY_ID
@@ -1017,26 +1017,26 @@ class CAllSocNetEventUserView
 						AND EUV.EVENT_ID = ".$table.".EVENT_ID ".$strUser;
 	}
 	
-	public static function CheckPermissionsByEvent($entity_type, $entity_id, $event_id, $user_id)
+	function CheckPermissionsByEvent($entity_type, $entity_id, $event_id, $user_id)
 	{
 		global $DB;
 
-		$user_id = IntVal($user_id);
+		$user_id = intval($user_id);
 		if ($user_id <= 0)
 			$user_id = $GLOBALS["USER"]->GetID();
 		if ($user_id <= 0)
 			return false;
 			
-		$entity_id = IntVal($entity_id);
+		$entity_id = intval($entity_id);
 		if ($entity_id <= 0)
 			return false;
 
 		$entity_type = trim($entity_type);
-		if (strlen($entity_type) <= 0)
+		if ($entity_type == '')
 			return false;
 
 		$event_id = trim($event_id);
-		if (strlen($event_id) <= 0)
+		if ($event_id == '')
 			return false;
 
 		$strSQL = "SELECT USER_ID FROM b_sonet_event_user_view WHERE

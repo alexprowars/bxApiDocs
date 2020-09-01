@@ -5,8 +5,6 @@ namespace Bitrix\Landing\Assets\PreProcessing;
 use \Bitrix\Landing\Block;
 use \Bitrix\Landing\File;
 use \Bitrix\Main\Web\DOM;
-use \Bitrix\Main\FileTable;
-use Bitrix\Main\Web\DOM\StyleInliner;
 
 class Lazyload
 {
@@ -81,9 +79,12 @@ class Lazyload
 		}
 
 		// get sizes for placeholder
-		if (($fileId = $node->getAttribute('data-fileid')) && $fileId > 0)
+		if (
+			($fileId = $node->getAttribute('data-fileid'))
+			&& $fileId > 0
+			&& ($fileArray = File::getFileArray($fileId))
+		)
 		{
-			$fileArray = \CFile::GetFileArray($fileId);
 			$width = $fileArray['WIDTH'];
 			$height = $fileArray['HEIGHT'];
 		}
@@ -118,9 +119,12 @@ class Lazyload
 		}
 
 		// get sizes for placeholder
-		if (($fileId = $node->getAttribute('data-fileid')) && $fileId > 0)
+		if (
+			($fileId = $node->getAttribute('data-fileid'))
+			&& $fileId > 0
+			&& ($fileArray = File::getFileArray($fileId))
+		)
 		{
-			$fileArray = \CFile::GetFileArray($fileId);
 			$width = $fileArray['WIDTH'];
 			$height = $fileArray['HEIGHT'];
 		}
@@ -158,11 +162,11 @@ class Lazyload
 		{
 			foreach($dimensions as $key => $value)
 			{
-				if(strpos($key, 'width') !== false)
+				if(stripos($key, 'width') !== false)
 				{
 					$width = $value;
 				}
-				if(strpos($key, 'height') !== false)
+				if(stripos($key, 'height') !== false)
 				{
 					$height = $value;
 				}
@@ -189,7 +193,8 @@ class Lazyload
 	 */
 	protected function createPlaceholderImage(int $width, int $height): string
 	{
-		return "https://cdn.bitrix24.site/placeholder/{$width}x{$height}.png";
+		return "data:image/svg+xml;base64,".base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="'.$width.'" height="'.$height.'"><rect id="backgroundrect" width="100%" height="100%" x="0" y="0" fill="#ddd" fill-opacity=".7" stroke="none"/></svg>');
+		// return "https://cdn.bitrix24.site/placeholder/{$width}x{$height}.png";
 	}
 
 	/**

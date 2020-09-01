@@ -67,9 +67,15 @@ class CIBlockFindTools
 
 		$component = $engine->getComponent();
 		if ($component)
+		{
 			$iblock_id = intval($component->arParams["IBLOCK_ID"]);
+			$strict_check = $component->arParams["DETAIL_STRICT_SECTION_CHECK"] === "Y";
+		}
 		else
+		{
 			$iblock_id = 0;
+			$strict_check = false;
+		}
 
 		//To fix GetPagePath security hack for SMART_FILTER_PATH
 		foreach ($pageCandidates as $pageID => $arVariablesTmp)
@@ -83,7 +89,7 @@ class CIBlockFindTools
 
 		$requestURL = $APPLICATION->GetCurPage(true);
 
-		$cacheId = $requestURL.implode("|", array_keys($pageCandidates))."|".SITE_ID."|".$iblock_id;
+		$cacheId = $requestURL.implode("|", array_keys($pageCandidates))."|".SITE_ID."|".$iblock_id.$engine->cacheSalt;
 		$cache = new CPHPCache;
 		if ($cache->StartDataCache(3600, $cacheId, "iblock_find"))
 		{
@@ -100,7 +106,7 @@ class CIBlockFindTools
 					&& (isset($arVariablesTmp["ELEMENT_ID"]) || isset($arVariablesTmp["ELEMENT_CODE"]))
 				)
 				{
-					if (CIBlockFindTools::checkElement($iblock_id, $arVariablesTmp))
+					if (CIBlockFindTools::checkElement($iblock_id, $arVariablesTmp, $strict_check))
 					{
 						$arVariables = $arVariablesTmp;
 						if (defined("BX_COMP_MANAGED_CACHE"))
@@ -142,12 +148,13 @@ class CIBlockFindTools
 		}
 
 		reset($pageCandidates);
-		list($pageID, $arVariables) = each($pageCandidates);
+		$pageID = key($pageCandidates);
+		$arVariables = $pageCandidates[$pageID];
 
 		return $pageID;
 	}
 
-	public static function checkElement($iblock_id, &$arVariables)
+	public static function checkElement($iblock_id, &$arVariables, $strict_check = false)
 	{
 		global $DB;
 
@@ -181,6 +188,13 @@ class CIBlockFindTools
 					AND BS".$i.".CODE = '".$DB->ForSql($SECTION_CODE)."'
 				";
 			}
+
+			if ($strict_check)
+			{
+				$strWhere .= "
+					AND BS".$i.".IBLOCK_SECTION_ID is null
+				";
+			}
 		}
 
 		$strSql = "
@@ -207,6 +221,10 @@ class CIBlockFindTools
 		global $DB;
 
 		$sectionPath = explode("/", $arVariables["SECTION_CODE_PATH"]);
+
+		// B24 fix
+		if (count($sectionPath) > 61)
+			return false;
 
 		$strFrom = "";
 		$joinField = "";

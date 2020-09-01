@@ -48,6 +48,8 @@ class HttpRequest extends Request
 	 */
 	protected $headers;
 
+	protected $httpHost;
+
 	/**
 	 * Creates new HttpRequest object
 	 *
@@ -339,17 +341,17 @@ class HttpRequest extends Request
 	 */
 	public function getHttpHost()
 	{
-		static $host = null;
-
-		if ($host === null)
+		if ($this->httpHost === null)
 		{
 			//scheme can be anything, it's used only for parsing
 			$url = new Web\Uri("http://".$this->server->getHttpHost());
 			$host = $url->getHost();
 			$host = trim($host, "\t\r\n\0 .");
+
+			$this->httpHost = $host;
 		}
 
-		return $host;
+		return $this->httpHost;
 	}
 
 	public function isHttps()

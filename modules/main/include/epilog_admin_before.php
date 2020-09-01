@@ -8,7 +8,7 @@
  * @global CCacheManager $CACHE_MANAGER
  */
 
-// define("START_EXEC_EPILOG_BEFORE_1", microtime());
+define("START_EXEC_EPILOG_BEFORE_1", microtime());
 $GLOBALS["BX_STATE"] = "EB";
 
 if($USER->IsAuthorized() && (!defined("BX_AUTH_FORM") || !BX_AUTH_FORM))
@@ -24,7 +24,10 @@ if($USER->IsAuthorized() && (!defined("BX_AUTH_FORM") || !BX_AUTH_FORM))
 	echo $hkInstance->PrintJSExecs($Execs);
 	echo $hkInstance->PrintPhpToJSVars();
 
-	echo CAdminInformer::PrintHtml();
+	if (!defined('BX_PUBLIC_MODE') || BX_PUBLIC_MODE != 1)
+	{
+		echo CAdminInformer::PrintHtml();
+	}
 
 	if(
 		$USER->IsAuthorized()
@@ -40,9 +43,19 @@ if($USER->IsAuthorized() && (!defined("BX_AUTH_FORM") || !BX_AUTH_FORM))
 			&& method_exists("Bitrix\\Socialservices\\Network", "displayAdminPopup")
 		)
 		{
-			\Bitrix\Socialservices\Network::displayAdminPopup(array(
-				"SHOW" => true,
-			));
+			global $adminSidePanelHelper;
+			if (!is_object($adminSidePanelHelper))
+			{
+				require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/interface/admin_lib.php");
+				$adminSidePanelHelper = new CAdminSidePanelHelper();
+			}
+
+			if (!$adminSidePanelHelper->isPublicSidePanel())
+			{
+				\Bitrix\Socialservices\Network::displayAdminPopup(array(
+					"SHOW" => true,
+				));
+			}
 		}
 	}
 }

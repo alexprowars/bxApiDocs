@@ -10,17 +10,6 @@ require_once(substr(__FILE__, 0, strlen(__FILE__) - strlen("/classes/mysql/main.
 
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/general/main.php");
 
-
-/**
- * <b>CMain</b> - главный класс страницы.    <br><br>  При создании каждой страницы создаётся глобальный объект этого класса с именем $APPLICATION.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cmain/index.php
- * @author Bitrix
- */
 class CMain extends CAllMain
 {
 	/** @deprecated */
@@ -29,6 +18,7 @@ class CMain extends CAllMain
 		return "`CONDITION`";
 	}
 
+	/** @deprecated Will be removed soon  */
 	public static function FileAction()
 	{
 	}
@@ -69,9 +59,6 @@ class CMain extends CAllMain
 				$MAIN_LANGS_ADMIN_CACHE[$res["LID"]]=$res;
 				return $res;
 			}
-
-			//core default
-			return array("en", "MM/DD/YYYY", "MM/DD/YYYY HH24:MI:SS");
 		}
 		else
 		{
@@ -144,7 +131,7 @@ class CMain extends CAllMain
 						foreach($arLangDomain[$row["LID"]] as $dom)
 						{
 							//AND '".$DB->ForSql($CURR_DOMAIN, 255)."' LIKE CONCAT('%', LD.DOMAIN)
-							if(strcasecmp(substr($CURR_DOMAIN, -strlen($dom["LD_DOMAIN"])), $dom["LD_DOMAIN"]) == 0)
+							if(strcasecmp(substr(".".$CURR_DOMAIN, -strlen(".".$dom["LD_DOMAIN"])), ".".$dom["LD_DOMAIN"]) == 0)
 							{
 								$arJoin[] = $row+$dom;
 								$bLeft = false;
@@ -212,7 +199,7 @@ class CMain extends CAllMain
 					"SELECT L.*, L.LID as ID, L.LID as SITE_ID, ".
 					"	C.FORMAT_DATE, C.FORMAT_DATETIME, C.FORMAT_NAME, C.WEEK_START, C.CHARSET, C.DIRECTION ".
 					"FROM b_lang L  ".
-					"	LEFT JOIN b_lang_domain LD ON L.LID=LD.LID AND '".$DB->ForSql($CURR_DOMAIN, 255)."' LIKE CONCAT('%', LD.DOMAIN) ".
+					"	LEFT JOIN b_lang_domain LD ON L.LID=LD.LID AND '".$DB->ForSql(".".$CURR_DOMAIN, 255)."' LIKE CONCAT('%.', LD.DOMAIN) ".
 					"	INNER JOIN b_culture C ON C.ID=L.CULTURE_ID ".
 					"WHERE ".
 					"	('".$DB->ForSql($cur_dir)."' LIKE CONCAT(L.DIR, '%') OR LD.LID IS NOT NULL)".
@@ -246,28 +233,26 @@ class CMain extends CAllMain
 				"ORDER BY L.DEF DESC, L.SORT";
 
 			$R = $DB->Query($strSql);
-			while($res = $R->Fetch())
+			if($res = $R->Fetch())
 			{
 				$MAIN_LANGS_CACHE[$res["LID"]]=$res;
 				return $res;
 			}
 		}
 
-		return array("en", "MM/DD/YYYY", "MM/DD/YYYY HH24:MI:SS");
+		//core default
+		return array(
+			"LID" => "en",
+			"DIR" => "/",
+			"SERVER_NAME" => "",
+			"CHARSET" => "UTF-8",
+			"FORMAT_DATE" => "MM/DD/YYYY",
+			"FORMAT_DATETIME" => "MM/DD/YYYY HH:MI:SS",
+			"LANGUAGE_ID" => "en",
+		);
 	}
 }
 
-
-/**
- * <b>CSite</b> - класс для работы с сайтами.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/csite/index.php
- * @author Bitrix
- */
 class CSite extends CAllSite
 {
 }

@@ -9,13 +9,13 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/vote/classes/general/cha
 
 class CVoteChannel extends CAllVoteChannel
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "vote";
 		return "<br>Module: ".$module_id."<br>Class: CVoteChannel<br>File: ".__FILE__;
 	}
 
-	public static function GetDropDownList()
+	function GetDropDownList()
 	{
 		global $DB;
 		$err_mess = (CVoteChannel::err_mess())."<br>Function: GetDropDownList<br>Line: ";

@@ -85,6 +85,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			"STATUS_ID",
 			"BASE_PRICE_DELIVERY",
 			"PRICE_DELIVERY",
+			"EXPECTED_PRICE_DELIVERY",
 			"ALLOW_DELIVERY",
 			"DATE_ALLOW_DELIVERY",
 			"EMP_ALLOW_DELIVERY_ID",
@@ -779,9 +780,9 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			throw new Main\NotSupportedException();
 		}
 
-		if ($name === "REASON_MARKED" && strlen($value) > 255)
+		if ($name === "REASON_MARKED" && mb_strlen($value) > 255)
 		{
-			$value = substr($value, 0, 255);
+			$value = mb_substr($value, 0, 255);
 		}
 
 		$priceFields = [
@@ -1703,6 +1704,24 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 					}
 				}
 			}
+			elseif ($name === 'PRICE')
+			{
+				if (!$this->isMarkedFieldCustom('BASE_PRICE_DELIVERY'))
+				{
+					if ($this->getShipmentItemCollection()->isExistBasketItem($basketItem))
+					{
+						$r = $this->calculateDelivery();
+						if ($r->isSuccess())
+						{
+							$this->setField('BASE_PRICE_DELIVERY', $r->getPrice());
+						}
+						else
+						{
+							$result->addErrors($r->getErrors());
+						}
+					}
+				}
+			}
 		}
 
 		return $result;
@@ -1867,14 +1886,17 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		}
 		elseif ($name === 'TRACKING_NUMBER')
 		{
-			Internals\EventsPool::addEvent(
-				's'.$this->getInternalIndex(),
-				EventActions::EVENT_ON_SHIPMENT_TRACKING_NUMBER_CHANGE,
-				[
-					'ENTITY' => $this,
-					'VALUES' => $this->getFields()->getOriginalValues(),
-				]
-			);
+			if ($value)
+			{
+				Internals\EventsPool::addEvent(
+					's'.$this->getInternalIndex(),
+					EventActions::EVENT_ON_SHIPMENT_TRACKING_NUMBER_CHANGE,
+					[
+						'ENTITY' => $this,
+						'VALUES' => $this->getFields()->getOriginalValues(),
+					]
+				);
+			}
 		}
 
 

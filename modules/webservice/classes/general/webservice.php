@@ -5,17 +5,6 @@ $wswraps = array();
 
 $componentContext = array();
 
-
-/**
- * 
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/webservice/classes/cwebservicedesc/index.php
- * @author Bitrix
- */
 class CWebServiceDesc
 {
 	var $wsname;		// webservice name
@@ -59,32 +48,10 @@ class CWebServiceDesc
 	var $_soapsi;		// soap server instance class
 }
 
-
-/**
- * 
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/webservice/classes/iwebservice/index.php
- * @author Bitrix
- */
 class IWebService
 {
 	// May be called by Event to collect CWebServiceDesc on configuring WS.Server
-	
-	/**
-	* <p>Метод возвращает экземпляр класса <a href="http://dev.1c-bitrix.ru/api_help/webservice/classes/cwebservicedesc/index.php">CWebServiceDesc</a> - описателя  веб-сервиса. Нестатический метод.</p> <br><br>
-	*
-	*
-	* @return CWebServiceDesc 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/webservice/classes/iwebservice/getwebservicedesc.php
-	* @author Bitrix
-	*/
-	public static function GetWebServiceDesc() {}
+	function GetWebServiceDesc() {}
 
 	//function TestComponent() {}
 
@@ -97,26 +64,15 @@ class IWebService
 	 * */
 }
 
-
-/**
- * 
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/webservice/classes/cwebservice/index.php
- * @author Bitrix
- */
 class CWebService
 {
-	public static function SetComponentContext($arParams)
+	function SetComponentContext($arParams)
 	{
 		if (is_array($arParams))
 			$GLOBALS["componentContext"] = $arParams;
 	}
 
-	public static function GetComponentContext($arParams)
+	function GetComponentContext($arParams)
 	{
 		if (is_array($GLOBALS["componentContext"]))
 			return $GLOBALS["componentContext"];
@@ -124,7 +80,7 @@ class CWebService
 		return false;
 	}
 
-	public static function SOAPServerProcessRequest($wsname)
+	function SOAPServerProcessRequest($wsname)
 	{
 		if (!isset($GLOBALS["wsdescs"][$wsname]) or
 			!$GLOBALS["wsdescs"][$wsname] or
@@ -134,39 +90,7 @@ class CWebService
 		return $GLOBALS["wsdescs"][$wsname]->_soapsi->ProcessRequest();
 	}
 
-	
-	/**
-	* <p>Метод регистрирует веб-сервис. Если операция проведена успешно, возвращается  <i>true</i>, иначе <i>false</i>. Нестатический метод.</p> <p>Если веб-сервис реализован через систему компонентов, то  <b>RegisterWebService </b>вызывается автоматически в компоненте  <b>webservice.server</b>. В этом случае <i>className =  $arParams["WEBSERVICE_NAME"]</i>.</p>
-	*
-	*
-	* @param string $className  Название класса веб-сервиса. реализующего интерфейс  			<b>IWebService</b>.
-	*
-	* @return boolean 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* <buttononclick>
-	* // В компоненте webservice.server
-	* CWebService::RegisterWebService($arParams["WEBSERVICE_CLASS"]);
-	* 
-	* // В компоненте веб-сервиса
-	* $arParams["WEBSERVICE_NAME"] = "bitrix.webservice.checkauth";
-	* // Следующий параметр прямо передается в SOAPServerProcessRequest
-	* $arParams["WEBSERVICE_CLASS"] = "CCheckAuthWS";
-	* $arParams["WEBSERVICE_MODULE"] = "";
-	* $APPLICATION-&gt;IncludeComponent(
-	*     "bitrix:webservice.server",
-	*     "",
-	*     $arParams
-	*     );</buttononclick>
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/webservice/classes/cwebservice/registerwebservice.php
-	* @author Bitrix
-	*/
-	public static function RegisterWebService($className /*IWebService implementor*/)
+	function RegisterWebService($className /*IWebService implementor*/)
 	{
 		$ifce =& CWebService::GetInterface($className);
 		if (!is_object($ifce)) return false;
@@ -258,7 +182,7 @@ class CWebService
 		return true;
 	}
 
-	public static function GetSOAPServerRequest($wsname)
+	function GetSOAPServerRequest($wsname)
 	{
 		if (isset($GLOBALS["wsdescs"][$wsname]) and
 			$GLOBALS["wsdescs"][$wsname]->_soapsi)
@@ -268,7 +192,7 @@ class CWebService
 		return false;
 	}
 
-	public static function GetSOAPServerResponse($wsname)
+	function GetSOAPServerResponse($wsname)
 	{
 		if (isset($GLOBALS["wsdescs"][$wsname]))
 		{
@@ -277,7 +201,7 @@ class CWebService
 		return false;
 	}
 
-	public static function MethodRequireHTTPAuth($class, $method)
+	function MethodRequireHTTPAuth($class, $method)
 	{
 		global $USER;
 
@@ -290,7 +214,7 @@ class CWebService
 		return true;
 	}
 
-	public static function TestComponent($wsname)
+	function TestComponent($wsname)
 	{
 		if (isset($GLOBALS["wsdescs"][$wsname]))
 		{
@@ -301,7 +225,7 @@ class CWebService
 		return false;
 	}
 
-	public static function GetWSDL($wsname)
+	function GetWSDL($wsname)
 	{
 		if (!isset($GLOBALS["wsdescs"][$wsname]) or
 			!$GLOBALS["wsdescs"][$wsname] or
@@ -310,14 +234,14 @@ class CWebService
 		return $GLOBALS["wsdescs"][$wsname]->_wsdlci->getWSDL();
 	}
 
-	public static function GetDefaultEndpoint()
+	function GetDefaultEndpoint()
 	{
 		global $APPLICATION;
 		return ($APPLICATION->IsHTTPS() ? "https" : "http")."://".$_SERVER["HTTP_HOST"].
 				$APPLICATION->GetCurPage();
 	}
 
-	public static function GetDefaultTargetNS()
+	function GetDefaultTargetNS()
 	{
 		global $APPLICATION;
 

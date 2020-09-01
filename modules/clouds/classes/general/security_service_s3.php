@@ -9,27 +9,27 @@ class CCloudSecurityService_AmazonS3
 	protected $errstr = '';
 	protected $result = '';
 
-	public function GetLastRequestStatus()
+	function GetLastRequestStatus()
 	{
 		return $this->status;
 	}
 
-	public static function GetObject()
+	function GetObject()
 	{
 		return new CCloudSecurityService_AmazonS3();
 	}
 
-	public static function GetID()
+	function GetID()
 	{
 		return "amazon_sts";
 	}
 
-	public static function GetName()
+	function GetName()
 	{
 		return "AWS Security Token Service";
 	}
 
-	public static function GetDefaultBucketControlPolicy($bucket, $prefix)
+	function GetDefaultBucketControlPolicy($bucket, $prefix)
 	{
 		return array(
 			'Statement' => array(
@@ -59,7 +59,7 @@ class CCloudSecurityService_AmazonS3
 		);
 	}
 
-	public function GetFederationToken($arBucket, $Policy, $Name, $DurationSeconds = 129600/*36h*/)
+	function GetFederationToken($arBucket, $Policy, $Name, $DurationSeconds = 129600/*36h*/)
 	{
 		global $APPLICATION;
 
@@ -108,7 +108,9 @@ class CCloudSecurityService_AmazonS3
 			)
 				$SessionToken = $Credentials[0]["#"]["SessionToken"][0]["#"];
 			else
+			{
 				return 1;
+			}
 
 			if(
 				isset($Credentials[0])
@@ -123,7 +125,9 @@ class CCloudSecurityService_AmazonS3
 			)
 				$SecretAccessKey = $Credentials[0]["#"]["SecretAccessKey"][0]["#"];
 			else
+			{
 				return 2;
+			}
 
 			if(
 				isset($Credentials[0])
@@ -138,7 +142,9 @@ class CCloudSecurityService_AmazonS3
 			)
 				$AccessKeyId = $Credentials[0]["#"]["AccessKeyId"][0]["#"];
 			else
+			{
 				return 3;
+			}
 
 			return array(
 				"ACCESS_KEY" => $AccessKeyId,
@@ -152,38 +158,54 @@ class CCloudSecurityService_AmazonS3
 		}
 	}
 
-	public function SendRequest($access_key, $secret_key, $verb, $bucket, $file_name='/', $params='')
+	function SendRequest($access_key, $secret_key, $verb, $bucket, $file_name='/', $params='')
 	{
 		global $APPLICATION;
 		$this->status = 0;
 
-		$RequestMethod = $verb;
-		$RequestHost = "sts.amazonaws.com";
-		$RequestURI = "/";
-		$RequestParams = "";
-
 		$params['SignatureVersion'] = 2;
 		$params['SignatureMethod'] = 'HmacSHA1';
 		$params['AWSAccessKeyId'] = $access_key;
-		$params['Timestamp'] = gmdate('Y-m-d').'T'.gmdate('H:i:s');//.preg_replace("/(\d\d)\$/", ":\\1", date("O"));
 		$params['Version'] = '2011-06-15';
-		ksort($params);
-		foreach($params as $name => $value)
+
+		$retry_count = COption::GetOptionInt("clouds", "aws_security_service_retry_count");
+		$retry_timeout = COption::GetOptionInt("clouds", "aws_security_service_retry_timeout");
+		while (true)
 		{
-			if($RequestParams != '')
-				$RequestParams .= '&';
-			$RequestParams .= urlencode($name)."=".urlencode($value);
+			$time = time();
+			$params['Timestamp'] = gmdate('Y-m-d', $time).'T'.gmdate('H:i:s', $time);
+
+			$RequestMethod = $verb;
+			$RequestHost = "sts.amazonaws.com";
+			$RequestURI = "/";
+			$RequestParams = "";
+
+			ksort($params);
+			foreach($params as $name => $value)
+			{
+				if($RequestParams != '')
+					$RequestParams .= '&';
+				$RequestParams .= urlencode($name)."=".urlencode($value);
+			}
+
+			$StringToSign =  "$RequestMethod\n"
+					."$RequestHost\n"
+					."$RequestURI\n"
+					."$RequestParams"
+			;
+			$Signature = urlencode(base64_encode($this->hmacsha1($StringToSign, $secret_key)));
+
+			$obRequest = new CHTTP;
+			$obRequest->Query($RequestMethod, $RequestHost, 443, $RequestURI."?$RequestParams&Signature=$Signature", false, 'ssl://');
+			if (!$obRequest->result && $retry_count > 0)
+			{
+				$retry_count--;
+				sleep($retry_timeout);
+				continue;
+			}
+			break;
 		}
 
-		$StringToSign =  "$RequestMethod\n"
-				."$RequestHost\n"
-				."$RequestURI\n"
-				."$RequestParams"
-		;
-		$Signature = urlencode(base64_encode($this->hmacsha1($StringToSign, $secret_key)));
-
-		$obRequest = new CHTTP;
-		$obRequest->Query($RequestMethod, $RequestHost, 443, $RequestURI."?$RequestParams&Signature=$Signature", false, 'ssl://');
 		$this->status = $obRequest->status;
 		$this->headers = $obRequest->headers;
 		$this->errno = $obRequest->errno;
@@ -231,9 +253,9 @@ class CCloudSecurityService_AmazonS3
 		}
 	}
 
-	public static function hmacsha1($data, $key)
+	function hmacsha1($data, $key)
 	{
-		if(strlen($key)>64)
+		if(mb_strlen($key) > 64)
 			$key=pack('H*', sha1($key));
 		$key = str_pad($key, 64, chr(0x00));
 		$ipad = str_repeat(chr(0x36), 64);
@@ -242,7 +264,7 @@ class CCloudSecurityService_AmazonS3
 		return $hmac;
 	}
 
-	public function PhpToJSObject($arData, $bWS = false, $bSkipTilda = false)
+	function PhpToJSObject($arData, $bWS = false, $bSkipTilda = false)
 	{
 		static $aSearch = array("\r", "\n");
 		if(is_array($arData))
@@ -278,7 +300,7 @@ class CCloudSecurityService_AmazonS3
 			$first = true;
 			foreach($arData as $key => $value)
 			{
-				if ($bSkipTilda && substr($key, 0, 1) == '~')
+				if ($bSkipTilda && mb_substr($key, 0, 1) == '~')
 					continue;
 
 				if($first)

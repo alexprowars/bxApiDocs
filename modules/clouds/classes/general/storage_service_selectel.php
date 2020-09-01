@@ -3,22 +3,22 @@ IncludeModuleLangFile(__FILE__);
 
 class CCloudStorageService_Selectel extends CCloudStorageService_OpenStackStorage
 {
-	public static function GetObject()
+	function GetObject()
 	{
 		return new CCloudStorageService_Selectel();
 	}
 
-	public static function GetID()
+	function GetID()
 	{
 		return "selectel_storage";
 	}
 
-	public static function GetName()
+	function GetName()
 	{
 		return "Selectel";
 	}
 
-	public function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
+	function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
 	{
 		if($bVarsFromForm)
 			$arSettings = $_POST["SETTINGS"][$this->GetID()];
@@ -47,7 +47,7 @@ class CCloudStorageService_Selectel extends CCloudStorageService_OpenStackStorag
 		return $result;
 	}
 
-	public static function CheckSettings($arBucket, &$arSettings)
+	function CheckSettings($arBucket, &$arSettings)
 	{
 		if(is_array($arSettings))
 			$arSettings["HOST"] = "auth.selcdn.ru";

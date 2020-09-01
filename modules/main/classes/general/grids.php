@@ -156,6 +156,23 @@ class CGridOptions
 		return array();
 	}
 
+	public function SetVisibleColumns($arColumns)
+	{
+		$this->options['columns'] = implode(',', $arColumns);
+		$aOptions = CUserOptions::GetOption('main.interface.grid', $this->grid_id, array());
+		if (!is_array($aOptions['views']))
+			$aOptions['views'] = array();
+		if (!is_array($aOptions['filters']))
+			$aOptions['filters'] = array();
+		if (!array_key_exists('default', $aOptions['views']))
+			$aOptions['views']['default'] = array('columns'=>'');
+		if ($aOptions['current_view'] == '' || !array_key_exists($aOptions['current_view'], $aOptions['views']))
+			$aOptions['current_view'] = 'default';
+
+		$aOptions['views'][$aOptions['current_view']]['columns'] = $this->options['columns'];
+		CUserOptions::SetOption('main.interface.grid', $this->grid_id, $aOptions);
+	}
+
 	public function GetFilter($arFilter)
 	{
 		$aRes = array();

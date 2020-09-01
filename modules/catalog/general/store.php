@@ -1,79 +1,65 @@
 <?php
+use Bitrix\Main,
+	Bitrix\Catalog,
+	Bitrix\Iblock;
+
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CCatalogStore</b> - класс для работы со складами.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/index.php
- * @author Bitrix
- */
 class CAllCatalogStore
 {
-	
-	/**
-	* <p>Метод служит для проверки параметров, переданных в методы <a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/add.php">CCatalogStore::Add</a> и <a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/update.php">CCatalogStore::Update</a>. Нестатический метод.</p>
-	*
-	*
-	* @param string $action  Указывает, для какого метода идет проверка. Возможные значения: 
-	* 			<br><ul> <li> <b>ADD</b> - для метода <a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/add.php">CCatalogStore::Add</a>;</li> 				<li>
-	* <b>UPDATE</b> - для метода <a
-	* href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/update.php">CCatalogStore::Update</a>.</li>
-	* 			</ul>
-	*
-	* @param array &$arFields  Ассоциативный массив параметров склада. Допустимые ключи:  			        
-	* <ul> <li>TITLE - название склада;</li>           <li>ACTIVE - активность склада('Y' -
-	* активен, 'N' - не активен);</li> 		  <li>ADDRESS - адрес склада;</li> 		  <li>DESCRIPTION -
-	* описание склада;</li> 		  <li>GPS_N - GPS координата(широта);</li> 		  <li>GPS_S - GPS
-	* координата(долгота);</li> 		  <li>IMAGE_ID - ID картинки склада;</li> 		  <li>PHONE -
-	* телефон;</li> 		  <li>SCHEDULE - расписание работы склада;</li> 		  <li>XML_ID - XML_ID
-	* склада для экспорта\импорта из 1С;</li> 		   		  <li>ISSUING_CENTER - пункт выдачи
-	* (Y/N);</li> 		   		  <li>SHIPPING_CENTER - для отгрузки (Y/N).</li>                  </ul>
-	*
-	* @return bool <p> В случае корректности переданных параметров возвращает true,
-	* иначе - false. Если функция вернула false, с помощью $APPLICATION-&gt;GetException()
-	* можно получить текст ошибок.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_help/catalog/fields.php">Структура таблицы</a></li>
-	* 	<li><a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/add.php">CCatalogStore::Add</a></li>
-	* 	<li><a href="http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/update.php">CCatalogStore::Update</a></li>
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/checkfields.php
-	* @author Bitrix
-	*/
-	protected function CheckFields($action, &$arFields)
+	protected static function CheckFields($action, &$arFields)
 	{
-		if(is_set($arFields["ADDRESS"]) && strlen($arFields["ADDRESS"]) <= 0)
+		if (array_key_exists("ADDRESS", $arFields) && (string)$arFields["ADDRESS"] == '')
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CS_EMPTY_ADDRESS"));
 			$arFields["ADDRESS"] = ' ';
 		}
-		if(($action == 'ADD') &&
-			((is_set($arFields, "IMAGE_ID") && strlen($arFields["IMAGE_ID"]) < 0)))
+
+		if ($action == 'ADD')
 		{
-			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CS_WRONG_IMG"));
-			return false;
+			if (array_key_exists('IMAGE_ID', $arFields))
+			{
+				$arFields['IMAGE_ID'] = (int)$arFields['IMAGE_ID'];
+				if ($arFields['IMAGE_ID'] <= 0)
+				{
+					$arFields['IMAGE_ID'] = false;
+				}
+			}
+			if (array_key_exists('LOCATION_ID', $arFields))
+			{
+				$arFields['LOCATION_ID'] = (int)$arFields['LOCATION_ID'];
+				if ($arFields['LOCATION_ID'] <= 0)
+				{
+					$arFields['IMAGE_ID'] = false;
+				}
+			}
 		}
-		if(($action == 'ADD') &&
-			((is_set($arFields, "LOCATION_ID") && intval($arFields["LOCATION_ID"]) <= 0)))
-		{
-			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CS_WRONG_LOC"));
-			return false;
-		}
+
 		if(($action == 'UPDATE') && is_set($arFields, "ID"))
 			unset($arFields["ID"]);
 
-		if(($action == 'UPDATE') && strlen($arFields["IMAGE_ID"]) <= 0)
-			unset($arFields["IMAGE_ID"]);
+		if ($action == 'UPDATE')
+		{
+			if (array_key_exists('IMAGE_ID', $arFields))
+			{
+				if ($arFields['IMAGE_ID'] === null || $arFields['IMAGE_ID'] === 'null' || $arFields['IMAGE_ID'] === false)
+				{
+					$arFields['IMAGE_ID'] = false;
+				}
+				elseif (is_string($arFields['IMAGE_ID']) || is_int($arFields['IMAGE_ID']))
+				{
+					$arFields['IMAGE_ID'] = (int)$arFields['IMAGE_ID'];
+					if ($arFields['IMAGE_ID'] <= 0)
+					{
+						unset($arFields['IMAGE_ID']);
+					}
+				}
+				else
+				{
+					unset($arFields['IMAGE_ID']);
+				}
+			}
+		}
 
 		if(isset($arFields["ISSUING_CENTER"]) && ($arFields["ISSUING_CENTER"]) !== 'Y')
 		{
@@ -87,59 +73,17 @@ class CAllCatalogStore
 		{
 			$arFields["SITE_ID"] = '';
 		}
+		if (isset($arFields['CODE']) && $arFields['CODE'] === '')
+			$arFields['CODE'] = false;
+
 		return true;
 	}
 
-	
-	/**
-	* <p>Метод изменяет параметры склада с кодом ID, в соответствии с данными из массива arFields. Метод статический.</p>
-	*
-	*
-	* @param mixed $intId  Код склада для изменения.
-	*
-	* @param array $arFields  Ассоциативный массив параметров склада, ключами в котором
-	* являются названия параметров, а значениями - соответствующие
-	* значения. Допустимые ключи:         <br><ul> <li>TITLE - название склада;</li>     
-	*               <li>ACTIVE - активность склада('Y' - активен, 'N' - не активен);</li> 		  
-	* 		  <li>ADDRESS - адрес склада;</li> 		   		  <li>DESCRIPTION - описание склада;</li> 		   		 
-	* <li>GPS_N - GPS координата(широта);</li> 		   		  <li>GPS_S - GPS
-	* координата(долгота);</li> 		   		  <li>IMAGE_ID - ID картинки склада;</li> 		   		 
-	* <li>PHONE - телефон;</li> 		   		  <li>SCHEDULE - расписание работы склада;</li> 		   		 
-	* <li>XML_ID - XML_ID склада для экспорта\импорта из 1С;</li> 		   		  <li>ISSUING_CENTER -
-	* пункт выдачи (Y/N);</li> 		   		  <li>SHIPPING_CENTER - для отгрузки (Y/N).</li>                  
-	*         </ul>
-	*
-	* @return int <p>Возвращает <i>ID</i> измененного склада, если операция прошла
-	* успешно, в противном случае - <i>false</i>.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $arFields = Array(
-	* 		"TITLE" =&gt; $TITLE,
-	* 		"ACTIVE" =&gt; $ACTIVE,
-	* 		"ADDRESS" =&gt; $ADDRESS,
-	* 		"DESCRIPTION" =&gt; $DESCRIPTION,
-	* 		"IMAGE_ID" =&gt; $fid,
-	* 		"GPS_N" =&gt; $GPS_N,
-	* 		"GPS_S" =&gt; $GPS_S,
-	* 		"PHONE" =&gt; $PHONE,
-	* 		"SCHEDULE" =&gt; $SCHEDULE,
-	* 		"XML_ID" =&gt; $XML_ID,
-	* 	);
-	* 	
-	* 	$ID = CCatalogStore::Update(1, $arFields);
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/update.php
-	* @author Bitrix
-	*/
-	static function Update($id, $arFields)
+	public static function Update($id, $arFields)
 	{
 		global $DB;
-		$id = intval($id);
-		if (0 >= $id)
+		$id = (int)$id;
+		if ($id <= 0)
 			return false;
 
 		foreach (GetModuleEvents("catalog", "OnBeforeCatalogStoreUpdate", true) as $arEvent)
@@ -148,7 +92,6 @@ class CAllCatalogStore
 				return false;
 		}
 
-		$bNeedConversion = false;
 		if(array_key_exists('DATE_CREATE',$arFields))
 			unset($arFields['DATE_CREATE']);
 		if(array_key_exists('DATE_MODIFY', $arFields))
@@ -160,24 +103,33 @@ class CAllCatalogStore
 
 		$arFields['~DATE_MODIFY'] = $DB->GetNowFunction();
 
-		$dbStore = CCatalogStore::GetList(array(), array("ID" => $id), false, false, array("ACTIVE"));
-		if($arStore = $dbStore->Fetch())
-		{
-			if($arStore["ACTIVE"] != $arFields["ACTIVE"])
-				$bNeedConversion = true;
-		}
-
-		if($id <= 0 || !self::CheckFields('UPDATE',$arFields))
+		if (!self::CheckFields('UPDATE', $arFields))
 			return false;
+
 		$strUpdate = $DB->PrepareUpdate("b_catalog_store", $arFields);
 
-		if(!empty($strUpdate))
+		$bNeedConversion = false;
+		if (!empty($strUpdate))
 		{
+			if (isset($arFields['ACTIVE']))
+			{
+				$row = Catalog\StoreTable::getList(array(
+					'select' => array('ACTIVE'),
+					'filter' => array('=ID' => $id)
+				))->fetch();
+				if (!empty($row))
+					$bNeedConversion = ($row['ACTIVE'] != $arFields['ACTIVE']);
+				unset($row);
+			}
+
 			$strSql = "update b_catalog_store set ".$strUpdate." where ID = ".$id;
 			if(!$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__))
 				return false;
 			CCatalogStoreControlUtil::clearStoreName($id);
+
+			Catalog\StoreTable::getEntity()->cleanCache();
 		}
+
 		if($bNeedConversion)
 		{
 			self::recalculateStoreBalances($id);
@@ -189,29 +141,9 @@ class CAllCatalogStore
 		return $id;
 	}
 
-	
-	/**
-	* <p>Метод удаляет склад с кодом ID. При этом удаляются так же все остатки товаров, относящиеся к этому складу. Метод статический.</p>
-	*
-	*
-	* @param mixed $intId  Код склада для удаления.
-	*
-	* @return bool <p>Возвращает <i>true</i>, если операция прошла успешно, в противном
-	* случае - <i>false</i>.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $result = CCatalogStore::Delete($id);
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/catalog/classes/ccatalogstore/delete.php
-	* @author Bitrix
-	*/
-	static function Delete($id)
+	public static function Delete($id)
 	{
-		global $DB;
+		global $DB, $USER_FIELD_MANAGER;
 		$id = intval($id);
 		if($id > 0)
 		{
@@ -231,6 +163,10 @@ class CAllCatalogStore
 			$DB->Query("delete from b_catalog_store_product where STORE_ID = ".$id, true);
 			$DB->Query("delete from b_catalog_store where ID = ".$id, true);
 
+			$USER_FIELD_MANAGER->Delete(Catalog\StoreTable::getUfId(), $id);
+
+			Catalog\StoreTable::getEntity()->cleanCache();
+
 			foreach(GetModuleEvents("catalog", "OnCatalogStoreDelete", true) as $arEvent)
 				ExecuteModuleEventEx($arEvent, array($id));
 
@@ -241,31 +177,154 @@ class CAllCatalogStore
 		return false;
 	}
 
-	public static function recalculateStoreBalances($id)
+	/**
+	 * Recalculate quantity for store.
+	 *
+	 * @param int $storeId		Store id.
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\Db\SqlQueryException
+	 */
+	public static function recalculateStoreBalances($storeId)
 	{
-		global $DB;
-		$arFields = array();
-		if(COption::GetOptionString('catalog','default_use_store_control','N') != 'Y')
-		{
+		$storeId = (int)$storeId;
+		if ($storeId <= 0)
+			return false;
+
+		if (!Catalog\Config\State::isUsedInventoryManagement())
 			return true;
-		}
-		$dbStoreProduct = CCatalogStoreProduct::GetList(array(), array("STORE_ID" => $id, "!AMOUNT" => 0), false, false, array("PRODUCT_ID", "AMOUNT"));
-		while($arStoreProduct = $dbStoreProduct->Fetch())
+
+		$iterator = Catalog\StoreTable::getList([
+			'select' => ['ID'],
+			'filter' => ['=ID' => $storeId]
+		]);
+		$row = $iterator->fetch();
+		unset($iterator);
+		if (empty($row))
+			return false;
+		unset($row);
+
+		$errors = [];
+
+		$connection = Main\Application::getConnection();
+
+		Iblock\PropertyIndex\Manager::enableDeferredIndexing();
+		Catalog\Product\Sku::enableDeferredCalculation();
+
+		$iblockIds = [];
+
+		$startId = 0;
+		do
 		{
-			$dbAmount = $DB->Query("select SUM(SP.AMOUNT) as SUM, CP.QUANTITY_RESERVED as RESERVED, CS.ACTIVE FROM b_catalog_store_product SP inner join b_catalog_product CP on SP.PRODUCT_ID = CP.ID inner join b_catalog_store CS on SP.STORE_ID = CS.ID where SP.PRODUCT_ID = ".$arStoreProduct['PRODUCT_ID']." and CS.ACTIVE = 'Y' group by QUANTITY_RESERVED, ACTIVE", true);
-			if($arAmount = $dbAmount->Fetch())
+			$found = false;
+			$productIds = [];
+
+			$iterator = Catalog\StoreProductTable::getList([
+				'select' => ['ID', 'PRODUCT_ID'],
+				'filter' => ['>ID' => $startId, '=STORE_ID' => $storeId, '!=AMOUNT' => 0],
+				'order' => ['ID' => 'ASC'],
+				'limit' => 200
+			]);
+			while ($row = $iterator->fetch())
 			{
-				$arFields["QUANTITY"] = doubleval($arAmount["SUM"] - $arAmount["RESERVED"]);
+				$found = true;
+				$startId = (int)$row['ID'];
+				$productIds[] = (int)$row['PRODUCT_ID'];
 			}
-			else
+			unset($row, $iterator);
+			if (!empty($productIds))
+				Main\Type\Collection::normalizeArrayValuesByInt($productIds, true);
+
+			if (!empty($productIds))
 			{
-				if($arReservAmount = CCatalogProduct::GetByID($arStoreProduct['PRODUCT_ID']))
+				$products = [];
+				$iterator = Catalog\Model\Product::getList([
+					'select' => ['ID', 'QUANTITY_RESERVED', 'IBLOCK_ID' => 'IBLOCK_ELEMENT.IBLOCK_ID'],
+					'filter' => ['@ID' => $productIds],
+					'order' => ['ID' => 'ASC']
+				]);
+				while ($row = $iterator->fetch())
 				{
-					$arFields["QUANTITY"] = doubleval(0 - $arReservAmount["QUANTITY_RESERVED"]);
+					if ($row['IBLOCK_ID'] === null)
+						continue;
+					$rowId = (int)$row['ID'];
+					$iblock = (int)$row['IBLOCK_ID'];
+					$iblockIds[$iblock] = $iblock;
+					$products[$rowId] = [
+						'QUANTITY_RESERVED' => (float)$row['QUANTITY_RESERVED'],
+						'IBLOCK_ID' => $iblock
+					];
 				}
+				unset($row, $iterator);
+
+				if (!empty($products))
+				{
+					$query = 'select SUM(CSP.AMOUNT) as PRODUCT_QUANTITY, CSP.PRODUCT_ID '.
+						'from b_catalog_store_product CSP inner join b_catalog_store CS on CS.ID = CSP.STORE_ID '.
+						'where CSP.PRODUCT_ID in ('.implode(',', array_keys($products)).') and CS.ACTIVE = "Y" '.
+						'group by CSP.PRODUCT_ID';
+					$iterator = $connection->query($query);
+					while ($row = $iterator->fetch())
+					{
+						$rowId = (int)$row['PRODUCT_ID'];
+						$data = [
+							'fields' => [
+								'QUANTITY' => (float)$row['PRODUCT_QUANTITY'] - $products[$rowId]['QUANTITY_RESERVED']
+							],
+							'external_fields' => [
+								'IBLOCK_ID' => $products[$rowId]['IBLOCK_ID']
+							]
+						];
+						$resultInternal = Catalog\Model\Product::update($rowId, $data);
+						if (!$resultInternal->isSuccess())
+							$errors[$rowId] = $resultInternal->getErrorMessages();
+
+						unset($products[$rowId]);
+					}
+					unset($row, $iterator, $query);
+				}
+
+				if (!empty($products))
+				{
+					foreach ($products as $rowId => $rowData)
+					{
+						$data = [
+							'fields' => [
+								'QUANTITY' => -$products[$rowId]['QUANTITY_RESERVED']
+							],
+							'external_fields' => [
+								'IBLOCK_ID' => $products[$rowId]['IBLOCK_ID']
+							]
+						];
+						$resultInternal = Catalog\Model\Product::update($rowId, $data);
+						if (!$resultInternal->isSuccess())
+							$errors[$rowId] = $resultInternal->getErrorMessages();
+
+						unset($products[$rowId]);
+					}
+					unset($rowId, $rowData);
+				}
+				unset($products);
 			}
-			CCatalogProduct::Update($arStoreProduct["PRODUCT_ID"], $arFields);
+			unset($productIds);
 		}
-		return true;
+		while ($found);
+
+		unset($connection);
+
+		Catalog\Product\Sku::disableDeferredCalculation();
+		Catalog\Product\Sku::calculate();
+
+		Iblock\PropertyIndex\Manager::disableDeferredIndexing();
+		if (!empty($iblockIds))
+		{
+			foreach ($iblockIds as $iblock)
+				Iblock\PropertyIndex\Manager::runDeferredIndexing($iblock);
+		}
+		unset($iblockIds);
+
+		Catalog\Model\Product::clearCache();
+
+		return empty($errors);
 	}
 }

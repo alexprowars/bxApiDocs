@@ -3,7 +3,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CSupportEMail
 {
-	public static function OnGetFilterList()
+	function OnGetFilterList()
 	{
 		return Array(
 			"ID"					=>	"support",
@@ -15,7 +15,7 @@ class CSupportEMail
 			);
 	}
 
-	public static function PrepareVars()
+	function PrepareVars()
 	{
 		return
 			'W_SUPPORT_CATEGORY='.urlencode($_REQUEST["W_SUPPORT_CATEGORY"]).
@@ -27,7 +27,7 @@ class CSupportEMail
 			'&W_SUPPORT_USER_FIND='.urlencode($_REQUEST["W_SUPPORT_USER_FIND"]);
 	}
 
-	public static function EMailMessageCheck($arFields, $ACTION_VARS)
+	function EMailMessageCheck($arFields, $ACTION_VARS)
 	{
 		$arActionVars = explode("&", $ACTION_VARS);
 		$countAr = count($arActionVars);
@@ -40,7 +40,7 @@ class CSupportEMail
 		return true;
 	}
 
-	public static function EMailMessageAdd($arMessageFields, $ACTION_VARS)
+	function EMailMessageAdd($arMessageFields, $ACTION_VARS)
 	{
 		$arActionVars = explode("&", $ACTION_VARS);
 		$countAr = count($arActionVars);

@@ -3,41 +3,29 @@ IncludeModuleLangFile(__FILE__);
 
 class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 {
-	protected $status = 0;
-	protected $errno = 0;
-	protected $errstr = '';
-	protected $result = '';
-	protected $verb = '';
-	protected $url = '';
-
-	public function GetLastRequestStatus()
-	{
-		return $this->status;
-	}
-
-	public static function GetObject()
+	function GetObject()
 	{
 		return new CCloudStorageService_OpenStackStorage();
 	}
 
-	public static function GetID()
+	function GetID()
 	{
 		return "openstack_storage";
 	}
 
-	public static function GetName()
+	function GetName()
 	{
 		return "OpenStack Object Storage";
 	}
 
-	public static function GetLocationList()
+	function GetLocationList()
 	{
 		return array(
 			"" => "N/A",
 		);
 	}
 
-	public function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
+	function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
 	{
 		if($bVarsFromForm)
 			$arSettings = $_POST["SETTINGS"][$this->GetID()];
@@ -78,7 +66,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return $result;
 	}
 
-	public function CheckSettings($arBucket, &$arSettings)
+	function CheckSettings($arBucket, &$arSettings)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -90,13 +78,13 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 			"FORCE_HTTP" => is_array($arSettings) && $arSettings["FORCE_HTTP"] == "Y"? "Y": "N",
 		);
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["HOST"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["HOST"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_HOST", "text" => GetMessage("CLO_STORAGE_OPENSTACK_EMPTY_HOST"));
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["USER"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["USER"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_USER", "text" => GetMessage("CLO_STORAGE_OPENSTACK_EMPTY_USER"));
 
-		if($arBucket["READ_ONLY"] !== "Y" && !strlen($result["KEY"]))
+		if($arBucket["READ_ONLY"] !== "Y" && !mb_strlen($result["KEY"]))
 			$aMsg[] = array("id" => $this->GetID()."INP_KEY", "text" => GetMessage("CLO_STORAGE_OPENSTACK_EMPTY_KEY"));
 
 
@@ -120,7 +108,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return true;
 	}
 
-	public static function _GetToken($host, $user, $key)
+	function _GetToken($host, $user, $key)
 	{
 		global $APPLICATION;
 		static $results = array();
@@ -160,9 +148,9 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 					if(preg_match("#^http://(.*?)(|:\d+)(/.*)\$#", $obRequest->headers["X-Storage-Url"], $arStorage))
 					{
 						$result = $obRequest->headers;
-						$result["X-Storage-NoProtoUrl"] = $arStorage[1].$arStorage[2].$arStorage[3];
+						$result["X-Storage-NoProtoUrl"] = $arStorage[1].($arStorage[2] == ':80'? '': $arStorage[2]).$arStorage[3];
 						$result["X-Storage-Host"] = $arStorage[1];
-						$result["X-Storage-Port"] = $arStorage[2]? substr($arStorage[2], 1): 80;
+						$result["X-Storage-Port"] = $arStorage[2]? mb_substr($arStorage[2], 1) : 80;
 						$result["X-Storage-Urn"] = $arStorage[3];
 						$result["X-Storage-Proto"] = "";
 					}
@@ -181,7 +169,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return $result;
 	}
 
-	public function SendRequest($settings, $verb, $bucket, $file_name='', $params='', $content=false, $additional_headers=array())
+	function SendRequest($settings, $verb, $bucket, $file_name='', $params='', $content=false, $additional_headers=array())
 	{
 		$arToken = $this->_GetToken($settings["HOST"], $settings["USER"], $settings["KEY"]);
 		if(!$arToken)
@@ -203,15 +191,19 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		}
 
 		@$obRequest->Query(
-			$this->verb = $verb,
+			$verb,
 			$arToken["X-Storage-Host"],
-			$arToken["X-Storage-Port"],
-			$this->url = $arToken["X-Storage-Urn"]."/".$bucket.$RequestURI.$params,
+			$this->port = $arToken["X-Storage-Port"],
+			rtrim($arToken["X-Storage-Urn"], "/")."/".$bucket.$RequestURI.$params,
 			$content,
 			$arToken["X-Storage-Proto"],
 			$ContentType
 		);
 		$this->status = $obRequest->status;
+		$this->host = $arToken["X-Storage-Host"];
+		$this->verb = $verb;
+		$this->url =  rtrim($arToken["X-Storage-Urn"], "/")."/".$bucket.$RequestURI.$params;
+		$this->headers = $obRequest->headers;
 		$this->errno = $obRequest->errno;
 		$this->errstr = $obRequest->errstr;
 		$this->result = $obRequest->result;
@@ -219,7 +211,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return $obRequest;
 	}
 
-	public function CreateBucket($arBucket)
+	function CreateBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -240,7 +232,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return ($this->status == 201)/*Created*/ || ($this->status == 202) /*Accepted*/;
 	}
 
-	public function DeleteBucket($arBucket)
+	function DeleteBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -276,7 +268,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		}
 	}
 
-	public function IsEmptyBucket($arBucket)
+	function IsEmptyBucket($arBucket)
 	{
 		global $APPLICATION;
 
@@ -319,7 +311,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		}
 	}
 
-	public function GetFileSRC($arBucket, $arFile)
+	function GetFileSRC($arBucket, $arFile)
 	{
 		global $APPLICATION;
 		
@@ -360,23 +352,23 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($URI, 0, strlen($arBucket["PREFIX"])+1) !== $arBucket["PREFIX"]."/")
+			if(mb_substr($URI, 0, mb_strlen($arBucket["PREFIX"]) + 1) !== $arBucket["PREFIX"]."/")
 				$URI = $arBucket["PREFIX"]."/".$URI;
 		}
 
-		return $host."/".CCloudUtil::URLEncode($URI, "UTF-8");
+		return $host."/".CCloudUtil::URLEncode($URI, "UTF-8", true);
 	}
 
-	public function FileExists($arBucket, $filePath)
+	function FileExists($arBucket, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$obRequest = $this->SendRequest(
 			$arBucket["SETTINGS"],
@@ -388,25 +380,26 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return ($this->status == 200 || $this->status == 206);
 	}
 
-	public function FileCopy($arBucket, $arFile, $filePath)
+	function FileCopy($arBucket, $arFile, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
+		$fileSource = CCloudUtil::URLEncode("/".$arBucket["BUCKET"]."/".($arBucket["PREFIX"]? $arBucket["PREFIX"]."/": "").($arFile["SUBDIR"]? $arFile["SUBDIR"]."/": "").$arFile["FILE_NAME"], "UTF-8", true);
 
 		$obRequest = $this->SendRequest(
 			$arBucket["SETTINGS"],
 			"PUT",
 			$arBucket["BUCKET"],
-			CCloudUtil::URLEncode($filePath, "UTF-8"),
+			CCloudUtil::URLEncode($filePath, "UTF-8", true),
 			'',
 			false,
 			array(
-				"X-Copy-From" => CCloudUtil::URLEncode("/".$arBucket["BUCKET"]."/".($arBucket["PREFIX"]? $arBucket["PREFIX"]."/": "").($arFile["SUBDIR"]? $arFile["SUBDIR"]."/": "").$arFile["FILE_NAME"], "UTF-8"),
+				"X-Copy-From" => $fileSource,
 			)
 		);
 
@@ -416,7 +409,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 			return false;
 	}
 
-	public function DownloadToFile($arBucket, $arFile, $filePath)
+	function DownloadToFile($arBucket, $arFile, $filePath)
 	{
 		$io = CBXVirtualIo::GetInstance();
 		$obRequest = new CHTTP;
@@ -424,16 +417,16 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return $obRequest->Download($this->GetFileSRC($arBucket, $arFile), $io->GetPhysicalName($filePath));
 	}
 
-	public function DeleteFile($arBucket, $filePath)
+	function DeleteFile($arBucket, $filePath)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$obRequest = $this->SendRequest(
 			$arBucket["SETTINGS"],
@@ -442,19 +435,40 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 			$filePath
 		);
 
-		return ($obRequest->status == 204 || $obRequest->status == 404);
+		//Try to fix space in the path
+		if ($this->status == 404 && mb_strpos($filePath, '+') !== false)
+		{
+			$filePath = str_replace('+', '%20', $filePath);
+			$obRequest = $this->SendRequest(
+				$arBucket["SETTINGS"],
+				"DELETE",
+				$arBucket["BUCKET"],
+				$filePath
+			);
+		}
+
+		if($this->status == 204 || $this->status == 404)
+		{
+			$APPLICATION->ResetException();
+			return true;
+		}
+		else
+		{
+			$APPLICATION->ResetException();
+			return false;
+		}
 	}
 
-	public function SaveFile($arBucket, $filePath, $arFile)
+	function SaveFile($arBucket, $filePath, $arFile)
 	{
 		global $APPLICATION;
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		if (array_key_exists("content", $arFile))
 		{
@@ -497,7 +511,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		}
 	}
 
-	public function ListFiles($arBucket, $filePath, $bRecursive = false)
+	function ListFiles($arBucket, $filePath, $bRecursive = false)
 	{
 		global $APPLICATION;
 
@@ -505,18 +519,22 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 			"dir" => array(),
 			"file" => array(),
 			"file_size" => array(),
+			"file_mtime" => array(),
 		);
 
 		$filePath = trim($filePath, '/');
-		if(strlen($filePath))
+		if($filePath <> '')
+		{
 			$filePath .= '/';
+		}
 
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = $arBucket["PREFIX"]."/".ltrim($filePath, "/");
 		}
 		$filePath = $APPLICATION->ConvertCharset($filePath, LANG_CHARSET, "UTF-8");
+		$filePath = str_replace(" ", "+", $filePath);
 
 		$marker = '';
 		$new_marker = false;
@@ -557,17 +575,18 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 								$new_marker = $a["#"]["name"][0]["#"];
 								if($a["#"]["content_type"][0]["#"] === "application/directory")
 								{
-									$dir_name = trim(substr($a["#"]["name"][0]["#"], strlen($filePath)), "/");
+									$dir_name = trim(mb_substr($a["#"]["name"][0]["#"], mb_strlen($filePath)), "/");
 									$result["dir"][$APPLICATION->ConvertCharset(urldecode($dir_name), "UTF-8", LANG_CHARSET)] = true;
 								}
 								else
 								{
-									$file_name = substr($a["#"]["name"][0]["#"], strlen($filePath));
+									$file_name = mb_substr($a["#"]["name"][0]["#"], mb_strlen($filePath));
 									$file_name = $APPLICATION->ConvertCharset(urldecode($file_name), "UTF-8", LANG_CHARSET);
 									if (!in_array($file_name, $result["file"]))
 									{
 										$result["file"][] = $file_name;
 										$result["file_size"][] = $a["#"]["bytes"][0]["#"];
+										$result["file_mtime"][] = mb_substr($a["#"]["last_modified"][0]["#"], 0, 19);
 									}
 								}
 							}
@@ -583,7 +602,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 							foreach($arXML["container"]["#"]["subdir"] as $a)
 							{
 								$new_marker = $a["@"]["name"];
-								$dir_name = trim(substr($a["@"]["name"], strlen($filePath)), "/");
+								$dir_name = trim(mb_substr($a["@"]["name"], mb_strlen($filePath)), "/");
 								$result["dir"][$APPLICATION->ConvertCharset(urldecode($dir_name), "UTF-8", LANG_CHARSET)] = true;
 							}
 						}
@@ -607,34 +626,35 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		return $result;
 	}
 
-	public static function InitiateMultipartUpload($arBucket, &$NS, $filePath, $fileSize, $ContentType)
+	function InitiateMultipartUpload($arBucket, &$NS, $filePath, $fileSize, $ContentType)
 	{
 		$filePath = '/'.trim($filePath, '/');
 		if($arBucket["PREFIX"])
 		{
-			if(substr($filePath, 0, strlen($arBucket["PREFIX"])+2) != "/".$arBucket["PREFIX"]."/")
+			if(mb_substr($filePath, 0, mb_strlen($arBucket["PREFIX"]) + 2) != "/".$arBucket["PREFIX"]."/")
 				$filePath = "/".$arBucket["PREFIX"].$filePath;
 		}
 
 		$NS = array(
 			"filePath" => $filePath,
-			"fileTemp" => CCloudStorage::translit("/tmp".$filePath, "/"),
+			"fileTemp" => CCloudStorage::translit("/tmp".str_replace(' ', '_', $filePath), "/"),
 			"partsCount" => 0,
+			"Parts" => array(),
 			"Content-Type" => $ContentType,
 		);
 
 		return true;
 	}
 
-	public static function GetMinUploadPartSize()
+	function GetMinUploadPartSize()
 	{
 		return 5*1024*1024; //5MB
 	}
 
-	public function UploadPart($arBucket, &$NS, $data)
+	function UploadPartNo($arBucket, &$NS, $data, $part_no)
 	{
-		$filePath = $NS["fileTemp"]."/".sprintf("%06d", $NS["partsCount"]+1);
-		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8");
+		$filePath = $NS["fileTemp"]."/".sprintf("%06d", $part_no + 1);
+		$filePath = CCloudUtil::URLEncode($filePath, "UTF-8", true);
 
 		$obRequest = $this->SendRequest(
 			$arBucket["SETTINGS"],
@@ -648,6 +668,7 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		if(is_object($obRequest) && $this->status == 201)
 		{
 			$NS["partsCount"]++;
+			$NS["Parts"][$part_no] = $filePath;
 			return true;
 		}
 		else
@@ -656,10 +677,14 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 		}
 	}
 
-	public function CompleteMultipartUpload($arBucket, &$NS)
+	function UploadPart($arBucket, &$NS, $data)
 	{
-		global $APPLICATION;
-		$filePath = CCloudUtil::URLEncode($NS["fileTemp"], "UTF-8");
+		return $this->UploadPartNo($arBucket, $NS, $data, count($NS["Parts"]));
+	}
+
+	function CompleteMultipartUpload($arBucket, &$NS)
+	{
+		$filePath = CCloudUtil::URLEncode($NS["fileTemp"], "UTF-8", true);
 
 		$obRequest = $this->SendRequest(
 			$arBucket["SETTINGS"],
@@ -676,27 +701,38 @@ class CCloudStorageService_OpenStackStorage extends CCloudStorageService
 
 		if(is_object($obRequest) && $this->status == 201)
 		{
+			$fileSource = CCloudUtil::URLEncode("/".$arBucket["BUCKET"].$NS["fileTemp"], "UTF-8", true);
+
 			$obRequest = $this->SendRequest(
 				$arBucket["SETTINGS"],
 				"PUT",
 				$arBucket["BUCKET"],
-				CCloudUtil::URLEncode($NS["filePath"], "UTF-8"),
+				CCloudUtil::URLEncode($NS["filePath"], "UTF-8", true),
 				'',
 				false,
 				array(
 					"Content-Type" => $NS["Content-Type"],
-					"X-Copy-From" => "/".$arBucket["BUCKET"].$filePath,
+					"X-Copy-From" => $fileSource,
 				)
 			);
 
-			if(is_object($obRequest) && $this->status == 201)
+			if(
+				is_object($obRequest)
+				&& (
+					$this->status == 201
+					|| $this->status == 200
+				)
+			)
 				$result = true;
 			else
 				$result = false;
 
 			$this->DeleteFile($arBucket, $NS["fileTemp"]);
-			for($part = $NS["partsCount"]; $part > 0; $part--)
-				$this->DeleteFile($arBucket, $NS["fileTemp"]."/".sprintf("%06d", $part));
+			ksort($NS["Parts"]);
+			foreach ($NS["Parts"] as $tmpPath)
+			{
+				$this->DeleteFile($arBucket, $tmpPath);
+			}
 
 			return $result;
 		}

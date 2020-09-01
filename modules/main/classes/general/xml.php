@@ -16,26 +16,26 @@ class CDataXMLNode
 	var $attributes;
 	var $_parent;
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
-	public function name()
+	function name()
 	{
 		return $this->name;
 	}
 
-	public function children()
+	function children()
 	{
 		return $this->children;
 	}
 
-	public function textContent()
+	function textContent()
 	{
 		return $this->content;
 	}
 
-	public function getAttribute($attribute)
+	function getAttribute($attribute)
 	{
 		if(is_array($this->attributes))
 		{
@@ -46,12 +46,12 @@ class CDataXMLNode
 		return "";
 	}
 
-	public function getAttributes()
+	function getAttributes()
 	{
 		return $this->attributes;
 	}
 
-	public function namespaceURI()
+	function namespaceURI()
 	{
 		return $this->getAttribute("xmlns");
 	}
@@ -60,7 +60,7 @@ class CDataXMLNode
 	 * @param $tagname
 	 * @return CDataXMLNode[]
 	 */
-	public function elementsByName($tagname)
+	function elementsByName($tagname)
 	{
 		$result = array();
 
@@ -82,7 +82,7 @@ class CDataXMLNode
 		return $result;
 	}
 
-	public static function _SaveDataType_OnDecode(&$result, $name, $value)
+	function _SaveDataType_OnDecode(&$result, $name, $value)
 	{
 		if (isset($result[$name]))
 		{
@@ -99,7 +99,7 @@ class CDataXMLNode
 		}
 	}
 
-	public function decodeDataTypes($attrAsNodeDecode = false)
+	function decodeDataTypes($attrAsNodeDecode = false)
 	{
 		$result = array();
 
@@ -191,7 +191,7 @@ class CDataXMLNode
 		return $ret;
 	}
 
-	public function __toArray()
+	function __toArray()
 	{
 		$retHash = array(
 			"@" => array(),
@@ -232,11 +232,11 @@ class CDataXMLDocument
 	var $children;
 	var $root;
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
-	public function elementsByName($tagname)
+	function elementsByName($tagname)
 	{
 		$result = array();
 		if(is_array($this->children))
@@ -254,7 +254,7 @@ class CDataXMLDocument
 		return $result;
 	}
 
-	public function encodeDataTypes( $name, $value)
+	function encodeDataTypes( $name, $value)
 	{
 		static $Xsd = array(
 			"string"=>"string", "bool"=>"boolean", "boolean"=>"boolean",
@@ -347,7 +347,7 @@ class CDataXML
 		$this->tree = False;
 	}
 
-	public function Load($file)
+	function Load($file)
 	{
 		/** @global CMain $APPLICATION */
 		global $APPLICATION;
@@ -371,7 +371,7 @@ class CDataXML
 		return false;
 	}
 
-	public function LoadString($text)
+	function LoadString($text)
 	{
 		unset($this->tree);
 		$this->tree = false;
@@ -683,7 +683,7 @@ class CDataXML
 		return $oXMLDocument;
 	}
 
-	public function __stripComments(&$str)
+	function __stripComments(&$str)
 	{
 		$str = &preg_replace("#<\\!--.*?-->#s", "", $str);
 		return $str;
@@ -737,12 +737,12 @@ class OrderLoader
 {
 	var $errors = array();
 
-	public static function elementHandler($path, $attr)
+	function elementHandler($path, $attr)
 	{
 		AddMessage2Log(print_r(array($path, $attr), true));
 	}
 
-	public static function nodeHandler(CDataXML $xmlObject)
+	function nodeHandler(CDataXML $xmlObject)
 	{
 		AddMessage2Log(print_r($xmlObject, true));
 	}
@@ -754,8 +754,8 @@ $loader = new OrderLoader;
 while(true) //this while is cross hit emulation
 {
 	$o = new CXMLFileStream;
-	$o->registerElementHandler("/ÐšÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ°ÑÐ˜Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ", array($loader, "elementHandler"));
-	$o->registerNodeHandler("/ÐšÐ¾Ð¼Ð¼ÐµÑ€Ñ‡ÐµÑÐºÐ°ÑÐ˜Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ/ÐšÐ°Ñ‚Ð°Ð»Ð¾Ð³/Ð¢Ð¾Ð²Ð°Ñ€Ñ‹/Ð¢Ð¾Ð²Ð°Ñ€", array($loader, "nodeHandler"));
+	$o->registerElementHandler("/Êîììåð÷åñêàÿÈíôîðìàöèÿ", array($loader, "elementHandler"));
+	$o->registerNodeHandler("/Êîììåð÷åñêàÿÈíôîðìàöèÿ/Êàòàëîã/Òîâàðû/Òîâàð", array($loader, "nodeHandler"));
 	$o->setPosition($position);
 
 	if ($o->openFile($_SERVER["DOCUMENT_ROOT"]."/upload/081_books_books-books_ru.xml"))
@@ -965,6 +965,13 @@ class CXMLFileStream
 			else
 			{
 				$this->startElement($bMB, $xmlChunk, $origChunk);
+				//check for self-closing tag
+				$p = strpos($xmlChunk, ">");
+				if (($p !== false) && (substr($xmlChunk, $p - 1, 1)=="/"))
+				{
+					$this->endElement($xmlChunk);
+					return true;
+				}
 			}
 		}
 		$this->eof = true;
@@ -1084,39 +1091,36 @@ class CXMLFileStream
 				$elementAttrs = "";
 			}
 
-			if(substr($xmlChunk, $p - 1, 1) != "/")
+			$this->elementStack[] = $elementName;
+			$this->positionStack[] = $this->filePosition - ($bMB? mb_strlen($origChunk, 'latin1'): strlen($origChunk)) - 1;
+
+			if (isset($this->endNodes[$elementName]))
 			{
-				$this->elementStack[] = $elementName;
-				$this->positionStack[] = $this->filePosition - ($bMB? mb_strlen($origChunk, 'latin1'): strlen($origChunk)) - 1;
-
-				if (isset($this->endNodes[$elementName]))
+				$xmlPath = implode("/", $this->elementStack);
+				if (isset($this->elementHandlers[$xmlPath]))
 				{
-					$xmlPath = implode("/", $this->elementStack);
-					if (isset($this->elementHandlers[$xmlPath]))
+					$attributes = array();
+					if ($elementAttrs !== "")
 					{
-						$attributes = array();
-						if ($elementAttrs !== "")
+						preg_match_all("/(\\S+)\\s*=\\s*[\"](.*?)[\"]/s", $elementAttrs, $attrs_tmp);
+						if(strpos($elementAttrs, "&")===false)
 						{
-							preg_match_all("/(\\S+)\\s*=\\s*[\"](.*?)[\"]/s", $elementAttrs, $attrs_tmp);
-							if(strpos($elementAttrs, "&")===false)
-							{
-								foreach($attrs_tmp[1] as $i=>$attrs_tmp_1)
-									$attributes[$attrs_tmp_1] = $attrs_tmp[2][$i];
-							}
-							else
-							{
-								foreach($attrs_tmp[1] as $i=>$attrs_tmp_1)
-									$attributes[$attrs_tmp_1] = preg_replace($search, $replace, $attrs_tmp[2][$i]);
-							}
+							foreach($attrs_tmp[1] as $i=>$attrs_tmp_1)
+								$attributes[$attrs_tmp_1] = $attrs_tmp[2][$i];
 						}
+						else
+						{
+							foreach($attrs_tmp[1] as $i=>$attrs_tmp_1)
+								$attributes[$attrs_tmp_1] = preg_replace($search, $replace, $attrs_tmp[2][$i]);
+						}
+					}
 
-						foreach ($this->elementHandlers[$xmlPath] as $callableHandler)
-						{
-							call_user_func_array($callableHandler, array(
-								$xmlPath,
-								$attributes,
-							));
-						}
+					foreach ($this->elementHandlers[$xmlPath] as $callableHandler)
+					{
+						call_user_func_array($callableHandler, array(
+							$xmlPath,
+							$attributes,
+						));
 					}
 				}
 			}

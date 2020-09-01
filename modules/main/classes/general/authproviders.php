@@ -34,8 +34,8 @@ class CAuthProvider
 
 interface IProviderInterface
 {
-	static public function GetFormHtml($arParams=false);
-	static public function GetNames($arCodes);
+	public function GetFormHtml($arParams=false);
+	public function GetNames($arCodes);
 }
 
 class CGroupAuthProvider extends CAuthProvider implements IProviderInterface
@@ -77,7 +77,7 @@ class CGroupAuthProvider extends CAuthProvider implements IProviderInterface
 
 	public static function OnAfterGroupAdd(&$arFields)
 	{
-		if(count($arFields["USER_ID"]) > 0)
+		if(is_array($arFields["USER_ID"]) && !empty($arFields["USER_ID"]))
 			self::DeleteByGroup($arFields["ID"]);
 	}
 	
@@ -203,7 +203,7 @@ class CGroupAuthProvider extends CAuthProvider implements IProviderInterface
 		return array("HTML"=>$html);
 	}
 
-	static public function GetNames($arCodes)
+	public function GetNames($arCodes)
 	{
 		$aID = array();
 		foreach($arCodes as $code)
@@ -260,7 +260,11 @@ class CUserAuthProvider extends CAuthProvider implements IProviderInterface
 
 		$nameFormat = CSite::GetNameFormat(false);
 
-		$arFilter = array('ACTIVE' => 'Y', 'NAME_SEARCH' => $search);
+		$arFilter = array(
+			'ACTIVE' => 'Y', 
+			'NAME_SEARCH' => $search,
+			'!EXTERNAL_AUTH_ID' => \Bitrix\Main\UserTable::getExternalUserTypes(),
+		);
 
 		if (
 			IsModuleInstalled('intranet')
@@ -342,7 +346,7 @@ class CUserAuthProvider extends CAuthProvider implements IProviderInterface
 		return array("HTML"=>$html);
 	}
 
-	static public function GetNames($arCodes)
+	public function GetNames($arCodes)
 	{
 		$aID = array();
 		foreach($arCodes as $code)
@@ -379,7 +383,7 @@ class CUserAuthProvider extends CAuthProvider implements IProviderInterface
 
 class COtherAuthProvider implements IProviderInterface
 {
-	static public function GetFormHtml($arParams=false)
+	public function GetFormHtml($arParams=false)
 	{
 		global $USER;
 
@@ -445,7 +449,7 @@ class COtherAuthProvider implements IProviderInterface
 		return array("HTML"=>$html);
 	}
 
-	static public function GetNames($arCodes)
+	public function GetNames($arCodes)
 	{
 		return array(
 			"CR" => array("provider"=>"", "name"=>GetMessage("authprov_author")),

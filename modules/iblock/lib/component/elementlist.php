@@ -211,7 +211,7 @@ abstract class ElementList extends Base
 		{
 			$params[$order] = (isset($default['ORDER']) ? $default['ORDER'] : 'SORT');
 		}
-		$params[$order] = strtoupper($params[$order]);
+		$params[$order] = mb_strtoupper($params[$order]);
 
 		if ($params[$order] === 'ID' && !empty($params[$direction]) && is_array($params[$direction]))
 		{
@@ -627,7 +627,7 @@ abstract class ElementList extends Base
 				if ($value == '')
 					continue;
 
-				$paramName = strtolower($linkParams[1][$key]);
+				$paramName = mb_strtolower($linkParams[1][$key]);
 
 				if ($paramName === 'href')
 				{
@@ -653,13 +653,13 @@ abstract class ElementList extends Base
 				{
 					$realUrl = $url;
 
-					$pos = strpos($url, '#');
+					$pos = mb_strpos($url, '#');
 					if ($pos !== false)
 					{
-						$realUrl = substr($realUrl, 0, $pos);
+						$realUrl = mb_substr($realUrl, 0, $pos);
 					}
 
-					$realUrl .= strpos($url, '?') === false ? '?' : '&';
+					$realUrl .= mb_strpos($url, '?') === false ? '?' : '&';
 					$realUrl .= $addParam;
 
 					$arData[$i] = \CAjax::GetLinkEx($realUrl, $url, $match[2], 'comp_'.$this->arParams['AJAX_ID'], $strAdditional);
@@ -678,7 +678,7 @@ abstract class ElementList extends Base
 	private function checkPcreLimit($data)
 	{
 		$pcreBacktrackLimit = (int)ini_get('pcre.backtrack_limit');
-		$textLen = function_exists('mb_strlen') ? mb_strlen($data, 'latin1') : strlen($data);
+		$textLen = function_exists('mb_strlen')? mb_strlen($data, 'latin1') : mb_strlen($data);
 		$textLen++;
 
 		if ($pcreBacktrackLimit > 0 && $pcreBacktrackLimit < $textLen)
@@ -695,19 +695,19 @@ abstract class ElementList extends Base
 		if (preg_match('/^(#|mailto:|javascript:|callto:)/', $url))
 			return false;
 
-		if (strpos($url, '://') !== false)
+		if (mb_strpos($url, '://') !== false)
 			return false;
 
 		$url = preg_replace('/#.*/', '', $url);
 
-		if (strpos($url, '?') !== false)
+		if (mb_strpos($url, '?') !== false)
 		{
-			$url = substr($url, 0, strpos($url, '?'));
+			$url = mb_substr($url, 0, mb_strpos($url, '?'));
 		}
 
-		if (substr($url, -4) != '.php')
+		if (mb_substr($url, -4) != '.php')
 		{
-			if (substr($url, -1) != '/')
+			if (mb_substr($url, -1) != '/')
 			{
 				$url .= '/';
 			}
@@ -717,14 +717,14 @@ abstract class ElementList extends Base
 
 		$currentUrl = $this->arParams['CURRENT_BASE_PAGE'];
 
-		if (strpos($currentUrl, '?') !== false)
+		if (mb_strpos($currentUrl, '?') !== false)
 		{
-			$currentUrl = substr($currentUrl, 0, strpos($currentUrl, '?'));
+			$currentUrl = mb_substr($currentUrl, 0, mb_strpos($currentUrl, '?'));
 		}
 
-		if (substr($currentUrl, -4) != '.php')
+		if (mb_substr($currentUrl, -4) != '.php')
 		{
-			if (substr($currentUrl, -1) != '/')
+			if (mb_substr($currentUrl, -1) != '/')
 			{
 				$currentUrl .= '/';
 			}
@@ -957,13 +957,13 @@ abstract class ElementList extends Base
 				$sortFields['AVAILABLE'] = 'desc,nulls';
 			}
 
-			$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD']);
+			$field = mb_strtoupper($this->arParams['ELEMENT_SORT_FIELD']);
 			if (!isset($sortFields[$field]))
 			{
 				$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER'];
 			}
 
-			$field = strtoupper($this->arParams['ELEMENT_SORT_FIELD2']);
+			$field = mb_strtoupper($this->arParams['ELEMENT_SORT_FIELD2']);
 			if (!isset($sortFields[$field]))
 			{
 				$sortFields[$field] = $this->arParams['ELEMENT_SORT_ORDER2'];

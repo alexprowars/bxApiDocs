@@ -6,7 +6,7 @@ class CSecurityIPRule
 	static $bActive = null;
 	public $LAST_ERROR = "";
 
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB, $CACHE_MANAGER;
 
@@ -99,7 +99,7 @@ class CSecurityIPRule
 		return $res;
 	}
 
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB, $CACHE_MANAGER;
 		$ID = intval($ID);
@@ -111,7 +111,7 @@ class CSecurityIPRule
 			return false;
 
 		$strUpdate = $DB->PrepareUpdate("b_sec_iprule", $arFields);
-		if(strlen($strUpdate) > 0)
+		if($strUpdate <> '')
 		{
 			$strSql = "
 				UPDATE b_sec_iprule SET
@@ -235,7 +235,7 @@ class CSecurityIPRule
 		return true;
 	}
 
-	public static function UpdateRuleIPs($IPRULE_ID, $arInclIPs=false, $arExclIPs=false)
+	function UpdateRuleIPs($IPRULE_ID, $arInclIPs=false, $arExclIPs=false)
 	{
 		global $DB, $CACHE_MANAGER;
 		$IPRULE_ID = intval($IPRULE_ID);
@@ -322,14 +322,14 @@ class CSecurityIPRule
 	protected static function ip2number($ip)
 	{
 		$ip = trim($ip);
-		if(strlen($ip) > 0)
+		if($ip <> '')
 			$res = doubleval(sprintf("%u", ip2long(trim($ip))));
 		else
 			$res = 0;
 		return $res;
 	}
 
-	public function CheckIP($arInclIPs=false, $arExclIPs=false)
+	function CheckIP($arInclIPs=false, $arExclIPs=false)
 	{
 		global $APPLICATION;
 
@@ -402,7 +402,7 @@ class CSecurityIPRule
 		}
 	}
 
-	public function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $APPLICATION;
 
@@ -568,7 +568,7 @@ class CSecurityIPRule
 		return $res;
 	}
 
-	public static function DeleteRuleExclFiles($files)
+	function DeleteRuleExclFiles($files)
 	{
 		global $DB;
 		if (!is_array($files))
@@ -578,7 +578,7 @@ class CSecurityIPRule
 				$DB->Query("DELETE FROM b_sec_iprule_excl_mask WHERE RULE_MASK = '".$DB->ForSQL($file)."'", false, "File: ".__FILE__."<br>Line: ".__LINE__);
 	}
 
-	public static function AddRuleExclFiles($files)
+	function AddRuleExclFiles($files)
 	{
 		if (empty($files))
 			return;
@@ -615,7 +615,7 @@ class CSecurityIPRule
 		}
 	}
 
-	public static function GetRuleExclFiles($files)
+	function GetRuleExclFiles($files)
 	{
 		global $DB;
 		$res=array();
@@ -700,8 +700,8 @@ class CSecurityIPRule
 		$arQueryOrder = array();
 		foreach($arOrder as $strColumn => $strDirection)
 		{
-			$strColumn = strtoupper($strColumn);
-			$strDirection = strtoupper($strDirection)=="ASC"? "ASC": "DESC";
+			$strColumn = mb_strtoupper($strColumn);
+			$strDirection = mb_strtoupper($strDirection) == "ASC"? "ASC": "DESC";
 			switch($strColumn)
 			{
 				case "ID":
@@ -711,10 +711,14 @@ class CSecurityIPRule
 				case "SITE_ID":
 				case "SORT":
 				case "NAME":
+					$arSelect[] = $strColumn;
+					$arQueryOrder[$strColumn] = $strColumn." ".$strDirection;
+					break;
 				case "ACTIVE_FROM":
 				case "ACTIVE_TO":
 					$arSelect[] = $strColumn;
-					$arQueryOrder[$strColumn] = $strColumn." ".$strDirection;
+					$arSelect[] = $strColumn."_TIMESTAMP";
+					$arQueryOrder[$strColumn] = $strColumn."_TIMESTAMP ".$strDirection;
 					break;
 			}
 		}
@@ -722,7 +726,7 @@ class CSecurityIPRule
 		$arQuerySelect = array();
 		foreach($arSelect as $strColumn)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			switch($strColumn)
 			{
 				case "ID":
@@ -931,7 +935,7 @@ class CSecurityIPRule
 	public static function CheckAntiFile($return_message = false)
 	{
 		$file = COption::GetOptionString("security", "ipcheck_disable_file", "");
-		$res = (strlen($file) > 0) && file_exists($_SERVER["DOCUMENT_ROOT"].$file) && is_file($_SERVER["DOCUMENT_ROOT"].$file);
+		$res = ($file <> '') && file_exists($_SERVER["DOCUMENT_ROOT"].$file) && is_file($_SERVER["DOCUMENT_ROOT"].$file);
 
 		if($return_message)
 		{
@@ -962,8 +966,8 @@ class CSecurityIPRule
 			$bMatch = false;
 
 			$uri = $_SERVER['REQUEST_URI'];
-			if (($pos = strpos($uri, '?')) !== false)
-				$uri = substr($uri, 0, $pos);
+			if (($pos = mb_strpos($uri, '?')) !== false)
+				$uri = mb_substr($uri, 0, $pos);
 
 			$uri = urldecode($uri);
 			$uri = preg_replace('#/+#', '/', $uri);
@@ -1242,10 +1246,10 @@ class CSecurityIPRule
 		if (trim($uri) == '')
 			return false;
 
-		if (strpos($uri, "\0") !== false)
+		if (mb_strpos($uri, "\0") !== false)
 			return false;
 
-		if (strpos($uri, '/') !== 0)
+		if (mb_strpos($uri, '/') !== 0)
 			return false;
 
 		if (CHTTP::isPathTraversalUri($uri))
@@ -1254,7 +1258,7 @@ class CSecurityIPRule
 		return true;
 	}
 
-	public static function CleanUpAgent()
+	function CleanUpAgent()
 	{
 		$agentName = "CSecurityIPRule::CleanUpAgent();";
 		$cleanupDays = 2;

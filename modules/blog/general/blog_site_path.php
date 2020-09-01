@@ -5,7 +5,7 @@ $GLOBALS["BLOG_SITE_PATH"] = Array();
 class CAllBlogSitePath
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 /*
 		if ((is_set($arFields, "TYPE") || $ACTION=="ADD") && strlen($arFields["TYPE"]) <= 0)
@@ -53,7 +53,7 @@ class CAllBlogSitePath
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
@@ -69,7 +69,7 @@ class CAllBlogSitePath
 	}
 
 	//*************** SELECT *********************/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
@@ -97,7 +97,7 @@ class CAllBlogSitePath
 		return False;
 	}
 
-	public static function GetBySiteID($siteID)
+	function GetBySiteID($siteID)
 	{
 		global $DB;
 
@@ -127,7 +127,7 @@ class CAllBlogSitePath
 		return False;
 	}
 	
-	public static function DeleteBySiteID($siteID)
+	function DeleteBySiteID($siteID)
 	{
 		global $DB;
 

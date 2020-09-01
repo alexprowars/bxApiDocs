@@ -5,6 +5,7 @@ namespace Bitrix\Im\Call\Integration;
 use Bitrix\Im\Call\Call;
 use Bitrix\Im\Call\CallUser;
 use Bitrix\Im\Common;
+use Bitrix\Im\Dialog;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\UserTable;
 
@@ -13,6 +14,8 @@ class Chat extends AbstractEntity
 	protected $chatId;
 	protected $chatFields;
 	protected $chatUsers = [];
+
+	const MUTE_MESSAGE = true;
 
 	public function __construct(Call $call, $entityId)
 	{
@@ -40,7 +43,19 @@ class Chat extends AbstractEntity
 		if (is_array($result['userInChat'][$chatId]))
 		{
 			$users = $result['userInChat'][$chatId];
-			$activeRealUsers = UserTable::getList(['select' => ['ID'], 'filter' => ['ID' => $users, '=ACTIVE' => 'Y', '=IS_REAL_USER' => 'Y']])->fetchAll();
+			$activeRealUsers = UserTable::getList([
+				'select' => ['ID'],
+				'filter' => [
+					'ID' => $users,
+					'=ACTIVE' => 'Y',
+					'=IS_REAL_USER' => 'Y',
+					[
+						'LOGIC' => 'OR',
+						'!=EXTERNAL_AUTH_ID' => \Bitrix\Im\Call\Auth::AUTH_TYPE,
+						'=IS_ONLINE' => 'Y'
+					]
+				]
+			])->fetchAll();
 			$this->chatUsers = array_column($activeRealUsers, 'ID');
 		}
 		$this->chatId = $chatId;
@@ -91,56 +106,7 @@ class Chat extends AbstractEntity
 	 */
 	public function checkAccess($userId)
 	{
-		if(!$this->chatFields || count($this->chatUsers) == 0)
-		{
-			return false;
-		}
-
-		if($this->chatFields['message_type'] == IM_MESSAGE_PRIVATE)
-		{
-			$otherUserId = $this->chatUsers[0] == $this->userId ? $this->chatUsers[1] : $this->chatUsers[0];
-
-			if (\Bitrix\Main\ModuleManager::isModuleInstalled('intranet'))
-			{
-				if (
-					\Bitrix\Im\User::getInstance($this->userId)->isExtranet()
-					|| \Bitrix\Im\User::getInstance($otherUserId)->isExtranet()
-				)
-				{
-					if (!\Bitrix\Im\Integration\Socialnetwork\Extranet::isUserInGroup($otherUserId, $this->userId))
-					{
-						return false;
-					}
-				}
-			}
-			else
-			{
-				if (
-					\CIMSettings::GetPrivacy(\CIMSettings::PRIVACY_CALL) == \CIMSettings::PRIVACY_RESULT_CONTACT
-					&& \CModule::IncludeModule('socialnetwork')
-					&& \CSocNetUser::IsFriendsAllowed()
-					&& !\CSocNetUserRelations::IsFriends($otherUserId, $this->userId))
-				{
-					return false;
-				}
-				else if
-				(
-					\CIMSettings::GetPrivacy(\CIMSettings::PRIVACY_CALL, $otherUserId) == \CIMSettings::PRIVACY_RESULT_CONTACT
-					&& \CModule::IncludeModule('socialnetwork')
-					&& \CSocNetUser::IsFriendsAllowed()
-					&& !\CSocNetUserRelations::IsFriends($otherUserId, $this->userId)
-				)
-				{
-					return false;
-				}
-			}
-		}
-		else if($this->chatFields['message_type'] != IM_MESSAGE_PRIVATE)
-		{
-			return in_array($this->userId, $this->chatUsers);
-		}
-
-		return true;
+		return Dialog::hasAccess($this->entityId, $userId);
 	}
 
 	/**
@@ -235,18 +201,19 @@ class Chat extends AbstractEntity
 
 	public function onStateChange($state, $prevState)
 	{
-
 		$initiatorId = $this->call->getInitiatorId();
 		$initiator = \Bitrix\Im\User::getInstance($initiatorId);
 		if($state === Call::STATE_INVITING && $prevState === Call::STATE_NEW)
 		{
-			/*static::sendMessage(Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_STARTED_".$initiator->getGender(), [
-				"#NAME#" => $initiator->getFullName()
-			]));*/
+			static::sendMessage(Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_STARTED", [
+				"#ID#" => '[B]'.$this->call->getId().'[/B]'
+			]), self::MUTE_MESSAGE);
 		}
 		else if($state === Call::STATE_FINISHED)
 		{
 			$message = Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_FINISHED");
+			$mute = true;
+
 			$userIds = array_values(array_filter($this->call->getUsers(), function($userId) use ($initiatorId)
 			{
 				return $userId != $initiatorId;
@@ -259,33 +226,37 @@ class Chat extends AbstractEntity
 				if ($otherUserState == CallUser::STATE_DECLINED)
 				{
 					$message = Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_USER_DECLINED_" . $otherUser->getGender(), [
-						'#NAME#' => $otherUser->getFullName()
+						'#NAME#' => $otherUser->getFullName(false)
 					]);
 				}
 				else if ($otherUserState == CallUser::STATE_BUSY)
 				{
 					$message = Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_USER_BUSY_" . $otherUser->getGender(), [
-						'#NAME#' => $otherUser->getFullName()
+						'#NAME#' => $otherUser->getFullName(false)
 					]);
+					$mute = false;
 				}
 				else if ($otherUserState == CallUser::STATE_UNAVAILABLE || $otherUserState == CallUser::STATE_CALLING)
 				{
 					$message = Loc::getMessage("IM_CALL_INTEGRATION_CHAT_CALL_MISSED_" . $initiator->getGender(), [
-						'#NAME#' => $initiator->getFullName()
+						'#NAME#' => $initiator->getFullName(false)
 					]);
+					$mute = false;
 				}
 			}
-			$this->sendMessage($message);
+
+			$this->sendMessage($message, $mute);
 		}
 	}
 
-	public function sendMessage($message)
+	public function sendMessage($message, $muted = false)
 	{
 		\CIMMessenger::add([
 			'DIALOG_ID' => $this->entityId,
 			'FROM_USER_ID' => $this->getCall()->getInitiatorId(),
 			'MESSAGE' => $message,
 			'SYSTEM' => 'Y',
+			'INCREMENT_COUNTER' => $muted? 'N': 'Y',
 			'PUSH' => 'N'
 		]);
 	}
@@ -301,9 +272,10 @@ class Chat extends AbstractEntity
 			'id' => $this->getEntityId($currentUserId),
 			'name' => $this->getName($currentUserId),
 			'avatar' => $this->getAvatar($currentUserId),
-			'avatarColor' => $this->getAvatarColor($currentUserId)
+			'avatarColor' => $this->getAvatarColor($currentUserId),
+			'advanced' => [
+				'chatType' => $this->chatFields['type']
+			]
 		];
 	}
-
-
 }

@@ -239,7 +239,7 @@ class CBitrixCloudCDN
 		if (!isset($sites[$siteId]))
 			return;
 
-		self::$ajax = preg_match("/<head>/i", substr($content, 0, 1024)) === 0;
+		self::$ajax = preg_match("/<head>/i", mb_substr($content, 0, 1024)) === 0;
 
 		$arPrefixes = array_map(array(
 			"CBitrixCloudCDN",
@@ -295,7 +295,7 @@ class CBitrixCloudCDN
 	 * @return string
 	 *
 	 */
-	private function _preg_quote($str)
+	private static function _preg_quote($str)
 	{
 		return preg_quote($str, "/");
 	}
@@ -305,7 +305,7 @@ class CBitrixCloudCDN
 	 * @return string
 	 *
 	 */
-	private function _filter($match)
+	private static function _filter($match)
 	{
 		$attribute = $match[1];
 		$open_quote = $match[2];

@@ -1,15 +1,4 @@
 <?
-
-/**
- * <b>CIBlockRSS</b> - класс для работы с RSS лентами.    <br>
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockrss/index.php
- * @author Bitrix
- */
 class CIBlockRSS extends CAllIBlockRSS
 {
 	public static function GetCache($cacheKey)
@@ -26,13 +15,13 @@ class CIBlockRSS extends CAllIBlockRSS
 	public static function Add($IBLOCK_ID, $NODE, $NODE_VALUE)
 	{
 		global $DB;
-		$IBLOCK_ID = IntVal($IBLOCK_ID);
+		$IBLOCK_ID = intval($IBLOCK_ID);
 		$DB->Query(
 			"INSERT INTO b_iblock_rss (IBLOCK_ID, NODE, NODE_VALUE) ".
 			"VALUES(".$IBLOCK_ID.", '".$DB->ForSql($NODE, 50)."', '".$DB->ForSql($NODE_VALUE, 255)."')");
 	}
 
-	public static function UpdateCache($cacheKey, $CACHE, $HOURS_CACHE, $bCACHED)
+	function UpdateCache($cacheKey, $CACHE, $HOURS_CACHE, $bCACHED)
 	{
 		global $DB;
 
@@ -46,19 +35,19 @@ class CIBlockRSS extends CAllIBlockRSS
 			$db_res = $DB->Query(
 				"UPDATE b_iblock_cache SET ".
 				"	CACHE = '".$DB->ForSql($CACHE, 0)."', ".
-				"	CACHE_DATE = date_add(NOW(), interval ".IntVal($TTL)." second) ".
+				"	CACHE_DATE = date_add(NOW(), interval ".intval($TTL)." second) ".
 				"WHERE CACHE_KEY = '".$DB->ForSql($cacheKey, 0)."' ");
 		}
 		else
 		{
 			$db_res = $DB->Query(
 				"INSERT INTO b_iblock_cache (CACHE_KEY, CACHE, CACHE_DATE) ".
-				"VALUES('".$DB->ForSql($cacheKey, 0)."', '".$DB->ForSql($CACHE, 0)."', date_add(NOW(), interval ".IntVal($TTL)." second)) ");
+				"VALUES('".$DB->ForSql($cacheKey, 0)."', '".$DB->ForSql($CACHE, 0)."', date_add(NOW(), interval ".intval($TTL)." second)) ");
 		}
 		$db_res = $DB->Query("DELETE from b_iblock_cache WHERE CACHE_DATE < NOW()");
 	}
 
-	public static function GetRSSText($arIBLOCK, $LIMIT_NUM = false, $LIMIT_DAY = false, $yandex = false)
+	function GetRSSText($arIBLOCK, $LIMIT_NUM = false, $LIMIT_DAY = false, $yandex = false)
 	{
 		global $DB;
 
@@ -66,19 +55,21 @@ class CIBlockRSS extends CAllIBlockRSS
 
 		$serverName = "";
 
-		if (isset($arIBLOCK["SERVER_NAME"]) && strlen($arIBLOCK["SERVER_NAME"]) > 0)
+		if (isset($arIBLOCK["SERVER_NAME"]) && $arIBLOCK["SERVER_NAME"] <> '')
 			$serverName = $arIBLOCK["SERVER_NAME"];
 
-		if (strlen($serverName) <=0 && !isset($arIBLOCK["SERVER_NAME"]))
+		if ($serverName == '' && !isset($arIBLOCK["SERVER_NAME"]))
 		{
-			$dbSite = CSite::GetList(($b="sort"), ($o="asc"), array("LID" => $arIBLOCK["LID"]));
+			$b="sort";
+			$o="asc";
+			$dbSite = CSite::GetList($b, $o, array("LID" => $arIBLOCK["LID"]));
 			if ($arSite = $dbSite->Fetch())
 				$serverName = $arSite["SERVER_NAME"];
 		}
 
-		if (strlen($serverName) <=0)
+		if ($serverName == '')
 		{
-			if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME)>0)
+			if (defined("SITE_SERVER_NAME") && SITE_SERVER_NAME <> '')
 				$serverName = SITE_SERVER_NAME;
 			else
 				$serverName = COption::GetOptionString("main", "server_name", "www.bitrixsoft.com");
@@ -86,7 +77,7 @@ class CIBlockRSS extends CAllIBlockRSS
 
 		$strRes .= "<channel>\n";
 		$strRes .= "<title>".htmlspecialcharsbx($arIBLOCK["NAME"])."</title>\n";
-		$strRes .= "<link>http://".$serverName."</link>\n";
+		$strRes .= "<link>http://".htmlspecialcharsbx($serverName)."</link>\n";
 		$strRes .= "<description>".htmlspecialcharsbx($arIBLOCK["DESCRIPTION"])."</description>\n";
 		$strRes .= "<lastBuildDate>".date("r")."</lastBuildDate>\n";
 		$strRes .= "<ttl>".$arIBLOCK["RSS_TTL"]."</ttl>\n";
@@ -94,14 +85,14 @@ class CIBlockRSS extends CAllIBlockRSS
 		$db_img_arr = CFile::GetFileArray($arIBLOCK["PICTURE"]);
 		if ($db_img_arr)
 		{
-			if(substr($db_img_arr["SRC"], 0, 1) == "/")
+			if(mb_substr($db_img_arr["SRC"], 0, 1) == "/")
 				$strImage = "http://".$serverName.$db_img_arr["SRC"];
 			else
 				$strImage = $db_img_arr["SRC"];
 
 			if ($yandex)
 			{
-				$strRes .= "<yandex:logo>".$strImage."</yandex:logo>\n";
+				$strRes .= "<yandex:logo>".htmlspecialcharsbx($strImage)."</yandex:logo>\n";
 				$squareSize = min($db_img_arr["WIDTH"], $db_img_arr["HEIGHT"]);
 				if ($squareSize > 0)
 				{
@@ -112,11 +103,11 @@ class CIBlockRSS extends CAllIBlockRSS
 					);
 					if ($squarePicture)
 					{
-						if(substr($squarePicture["src"], 0, 1) == "/")
+						if(mb_substr($squarePicture["src"], 0, 1) == "/")
 							$squareImage = "http://".$serverName.$squarePicture["src"];
 						else
 							$squareImage = $squarePicture["src"];
-						$strRes .= "<yandex:logo type=\"square\">".$squareImage."</yandex:logo>\n";
+						$strRes .= "<yandex:logo type=\"square\">".htmlspecialcharsbx($squareImage)."</yandex:logo>\n";
 					}
 				}
 			}
@@ -124,8 +115,8 @@ class CIBlockRSS extends CAllIBlockRSS
 			{
 				$strRes .= "<image>\n";
 				$strRes .= "<title>".htmlspecialcharsbx($arIBLOCK["NAME"])."</title>\n";
-				$strRes .= "<url>".$strImage."</url>\n";
-				$strRes .= "<link>http://".$serverName."</link>\n";
+				$strRes .= "<url>".htmlspecialcharsbx($strImage)."</url>\n";
+				$strRes .= "<link>http://".htmlspecialcharsbx($serverName)."</link>\n";
 				$strRes .= "<width>".$db_img_arr["WIDTH"]."</width>\n";
 				$strRes .= "<height>".$db_img_arr["HEIGHT"]."</height>\n";
 				$strRes .= "</image>\n";
@@ -133,42 +124,34 @@ class CIBlockRSS extends CAllIBlockRSS
 		}
 
 		$arNodes = array();
-		$db_res = $DB->Query("SELECT NODE, NODE_VALUE FROM b_iblock_rss WHERE IBLOCK_ID = ".IntVal($arIBLOCK["ID"]));
+		$db_res = $DB->Query("SELECT NODE, NODE_VALUE FROM b_iblock_rss WHERE IBLOCK_ID = ".intval($arIBLOCK["ID"]));
 		while ($db_res_arr = $db_res->Fetch())
 		{
 			$arNodes[$db_res_arr["NODE"]] = $db_res_arr["NODE_VALUE"];
 		}
 
+		$formatActiveDates = CPageOption::GetOptionString("iblock", "FORMAT_ACTIVE_DATES", "-");
+		CPageOption::SetOptionString("iblock", "FORMAT_ACTIVE_DATES", "FULL");
+
+		$nav = $LIMIT_NUM > 0? array("nTopCount" => $LIMIT_NUM): false;
+
+		$arFilter = array(
+			"IBLOCK_ID" => $arIBLOCK["ID"],
+			"ACTIVE_DATE" => "Y",
+			"ACTIVE" => "Y",
+		);
+		if ($LIMIT_DAY !== false)
+		{
+			$date = new \Bitrix\Main\Type\DateTime();
+			$date->add("- $LIMIT_DAY days");
+			$arFilter["ACTIVE_FROM"] = $date->toString();
+		}
+
 		CTimeZone::Disable();
-
-		$strSql =
-			"SELECT DISTINCT BE.*, ".
-			"	".$DB->DateToCharFunction("BE.TIMESTAMP_X")." as TIMESTAMP_X, ".
-			"	".$DB->DateToCharFunction("BE.ACTIVE_FROM", "FULL")." as ACTIVE_FROM, ".
-			"	".$DB->DateToCharFunction("BE.ACTIVE_TO", "FULL")." as ACTIVE_TO, ".
-			"	L.DIR as LANG_DIR, B.DETAIL_PAGE_URL, B.LIST_PAGE_URL, B.LID, L.SERVER_NAME ".
-			"FROM b_iblock_element BE, b_lang L, b_iblock B ".
-			"	LEFT JOIN b_iblock_group IBG ON IBG.IBLOCK_ID=B.ID ".
-			"WHERE BE.IBLOCK_ID = B.ID ".
-			"	AND B.LID = L.LID ".
-			"	AND IBG.GROUP_ID IN (2) ".
-			"	AND BE.WF_STATUS_ID = 1 AND BE.WF_PARENT_ELEMENT_ID is null ".
-			"	AND IBG.PERMISSION>='R' ".
-			"	AND (IBG.PERMISSION='X' OR B.ACTIVE='Y') ".
-			"	AND (BE.IBLOCK_ID = ".IntVal($arIBLOCK["ID"]).") ".
-			"	AND ((BE.ACTIVE_TO >= ".$DB->GetNowFunction()." OR BE.ACTIVE_TO IS NULL) AND (BE.ACTIVE_FROM <= ".$DB->GetNowFunction()." OR BE.ACTIVE_FROM IS NULL)) ".
-			"	AND (BE.ACTIVE = 'Y') ";
-		if ($LIMIT_DAY!==false)
-			$strSql .= " AND (BE.ACTIVE_FROM>=".$DB->CharToDateFunction($DB->ForSql(date($DB->DateFormatToPHP(CLang::GetDateFormat("FULL")), mktime(date("H"), date("i"), date("s"), date("m"), date("d")-IntVal($LIMIT_DAY), date("Y")))), "FULL")." OR BE.ACTIVE_FROM IS NULL) ";
-		$strSql .= "ORDER BY BE.ACTIVE_FROM DESC, BE.SORT ASC ";
-
-		$res = $DB->Query($strSql);
-
+		$items = CIBlockElement::GetList(array("ACTIVE_FROM"=>"DESC", "SORT"=>"ASC", "ID"=>"DESC"), $arFilter, false, $nav);
 		CTimeZone::Enable();
 
-		$items = new CIBlockResult($res->result);
-		if ($LIMIT_NUM!==False && IntVal($LIMIT_NUM)>0)
-			$items->NavStart($LIMIT_NUM);
+		CPageOption::SetOptionString("iblock", "FORMAT_ACTIVE_DATES", $formatActiveDates);
 
 		while ($arItem = $items->GetNext())
 		{
@@ -176,7 +159,7 @@ class CIBlockRSS extends CAllIBlockRSS
 			$arProps = Array();
 			while ($arProp = $props->Fetch())
 			{
-				if (strlen($arProp["CODE"])>0)
+				if ($arProp["CODE"] <> '')
 					$arProps[$arProp["CODE"]] = Array("NAME"=>htmlspecialcharsbx($arProp["NAME"]), "VALUE"=>htmlspecialcharsex($arProp["VALUE"]));
 				else
 					$arProps[$arProp["ID"]] = Array("NAME"=>htmlspecialcharsbx($arProp["NAME"]), "VALUE"=>htmlspecialcharsex($arProp["VALUE"]));
@@ -185,7 +168,7 @@ class CIBlockRSS extends CAllIBlockRSS
 			$arLinkProp = $arProps["DOC_LINK"];
 
 			$strRes .= "<item>\n";
-			if (strlen($arNodes["title"])>0)
+			if ($arNodes["title"] <> '')
 			{
 				$strRes .= "<title>".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["title"], $arProps, $arItem))."</title>\n";
 			}
@@ -193,15 +176,15 @@ class CIBlockRSS extends CAllIBlockRSS
 			{
 				$strRes .= "<title>".htmlspecialcharsbx($arItem["~NAME"])."</title>\n";
 			}
-			if (strlen($arNodes["link"])>0)
+			if ($arNodes["link"] <> '')
 			{
 				$strRes .= "<link>".CIBlockRSS::ExtractProperties($arNodes["link"], $arProps, $arItem)."</link>\n";
 			}
 			else
 			{
-				$strRes .= "<link>http://".$serverName.(($arLinkProp["VALUE"]) ? $arLinkProp["VALUE"] : $arItem["DETAIL_PAGE_URL"])."</link>\n";
+				$strRes .= "<link>http://".htmlspecialcharsbx($serverName).(($arLinkProp["VALUE"]) ? $arLinkProp["VALUE"] : $arItem["DETAIL_PAGE_URL"])."</link>\n";
 			}
-			if (strlen($arNodes["description"])>0)
+			if ($arNodes["description"] <> '')
 			{
 				$strRes .= "<description>".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["description"], $arProps, $arItem))."</description>\n";
 			}
@@ -209,7 +192,7 @@ class CIBlockRSS extends CAllIBlockRSS
 			{
 				$strRes .= "<description>".(($arItem["PREVIEW_TEXT"] || $yandex) ? htmlspecialcharsbx($arItem["PREVIEW_TEXT"]) : htmlspecialcharsbx($arItem["DETAIL_TEXT"]))."</description>\n";
 			}
-			if (strlen($arNodes["enclosure"])>0)
+			if ($arNodes["enclosure"] <> '')
 			{
 				$strRes .= "<enclosure url=\"".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["enclosure"], $arProps, $arItem))."\" length=\"".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["enclosure_length"], $arProps, $arItem))."\" type=\"".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["enclosure_type"], $arProps, $arItem))."\"/>\n";
 			}
@@ -218,15 +201,15 @@ class CIBlockRSS extends CAllIBlockRSS
 				$db_img_arr = CFile::GetFileArray($arItem["PREVIEW_PICTURE"]);
 				if ($db_img_arr)
 				{
-					if(substr($db_img_arr["SRC"], 0, 1) == "/")
+					if(mb_substr($db_img_arr["SRC"], 0, 1) == "/")
 						$strImage = "http://".$serverName.$db_img_arr["SRC"];
 					else
 						$strImage = $db_img_arr["SRC"];
 
-					$strRes .= "<enclosure url=\"".$strImage."\" length=\"".$db_img_arr["FILE_SIZE"]."\" type=\"".$db_img_arr["CONTENT_TYPE"]."\" width=\"".$db_img_arr["WIDTH"]."\" height=\"".$db_img_arr["HEIGHT"]."\"/>\n";
+					$strRes .= "<enclosure url=\"".htmlspecialcharsbx($strImage)."\" length=\"".$db_img_arr["FILE_SIZE"]."\" type=\"".$db_img_arr["CONTENT_TYPE"]."\" width=\"".$db_img_arr["WIDTH"]."\" height=\"".$db_img_arr["HEIGHT"]."\"/>\n";
 				}
 			}
-			if (strlen($arNodes["category"])>0)
+			if ($arNodes["category"] <> '')
 			{
 				$strRes .= "<category>".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["category"], $arProps, $arItem))."</category>\n";
 			}
@@ -238,7 +221,7 @@ class CIBlockRSS extends CAllIBlockRSS
 				{
 					$strPath .= $ar_nav["NAME"]."/";
 				}
-				if (strlen($strPath)>0)
+				if ($strPath <> '')
 				{
 					$strRes .= "<category>".htmlspecialcharsbx($strPath)."</category>\n";
 				}
@@ -247,13 +230,13 @@ class CIBlockRSS extends CAllIBlockRSS
 			{
 				$strRes .= "<yandex:full-text>".htmlspecialcharsbx($arItem["DETAIL_TEXT"])."</yandex:full-text>\n";
 			}
-			if (strlen($arNodes["pubDate"])>0)
+			if ($arNodes["pubDate"] <> '')
 			{
 				$strRes .= "<pubDate>".htmlspecialcharsbx(CIBlockRSS::ExtractProperties($arNodes["pubDate"], $arProps, $arItem))."</pubDate>\n";
 			}
 			else
 			{
-				if (strlen($arItem["ACTIVE_FROM"])>0)
+				if ($arItem["ACTIVE_FROM"] <> '')
 				{
 					$strRes .= "<pubDate>".date("r", MkDateTime($DB->FormatDate($arItem["ACTIVE_FROM"], Clang::GetDateFormat("FULL"), "DD.MM.YYYY H:I:S"), "d.m.Y H:i:s"))."</pubDate>\n";
 				}
@@ -278,7 +261,7 @@ class CIBlockRSS extends CAllIBlockRSS
 			"FROM b_iblock B LEFT JOIN b_iblock_group IBG ON IBG.IBLOCK_ID=B.ID ".
 			"	LEFT JOIN b_lang S ON S.LID=B.LID ".
 			"	LEFT JOIN b_culture C ON C.ID=S.CULTURE_ID ".
-			"WHERE B.ID = ".IntVal($IBLOCK_ID).
+			"WHERE B.ID = ".intval($IBLOCK_ID).
 			"	AND IBG.GROUP_ID IN (2) ".
 			"	AND IBG.PERMISSION>='R'".
 			"	AND (IBG.PERMISSION='X' OR B.ACTIVE='Y')";
@@ -301,12 +284,12 @@ class CIBlockRSS extends CAllIBlockRSS
 		if (!$yandex)
 		{
 			$limit_num = false;
-			if (strlen($arIBlock["RSS_FILE_LIMIT"])>0 && IntVal($arIBlock["RSS_FILE_LIMIT"])>0)
-				$limit_num = IntVal($arIBlock["RSS_FILE_LIMIT"]);
+			if ($arIBlock["RSS_FILE_LIMIT"] <> '' && intval($arIBlock["RSS_FILE_LIMIT"])>0)
+				$limit_num = intval($arIBlock["RSS_FILE_LIMIT"]);
 
 			$limit_day = false;
-			if (strlen($arIBlock["RSS_FILE_DAYS"])>0 && IntVal($arIBlock["RSS_FILE_DAYS"])>0)
-				$limit_day = IntVal($arIBlock["RSS_FILE_DAYS"]);
+			if ($arIBlock["RSS_FILE_DAYS"] <> '' && intval($arIBlock["RSS_FILE_DAYS"])>0)
+				$limit_day = intval($arIBlock["RSS_FILE_DAYS"]);
 		}
 		$strRes .= CIBlockRSS::GetRSSText($arIBlock, $limit_num, $limit_day, $yandex);
 
@@ -314,17 +297,15 @@ class CIBlockRSS extends CAllIBlockRSS
 
 		$rss_file = $_SERVER["DOCUMENT_ROOT"].COption::GetOptionString("iblock", "path2rss", "/upload/");
 		if ($yandex)
-			$rss_file .= "yandex_rss_".IntVal($arIBlock["ID"]).".xml";
+			$rss_file .= "yandex_rss_".intval($arIBlock["ID"]).".xml";
 		else
-			$rss_file .= "iblock_rss_".IntVal($arIBlock["ID"]).".xml";
+			$rss_file .= "iblock_rss_".intval($arIBlock["ID"]).".xml";
 		$fp = fopen($rss_file, "w");
 		fwrite($fp, $strRes);
 		fclose($fp);
 
 		global $pPERIOD;
-		$pPERIOD = IntVal($arIBlock["RSS_TTL"])*60*60;
+		$pPERIOD = intval($arIBlock["RSS_TTL"])*60*60;
 		return "CIBlockRSS::PreGenerateRSS(".$IBLOCK_ID.", ".($yandex?"true":"false").");";
 	}
-
 }
-?>

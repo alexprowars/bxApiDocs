@@ -236,9 +236,10 @@ class UserFieldTable extends ORM\Data\DataManager
 
 	/**
 	 * @param ORM\Entity $entity
-	 * @param          $ufId
+	 * @param            $ufId
 	 *
 	 * @throws ArgumentException
+	 * @throws SystemException
 	 */
 	public static function attachFields(ORM\Entity $entity, $ufId)
 	{
@@ -269,7 +270,7 @@ class UserFieldTable extends ORM\Data\DataManager
 		if (!empty($utsFields) || !empty($utmFields))
 		{
 			// create uts entity & put fields into it
-			$utsEntity = static::createUtsEntity($entity, $utsFields, $utmFields);
+			$utsEntity = static::createUtsEntity($entity, $utsFields, $utmFields, $ufId);
 
 			// create reference to uts entity
 			$utsReference = new ORM\Fields\Relations\Reference('UTS_OBJECT', $utsEntity->getDataClass(), array(
@@ -329,7 +330,7 @@ class UserFieldTable extends ORM\Data\DataManager
 			if (!empty($utmFields))
 			{
 				// create utm entity & put base fields into it
-				$utmEntity = static::createUtmEntity($entity, $utmFields);
+				$utmEntity = static::createUtmEntity($entity, $utmFields, $ufId);
 
 				// add UF_* aliases
 				foreach ($utmFieldNames as $utmFieldName => $true)
@@ -354,11 +355,13 @@ class UserFieldTable extends ORM\Data\DataManager
 	 * @param ORM\Entity $srcEntity
 	 * @param array      $utsFields
 	 * @param array      $utmFields
+	 * @param null       $ufId
 	 *
 	 * @return ORM\Entity
 	 * @throws ArgumentException
+	 * @throws SystemException
 	 */
-	protected static function createUtsEntity(ORM\Entity $srcEntity, array $utsFields, array $utmFields)
+	protected static function createUtsEntity(ORM\Entity $srcEntity, array $utsFields, array $utmFields, $ufId = null)
 	{
 		global $USER_FIELD_MANAGER;
 
@@ -371,7 +374,7 @@ class UserFieldTable extends ORM\Data\DataManager
 		$utsClass = end($utsClassPath);
 
 		// get table name
-		$utsTable = static::getUtsEntityTableNameBySrcEntity($srcEntity);
+		$utsTable = static::getUtsEntityTableNameBySrcEntity($srcEntity, $ufId);
 
 		// base fields
 		$fieldsMap = array(
@@ -506,19 +509,21 @@ class UserFieldTable extends ORM\Data\DataManager
 		return $srcEntity->getFullName().'UtsTable';
 	}
 
-	protected static function getUtsEntityTableNameBySrcEntity(ORM\Entity $srcEntity)
+	protected static function getUtsEntityTableNameBySrcEntity(ORM\Entity $srcEntity, $ufId = null)
 	{
-		return 'b_uts_'.strtolower($srcEntity->getUfId());
+		return 'b_uts_'.strtolower($ufId ?: $srcEntity->getUfId());
 	}
 
 	/**
 	 * @param ORM\Entity $srcEntity
 	 * @param array      $utmFields
+	 * @param null       $ufId
 	 *
 	 * @return ORM\Entity
 	 * @throws ArgumentException
+	 * @throws SystemException
 	 */
-	protected static function createUtmEntity(ORM\Entity $srcEntity, array $utmFields)
+	protected static function createUtmEntity(ORM\Entity $srcEntity, array $utmFields, $ufId = null)
 	{
 		global $USER_FIELD_MANAGER;
 
@@ -530,7 +535,7 @@ class UserFieldTable extends ORM\Data\DataManager
 		$utmClass = end($utmClassPath);
 
 		// get table name
-		$utmTable = static::getUtmEntityTableNameBySrcEntity($srcEntity);
+		$utmTable = static::getUtmEntityTableNameBySrcEntity($srcEntity, $ufId);
 
 		// collect fields
 		$fieldsMap = array(
@@ -635,9 +640,9 @@ class UserFieldTable extends ORM\Data\DataManager
 		return $srcEntity->getFullName().'UtmTable';
 	}
 
-	protected static function getUtmEntityTableNameBySrcEntity(ORM\Entity $srcEntity)
+	protected static function getUtmEntityTableNameBySrcEntity(ORM\Entity $srcEntity, $ufId = null)
 	{
-		return 'b_utm_'.strtolower($srcEntity->getUfId());
+		return 'b_utm_'.strtolower($ufId ?: $srcEntity->getUfId());
 	}
 
 	/**

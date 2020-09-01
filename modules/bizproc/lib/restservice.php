@@ -1282,7 +1282,7 @@ class RestService extends \IRestService
 		{
 			foreach ($rules as $field)
 			{
-				$field = strtoupper($field);
+				$field = mb_strtoupper($field);
 				if (isset($fields[$field]) && !in_array($field, $select))
 					$select[$field] = $fields[$field];
 			}
@@ -1298,8 +1298,8 @@ class RestService extends \IRestService
 		{
 			foreach ($rules as $field => $ordering)
 			{
-				$field = strtoupper($field);
-				$ordering = strtoupper($ordering);
+				$field = mb_strtoupper($field);
+				$ordering = mb_strtoupper($ordering);
 				if (isset($fields[$field]))
 					$order[$fields[$field]] = $ordering == 'DESC' ? 'DESC' : 'ASC';
 			}
@@ -1390,7 +1390,7 @@ class RestService extends \IRestService
 		));
 		while($lang = $iterator->fetch())
 		{
-			$result[strtoupper($lang['LANGUAGE_ID'])] = $lang['MENU_NAME'];
+			$result[mb_strtoupper($lang['LANGUAGE_ID'])] = $lang['MENU_NAME'];
 		}
 
 		return $result;
@@ -1498,23 +1498,23 @@ class RestService extends \IRestService
 		$handlerData = parse_url($handler);
 
 		if (is_array($handlerData)
-			&& strlen($handlerData['host']) > 0
-			&& strpos($handlerData['host'], '.') > 0
+			&& $handlerData['host'] <> ''
+			&& mb_strpos($handlerData['host'], '.') > 0
 		)
 		{
 			if ($handlerData['scheme'] == 'http' || $handlerData['scheme'] == 'https')
 			{
 				$host = $handlerData['host'];
 				$app = self::getApp($server);
-				if (strlen($app['URL']) > 0)
+				if ($app['URL'] <> '')
 				{
 					$urls = array($app['URL']);
 
-					if (strlen($app['URL_DEMO']) > 0)
+					if ($app['URL_DEMO'] <> '')
 					{
 						$urls[] = $app['URL_DEMO'];
 					}
-					if (strlen($app['URL_INSTALL']) > 0)
+					if ($app['URL_INSTALL'] <> '')
 					{
 						$urls[] = $app['URL_INSTALL'];
 					}

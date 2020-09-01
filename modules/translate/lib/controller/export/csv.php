@@ -278,8 +278,8 @@ class Csv
 		}
 
 		// III. List of files and folders
-		$list = $this->request->get('pathList');
-		if (!empty($list))
+		$pathList = $this->request->get('pathList');
+		if (!empty($pathList))
 		{
 			$nextAction = self::ACTION_EXPORT_PATH;
 			$exporterClass = ExportPath::class;
@@ -295,9 +295,17 @@ class Csv
 		{
 			$nextAction = self::ACTION_EXPORT_PHRASE_SEARCH;
 			$exporterClass = ExportPhraseSearch::class;
+
+			// V. List of files with codes
+			$codeList = $this->request->get('codeList');
+			if (!empty($pathList) && !empty($codeList))
+			{
+				$nextAction = self::ACTION_EXPORT_PATH;
+				$exporterClass = ExportPath::class;
+			}
 		}
 
-		// V. Single file
+		// VI. Single file
 		if (preg_match("/\.php$/", $path))
 		{
 			$nextAction = self::ACTION_EXPORT_FILE;

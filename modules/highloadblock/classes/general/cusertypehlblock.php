@@ -4,39 +4,44 @@ IncludeModuleLangFile(__FILE__);
 
 class CUserTypeHlblock extends CUserTypeEnum
 {
-	public static function GetUserTypeDescription()
+	const USER_TYPE_ID = "hlblock";
+
+	const DISPLAY_LIST = 'LIST';
+	const DISPLAY_CHECKBOX = 'CHECKBOX';
+
+	function GetUserTypeDescription()
 	{
 		return array(
-			"USER_TYPE_ID" => "hlblock",
+			"USER_TYPE_ID" => self::USER_TYPE_ID,
 			"CLASS_NAME" => "CUserTypeHlblock",
 			"DESCRIPTION" => GetMessage('USER_TYPE_HLEL_DESCRIPTION'),
 			"BASE_TYPE" => "int",
 		);
 	}
 
-	public static function GetDBColumnType($arUserField)
+	function GetDBColumnType($arUserField)
 	{
 		global $DB;
-		switch(strtolower($DB->type))
+		switch($DB->type)
 		{
-			case "mysql":
+			case "MYSQL":
 				return "int(18)";
-			case "oracle":
+			case "ORACLE":
 				return "number(18)";
-			case "mssql":
+			case "MSSQL":
 				return "int";
 		}
 		return "int";
 	}
 
-	public static function PrepareSettings($arUserField)
+	function PrepareSettings($arUserField)
 	{
 		$height = intval($arUserField["SETTINGS"]["LIST_HEIGHT"]);
 
 		$disp = $arUserField["SETTINGS"]["DISPLAY"];
 
-		if($disp!="CHECKBOX" && $disp!="LIST")
-			$disp = "LIST";
+		if($disp!=self::DISPLAY_CHECKBOX && $disp!=self::DISPLAY_LIST)
+			$disp = self::DISPLAY_LIST;
 
 		$hlblock_id = intval($arUserField["SETTINGS"]["HLBLOCK_ID"]);
 
@@ -59,7 +64,7 @@ class CUserTypeHlblock extends CUserTypeEnum
 		);
 	}
 
-	public static function GetSettingsHTML($arUserField = false, $arHtmlControl, $bVarsFromForm)
+	function GetSettingsHTML($arUserField = false, $arHtmlControl, $bVarsFromForm)
 	{
 		$result = '';
 
@@ -98,7 +103,7 @@ class CUserTypeHlblock extends CUserTypeEnum
 			';
 		}
 
-		if($hlblock_id > 0 && strlen($hlfield_id) && CModule::IncludeModule('highloadblock'))
+		if($hlblock_id > 0 && mb_strlen($hlfield_id) && CModule::IncludeModule('highloadblock'))
 		{
 			$result .= '
 			<tr>
@@ -134,13 +139,13 @@ class CUserTypeHlblock extends CUserTypeEnum
 		elseif(is_array($arUserField))
 			$value = $arUserField["SETTINGS"]["DISPLAY"];
 		else
-			$value = "LIST";
+			$value = self::DISPLAY_LIST;
 		$result .= '
 		<tr>
 			<td class="adm-detail-valign-top">'.GetMessage("USER_TYPE_ENUM_DISPLAY").':</td>
 			<td>
-				<label><input type="radio" name="'.$arHtmlControl["NAME"].'[DISPLAY]" value="LIST" '.("LIST"==$value? 'checked="checked"': '').'>'.GetMessage("USER_TYPE_HLEL_LIST").'</label><br>
-				<label><input type="radio" name="'.$arHtmlControl["NAME"].'[DISPLAY]" value="CHECKBOX" '.("CHECKBOX"==$value? 'checked="checked"': '').'>'.GetMessage("USER_TYPE_HLEL_CHECKBOX").'</label><br>
+				<label><input type="radio" name="'.$arHtmlControl["NAME"].'[DISPLAY]" value="'.self::DISPLAY_LIST.'" '.(self::DISPLAY_LIST==$value? 'checked="checked"': '').'>'.GetMessage("USER_TYPE_HLEL_LIST").'</label><br>
+				<label><input type="radio" name="'.$arHtmlControl["NAME"].'[DISPLAY]" value="'.self::DISPLAY_CHECKBOX.'" '.(self::DISPLAY_CHECKBOX==$value? 'checked="checked"': '').'>'.GetMessage("USER_TYPE_HLEL_CHECKBOX").'</label><br>
 			</td>
 		</tr>
 		';
@@ -163,13 +168,13 @@ class CUserTypeHlblock extends CUserTypeEnum
 		return $result;
 	}
 
-	public static function CheckFields($arUserField, $value)
+	function CheckFields($arUserField, $value)
 	{
 		$aMsg = array();
 		return $aMsg;
 	}
 
-	public static function GetList($arUserField)
+	function GetList($arUserField)
 	{
 		$rs = false;
 
@@ -185,7 +190,7 @@ class CUserTypeHlblock extends CUserTypeEnum
 		return $rs;
 	}
 
-	public static function getEntityReferences($userfield, \Bitrix\Main\Entity\ScalarField $entityField)
+	function getEntityReferences($userfield, \Bitrix\Main\Entity\ScalarField $entityField)
 	{
 		if ($userfield['SETTINGS']['HLBLOCK_ID'])
 		{
@@ -268,7 +273,8 @@ class CUserTypeHlblock extends CUserTypeEnum
 					}
 					else
 					{
-						if ($clearValues)
+						//see #0088117
+						if ($userfield['USER_TYPE_ID'] != 'enumeration' && $clearValues)
 						{
 							$row['VALUE'] = $row[$userfield['FIELD_NAME']];
 						}
@@ -285,7 +291,7 @@ class CUserTypeHlblock extends CUserTypeEnum
 		return $rows;
 	}
 
-	public static function GetAdminListViewHTML($arUserField, $arHtmlControl)
+	function GetAdminListViewHTML($arUserField, $arHtmlControl)
 	{
 		static $cache = array();
 		$empty_caption = '&nbsp;';
@@ -333,7 +339,7 @@ class CUserTypeHlblock extends CUserTypeEnum
 
 			foreach ($userfields as $userfield)
 			{
-				$fieldTitle = strlen($userfield['LIST_COLUMN_LABEL']) ? $userfield['LIST_COLUMN_LABEL'] : $userfield['FIELD_NAME'];
+				$fieldTitle = $userfield['LIST_COLUMN_LABEL'] <> ''? $userfield['LIST_COLUMN_LABEL'] : $userfield['FIELD_NAME'];
 				$list[$hlblock['ID']]['fields'][(int)$userfield['ID']] = $fieldTitle;
 			}
 		}
@@ -363,9 +369,9 @@ class CUserTypeHlblock extends CUserTypeEnum
 
 		if ($hlblockId)
 		{
-			if (strlen($hlfieldId))
+			if($hlfieldId <> '')
 			{
-				$hlfieldId = (int) $hlfieldId;
+				$hlfieldId = (int)$hlfieldId;
 			}
 
 			foreach ($list[$hlblockId]['fields'] as $fieldId => $fieldName)

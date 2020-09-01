@@ -5,9 +5,9 @@ $GLOBALS["SALE_AFFILIATE_TIER"] = Array();
 
 class CAllSaleAffiliateTier
 {
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
-		if ((is_set($arFields, "SITE_ID") || $ACTION=="ADD") && StrLen($arFields["SITE_ID"]) <= 0)
+		if ((is_set($arFields, "SITE_ID") || $ACTION=="ADD") && $arFields["SITE_ID"] == '')
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SCGAT1_NO_SITE"), "EMPTY_SITE_ID");
 			return false;
@@ -46,11 +46,11 @@ class CAllSaleAffiliateTier
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return False;
 
@@ -59,20 +59,20 @@ class CAllSaleAffiliateTier
 		return $DB->Query("DELETE FROM b_sale_affiliate_tier WHERE ID = ".$ID." ", true);
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return False;
 
 		$arFields1 = array();
 		foreach ($arFields as $key => $value)
 		{
-			if (substr($key, 0, 1)=="=")
+			if (mb_substr($key, 0, 1) == "=")
 			{
-				$arFields1[substr($key, 1)] = $value;
+				$arFields1[mb_substr($key, 1)] = $value;
 				unset($arFields[$key]);
 			}
 		}
@@ -84,7 +84,7 @@ class CAllSaleAffiliateTier
 
 		foreach ($arFields1 as $key => $value)
 		{
-			if (strlen($strUpdate)>0) $strUpdate .= ", ";
+			if ($strUpdate <> '') $strUpdate .= ", ";
 			$strUpdate .= $key."=".$value." ";
 		}
 
@@ -96,11 +96,11 @@ class CAllSaleAffiliateTier
 		return $ID;
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return false;
 

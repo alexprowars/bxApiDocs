@@ -5,7 +5,7 @@ IncludeModuleLangFile(__FILE__);
 class CRatingsComponentsForum extends CAllRatingsComponentsForum
 {
 	// Calc function
-	public static function CalcUserVoteForumPost($arConfigs)
+	function CalcUserVoteForumPost($arConfigs)
 	{
 		global $DB;
 
@@ -39,7 +39,7 @@ class CRatingsComponentsForum extends CAllRatingsComponentsForum
 		return true;
 	}
 
-	public static function CalcUserVoteForumTopic($arConfigs)
+	function CalcUserVoteForumTopic($arConfigs)
 	{
 		global $DB;
 
@@ -72,7 +72,7 @@ class CRatingsComponentsForum extends CAllRatingsComponentsForum
 		return true;
 	}
 
-	public static function CalcUserRatingForumActivity($arConfigs)
+	function CalcUserRatingForumActivity($arConfigs)
 	{
 		global $DB;
 
@@ -147,7 +147,7 @@ class CRatingsComponentsForum extends CAllRatingsComponentsForum
 	}
 
 	// Exception function
-	public static function ExceptionUserRatingForumActivity()
+	function ExceptionUserRatingForumActivity()
 	{
 		global $DB;
 		$bIndex1 = $DB->IndexExists("b_forum_topic", array("START_DATE", "USER_START_ID"));

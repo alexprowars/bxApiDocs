@@ -1,22 +1,24 @@
 <?
 namespace Sale\Handlers\Delivery;
 
+use Bitrix\Main\Entity\ExpressionField;
 use Bitrix\Main\Error;
-use Bitrix\Main\EventManager;
 use Bitrix\Main\Loader;
-use Bitrix\Sale\Delivery\ExtraServices\Table;
-use Bitrix\Sale\Delivery\Services\Manager;
+use Bitrix\Sale\Internals\CompanyTable;
 use Bitrix\Sale\Result;
 use \Bitrix\Sale\Shipment;
+use Bitrix\Main\EventManager;
 use Bitrix\Main\Text\Encoding;
 use Bitrix\Sale\BusinessValue;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Localization\Loc;
 use Sale\Handlers\Delivery\Spsr\Cache;
-use Sale\Handlers\Delivery\Spsr\Location;
 use Sale\Handlers\Delivery\Spsr\Request;
+use Sale\Handlers\Delivery\Spsr\Location;
+use Bitrix\Sale\Delivery\Services\Manager;
 use Sale\Handlers\Delivery\Spsr\Calculator;
 use Bitrix\Sale\Delivery\CalculationResult;
+use Bitrix\Sale\Delivery\ExtraServices\Table;
 
 Loc::loadMessages(__FILE__);
 
@@ -26,9 +28,9 @@ Loader::registerAutoLoadClasses(
 		'Sale\Handlers\Delivery\Spsr\Cache' => 'handlers/delivery/spsr/cache.php',
 		'Sale\Handlers\Delivery\SpsrProfile' => 'handlers/delivery/spsr/profile.php',
 		'Sale\Handlers\Delivery\Spsr\Request' => 'handlers/delivery/spsr/request.php',
-		'Sale\Handlers\Delivery\Spsr\Location' => 'handlers/delivery/spsr/location.php',
 		'Sale\Handlers\Delivery\SpsrTracking' => 'handlers/delivery/spsr/tracking.php',
-		'Sale\Handlers\Delivery\Spsr\Calculator' => 'handlers/delivery/spsr/calculator.php',
+		'Sale\Handlers\Delivery\Spsr\Location' => 'handlers/delivery/spsr/location.php',
+		'Sale\Handlers\Delivery\Spsr\Calculator' => 'handlers/delivery/spsr/calculator.php'
 	)
 );
 
@@ -42,6 +44,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	protected static $whetherAdminExtraServicesShow = true;
 	/** @var string Tracking class */
 	protected $trackingClass = '\Sale\Handlers\Delivery\SpsrTracking';
+
 	/**
 	 * @return string
 	 */
@@ -65,17 +68,6 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	}
 
 	/**
-	 * Handler can't count concrete
-	 * @param Shipment $shipment
-	 * @throws SystemException
-	 * @return void
-	 */
-	protected function calculateConcrete(Shipment $shipment)
-	{
-		throw new SystemException("Only SPSR Profiles can calculate concrete");
-	}
-
-	/**
 	 * Returns string for http request.
 	 * @param Shipment $shipment
 	 * @return Result
@@ -83,7 +75,8 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	protected function getTarifsReq(Shipment $shipment)
 	{
 		$result = new Result();
-		$res = $this->getSidResult();
+		$icn = $this->getICN($shipment);
+		$res = $this->getSidResult($shipment);
 
 		if(!$res->isSuccess())
 		{
@@ -101,19 +94,19 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 		if(isset($this->config['MAIN']['AMOUNT_CHECK']) && intval($this->config['MAIN']['AMOUNT_CHECK']) >= 0)
 			$additional['AMOUNT_CHECK'] = $this->config['MAIN']['AMOUNT_CHECK'];
 
-		if(!empty($this->config['MAIN']['ICN']))
-			$additional['ICN'] = $this->config['MAIN']['ICN'];
+		if(!empty($icn))
+			$additional['ICN'] = $icn;
 
 		$additional['DEFAULT_WEIGHT'] = $this->config['MAIN']['DEFAULT_WEIGHT'];
 
-		if(strlen($sid) > 0)
+		if($sid <> '')
 			$additional['SID'] = $sid;
 
 		foreach($shipment->getExtraServices() as $srvId => $value)
 		{
 			$srvItem = $this->extraServices->getItem($srvId);
 
-			if($srvItem && strlen($srvItem->getCode()) > 0)
+			if($srvItem && $srvItem->getCode() <> '')
 				$additional['EXTRA_SERVICES'][$srvItem->getCode()] = $value;
 		}
 
@@ -148,7 +141,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 
 		foreach($res->getData() as $tarffParams)
 		{
-			if(strpos(ToUpper($tarffParams['TariffType']), ToUpper($tariff)) !== false)
+			if(mb_strpos(ToUpper($tarffParams['TariffType']), ToUpper($tariff)) !== false)
 			{
 				$result->setData($res->getData());
 				$result->setDeliveryPrice(
@@ -158,8 +151,19 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 				);
 				$result->setExtraServicesPrice(floatval($tarffParams['Total_DopUsl']));
 
-				if(strlen($tarffParams['DP']) > 0)
+				if($tarffParams['DP'] <> '')
+				{
 					$result->setPeriodDescription($tarffParams['DP'].' ('.Loc::getMessage('SALE_DLV_SRV_SPSR_DAYS').')');
+
+					$hyphenPos = mb_strpos($tarffParams['DP'], '-');
+
+					if($hyphenPos !== false)
+					{
+						$result->setPeriodFrom(intval(mb_substr($tarffParams['DP'], 0, $hyphenPos)));
+						$result->setPeriodTo(intval(mb_substr($tarffParams['DP'], $hyphenPos + 1)));
+						$result->setPeriodType(CalculationResult::PERIOD_TYPE_DAY);
+					}
+				}
 
 				return $result;
 			}
@@ -285,56 +289,61 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	 */
 	public static function onGetBusinessValueConsumers()
 	{
+		if(!self::isHoldingUsed())
+			return array();
+
 		static $consumers;
+
 		if(!$consumers)
 		{
-			static $personMaxIndex;
-
-			$providerKeys = array('', 'VALUE', 'USER', 'ORDER', 'PROPERTY', 'COMPANY', 'SHIPMENT');
+			$providerKeys = array('', 'VALUE', 'COMPANY');
 
 			$codes = array(
-				'NAME'         => array('NAME' => Loc::getMessage('BIZVAL_CODE_NAME'         ), 'SORT' =>  100, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'AGENT_NAME'   => array('NAME' => Loc::getMessage('BIZVAL_CODE_AGENT_NAME'   ), 'SORT' =>  500, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'CONTACT_NAME' => array('NAME' => Loc::getMessage('BIZVAL_CODE_CONTACT_NAME' ), 'SORT' =>  600, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'INN'          => array('NAME' => Loc::getMessage('BIZVAL_CODE_INN'          ), 'SORT' =>  900, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'KPP'          => array('NAME' => Loc::getMessage('BIZVAL_CODE_KPP'          ), 'SORT' => 1000, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'PHONE'        => array('NAME' => Loc::getMessage('BIZVAL_CODE_PHONE'        ), 'SORT' => 2200, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'EMAIL'        => array('NAME' => Loc::getMessage('BIZVAL_CODE_EMAIL'        ), 'SORT' => 2300, 'GROUP' => 'CODE_COMPANY', 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'EGRPO'        => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_EGRPO'), 'SORT' => 2400, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'OKVED'        => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_OKVED'), 'SORT' => 2500, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'OKDP'         => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_OKDP' ), 'SORT' => 2600, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'OKOPF'        => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_OKOPF'), 'SORT' => 2700, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'OKFC'         => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_OKFC' ), 'SORT' => 2800, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'OKPO'         => array('NAME' => Loc::getMessage('BIZVAL_CODE_COMPANY_OKPO' ), 'SORT' => 2900, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'BANK_ACCOUNT' => array('NAME' => Loc::getMessage('BIZVAL_CODE_BANK_ACCOUNT' ), 'SORT' => 3000, 'GROUP' => 'CODE_COMPANY'  , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::ENTITY_DOMAIN)),
-				'LAST_NAME'    => array('NAME' => Loc::getMessage('BIZVAL_CODE_LAST_NAME'    ), 'SORT' =>  200, 'GROUP' => 'CODE_CLIENT'   , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::INDIVIDUAL_DOMAIN)),
-				'FIRST_NAME'   => array('NAME' => Loc::getMessage('BIZVAL_CODE_FIRST_NAME'   ), 'SORT' =>  300, 'GROUP' => 'CODE_CLIENT'   , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::INDIVIDUAL_DOMAIN)),
-				'SECOND_NAME'  => array('NAME' => Loc::getMessage('BIZVAL_CODE_SECOND_NAME'  ), 'SORT' =>  400, 'GROUP' => 'CODE_CLIENT'   , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::INDIVIDUAL_DOMAIN)),
-				'BIRTHDAY'     => array('NAME' => Loc::getMessage('BIZVAL_CODE_BIRTHDAY'     ), 'SORT' =>  700, 'GROUP' => 'CODE_CLIENT'   , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::INDIVIDUAL_DOMAIN)),
-				'GENDER'       => array('NAME' => Loc::getMessage('BIZVAL_CODE_GENDER'       ), 'SORT' =>  800, 'GROUP' => 'CODE_CLIENT'   , 'PROVIDERS' => $providerKeys, 'DOMAINS' => array(BusinessValue::INDIVIDUAL_DOMAIN)),
-				'ADDRESS'      => array('NAME' => Loc::getMessage('BIZVAL_CODE_ADDRESS'      ), 'SORT' =>  100, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'ZIP'          => array('NAME' => Loc::getMessage('BIZVAL_CODE_ZIP'          ), 'SORT' =>  200, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'COUNTRY'      => array('NAME' => Loc::getMessage('BIZVAL_CODE_COUNTRY'      ), 'SORT' =>  300, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'REGION'       => array('NAME' => Loc::getMessage('BIZVAL_CODE_REGION'       ), 'SORT' =>  400, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'DISTRICT'     => array('NAME' => Loc::getMessage('BIZVAL_CODE_DISTRICT'     ), 'SORT' =>  500, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'LOCALITY'     => array('NAME' => Loc::getMessage('BIZVAL_CODE_LOCALITY'     ), 'SORT' =>  600, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'CITY'         => array('NAME' => Loc::getMessage('BIZVAL_CODE_CITY'         ), 'SORT' =>  700, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'STREET'       => array('NAME' => Loc::getMessage('BIZVAL_CODE_STREET'       ), 'SORT' =>  800, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'HOUSING'      => array('NAME' => Loc::getMessage('BIZVAL_CODE_HOUSING'      ), 'SORT' =>  900, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'BUILDING'     => array('NAME' => Loc::getMessage('BIZVAL_CODE_BUILDING'     ), 'SORT' => 1000, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
-				'APARTMENT'    => array('NAME' => Loc::getMessage('BIZVAL_CODE_APARTMENT'    ), 'SORT' => 1100, 'GROUP' => 'CODE_ADDRESS'  , 'PROVIDERS' => $providerKeys),
+				'DELIVERY_SPSR_LOGIN' => array('NAME' => Loc::getMessage('SALE_DLV_SRV_SPSR_LOGIN'), 'SORT' =>  100, 'GROUP' => 'DELIVERY_SPSR_AUTH', 'PROVIDERS' => $providerKeys),
+				'DELIVERY_SPSR_PASS' => array('NAME' => Loc::getMessage('SALE_DLV_SRV_SPSR_PASS'), 'SORT' =>  200, 'GROUP' => 'DELIVERY_SPSR_AUTH', 'PROVIDERS' => $providerKeys),
+				'DELIVERY_SPSR_ICN' => array('NAME' => Loc::getMessage('SALE_DLV_SRV_SPSR_ICN'), 'SORT' =>  300, 'GROUP' => 'DELIVERY_SPSR_AUTH', 'PROVIDERS' => $providerKeys),
 			);
 
 			$consumers = array(
-				'DELIVERY_SERIVICE_SPSR' => array(
-					'NAME'  => Loc::getMessage('BIZVAL_CONSUMER_1C'),
-					'SORT'  => 400,
-					'CODES' =>$codes
-				),
+				'SORT'  => 400,
+				'GROUP' => 'DELIVERY',
+				'CODES' => $codes
 			);
 		}
 
 		return $consumers;
+	}
+
+	public static function onGetBusinessValueGroups()
+	{
+		if(!self::isHoldingUsed())
+			return array();
+
+		return array(
+			'DELIVERY_SPSR_AUTH' => array('NAME' => Loc::getMessage('SALE_DLV_SRV_SPSR_BV_AUTH'), 'SORT' => 100),
+		);
+	}
+
+	private static function isHoldingUsed()
+	{
+		static $result = null;
+
+		if($result !== null)
+			return $result;
+
+		$dbRes = CompanyTable::getList(array(
+			'filter' => array('=ACTIVE' => 'Y'),
+			'select' => array('CNT'),
+    		'runtime' => array(
+				new ExpressionField('CNT', 'COUNT(*)'
+			))
+		));
+
+		if($row = $dbRes->fetch())
+			if(intval($row['CNT']) > 1)
+				$result = true;
+
+		return $result;
 	}
 
 	/**
@@ -344,7 +353,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	 */
 	protected static function utfDecode($str)
 	{
-		if(strtolower(SITE_CHARSET) != 'utf-8')
+		if(mb_strtolower(SITE_CHARSET) != 'utf-8')
 			$str = Encoding::convertEncodingArray($str, 'UTF-8', SITE_CHARSET);
 
 		return $str;
@@ -376,17 +385,19 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	 * Returns SID required for requests.
 	 * @return Result
 	 */
-	public function getSidResult()
+	public function getSidResult($shipment = null)
 	{
 		$result = new Result();
-		$sid = Cache::getSidResult();
+		$login = $this->getLogin($shipment);
+		$pass = $this->getPass($shipment);
+		$sid = Cache::getSidResult($login, $pass);
 
 		if($sid === false)
 		{
-			if(!empty($this->config['MAIN']['LOGIN']) && !empty($this->config['MAIN']['PASS']))
+			if(!empty($login) && !empty($pass))
 			{
 				$request = new Request();
-				$res = $request->getSidResult($this->config['MAIN']['LOGIN'], $this->config['MAIN']['PASS'], self::getCompanyName());
+				$res = $request->getSidResult($login, $pass, self::getCompanyName());
 
 				if(!$res->isSuccess())
 				{
@@ -402,30 +413,81 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 				$sid = "";
 			}
 
-			Cache::setSid($sid);
+			Cache::setSid($sid, $login, $pass);
 		}
 
 		$result->setData(array($sid));
 		return $result;
 	}
 
-	public function getICN()
+	/**
+	 * @param string $fieldName
+	 * @param Shipment|null $shipment
+	 * @return string
+	 */
+	protected function getAuthField($fieldName, $shipment = null)
 	{
-		return $this->config['MAIN']['ICN'];
+		$result = "";
+
+		if($shipment && self::isHoldingUsed())
+		{
+			$result = BusinessValue::get('DELIVERY_SPSR_'.$fieldName, 'DELIVERY_'.$this->getId(), $shipment);
+
+			if($result == '')
+				$result = $this->config['MAIN'][$fieldName];
+		}
+		else
+		{
+			$result = $this->config['MAIN'][$fieldName];
+
+			if($result == '' && self::isHoldingUsed())
+				$result = BusinessValue::get('DELIVERY_SPSR_'.$fieldName, 'DELIVERY_'.$this->getId(), $shipment);
+		}
+
+		return strval($result);
+	}
+
+	/**
+	 * @param Shipment|null $shipment
+	 * @return string
+	 */
+	protected function getLogin($shipment = null)
+	{
+		return $this->getAuthField('LOGIN', $shipment);
+	}
+
+	/**
+	 * @param Shipment|null $shipment
+	 * @return string
+	 */
+	protected function getPass($shipment = null)
+	{
+		return $this->getAuthField('PASS', $shipment);
+	}
+
+	/**
+	 * @param Shipment|null $shipment
+	 * @return string
+	 */
+	public function getICN($shipment = null)
+	{
+		return $this->getAuthField('ICN', $shipment);
 	}
 
 	/**
 	 * Returns services list with parameters.
 	 * @return Result
 	 */
-	public function getServiceTypes()
+	public function getServiceTypes($shipment = null)
 	{
 		$result = new Result();
-		$types = Cache::getServiceTypes();
+		$login = $this->getLogin($shipment);
+		$pass = $this->getPass($shipment);
+		$types = Cache::getServiceTypes($login, $pass);
 
 		if($types === false)
 		{
-			$res = self::getSidResult();
+			$res = self::getSidResult($shipment);
 
 			if($res->isSuccess())
 			{
@@ -448,8 +510,8 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 			}
 
 			$types = $res->getData();
-			$types = $types + self::getOnLineSrvs();
-			Cache::setServiceTypes($types);
+			$types = self::getOnLineSrvs() + $types;
+			Cache::setServiceTypes($types, $login, $pass);
 		}
 
 		if(!is_array($types))
@@ -494,7 +556,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	/**
 	 * @return array Extra services list we can use
 	 */
-	static public function getEmbeddedExtraServicesList()
+	public function getEmbeddedExtraServicesList()
 	{
 		return self::getAlltExtraServices();
 	}
@@ -576,12 +638,13 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	}
 
 	/**
+	 * @param Shipment|null $shipment
 	 * @return array Profiles list code => name
 	 */
-	public function getProfilesList()
+	public function getProfilesList($shipment = null)
 	{
 		$result = array();
-		$resSrv = $this->getServiceTypes();
+		$resSrv = $this->getServiceTypes($shipment);
 		$data = $resSrv->getData();
 
 		if(is_array($data))
@@ -602,7 +665,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 		if($compatibleProfiles !== null)
 			return $compatibleProfiles;
 
-		$profilesList = $this->getProfilesList();
+		$profilesList = $this->getProfilesList($shipment);
 
 		if($this->isCalculatePriceImmediately())
 		{
@@ -617,7 +680,7 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 			{
 				foreach($profilesList as $id => $name)
 				{
-					if(strpos(ToUpper($tarffParams['TariffType']), ToUpper($name)) !== false)
+					if(mb_strpos(ToUpper($tarffParams['TariffType']), ToUpper($name)) !== false)
 					{
 						$compatibleProfiles[] = $id;
 						break;
@@ -762,4 +825,30 @@ class SpsrHandler extends \Bitrix\Sale\Delivery\Services\Base
 	{
 		return self::$whetherAdminExtraServicesShow;
 	}
+
+	public function getAdminAdditionalTabs()
+	{
+		global $APPLICATION;
+
+		ob_start();
+		$APPLICATION->IncludeComponent(
+			"bitrix:sale.location.map",
+			"",
+			array(
+				"EXTERNAL_LOCATION_CLASS" => '\Sale\Handlers\Delivery\Spsr\Location'
+			),
+			false
+		);
+		$content = ob_get_contents();
+		ob_end_clean();
+
+		return array(
+			array(
+				"TAB" => Loc::getMessage('SALE_DLVRS_ADD_LOC_TAB'),
+				"TITLE" => Loc::getMessage('SALE_DLVRS_ADD_LOC_TAB_TITLE'),
+				"CONTENT" => $content
+			)
+		);
+	}
+
 }

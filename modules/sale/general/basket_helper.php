@@ -218,7 +218,7 @@ class CSaleBasketHelper
 	 */
 	public static function getFinalPrice(array $basketItemData)
 	{
-		$price = roundEx($basketItemData['PRICE'] * $basketItemData['QUANTITY'], SALE_VALUE_PRECISION);
+		$price = \Bitrix\Sale\PriceMaths::roundPrecision($basketItemData['PRICE'] * $basketItemData['QUANTITY']);
 		if (isset($basketItemData['VAT_INCLUDED']) && $basketItemData['VAT_INCLUDED'] === 'N')
 		{
 			$price += static::getVat($basketItemData);
@@ -234,9 +234,9 @@ class CSaleBasketHelper
 	 */
 	public static function formatQuantity($quantity)
 	{
-		$isOrderConverted = \Bitrix\Main\Config\Option::get("main", "~sale_converted_15", 'N');
+		$isOrderConverted = \Bitrix\Main\Config\Option::get("main", "~sale_converted_15", 'Y');
 
-		if ($isOrderConverted == "Y")
+		if ($isOrderConverted != 'N')
 		{
 			return \Bitrix\Sale\BasketItem::formatQuantity($quantity);
 		}

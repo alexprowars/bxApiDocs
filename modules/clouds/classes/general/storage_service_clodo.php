@@ -3,22 +3,22 @@ IncludeModuleLangFile(__FILE__);
 
 class CCloudStorageService_ClodoRU extends CCloudStorageService_OpenStackStorage
 {
-	public static function GetObject()
+	function GetObject()
 	{
 		return new CCloudStorageService_ClodoRU();
 	}
 
-	public static function GetID()
+	function GetID()
 	{
 		return "clodo_storage";
 	}
 
-	public static function GetName()
+	function GetName()
 	{
 		return "Clodo.ru";
 	}
 
-	public function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
+	function GetSettingsHTML($arBucket, $bServiceSet, $cur_SERVICE_ID, $bVarsFromForm)
 	{
 		if($bVarsFromForm)
 			$arSettings = $_POST["SETTINGS"][$this->GetID()];

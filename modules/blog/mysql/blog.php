@@ -4,7 +4,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/blog/general/blog.php");
 class CBlog extends CAllBlog
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 		if(strlen($arFields["PATH"]) > 0)
@@ -113,7 +113,7 @@ class CBlog extends CAllBlog
 		return $ID;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -245,7 +245,7 @@ class CBlog extends CAllBlog
 	}
 
 	//*************** SELECT *********************/
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB, $USER_FIELD_MANAGER, $USER;
 
@@ -261,7 +261,7 @@ class CBlog extends CAllBlog
 		if (count($arSelectFields) <= 0)
 			$arSelectFields = array("ID", "NAME", "DESCRIPTION", "DATE_CREATE", "DATE_UPDATE", "ACTIVE", "OWNER_ID", "URL", "REAL_URL", "GROUP_ID", "ENABLE_COMMENTS", "ENABLE_IMG_VERIF", "EMAIL_NOTIFY", "ENABLE_RSS", "LAST_POST_ID", "LAST_POST_DATE", "AUTO_GROUPS", "ALLOW_HTML", "SOCNET_GROUP_ID");
 		if(in_array("*", $arSelectFields))
-			$arSelectFields = array("ID", "NAME", "DESCRIPTION", "DATE_CREATE", "DATE_UPDATE", "ACTIVE", "OWNER_ID", "SOCNET_GROUP_ID", "URL", "REAL_URL", "GROUP_ID", "ENABLE_COMMENTS", "ENABLE_IMG_VERIF", "EMAIL_NOTIFY", "ENABLE_RSS", "ALLOW_HTML", "LAST_POST_ID", "LAST_POST_DATE", "AUTO_GROUPS", "SEARCH_INDEX", "USE_SOCNET", "OWNER_LOGIN", "OWNER_NAME", "OWNER_LAST_NAME", "OWNER_EMAIL", "OWNER", "GROUP_NAME", "GROUP_SITE_ID", "BLOG_USER_ALIAS", "BLOG_USER_AVATAR");
+			$arSelectFields = array("ID", "NAME", "DESCRIPTION", "DATE_CREATE", "DATE_UPDATE", "ACTIVE", "OWNER_ID", "SOCNET_GROUP_ID", "URL", "REAL_URL", "GROUP_ID", "ENABLE_COMMENTS", "ENABLE_IMG_VERIF", "EMAIL_NOTIFY", "ENABLE_RSS", "ALLOW_HTML", "LAST_POST_ID", "LAST_POST_DATE", "AUTO_GROUPS", "SEARCH_INDEX", "USE_SOCNET", "OWNER_LOGIN", "OWNER_NAME", "OWNER_LAST_NAME", "OWNER_EMAIL", "OWNER", "GROUP_NAME", "GROUP_SITE_ID", "BLOG_USER_ALIAS", "BLOG_USER_AVATAR", "EDITOR_USE_FONT", "EDITOR_USE_LINK", "EDITOR_USE_IMAGE", "EDITOR_USE_FORMAT", "EDITOR_USE_VIDEO");
 
 		// FIELDS -->
 		$arFields = array(
@@ -302,6 +302,12 @@ class CBlog extends CAllBlog
 				
 				"SOCNET_BLOG_READ" => array("FIELD" => "BS.BLOG_ID", "TYPE" => "int", "FROM" => "INNER JOIN b_blog_socnet BS ON (B.ID = BS.BLOG_ID)"),
 				"PERMS" => Array(),
+			
+				"EDITOR_USE_FONT" => array("FIELD" => "B.EDITOR_USE_FONT", "TYPE" => "char"),
+				"EDITOR_USE_LINK" => array("FIELD" => "B.EDITOR_USE_LINK", "TYPE" => "char"),
+				"EDITOR_USE_IMAGE" => array("FIELD" => "B.EDITOR_USE_IMAGE", "TYPE" => "char"),
+				"EDITOR_USE_FORMAT" => array("FIELD" => "B.EDITOR_USE_FORMAT", "TYPE" => "char"),
+				"EDITOR_USE_VIDEO" => array("FIELD" => "B.EDITOR_USE_VIDEO", "TYPE" => "char"),
 			);
 		// <-- FIELDS
 		
@@ -442,7 +448,7 @@ class CBlog extends CAllBlog
 		return $dbRes;
 	}
 	
-	public static function AddSocnetRead($ID)
+	function AddSocnetRead($ID)
 	{
 		global $DB;
 		$ID = IntVal($ID);

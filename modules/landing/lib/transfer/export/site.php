@@ -8,7 +8,6 @@ use \Bitrix\Landing\Template;
 use \Bitrix\Landing\TemplateRef;
 use \Bitrix\Landing\PublicAction;
 use \Bitrix\Landing\Site\Type;
-use \Bitrix\Landing\Manager;
 use \Bitrix\Landing\Transfer\AppConfiguration;
 use \Bitrix\Rest\Marketplace;
 use \Bitrix\Main\Event;
@@ -38,10 +37,6 @@ class Site
 	 */
 	public static function getUrl(string $type, int $siteId): string
 	{
-		if (Manager::getOption('transfer_enabled') != 'Y')
-		{
-			return '';
-		}
 		if (!\Bitrix\Main\Loader::includeModule('rest'))
 		{
 			return '';
@@ -86,6 +81,7 @@ class Site
 		$code = $event->getParameter('CODE');
 		$siteType = substr($code, strlen(AppConfiguration::PREFIX_CODE));
 		$siteId = (int)$event->getParameter('ITEM_CODE');
+		Type::setScope($siteType);
 
 		// set uses app to main manifest
 		$usedApp = PublicAction::getRestStat(
@@ -105,10 +101,15 @@ class Site
 		// get finish id if it is total export
 		if ($siteId)
 		{
-			return null;
+			return [
+				'SETTING' => [
+					'SITE_ID' => $siteId,
+					'APP_USES_REQUIRED' => $usedApp
+				],
+				'NEXT' => false
+			];
 		}
 		$lastSiteId = 0;
-		Type::setScope($siteType);
 		$res = SiteCore::getList([
 			'select' => [
 				'ID'
@@ -124,9 +125,9 @@ class Site
 		}
 		return [
 			'SETTING' => [
-				'FINISH_ID' => $lastSiteId
+				'FINISH_ID' => $lastSiteId,
+				'APP_USES_REQUIRED' => $usedApp
 			],
-			'APP_USES_REQUIRED' => $usedApp,
 			'NEXT' => false
 		];
 	}
@@ -199,8 +200,6 @@ class Site
 			}
 		}
 		$site['ADDITIONAL_FIELDS'] = $hookFields;
-
-		\Bitrix\Landing\Transfer\AppConfiguration::ttt($files);
 
 		return [
 			'FILE_NAME' => str_replace('#site_id#', $siteId, self::FILENAME_EXPORT_STEP_META),
@@ -300,10 +299,10 @@ class Site
 	/**
 	 * Final step.
 	 * @param Event $event
-	 * @return void
+	 * @return array
 	 */
-	public static function onFinish(Event $event): void
+	public static function onFinish(Event $event): array
 	{
-		//
+		return [];
 	}
 }

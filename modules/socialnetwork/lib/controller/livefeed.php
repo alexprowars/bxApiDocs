@@ -38,7 +38,7 @@ class Livefeed extends \Bitrix\Main\Engine\Controller
 
 	public function getRawEntryDataAction(array $params = [])
 	{
-		$entityType = (isset($params['entityType']) && strlen($params['entityType']) > 0 ? preg_replace("/[^a-z0-9_]/i", '', $params['entityType']) : false);
+		$entityType = (isset($params['entityType']) && $params['entityType'] <> '' ? preg_replace("/[^a-z0-9_]/i", '', $params['entityType']) : false);
 		$entityId = (isset($params['entityId']) && intval($params['entityId']) > 0 ? intval($params['entityId']) : false);
 		$logId = (isset($params['logId']) && intval($params['logId']) > 0 ? intval($params['logId']) : false);
 		$additionalParams = (isset($params['additionalParams']) && is_array($params['additionalParams']) ? $params['additionalParams'] : []);
@@ -111,7 +111,7 @@ class Livefeed extends \Bitrix\Main\Engine\Controller
 				$res = \CSite::getById(SITE_ID);
 				if (
 					($siteFields = $res->fetch())
-					&& strlen($siteFields['SERVER_NAME']) > 0
+					&& $siteFields['SERVER_NAME'] <> ''
 				)
 				{
 					$serverName = $siteFields['SERVER_NAME'];
@@ -141,8 +141,8 @@ class Livefeed extends \Bitrix\Main\Engine\Controller
 
 	public function createTaskCommentAction(array $params = [])
 	{
-		$postEntityType = (isset($params['postEntityType']) && strlen($params['postEntityType']) > 0 ? preg_replace('/[^a-z0-9_]/i', '', $params['postEntityType']) : false);
-		$entityType = (isset($params['entityType']) && strlen($params['entityType']) > 0 ? preg_replace("/[^a-z0-9_]/i", '', $params['entityType']) : false);
+		$postEntityType = (isset($params['postEntityType']) && $params['postEntityType'] <> '' ? preg_replace('/[^a-z0-9_]/i', '', $params['postEntityType']) : false);
+		$entityType = (isset($params['entityType']) && $params['entityType'] <> '' ? preg_replace("/[^a-z0-9_]/i", '', $params['entityType']) : false);
 		$entityId = (isset($params['entityId']) && intval($params['entityId']) > 0 ? intval($params['entityId']) : false);
 		$taskId = (isset($params['taskId']) && intval($params['taskId']) > 0 ? intval($params['taskId']) : false);
 		$logId = (isset($params['logId']) && intval($params['logId']) > 0 ? intval($params['logId']) : false);
@@ -340,5 +340,54 @@ class Livefeed extends \Bitrix\Main\Engine\Controller
 			'TARGET' => 'postContent',
 		]);
 	}
-}
 
+	public static function isAdmin()
+	{
+		global $USER;
+		return (
+			$USER->isAdmin()
+			|| (
+				Loader::includeModule('bitrix24')
+				&& \CBitrix24::isPortalAdmin($USER->getId())
+			)
+		);
+	}
+	
+	private function getComponentReturnWhiteList()
+	{
+		return [ 'LAST_TS', 'LAST_ID', 'EMPTY' ];
+	}
+
+	public function getNextPageAction(array $params = [])
+	{
+		$componentParameters = $this->getUnsignedParameters();
+		$requestParameters = [
+			'TARGET' => 'page',
+			'PAGE_NUMBER' => (isset($params['PAGE_NUMBER']) && intval($params['PAGE_NUMBER']) >= 1 ? intval($params['PAGE_NUMBER']) : 1),
+			'LAST_LOG_TIMESTAMP' => (isset($params['LAST_LOG_TIMESTAMP']) && intval($params['LAST_LOG_TIMESTAMP']) > 0 ? intval($params['LAST_LOG_TIMESTAMP']) : 0),
+			'PREV_PAGE_LOG_ID' => (isset($params['PREV_PAGE_LOG_ID']) ? $params['PREV_PAGE_LOG_ID'] : ''),
+			'useBXMainFilter' =>  (isset($params['useBXMainFilter']) ? $params['useBXMainFilter'] : 'N'),
+			'siteTemplateId' =>  (isset($params['siteTemplateId']) ? $params['siteTemplateId'] : 'bitrix24')
+		];
+
+		$componentResponse = new \Bitrix\Main\Engine\Response\Component('bitrix:socialnetwork.log.ex', '', array_merge($componentParameters, $requestParameters), [], $this->getComponentReturnWhiteList());
+
+		return $componentResponse;
+	}
+
+	public function refreshAction(array $params = [])
+	{
+		$componentParameters = $this->getUnsignedParameters();
+		$requestParameters = [
+			'TARGET' => 'page',
+			'PAGE_NUMBER' => 1,
+			'RELOAD' => 'Y',
+			'useBXMainFilter' =>  (isset($params['useBXMainFilter']) ? $params['useBXMainFilter'] : 'N'),
+			'siteTemplateId' =>  (isset($params['siteTemplateId']) ? $params['siteTemplateId'] : 'bitrix24')
+		];
+
+		$componentResponse = new \Bitrix\Main\Engine\Response\Component('bitrix:socialnetwork.log.ex', '', array_merge($componentParameters, $requestParameters), [], $this->getComponentReturnWhiteList());
+
+		return $componentResponse;
+	}
+}	

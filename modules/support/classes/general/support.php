@@ -4,17 +4,6 @@ IncludeModuleLangFile(__FILE__);
 global $SUPPORT_CACHE_USER_ROLES;
 $SUPPORT_CACHE_USER_ROLES  = Array();
 
-
-/**
- * <b>CTicket</b> - класс для работы с обращениями.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/support/classes/cticket/index.php
- * @author Bitrix
- */
 class CAllTicket
 {
 
@@ -34,15 +23,15 @@ class CAllTicket
 
 	/***************************************************************
 
-	Группа функций по работе с ролями на модуль
+	������ ������� �� ������ � ������ �� ������
 
-	Идентификаторы ролей:
+	�������������� �����:
 
-	D - доступ закрыт
-	R - клиент техподдержки
-	T - сотрудник техподдержки
-	V - демо-доступ
-	W - администратор техподдержки
+	D - ������ ������
+	R - ������ ������������
+	T - ��������� ������������
+	V - ����-������
+	W - ������������� ������������
 
 	*****************************************************************/
 
@@ -71,7 +60,7 @@ class CAllTicket
 		return "W";
 	}
 
-	// возвращает true если заданный пользователь имеет заданную роль на модуль
+	// ���������� true ���� �������� ������������ ����� �������� ���� �� ������
 	public static function HaveRole($role, $userID=false)
 	{
 		global $DB, $USER, $APPLICATION, $SUPPORT_CACHE_USER_ROLES;
@@ -107,8 +96,8 @@ class CAllTicket
 
 	}
 
-	// true - если пользователь имеет роль "администратор техподдержки"
-	// false - в противном случае
+	// true - ���� ������������ ����� ���� "������������� ������������"
+	// false - � ��������� ������
 	public static function IsAdmin($userID=false)
 	{
 		global $USER;
@@ -120,22 +109,22 @@ class CAllTicket
 		return CTicket::HaveRole(CTicket::GetAdminRoleID(), $userID);
 	}
 
-	// true - если пользователь имеет роль "демо-доступ"
-	// false - в противном случае
+	// true - ���� ������������ ����� ���� "����-������"
+	// false - � ��������� ������
 	public static function IsDemo($userID=false)
 	{
 		return CTicket::HaveRole(CTicket::GetDemoRoleID(), $userID);
 	}
 
-	// true - если пользователь имеет роль "сотрудник техподдержки"
-	// false - в противном случае
+	// true - ���� ������������ ����� ���� "��������� ������������"
+	// false - � ��������� ������
 	public static function IsSupportTeam($userID=false)
 	{
 		return CTicket::HaveRole(CTicket::GetSupportTeamRoleID(), $userID);
 	}
 
-	// true - если пользователь имеет роль "сотрудник техподдержки"
-	// false - в противном случае
+	// true - ���� ������������ ����� ���� "��������� ������������"
+	// false - � ��������� ������
 	public static function IsSupportClient($userID=false)
 	{
 		return CTicket::HaveRole(CTicket::GetSupportClientRoleID(), $userID);
@@ -157,7 +146,7 @@ class CAllTicket
 		return false;
 	}
 
-	// возвращает роли заданного пользователя
+	// ���������� ���� ��������� ������������
 	public static function GetRoles(&$isDemo, &$isSupportClient, &$isSupportTeam, &$isAdmin, &$isAccess, &$userID, $checkRights=true)
 	{
 		global $DB, $USER, $APPLICATION;
@@ -195,11 +184,11 @@ class CAllTicket
 		if ($isDemo || $isSupportClient || $isSupportTeam || $isAdmin) $isAccess = true;
 	}
 
-	// возвращает массив ID групп для которых задана роль
-	// $role - идентификатор роли
+	// ���������� ������ ID ����� ��� ������� ������ ����
+	// $role - ������������� ����
 	public static function GetGroupsByRole($role)
 	{
-		//Todo: определиться с доступом по умолчанию
+		//Todo: ������������ � �������� �� ���������
 
 		global $APPLICATION, $USER;
 		if (!is_object($USER)) $USER = new CUser;
@@ -239,19 +228,19 @@ class CAllTicket
 		return array_unique($arGroups);*/
 	}
 
-	// возвращает массив групп с ролью "администратор техподдержки"
+	// ���������� ������ ����� � ����� "������������� ������������"
 	public static function GetAdminGroups()
 	{
 		return CTicket::GetGroupsByRole(CTicket::GetAdminRoleID());
 	}
 
-	// возвращает массив групп с ролью "сотрудник техподдержки"
+	// ���������� ������ ����� � ����� "��������� ������������"
 	public static function GetSupportTeamGroups()
 	{
 		return CTicket::GetGroupsByRole(CTicket::GetSupportTeamRoleID());
 	}
 
-	// возвращает массив EMail адресов всех пользователей имеющих заданную роль
+	// ���������� ������ EMail ������� ���� ������������� ������� �������� ����
 	public static function GetEmailsByRole($role)
 	{
 		global $DB, $APPLICATION, $USER;
@@ -266,13 +255,13 @@ class CAllTicket
 		return array_unique($arEmail);
 	}
 
-	// возвращает массив EMail'ов всех пользователей имеющих роль "администратор"
+	// ���������� ������ EMail'�� ���� ������������� ������� ���� "�������������"
 	public static function GetAdminEmails()
 	{
 		return CTicket::GetEmailsByRole(CTicket::GetAdminRoleID());
 	}
 
-	// возвращает массив EMail'ов всех пользователей имеющих роль "сотрудник техподдержки"
+	// ���������� ������ EMail'�� ���� ������������� ������� ���� "��������� ������������"
 	public static function GetSupportTeamEmails()
 	{
 		return CTicket::GetEmailsByRole(CTicket::GetSupportTeamRoleID());
@@ -308,10 +297,10 @@ class CAllTicket
 	}
 
 	/*****************************************************************
-				Группа функций общие для всех классов
+				������ ������� ����� ��� ���� �������
 	*****************************************************************/
 
-	// проверка полей фильтра
+	// �������� ����� �������
 	public static function CheckFilter($arFilter)
 	{
 		$err_mess = (CAllTicket::err_mess())."<br>Function: CheckFilter<br>Line: ";
@@ -342,14 +331,14 @@ class CAllTicket
 		return true;
 	}
 
-	// проверка полей перед вставкой в базу данных
+	// �������� ����� ����� �������� � ���� ������
 	public static function CheckFields($arFields, $id, $arRequired)
 	{
 		global $DB, $USER, $APPLICATION, $MESS;
 
 		$arMsg = Array();
 
-		// проверяем указанные обязательные поля
+		// ��������� ��������� ������������ ����
 		if (is_array($arRequired) && count($arRequired)>0)
 		{
 			foreach($arRequired as $key)
@@ -365,7 +354,7 @@ class CAllTicket
 			}
 		}
 
-		// проверяем корректность дат
+		// ��������� ������������ ���
 		$arDate = array(
 			"DATE_CREATE",
 			"DATE_MODIFY",
@@ -404,7 +393,7 @@ class CAllTicket
 		return true;
 	}
 
-	// предварительно обрабатывает массив значений для вставки в базу данных
+	// �������������� ������������ ������ �������� ��� ������� � ���� ������
 	public static function PrepareFields($arFields, $table, $id)
 	{
 		global $DB, $USER, $APPLICATION;
@@ -412,7 +401,7 @@ class CAllTicket
 		$id = intval($id);
 		$arFields_i = array();
 
-		// числа
+		// �����
 		$arrNUMBER = array(
 			"SLA_ID",
 			"AGENT_ID",
@@ -454,7 +443,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = (strlen($arFields[$key])>0) ? intval($arFields[$key]) : "null";
 
-		// тип текста
+		// ��� ������
 		$arrTYPE = array(
 			"PREVIEW_TYPE",
 			"DESCRIPTION_TYPE",
@@ -463,7 +452,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = $arFields[$key]=="text" ? "'text'" : "'html'";
 
-		// булевые
+		// �������
 		$arrBOOLEAN = array(
 			"AUTO_CLOSED",
 			"IS_SPAM",
@@ -482,7 +471,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = $arFields[$key]=="Y" ? "'Y'" : "'N'";
 
-		// текст
+		// �����
 		$arrTEXT = array(
 			"OWNER_SID",
 			"LAST_MESSAGE_SID",
@@ -497,7 +486,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = (strlen($arFields[$key])>0) ? "'".$DB->ForSql($arFields[$key])."'" : "null";
 
-		// строка
+		// ������
 		$arrSTRING = array(
 			"NAME",
 			"TITLE",
@@ -519,7 +508,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = (strlen($arFields[$key])>0) ? "'".$DB->ForSql($arFields[$key], 255)."'" : "null";
 
-		// даты
+		// ����
 		$arDate = array(
 			"TIMESTAMP_X",
 			"DATE_CLOSE",
@@ -529,7 +518,7 @@ class CAllTicket
 			if (is_set($arFields, $key))
 				$arFields_i[$key] = (strlen($arFields[$key])>0) ? $DB->CharToDateFunction($arFields[$key]) : "null";
 
-		/* изображения
+		/* �����������
 		$arIMAGE = array();
 		foreach($arIMAGE as $key)
 		{
@@ -610,7 +599,7 @@ class CAllTicket
 		}
 		else $arFields_i["DATE_MODIFY"] = $DB->CurrentTimeFunction();
 
-		// убираем лишние поля для указанной таблицы
+		// ������� ������ ���� ��� ��������� �������
 		unset($arFields_i["ID"]);
 		$ar1 = $DB->GetTableFieldsList($table);
 		$ar2 = array_keys($arFields_i);
@@ -704,7 +693,7 @@ class CAllTicket
 	}
 
 	/*****************************************************************
-					Группа функций по работе со спамом
+					������ ������� �� ������ �� ������
 	*****************************************************************/
 
 	public static function MarkMessageAsSpam($messageID, $exactly="Y", $checkRights="Y")
@@ -829,7 +818,7 @@ class CAllTicket
 			$a = $b = $c = null;
 			if ($rsMessages = CTicket::GetMessageList($a, $b, $arFilter, $c, $checkRights))
 			{
-				// помечаем исходное сообщение
+				// �������� �������� ���������
 				if ($arMessage = $rsMessages->Fetch())
 				{
 					CTicket::MarkMessageAsSpam($arMessage["ID"], $exactly, $checkRights);
@@ -864,7 +853,7 @@ class CAllTicket
 			$a = $b = $c = null;
 			if ($rsMessages = CTicket::GetMessageList($a, $b, $arFilter, $c, $checkRights))
 			{
-				// снимаем отметку о спаме только у первого сообщения
+				// ������� ������� � ����� ������ � ������� ���������
 				if ($arMessage = $rsMessages->Fetch())
 				{
 					CTicket::UnMarkMessageAsSpam($arMessage["ID"], $checkRights);
@@ -877,7 +866,7 @@ class CAllTicket
 
 
 	/*****************************************************************
-					Группа функций по управлению обращениями
+					������ ������� �� ���������� �����������
 	*****************************************************************/
 
 	/*function UpdateLastParams($ticketID, $resetAutoClose=false, $changeLastMessageDate = true, $setReopenDefault = true)
@@ -891,7 +880,7 @@ class CAllTicket
 		//if ($resetAutoClose=="Y") $arFields["AUTO_CLOSE_DAYS"] = "null";
 
 		
-		// определим последнего автора
+		// ��������� ���������� ������
 		$strSql = "
 			SELECT
 				ID,
@@ -922,7 +911,7 @@ class CAllTicket
 			$arFields["LAST_MESSAGE_SID"] = "'".$DB->ForSql($arLastMess["OWNER_SID"],255)."'";
 		}
 
-		// определим количество сообщений
+		// ��������� ���������� ���������
 		$strSql = "
 			SELECT
 				SUM(CASE WHEN IS_HIDDEN='Y' THEN 0 ELSE 1 END) MESSAGES,
@@ -958,7 +947,7 @@ class CAllTicket
 	}
 	
 	//$dateType = CTicket::ADD, CTicket::DELETE, CTicket::CURRENT_DATE
-	public static function UpdateLastParams2($ticketID, $dateType)
+	function UpdateLastParams2($ticketID, $dateType)
 	{
 		global $DB;
 		$strUsers = implode(",", CTicket::GetSupportTeamAndAdminUsers());
@@ -1279,7 +1268,7 @@ class CAllTicket
 
 		$arFields = array();
 
-		// определим количество сообщений
+		// ��������� ���������� ���������
 		$strSql = "
 			SELECT
 				SUM(CASE WHEN IS_HIDDEN='Y' THEN 0 ELSE 1 END) MESSAGES,
@@ -1446,179 +1435,12 @@ class CAllTicket
 		return $res;
 	}
 
-	
-	/**
-	* <p>Метод возвращает данные по одному сообщению. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  ID сообщения.
-	*
-	* @param (1) $CHECK_RIGHTS = "Y" "Y" - сообщение будет выбрано только в том случае если у
-	* пользователя есть права на это сообщение (по умолчанию); "N" -
-	* сообщение будет выбрано независимо от прав текущего
-	* пользователя. Необязательный параметр. Изменен на <b>checkRights</b> с
-	* версии 12.0.0
-	*
-	* @param (1) $get_user_name = "Y" "Y" - при выборке сообщения будут также выбраны такие поля как
-	* 		OWNER_EMAIL, OWNER_LOGIN, OWNER_NAME, CREATED_EMAIL, CREATED_LOGIN, CREATED_NAME, MODIFIED_EMAIL, MODIFIED_LOGIN,
-	* MODIFIED_NAME, описывающие параметры пользователей имевших отношение к
-	* данному сообщению (по умолчанию); "N" - вышеперечисленные поля не
-	* будут выбраны, но зато это ускорит работу метода. Необязательный
-	* параметр.
-	*
-	* @return record 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Array
-	* (
-	*     [ID] =&gt; 3585
-	*     [TIMESTAMP_X] =&gt; 27.04.2004 12:46:02
-	*     [DATE_CREATE] =&gt; 13.04.2004 11:57:04
-	*     [C_NUMBER] =&gt; 22
-	*     [TICKET_ID] =&gt; 647
-	*     [MESSAGE] =&gt; <quote>Хорошо, тогда как насчет такой мысли: если группа указана в загружаемом файле, то она активируется (данное поведение можно регулировать при создании схемы загрузки). </quote>
-	* Цитирую себя же. Вспомнил вот что: деактивировать рубрику при загрузке возможность есть (соответствующая галочка при создании схемы), а активировать- нет.
-	* Разное получается поведение. А хотелось бы одинакового
-	*     [MESSAGE_SEARCH] =&gt; <quote>ХОРОШО, ТОГДА КАК НАСЧЕТ ТАКОЙ МЫСЛИ: ЕСЛИ ГРУППА УКАЗАНА В ЗАГРУЖАЕМОМ ФАЙЛЕ, ТО ОНА АКТИВИРУЕТСЯ (ДАННОЕ ПОВЕДЕНИЕ МОЖНО РЕГУЛИРОВАТЬ ПРИ СОЗДАНИИ СХЕМЫ ЗАГРУЗКИ). </quote>
-	* ЦИТИРУЮ СЕБЯ ЖЕ. ВСПОМНИЛ ВОТ ЧТО: ДЕАКТИВИРОВАТЬ РУБРИКУ ПРИ ЗАГРУЗКЕ ВОЗМОЖНОСТЬ ЕСТЬ (СООТВЕТСВУЮЩАЯ ГАЛОЧКА ПРИ СОЗДАНИИ СХЕМЫ), А АКТИВИРОВАТЬ- НЕТ.
-	* РАЗНОЕ ПОЛУЧАЕТСЯ ПОВЕДЕНИЕ. А ХОТЕЛОСЬ БЫ ОДИНАКОВОГО
-	*     [IMAGE] =&gt; 996
-	*     [OWNER_USER_ID] =&gt; 166
-	*     [OWNER_GUEST_ID] =&gt; 16218
-	*     [OWNER_SID] =&gt; 
-	*     [SOURCE_ID] =&gt; 0
-	*     [CREATED_USER_ID] =&gt; 166
-	*     [CREATED_GUEST_ID] =&gt; 16218
-	*     [CREATED_MODULE_NAME] =&gt; support
-	*     [MODIFIED_USER_ID] =&gt; 2
-	*     [MODIFIED_GUEST_ID] =&gt; 6221
-	*     [OWNER_EMAIL] =&gt; mail@server.com
-	*     [OWNER_LOGIN] =&gt; ant
-	*     [OWNER_NAME] =&gt; Поручик Лукаш
-	*     [CREATED_EMAIL] =&gt; mail@server.com
-	*     [CREATED_LOGIN] =&gt; ant
-	*     [CREATED_NAME] =&gt; Поручик Лукаш
-	*     [MODIFIED_EMAIL] =&gt; mail@server.com
-	*     [MODIFIED_LOGIN] =&gt; nessy
-	*     [MODIFIED_NAME] =&gt; Vitaly Kaplich
-	* )
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticket/getmessagebyid.php
-	* @author Bitrix
-	*/
 	public static function GetMessageByID($id, $checkRights="Y", $get_user_name="Y")
 	{
 		$by = $order = $is_filtered = null;
 		return CTicket::GetMessageList($by, $order, array("ID" => $id, "ID_EXACT_MATCH" => "Y"), $is_filtered, $checkRights, $get_user_name);
 	}
 
-	
-	/**
-	* <p>Метод возвращает данные по одному обращению. Метод нестатический.</p>
-	*
-	*
-	* @param int $intID  ID обращения.
-	*
-	* @param (2) $lang = LANG Двухсимвольный код языка в формате которого необходимо выбрать
-	* временные параметры обращения (время создания, изменения,
-	* закрытия); необязательный параметр, по умолчанию - код текущего
-	* сайта.
-	*
-	* @param (1) $CHECK_RIGHTS = "Y" Необязательный параметр. "Y" - будут выбраны только те обращения
-	* которые текущий пользователь может просматривать (по умолчанию);
-	* "N" - выбирать все обращения независимо от прав текущего
-	* пользователя. Изменен на <b>checkRights</b> c 12.0.0
-	*
-	* @param (1) $get_user_name = "Y" Необязательный параметр. "Y" - при выборке обращений будут также
-	* выбраны такие поля как OWNER_LOGIN, OWNER_NAME, RESPONSIBLE_LOGIN, RESPONSIBLE_NAME, MODIFIED_LOGIN,
-	* MODIFIED_NAME, LAST_MESSAGE_LOGIN, LAST_MESSAGE_NAME, CREATED_LOGIN, CREATED_EMAIL, CREATED_NAME, описывающие
-	* параметры пользователей имевших отношение к данному обращению
-	* (по умолчанию); "N" - вышеперечисленные поля не будут выбраны, но
-	* зато это ускорит работу метода.
-	*
-	* @param (1) $get_dictionary_name = "Y" Необязательный параметр. "Y" - при выборке обращений будут также
-	* выбраны такие поля как 	CATEGORY_NAME, CATEGORY_SID, CRITICALITY_NAME, CRITICALITY_SID, STATUS_NAME,
-	* STATUS_SID, MARK_NAME, MARK_SID, SOURCE_NAME, SOURCE_SID, описывающие поля из справочника
-	* техподдержки (по умолчанию); "N" - вышеперечисленные поля не будут
-	* выбраны, но зато это ускорит работу метода. Удален с 4.0.6
-	*
-	* @return record 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* Array
-	* (
-	*     [ID] =&gt; 647
-	*     [LID] =&gt; ru
-	*     [DATE_CREATE] =&gt; 17.03.2004 15:27:05
-	*     [TIMESTAMP_X] =&gt; 19.04.2004 13:37:30
-	*     [DATE_CLOSE] =&gt; 
-	*     [AUTO_CLOSED] =&gt; 
-	*     [AUTO_CLOSE_DAYS] =&gt; 
-	*     [CATEGORY_ID] =&gt; 27
-	*     [CRITICALITY_ID] =&gt; 8
-	*     [STATUS_ID] =&gt; 14
-	*     [MARK_ID] =&gt; 21
-	*     [SOURCE_ID] =&gt; 
-	*     [TITLE] =&gt; Импорт-экспорт в торговый каталог
-	*     [MESSAGES] =&gt; 30
-	*     [OWNER_USER_ID] =&gt; 166
-	*     [OWNER_GUEST_ID] =&gt; 14649
-	*     [OWNER_SID] =&gt; 
-	*     [CREATED_USER_ID] =&gt; 166
-	*     [CREATED_GUEST_ID] =&gt; 14649
-	*     [CREATED_MODULE_NAME] =&gt; support
-	*     [RESPONSIBLE_USER_ID] =&gt; 12
-	*     [MODIFIED_USER_ID] =&gt; 166
-	*     [MODIFIED_GUEST_ID] =&gt; 16218
-	*     [MODIFIED_MODULE_NAME] =&gt; support
-	*     [LAST_MESSAGE_USER_ID] =&gt; 166
-	*     [LAST_MESSAGE_GUEST_ID] =&gt; 16218
-	*     [LAST_MESSAGE_SID] =&gt; 
-	*     [SUPPORT_COMMENTS] =&gt; 
-	*     [OWNER_LOGIN] =&gt; ant
-	*     [OWNER_EMAIL] =&gt; mail@server.com
-	*     [OWNER_NAME] =&gt; Поручик Лукаш
-	*     [RESPONSIBLE_LOGIN] =&gt; wizard
-	*     [RESPONSIBLE_EMAIL] =&gt; mail@server.com
-	*     [RESPONSIBLE_NAME] =&gt; Фельдкурат Кац
-	*     [MODIFIED_LOGIN] =&gt; ant
-	*     [MODIFIED_EMAIL] =&gt; mail@server.com
-	*     [MODIFIED_NAME] =&gt; Поручик Лукаш
-	*     [LAST_MESSAGE_LOGIN] =&gt; ant
-	*     [LAST_MESSAGE_EMAIL] =&gt; mail@server.com
-	*     [LAST_MESSAGE_NAME] =&gt; Поручик Лукаш
-	*     [CREATED_LOGIN] =&gt; ant
-	*     [CREATED_EMAIL] =&gt; mail@server.com
-	*     [CREATED_NAME] =&gt; Поручик Лукаш
-	*     [CATEGORY_NAME] =&gt; Установка и настройка
-	*     [CATEGORY_DESC] =&gt; 
-	*     [CATEGORY_SID] =&gt; 
-	*     [CRITICALITY_NAME] =&gt; Средняя
-	*     [CRITICALITY_DESC] =&gt; 
-	*     [CRITICALITY_SID] =&gt; middle
-	*     [STATUS_NAME] =&gt; В стадии решения
-	*     [STATUS_DESC] =&gt; 
-	*     [STATUS_SID] =&gt; 
-	*     [MARK_NAME] =&gt; Ответ устраивает
-	*     [MARK_DESC] =&gt; 
-	*     [MARK_SID] =&gt; 
-	*     [SOURCE_NAME] =&gt; 
-	*     [SOURCE_DESC] =&gt; 
-	*     [SOURCE_SID] =&gt; 
-	*     [LAMP] =&gt; yellow
-	* )
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticket/getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($id, $lang=LANG, $checkRights="Y", $get_user_name="Y", $get_extra_names="Y", $arParams = Array())
 	{
 		$by = $order = $is_filtered = null;
@@ -1641,23 +1463,6 @@ class CAllTicket
 		return $id;
 	}
 
-	
-	/**
-	* <p>Метод удаляет обращение. Метод нестатический.</p>
-	*
-	*
-	* @param int $TICKET_ID  ID обращения. С версии 12.0.0 изменен на <b>ticketID</b>.
-	*
-	* @param (1) $CHECK_RIGHTS = "Y" "Y" - необходимо проверить право на удаление у текущего
-	* пользователя (по умолчанию); "N" - прав проверять не надо.
-	* Необязательный параметр. С версии 12.0.0 изменен на <b>checkRights</b>.
-	*
-	* @return record 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticket/delete.php
-	* @author Bitrix
-	*/
 	public static function Delete($ticketID, $checkRights="Y")
 	{
 		$err_mess = (CAllTicket::err_mess())."<br>Function: Delete<br>Line: ";
@@ -1910,7 +1715,7 @@ class CAllTicket
 		
 	public static function Set_getFilesLinks($arFiles, $lID)
 	{
-		// сформируем ссылки на прикрепленые файлы
+		// ���������� ������ �� ������������ �����
 		$fl = null;
 		if(is_array($arFiles) && count($arFiles) > 0)
 		{
@@ -2015,7 +1820,7 @@ class CAllTicket
 
 		if(!$v->isNew) $mf->WHAT_CHANGE = $v->change; // UPDATE
 				
-		// запишем изменения в лог
+		// ������� ��������� � ���
 		if(strlen($change_log) > 0)
 		{
 			$arFields_log = $v->arFields_log;
@@ -2120,10 +1925,10 @@ class CAllTicket
 		
 		$mf->MESSAGE_BODY = PrepareTxtForEmail($arFields["MESSAGE"], $v->arrSite["LANGUAGE_ID"], false, false);
 
-		// сформируем email автора
-		// Событие: "TICKET_CHANGE_BY_AUTHOR_FOR_AUTHOR"	- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (Обращение изменено автором (для автора))
-		// Событие: "TICKET_CHANGE_BY_SUPPORT_FOR_AUTHOR"	- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (Обращение изменено сотрудником техподдержки (для автора))
-		// Событие: "TICKET_NEW_FOR_AUTHOR"					- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (Новое обращение (для автора))
+		// ���������� email ������
+		// �������: "TICKET_CHANGE_BY_AUTHOR_FOR_AUTHOR"	- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (��������� �������� ������� (��� ������))
+		// �������: "TICKET_CHANGE_BY_SUPPORT_FOR_AUTHOR"	- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (��������� �������� ����������� ������������ (��� ������))
+		// �������: "TICKET_NEW_FOR_AUTHOR"					- #DEFAULT_EMAIL_FROM# -> #OWNER_EMAIL# (����� ��������� (��� ������))
 
 		$ownerEmail = "";
 		if($mf->OWNER_USER_ID > 0 && isset($arStrUsers["arUsers"][$mf->OWNER_USER_ID]))
@@ -2149,7 +1954,7 @@ class CAllTicket
 
 		$mf->OWNER_EMAIL = implode(", ", array_unique($arrOwnerEmails));
 		
-		// выбираем административные email'ы
+		// �������� ���������������� email'�
 		$arrAdminEMails = CTicket::GetAdminEmails();
 		if(!is_array($arrAdminEMails))
 		{
@@ -2157,17 +1962,17 @@ class CAllTicket
 		}
 		TrimArr($arrAdminEMails);
 	
-		// сформируем email техподдержки
-		// Событие: "TICKET_OVERDUE_REMINDER"				- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (Напоминание о необходимости ответа (для техподдержки))
-		// Событие: "TICKET_CHANGE_FOR_TECHSUPPORT"			- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (Изменения в обращении (для техподдержки))
-		// Событие: "TICKET_NEW_FOR_TECHSUPPORT"			- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (Новое обращение (для техподдержки))
+		// ���������� email ������������
+		// �������: "TICKET_OVERDUE_REMINDER"				- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (����������� � ������������� ������ (��� ������������))
+		// �������: "TICKET_CHANGE_FOR_TECHSUPPORT"			- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (��������� � ��������� (��� ������������))
+		// �������: "TICKET_NEW_FOR_TECHSUPPORT"			- #DEFAULT_EMAIL_FROM# -> #SUPPORT_EMAIL# (����� ��������� (��� ������������))
 
 		$arrSupportEmails = array();
 		if($mf->RESPONSIBLE_USER_ID > 0 && isset($arStrUsers["arUsers"][$mf->RESPONSIBLE_USER_ID]))
 		{
 			$arrSupportEmails[] = $arStrUsers["arUsers"][$mf->RESPONSIBLE_USER_ID]["EMAIL"];
 
-			// из группы ответсвенного, выбираем всех пользователей кто имеет доступ к рассылке
+			// �� ������ �������������, �������� ���� ������������� ��� ����� ������ � ��������
 			$rs = CTicket::GetResponsibleList($mf->RESPONSIBLE_USER_ID, $I_Email, $U_Email, "Y");
 			while($arr0 = $rs->Fetch()) if(strlen($arr0['EMAIL']) > 0)
 			{
@@ -2188,7 +1993,7 @@ class CAllTicket
 		$mf->SUPPORT_EMAIL = count($arrSupportEmails) > 0 ? TrimEx(implode(",", array_unique($arrSupportEmails)), ",") : "";
 
 
-		// удалим продублированные адреса из макроса #SUPPORT_ADMIN_EMAIL#
+		// ������ ���������������� ������ �� ������� #SUPPORT_ADMIN_EMAIL#
 		if(count($arrSupportEmails) > 0)
 		{
 			foreach($arrSupportEmails as $e)
@@ -2205,7 +2010,7 @@ class CAllTicket
 		else
 		{
 			$peurl = COption::GetOptionString("support", "SUPPORT_DIR");
-			$peurl = str_replace("#LANG_DIR#", $v->arrSite["DIR"], $peurl); // совместимость
+			$peurl = str_replace("#LANG_DIR#", $v->arrSite["DIR"], $peurl); // �������������
 			$peurl = str_replace("#SITE_DIR#", $v->arrSite["DIR"], $peurl);
 			$peurl = str_replace("\\", "/", $peurl);
 			$peurl = str_replace("//", "/", $peurl);
@@ -2384,7 +2189,7 @@ class CAllTicket
 		$arEventFields_author = $mf->ToArray(CSupportTableFields::ALL); //, array(CSupportTableFields::NOT_NULL)
 		$arEventFields_support = $arEventFields_author;
 
-		// отсылаем письмо автору
+		// �������� ������ ������
 		if($v->SEND_EMAIL_TO_AUTHOR == "Y" && ($v->isNew || strlen($v->change) > 0))
 		{
 			$EventType = "TICKET_NEW_FOR_AUTHOR";
@@ -2404,7 +2209,7 @@ class CAllTicket
 			if ($arEventFields_author) CEvent::Send($EventType, $v->arrSite["ID"], $arEventFields_author);
 		}
 
-		// отсылаем письмо техподдержке
+		// �������� ������ ������������
 		if($v->SEND_EMAIL_TO_TECHSUPPORT == "Y" && ($v->isNew || strlen($v->change) > 0 || strlen($v->change_hidden) > 0))
 		{
 			$EventType = "TICKET_NEW_FOR_TECHSUPPORT";
@@ -2425,16 +2230,16 @@ class CAllTicket
 		global $DB;
 		$err_mess = (CAllTicket::err_mess()) . "<br>Function: Set_getResponsibleUser<br>Line: ";
 		
-		// если обращение создается сотрудником техподдержки, администратором или демо пользователем
+		// ���� ��������� ��������� ����������� ������������, ��������������� ��� ���� �������������
 		$f->RESPONSIBLE_USER_ID = null;
 		if($v->bSupportTeam || $v->bAdmin || $v->Demo) $f->FromArray($arFields, "RESPONSIBLE_USER_ID", array(CSupportTableFields::MORE0));
 		if($f->RESPONSIBLE_USER_ID == null) unset($arFields["RESPONSIBLE_USER_ID"]);
 			
 		/*
-		получим идентификаторы события и ответственного в зависимости от
-			1) Категории
-			2) Критичности
-			3) Источника
+		������� �������������� ������� � �������������� � ����������� ��
+			1) ���������
+			2) �����������
+			3) ���������
 		*/
 		$strSql = "
 			SELECT ID, C_TYPE, RESPONSIBLE_USER_ID, EVENT1, EVENT2, EVENT3
@@ -2450,10 +2255,10 @@ class CAllTicket
 		$v->category_set = false;
 		while($zr = $z->Fetch())
 		{
-			// если
-			//    1) ответственный определен в справочнике
-			//    2) до сих пор он не был определен
-			//    3) не был задан явно пользователем имеющим на это права
+			// ����
+			//    1) ������������� ��������� � �����������
+			//    2) �� ��� ��� �� �� ��� ���������
+			//    3) �� ��� ����� ���� ������������� ������� �� ��� �����
 			if ($zr["C_TYPE"]=="C")
 			{
 				$v->T_EVENT1 = trim($zr["EVENT1"]);
@@ -2470,10 +2275,10 @@ class CAllTicket
 		}
 		
 		
-		// если ответственный явно не определен то
+		// ���� ������������� ���� �� ��������� ��
 		if($f->RESPONSIBLE_USER_ID == null)
 		{
-			// ответственный из настроек SLA
+			// ������������� �� �������� SLA
 			$rsSLA = CTicketSLA::GetByID($f->SLA_ID);
 
 			if($rsSLA !== false && $arSLA = $rsSLA->Fetch())
@@ -2485,10 +2290,10 @@ class CAllTicket
 			}
 		}
 		
-		// ответственный из настроек модуля
+		// ������������� �� �������� ������
 		if ($f->RESPONSIBLE_USER_ID == null)
 		{
-			// берем из настроек модуля ответственного по умолчанию
+			// ����� �� �������� ������ �������������� �� ���������
 			$RU_ID = intval(COption::GetOptionString("support", "DEFAULT_RESPONSIBLE_ID"));
 			$f->RESPONSIBLE_USER_ID = $RU_ID;
 		}
@@ -2502,7 +2307,7 @@ class CAllTicket
 		{
 			$slaID = $arFields['SLA_ID'];
 		}
-		// получение купона
+		// ��������� ������
 		if(array_key_exists('COUPON', $arFields) && strlen($arFields['COUPON']) > 0)
 		{
 			$v->bActiveCoupon = CSupportSuperCoupon::UseCoupon($arFields['COUPON']);
@@ -2525,7 +2330,7 @@ class CAllTicket
 					return false;
 			}
 		}
-		// получаем SLA
+		// �������� SLA
 		if($slaID > 0)
 		{
 			//$f->FromArray($arFields, "SLA_ID", array(CSupportTableFields::MORE0));
@@ -2566,7 +2371,7 @@ class CAllTicket
 		
 		$v->newSLA = false;
 		
-		// заголовок и сообщение - обязательные поля для нового обращения
+		// ��������� � ��������� - ������������ ���� ��� ������ ���������
 		if($v->isNew)
 		{
 			if(strlen($arFields["TITLE"]) <= 0)
@@ -2599,7 +2404,7 @@ class CAllTicket
 			}
 		}
 		
-		// установка прав
+		// ��������� ����
 		$v->bAdmin = $v->bSupportTeam = $v->bSupportClient = $v->bDemo = $v->bOwner = false;
 		if($v->CHECK_RIGHTS == "Y")
 		{
@@ -2619,7 +2424,7 @@ class CAllTicket
 		if(!$v->bAdmin && !$v->bSupportTeam && !$v->bSupportClient) return false;
 		if (!$v->bAdmin && !$v->bSupportTeam && ($v->bDemo && !$v->bOwner)) return false;
 		
-		// Это спам?
+		// ��� ����?
 		$f->FromArray($arFields, "IS_SPAM");
 		
 		$v->bActiveCoupon = false;
@@ -2627,13 +2432,13 @@ class CAllTicket
 		$f->FromArray($_SESSION, array("MODIFIED_GUEST_ID" => "SESS_GUEST_ID"), array(CSupportTableFields::MORE0));
 		$f->FromArray($arFields, "OWNER_USER_ID,OWNER_SID,HOLD_ON", array(CSupportTableFields::MORE0, CSupportTableFields::NOT_EMTY_STR));
 		
-		// получим SITE_ID
+		// ������� SITE_ID
 		if(strlen($arFields["SITE_ID"]) > 0) $f->SITE_ID = $arFields["SITE_ID"];
 		elseif(strlen($arFields["SITE"]) > 0) $f->SITE_ID = $arFields["SITE"];
-		elseif(strlen($arFields["LANG"]) > 0) $f->SITE_ID = $arFields["LANG"];  // совместимость со старой версией
+		elseif(strlen($arFields["LANG"]) > 0) $f->SITE_ID = $arFields["LANG"];  // ������������� �� ������ �������
 		else $f->SITE_ID = SITE_ID;
 		
-		// получаем ID записей справочника по SID
+		// �������� ID ������� ����������� �� SID
 		$arr = array(
 			"CATEGORY"			=> "C",
 			"CRITICALITY"		=> "K",
@@ -2655,66 +2460,6 @@ class CAllTicket
 		return array("v" => $v, "f" => $f);
 	}
 	
-	
-	/**
-	* <p>Метод создает новое обращение, либо модифицирует существующее в случае указания во втором параметре ID сообщения. Возвращает ID созданного обращения, либо ID модифицированного обращения. Метод нестатический.</p>
-	*
-	*
-	* @param array $arFields  Массив параметров обращения. В массиве допустимы следующие
-	* индексы: 	<ul> <li>*TITLE - заголовок обращения (обязательное поле при
-	* создании нового обращения) 		</li> <li>MESSAGE - тело сообщения
-	* (обязательное поле при создании нового обращения) 		</li> <li>IMAGE -
-	* массив описывающий загружаемое изображение; в массиве
-	* допустимые следующие индексы: 			<ul> <li>name - исходное имя
-	* загружаемого файла</li> 				<li>type - тип загружаемого файла (например:
-	* "image/gif")</li> 				<li>tmp_name - имя временного файла на сервере</li> 				<li>error -
-	* код ошибки ("0" - нет ошибок)</li> 				<li>size - размер загружаемого
-	* файла</li> 				<li>MODULE_ID - идентификатор модуля ("support")</li>				 			</ul> </li>
-	* <li>*OWNER_SID - символьный код автора обращения; можно указать любое
-	* значение идентифицирующее автора обращения - email, телефон, адрес и
-	* т.п. 		</li> <li>*OWNER_USER_ID - ID автора обращения (по умолчанию - ID текущего
-	* пользователя) 		</li> <li>*SOURCE_SID - символьный код источника обращения
-	* (по умолчанию - "web") 		</li> <li>*CREATED_MODULE_NAME - идентификатор модуля из
-	* которого создаётся обращение (по умолчанию - "support") 		</li>
-	* <li>**MESSAGE_AUTHOR_SID - символьный код автора сообщения (можно указать
-	* любое значение идентифицирующее автора сообщения - email, телефон,
-	* адрес и т.п.) 		</li> <li>**MESSAGE_AUTHOR_USER_ID - ID пользователя - автора
-	* сообщения (по умолчанию - ID текущего пользователя) 		</li>
-	* <li>**MESSAGE_SOURCE_SID - символьный код источника сообщения (по умолчанию -
-	* "web") 		</li> <li>**MODIFIED_MODULE_NAME - идентификатор модуля из которого
-	* обращение модифицируется (по умолчанию - "support") 		</li> <li>**HIDDEN - "Y" -
-	* сообщение будет добавлено как скрытое и будет видимо только
-	* сотрудникам техподдержки; "N" - сообщение будет добавлено видимым
-	* как для автора обращения так и для сотрудников техподдержки (по
-	* умолчанию) 		</li> <li>CATEGORY_SID - символьный код категории                 </li>
-	* <li>CATEGORY_ID - ID категории.</li>  		<li>CRITICALITY_SID - символьный код
-	* критичности 		</li> <li>STATUS_SID - символьный код статуса 		</li> <li>MARK_ID - ID
-	* оценки ответов 		</li> <li>RESPONSIBLE_USER_ID - ID пользователя ответственного
-	* за обращение 		</li> <li>SUPPORT_COMMENTS - комментарий видимый только
-	* пользователям входящим в группу техподдержки 		</li> <li>CLOSE - "Y" -
-	* обращение закрыть; "N" - обращение открыть 		</li> <li>AUTO_CLOSE_DAYS -
-	* количество дней по истечении которых автоматически закрыть
-	* обращение если за это время от автора не поступило сообщения 	</li>
-	* </ul> 	* - данное поле может быть использовано для создания новых
-	* обращений 	<br>	** - данное поле используется только при модификации
-	* существующих обращений.
-	*
-	* @param int &$MESSAGE_ID  ID добавленного сообщения. Необязательный параметр.
-	*
-	* @param int $TICKET_ID = "" ID модифицируемого обращения.
-	*
-	* @param (1) $CHECK_RIGHTS = "Y" Флаг необходимости проверки прав текущего пользователя: "Y" -
-	* необходимо проверить права текущего пользователя под которым
-	* создаётся обращение либо модифицируется; "N" - обращения создавать
-	* и модифицировать независимо от прав текущего пользователя.
-	* Необязательный параметр. Значение по умолчанию - "Y".
-	*
-	* @return int 
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticket/set.php
-	* @author Bitrix
-	*/
 	public static function Set($arFields, &$MID, $id="", $checkRights="Y", $sendEmailToAuthor="Y", $sendEmailToTechsupport="Y")
 	{						
 		global $DB, $APPLICATION, $USER;
@@ -2727,7 +2472,7 @@ class CAllTicket
 		/** @var CSupportTableFields $f */
 		$f = $v0["f"]; /* ID, SITE_ID, MODIFIED_GUEST_ID, OWNER_USER_ID, OWNER_SID, HOLD_ON, IS_SPAM */
 
-		// если модифицируем обращение то
+		// ���� ������������ ��������� ��
 		if(!$v->isNew)
 		{
 			unset($arFields['COUPON']);
@@ -2735,7 +2480,7 @@ class CAllTicket
 			$arFields = CTicket::ExecuteEvents('OnBeforeTicketUpdate', $arFields, false);
 			$v->closeDate = (isset($arFields["CLOSE"]) && $arFields["CLOSE"] == "Y"); //$close
 			
-			// запоминаем предыдущие важные значения
+			// ���������� ���������� ������ ��������
 			$v->arrOldFields = array();
 			$arr = array(
 				"TITLE" => "T.TITLE",
@@ -2826,7 +2571,7 @@ class CAllTicket
 				$f->REOPEN = "Y";
 			}
 				
-			// Если есть что и мы Аднины или из группы ТП, запишем в базу
+			// ���� ���� ��� � �� ������ ��� �� ������ ��, ������� � ����
 			$v->FirstUpdateRes = false;
 			
 			if($v->bSupportTeam || $v->bAdmin)
@@ -2841,7 +2586,7 @@ class CAllTicket
 					$v->SupportTeamUpdateRes = $DB->Update("b_ticket", $arFields_i, "WHERE ID='" . $f->ID . "'", $err_mess . __LINE__); //$rows1
 					$GLOBALS["USER_FIELD_MANAGER"]->Update("SUPPORT", $f->ID, $arFields);
 					
-					// если указана отметка о спаме то установим отметку о спаме
+					// ���� ������� ������� � ����� �� ��������� ������� � �����
 					if (strlen($f->IS_SPAM) > 0) CTicket::MarkAsSpam($f->ID, $f->IS_SPAM, $v->CHECK_RIGHTS);
 					
 					$v->newSLA = (isset($arFields_i["SLA_ID"]) && $v->arrOldFields["SLA_ID"] != $arFields_i["SLA_ID"]);
@@ -2863,7 +2608,7 @@ class CAllTicket
 				}
 			}
 			
-			// поля для записи лога
+			// ���� ��� ������ ����
 			/*$arFields_log = array(
 				"LOG"							=> "Y",
 				"MESSAGE_CREATED_USER_ID"		=> $MODIFIED_USER_ID,
@@ -2880,32 +2625,32 @@ class CAllTicket
 				"MESSAGE_SOURCE_ID"				=> $f->SOURCE_ID
 			);
 			
-			// если необходимо соблюдать права то
+			// ���� ���������� ��������� ����� ��
 			if($v->CHECK_RIGHTS == "Y")
 			{
-				// если update техподдержки не прошел то
+				// ���� update ������������ �� ������ ��
 				if(intval($v->SupportTeamUpdateRes) <= 0)
 				{
-					// убираем из массива исходных значений то что может менять только техподдержка
+					// ������� �� ������� �������� �������� �� ��� ����� ������ ������ ������������
 					unset($v->arrOldFields["RESPONSIBLE_USER_ID"]);
 					unset($v->arrOldFields["SLA_ID"]);
 					unset($v->arrOldFields["CATEGORY_ID"]);
 					unset($v->arrOldFields["DIFFICULTY_ID"]);
 					unset($v->arrOldFields["STATUS_ID"]);
 				}
-				// если update автора не прошел то
+				// ���� update ������ �� ������ ��
 				if (intval($v->SupportClientUpdateRes) <=0)
 				{
-					// убираем из массива исходных значений то что может менять только автор
+					// ������� �� ������� �������� �������� �� ��� ����� ������ ������ �����
 					unset($v->arrOldFields["MARK_ID"]);
 				}
 			}
 			
-			// если состоялся один из updat'ов то
+			// ���� ��������� ���� �� updat'�� ��
 			if(intval($v->SupportTeamUpdateRes) > 0 || intval($v->SupportClientUpdateRes) > 0)
 			{
 				
-				// добавляем сообщение
+				// ��������� ���������
 				$arFields["MESSAGE_CREATED_MODULE_NAME"] = $arFields["MODIFIED_MODULE_NAME"];
 				if(is_set($arFields, "IMAGE")) $arFields["FILES"][] = $arFields["IMAGE"];
 				$arFiles = null;
@@ -2928,16 +2673,16 @@ class CAllTicket
 				//CTicket::UpdateLastParams2($f->ID, $dateType);
 				CTicket::UpdateLastParamsN($f->ID, $dateType, true, true);
 
-				/*// если обращение закрывали то
+				/*// ���� ��������� ��������� ��
 				if($v->closeDate)
 				{
-					// удалим агентов-напоминальщиков и обновим параметры обращения
+					// ������ �������-��������������� � ������� ��������� ���������
 					CTicketReminder::Remove($f->ID);
 				}*/
 				
 				if(is_array($v->arrOldFields) && is_array($arFields))
 				{
-					// определяем что изменилось
+					// ���������� ��� ����������
 					$v->arChange = array();
 					if ($MID > 0)
 					{
@@ -2993,7 +2738,7 @@ class CAllTicket
 						}
 					}
 					
-					// получим текущие значения обращения
+					// ������� ������� �������� ���������
 					CTimeZone::Disable();
 					$z = CTicket::GetByID($f->ID, $f->SITE_ID, "N");
 					CTimeZone::Enable();
@@ -3044,7 +2789,7 @@ class CAllTicket
 
 			$f->DATE_CREATE = time() + CTimeZone::GetOffset();
 			
-			// если обращение создается сотрудником техподдержки, администратором или демо пользователем
+			// ���� ��������� ��������� ����������� ������������, ��������������� ��� ���� �������������
 			if($v->bSupportTeam || $v->bAdmin || $v->Demo)
 			{
 				$f->FromArray($arFields, "SUPPORT_COMMENTS", array(CSupportTableFields::NOT_EMTY_STR));
@@ -3058,7 +2803,7 @@ class CAllTicket
 			self::Set_getResponsibleUser($v, $f, $arFields);
 			// $f +RESPONSIBLE_USER_ID  $v +T_EVENT1 +T_EVENT2 +T_EVENT3
 			
-			// поля для записи лога
+			// ���� ��� ������ ����
 			$v->arFields_log = array(
 				"LOG"							=> "Y",
 				"MESSAGE_CREATED_USER_ID"		=> $f->CREATED_USER_ID,
@@ -3097,11 +2842,11 @@ class CAllTicket
 				//CTicket::UpdateLastParams2($f->ID, array("EVENT"=>array(CTicket::ADD)));
 				CTicket::UpdateLastParamsN($f->ID, array("EVENT"=>array(CTicket::ADD)), true, true);
 				
-				// если указана отметка о спаме то установим отметку о спаме
+				// ���� ������� ������� � ����� �� ��������� ������� � �����
 				if (strlen($f->IS_SPAM) > 0) CTicket::MarkAsSpam($f->ID, $f->IS_SPAM, $v->CHECK_RIGHTS);
 				
 				/********************************************
-					$nf - Заново прочитанные из базы поля
+					$nf - ������ ����������� �� ���� ����
 				********************************************/
 
 				CTimeZone::Disable();
@@ -3117,7 +2862,7 @@ class CAllTicket
 
 					self::Set_sendMails($nf, $v, $arFields);
 
-					// создаем событие в модуле статистики
+					// ������� ������� � ������ ����������
 					if(CModule::IncludeModule("statistic"))
 					{
 						if(!$v->category_set)
@@ -3132,7 +2877,7 @@ class CAllTicket
 					
 				}
 			}
-			// !!! ПРОВЕРИТЬ $arFields ТОЧНО ЛИ ВСЕ $arFields[..] = .. ТАКИЕ ЖЕ КАК В ОРИГИНАЛЕ !!!
+			// !!! ��������� $arFields ����� �� ��� $arFields[..] = .. ����� �� ��� � ��������� !!!
 			$arFields['ID'] = $f->ID;
 			$arFields['MID'] = $MID;
 			CTicket::ExecuteEvents('OnAfterTicketAdd', $arFields, true);
@@ -3142,7 +2887,7 @@ class CAllTicket
 	}
 
 	/***********************************************
-			Старые функции для совместимости
+			������ ������� ��� �������������
 	***********************************************/
 
 	public static function GetFUA($site_id)

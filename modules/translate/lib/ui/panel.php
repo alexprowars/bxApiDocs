@@ -169,7 +169,7 @@ class Panel
 
 					if (Localization\Translation::useTranslationRepository() && in_array(LANGUAGE_ID, Translate\Config::getTranslationRepositoryLanguages()))
 					{
-						if (strpos($langFile, Localization\Translation::getTranslationRepositoryPath()) === 0)
+						if (mb_strpos($langFile, Localization\Translation::getTranslationRepositoryPath()) === 0)
 						{
 							$langFile = str_replace(
 								Localization\Translation::getTranslationRepositoryPath().'/'.LANGUAGE_ID.'/',
@@ -180,7 +180,7 @@ class Panel
 					}
 					if (Localization\Translation::getDeveloperRepositoryPath() !== null)
 					{
-						if (strpos($langFile, Localization\Translation::getDeveloperRepositoryPath()) === 0)
+						if (mb_strpos($langFile, Localization\Translation::getDeveloperRepositoryPath()) === 0)
 						{
 							$langFile = str_replace(
 								Localization\Translation::getDeveloperRepositoryPath(). '/',
@@ -189,7 +189,7 @@ class Panel
 							);
 						}
 					}
-					if (strpos($langFile, Main\Application::getDocumentRoot()) === 0)
+					if (mb_strpos($langFile, Main\Application::getDocumentRoot()) === 0)
 					{
 						$langFile = str_replace(
 							Main\Application::getDocumentRoot(). '/',
@@ -203,15 +203,15 @@ class Panel
 					}
 
 					if(
-						(strpos($langFile, "/menu") !== false) ||
-						(strpos($langFile, "/classes") !== false) ||
-						(strpos($langFile, "tools.") !== false) ||
-						(strpos($langFile, "/include.") !== false) ||
-						(strpos($langFile, "menu_template.php") !== false) ||
-						(strpos($langFile, ".menu.") !== false) ||
-						(strpos($langFile, "/top_panel.php") !== false) ||
-						(strpos($langFile, "prolog_main_admin.php") !== false) ||
-						(strpos($_SERVER["REQUEST_URI"], "/iblock_") === false && strpos($langFile, "/modules/iblock/lang/")!==false)
+						(mb_strpos($langFile, "/menu") !== false) ||
+						(mb_strpos($langFile, "/classes") !== false) ||
+						(mb_strpos($langFile, "tools.") !== false) ||
+						(mb_strpos($langFile, "/include.") !== false) ||
+						(mb_strpos($langFile, "menu_template.php") !== false) ||
+						(mb_strpos($langFile, ".menu.") !== false) ||
+						(mb_strpos($langFile, "/top_panel.php") !== false) ||
+						(mb_strpos($langFile, "prolog_main_admin.php") !== false) ||
+						(mb_strpos($_SERVER["REQUEST_URI"], "/iblock_") === false && mb_strpos($langFile, "/modules/iblock/lang/")!==false)
 					)
 					{
 						$lowPriorityLangFiles[] = $langFile;
@@ -256,8 +256,8 @@ class Panel
 							foreach ($messages as $code => $phrase)
 							{
 								if (
-									$lookForCode && strpos($code, $searchString) !== false ||
-									strpos($phrase, $searchString) !== false
+									$lookForCode && mb_strpos($code, $searchString) !== false ||
+									mb_strpos($phrase, $searchString) !== false
 								)
 								{
 									$found = true;

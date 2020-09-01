@@ -147,7 +147,7 @@ class Base
 		catch (\Exception $exception)
 		{
 			throw new SystemException(
-				"Wrong Rest Response. ".$endPoint.$method."\n\n".substr($result, 0, 1024)
+				"Wrong Rest Response. ".$endPoint.$method."\n\n".mb_substr($result, 0, 1024)
 			);
 		}
 

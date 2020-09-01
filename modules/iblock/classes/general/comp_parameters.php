@@ -403,7 +403,7 @@ class CIBlockParameters
 				{
 					$result["properties"]["MENU"][] = array(
 						"TEXT" => $property["FIELD_NAME"],
-						"ONCLICK" => "$action_function('{=this.property.".strtolower(substr($property["FIELD_NAME"], 3))."}', '$menuID', '$inputID')",
+						"ONCLICK" => "$action_function('{=this.property.".mb_strtolower(mb_substr($property["FIELD_NAME"], 3))."}', '$menuID', '$inputID')",
 					);
 				}
 			}
@@ -1014,27 +1014,6 @@ class CIBlockParameters
 		return $arResult;
 	}
 
-	
-	/**
-	* <p>Проверяет значение параметра. Метод статический.</p>
-	*
-	*
-	* @param  $value  Проверяемое значение
-	*
-	* @return mixed <p>Возвращает <i>true</i>, если значение не может быть приведено к
-	* <i>false</i>.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $arCodes = array('', 0, 'ARTICUL');
-	* $arCodes = array_filter($arCodes, 'CIBlockParameters::checkParamValues');После этого в $arCodes будет выглядеть так:$arCodes = array(2 =&gt; 'ARTICUL');
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockparameters/checkparamvalues.php
-	* @author Bitrix
-	*/
 	public static function checkParamValues($value)
 	{
 		return ($value !== null && $value !== '' && $value !== false);

@@ -44,18 +44,18 @@ class Chat extends \Bitrix\Landing\Source\DataLoader
 			is_string($filter['type'])
 		)
 		{
-			$type = strtolower(trim($filter['type']));
+			$type = mb_strtolower(trim($filter['type']));
 		}
 
 		// ID of user chat or local ID of group chat
 		if (
 			isset($filter['attributeData']) &&
 			is_string($filter['attributeData']) &&
-			strpos($filter['attributeData'], '@')
+			mb_strpos($filter['attributeData'], '@')
 		)
 		{
 			[$attrSelector, $attrCode] = explode('@', $filter['attributeData']);
-			$attrCode = strtolower($attrCode);
+			$attrCode = mb_strtolower($attrCode);
 			$resultNode = $dom->querySelector($attrSelector);
 			if ($resultNode)
 			{
@@ -124,11 +124,11 @@ class Chat extends \Bitrix\Landing\Source\DataLoader
 			$return &&
 			isset($filter['attributeButton']) &&
 			is_string($filter['attributeButton']) &&
-			strpos($filter['attributeButton'], '@')
+			mb_strpos($filter['attributeButton'], '@')
 		)
 		{
 			[$attrSelector, $attrCode] = explode('@', $filter['attributeButton']);
-			$attrCode = strtolower($attrCode);
+			$attrCode = mb_strtolower($attrCode);
 			$resultNode = $dom->querySelector($attrSelector);
 			if ($resultNode)
 			{

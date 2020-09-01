@@ -101,6 +101,7 @@ abstract class OAuth
 	 * Returns packed metadata for instance
 	 *
 	 * @return string
+	 * @throws Main\ObjectException
 	 */
 	public function buildMeta()
 	{
@@ -447,7 +448,7 @@ abstract class OAuth
 	 * Returns service name
 	 *
 	 * @throws \Bitrix\Main\ObjectException
-	 * @return void
+	 * @return string
 	 */
 	public static function getServiceName()
 	{
@@ -457,7 +458,7 @@ abstract class OAuth
 	/**
 	 * Handles service response
 	 *
-	 * @param string $state Response data.
+	 * @param array $state Response data.
 	 * @return void
 	 */
 	public function handleResponse($state)

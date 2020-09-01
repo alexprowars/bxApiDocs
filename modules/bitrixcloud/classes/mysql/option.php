@@ -7,7 +7,7 @@ class CBitrixCloudOption extends CAllBitrixCloudOption
 	 * @return void
 	 *
 	 */
-	static public function __construct($name)
+	public function __construct($name)
 	{
 		parent::__construct($name);
 	}

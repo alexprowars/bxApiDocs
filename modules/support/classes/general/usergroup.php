@@ -3,7 +3,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CSupportUserGroup
 {
-	public static function GetList($arOrder = array(), $arFilter = array())
+	function GetList($arOrder = array(), $arFilter = array())
 	{
 		global $DB;
 
@@ -80,7 +80,7 @@ class CSupportUserGroup
 		return $DB->Query($strQuery, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 	}
 
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB, $APPLICATION;
 		if ($this->CheckFields($arFields))
@@ -90,7 +90,7 @@ class CSupportUserGroup
 		return false;
 	}
 
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB, $APPLICATION;
 		$ID = intval($ID);
@@ -103,7 +103,7 @@ class CSupportUserGroup
 		return false;
 	}
 
-	public static function CheckFields(&$arFields, $ID = 0)
+	function CheckFields(&$arFields, $ID = 0)
 	{
 		global $APPLICATION;
 		if ($ID > 0)
@@ -137,7 +137,7 @@ class CSupportUserGroup
 		return true;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -148,22 +148,22 @@ class CSupportUserGroup
 		}
 	}
 
-	public static function GetUserGroupList($arOrder = array(), $arFilter = array())
+	function GetUserGroupList($arOrder = array(), $arFilter = array())
 	{
 		return CSupportUser2UserGroup::GetList($arOrder, $arFilter);
 	}
 
-	public static function AddUserGroup($arFields)
+	function AddUserGroup($arFields)
 	{
 		return CSupportUser2UserGroup::Add($arFields);
 	}
 
-	public static function UpdateUserGroup($groupID, $userID, $arFields)
+	function UpdateUserGroup($groupID, $userID, $arFields)
 	{
 		return CSupportUser2UserGroup::Update($groupID, $userID, $arFields);
 	}
 
-	public static function DeleteUserGroup($groupID, $userID)
+	function DeleteUserGroup($groupID, $userID)
 	{
 		return CSupportUser2UserGroup::Delete($groupID, $userID);
 	}

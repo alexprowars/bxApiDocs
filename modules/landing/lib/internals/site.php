@@ -203,7 +203,7 @@ class SiteTable extends Entity\DataManager
 	protected static function customizeControllerError(SystemException $ex)
 	{
 		$code = str_replace(' ', '', $ex->getMessage());
-		$code = strtoupper($code);
+		$code = mb_strtoupper($code);
 		$message = Loc::getMessage('LANDING_CONTROLLER_ERROR_' . $code);
 		$message = $message ? $message : $ex->getMessage();
 
@@ -227,7 +227,7 @@ class SiteTable extends Entity\DataManager
 			(
 				$isB24Domain && preg_match_all($disableMask, $domainName)
 				||
-				!$isB24Domain && strpos($domainName, 'bitrix') !== false
+				!$isB24Domain && mb_strpos($domainName, 'bitrix') !== false
 			)
 		)
 		{
@@ -626,7 +626,7 @@ class SiteTable extends Entity\DataManager
 				$primary
 				? array(
 					'filter' => array(
-						'!ID' => $primary['ID'],
+						'!ID' => $primary['ID']
 					),
 					'type' => $fields['TYPE']
 				)
@@ -651,7 +651,7 @@ class SiteTable extends Entity\DataManager
 		if (array_key_exists('CODE', $fields))
 		{
 			$fields['CODE'] = trim(trim(trim($fields['CODE']), '/'));
-			if (strpos($fields['CODE'], '/') !== false)
+			if (mb_strpos($fields['CODE'], '/') !== false)
 			{
 				$result->unsetFields($unsetFields);
 				$result->setErrors(array(
@@ -680,7 +680,7 @@ class SiteTable extends Entity\DataManager
 			{
 				$fields['CODE'] = 'site' . $fields['CODE'];
 			}
-			$fields['CODE'] = substr($fields['CODE'], 0, 253);
+			$fields['CODE'] = mb_substr($fields['CODE'], 0, 253);
 			$domainId = null;
 			// get domain id if no exists
 			if (!array_key_exists('DOMAIN_ID', $fields) && $primary)
@@ -728,7 +728,7 @@ class SiteTable extends Entity\DataManager
 		)
 		{
 			$domainId = 0;
-			$domainName = strtolower(trim($fields['DOMAIN_ID']));
+			$domainName = mb_strtolower(trim($fields['DOMAIN_ID']));
 			$domainNameOld = '';
 
 			// fix for full name
@@ -786,7 +786,7 @@ class SiteTable extends Entity\DataManager
 					));
 					if ($row = $res->fetch())
 					{
-						$domainNameOld = strtolower($row['DOMAIN_NAME']);
+						$domainNameOld = mb_strtolower($row['DOMAIN_NAME']);
 						$domainId = $row['DOMAIN_ID'];
 					}
 				}

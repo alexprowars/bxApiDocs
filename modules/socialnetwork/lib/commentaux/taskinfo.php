@@ -48,7 +48,7 @@ final class TaskInfo extends Base
 		if (
 			isset($params['auxData'])
 			&& isset($params['text'])
-			&& strlen($params['text']) > 0
+			&& $params['text'] <> ''
 		)
 		{
 			$result = $params['text'];

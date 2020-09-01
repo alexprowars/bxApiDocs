@@ -6,7 +6,7 @@ Class CIdeaManagmentIdea
 	private static $CategoryIB = false;
 	private static $instance = null;
 
-	public function __construct($IdeaId = false)
+	function __construct($IdeaId = false)
 	{
 		$this->SetId($IdeaId);
 	}
@@ -33,7 +33,7 @@ Class CIdeaManagmentIdea
 		return $this;
 	}
 
-	static public function SetCategoryListID($ID)
+	public function SetCategoryListID($ID)
 	{
 		if(intval($ID)>0)
 			self::$CategoryIB = intval($ID);
@@ -41,7 +41,7 @@ Class CIdeaManagmentIdea
 		return $this;
 	}
 
-	static public function GetCategoryListID()
+	public function GetCategoryListID()
 	{
 		return (int)self::$CategoryIB;
 	}
@@ -281,8 +281,8 @@ Class CIdeaManagmentIdea
 	}
 
 	//%TODO%
-	static public function BindDuplicate(){}
+	public function BindDuplicate(){}
 	//%TODO%
-	static public function UnBindDuplicate(){}
+	public function UnBindDuplicate(){}
 }
 ?>

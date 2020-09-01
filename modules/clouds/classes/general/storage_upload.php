@@ -1,4 +1,4 @@
-<?
+<?php
 /*.
 	require_module 'standard';
 	require_module 'pcre';
@@ -21,10 +21,10 @@ class CCloudStorageUpload
 	 * @param string $filePath
 	 * @return void
 	*/
-	public function __construct($filePath)
+	function __construct($filePath)
 	{
 		$this->_filePath = $filePath;
-		$this->_ID = "1".substr(md5($filePath), 1);
+		$this->_ID = "1".mb_substr(md5($filePath), 1);
 	}
 
 	/**
@@ -69,7 +69,7 @@ class CCloudStorageUpload
 	/**
 	 * @return void
 	*/
-	static public function DeleteOld()
+	public function DeleteOld()
 	{
 		global $DB;
 		$DB->Query("DELETE FROM b_clouds_file_upload WHERE TIMESTAMP_X < ".$DB->CharToDateFunction(ConvertTimeStamp(time()-24*60*60)));
@@ -81,7 +81,7 @@ class CCloudStorageUpload
 	 * @param string $ContentType
 	 * @return bool
 	*/
-	public function Start($bucket_id, $fileSize, $ContentType = 'binary/octet-stream', $tmpFileName = false)
+	function Start($bucket_id, $fileSize, $ContentType = 'binary/octet-stream', $tmpFileName = false)
 	{
 		global $DB;
 
@@ -103,6 +103,16 @@ class CCloudStorageUpload
 				$fileSize,
 				$ContentType
 			);
+			if (!$bStarted && $obBucket->RenewToken())
+			{
+				$bStarted = $obBucket->GetService()->InitiateMultipartUpload(
+					$obBucket->GetBucketArray(),
+					$arUploadInfo,
+					$this->_filePath,
+					$fileSize,
+					$ContentType
+				);
+			}
 
 			if($bStarted)
 			{
@@ -131,9 +141,9 @@ class CCloudStorageUpload
 	 * @param string $data
 	 * @return bool
 	*/
-	public function Next($data, $obBucket = null)
+	function Next($data, $obBucket = null)
 	{
-		global $DB;
+		global $APPLICATION;
 
 		if($this->isStarted())
 		{
@@ -141,8 +151,12 @@ class CCloudStorageUpload
 
 			if($obBucket == null)
 				$obBucket = new CCloudStorageBucket(intval($ar["BUCKET_ID"]));
+
 			if(!$obBucket->Init())
+			{
+				$APPLICATION->ThrowException(GetMessage('CLO_STORAGE_UPLOAD_ERROR', array('#errno#'=>1)));
 				return false;
+			}
 
 			$arUploadInfo = unserialize($ar["NEXT_STEP"]);
 			$bSuccess = $obBucket->GetService()->UploadPart(
@@ -151,38 +165,60 @@ class CCloudStorageUpload
 				$data
 			);
 
-			if($bSuccess)
+			if (!$this->UpdateProgress($arUploadInfo, $bSuccess))
 			{
-				$arFields = array(
-					"NEXT_STEP" => serialize($arUploadInfo),
-					"~PART_NO" => "PART_NO + 1",
-					"PART_FAIL_COUNTER" => 0,
-				);
-				$arBinds = array(
-					"NEXT_STEP" => $arFields["NEXT_STEP"],
-				);
-			}
-			else
-			{
-				$arFields = array(
-					"~PART_FAIL_COUNTER" => "PART_FAIL_COUNTER + 1",
-				);
-				$arBinds = array(
-				);
+				$APPLICATION->ThrowException(GetMessage('CLO_STORAGE_UPLOAD_ERROR', array('#errno#'=>2)));
+				return false;
 			}
 
-			$strUpdate = $DB->PrepareUpdate("b_clouds_file_upload", $arFields);
-			if ($strUpdate != "")
+			return $bSuccess;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param string $data
+	 * @param int $part_no
+	 * @return bool
+	*/
+	function Part($data, $part_no, $obBucket = null)
+	{
+		global $APPLICATION;
+
+		if($this->isStarted())
+		{
+			$ar = $this->GetArray();
+
+			if($obBucket == null)
+				$obBucket = new CCloudStorageBucket(intval($ar["BUCKET_ID"]));
+
+			if(!$obBucket->Init())
 			{
-				$strSql = "UPDATE b_clouds_file_upload SET ".$strUpdate." WHERE ID = '".$this->_ID."'";
-				if(!$DB->QueryBind($strSql, $arBinds))
-				{
-					unset($this->_cache);
-					return false;
-				}
+				$APPLICATION->ThrowException(GetMessage('CLO_STORAGE_UPLOAD_ERROR', array('#errno#'=>3)));
+				return false;
 			}
 
-			unset($this->_cache);
+			$service = $obBucket->GetService();
+			if (!is_callable(array($service, 'UploadPartNo')))
+			{
+				$APPLICATION->ThrowException(GetMessage('CLO_STORAGE_UPLOAD_ERROR', array('#errno#'=>4)));
+				return false;
+			}
+
+			$arUploadInfo = unserialize($ar["NEXT_STEP"]);
+			$bSuccess = $obBucket->GetService()->UploadPartNo(
+				$obBucket->GetBucketArray(),
+				$arUploadInfo,
+				$data,
+				$part_no
+			);
+
+			if (!$this->UpdateProgress($arUploadInfo, $bSuccess))
+			{
+				$APPLICATION->ThrowException(GetMessage('CLO_STORAGE_UPLOAD_ERROR', array('#errno#'=>5)));
+				return false;
+			}
 
 			return $bSuccess;
 		}
@@ -193,7 +229,7 @@ class CCloudStorageUpload
 	/**
 	 * @return bool
 	*/
-	public function Finish($obBucket = null)
+	function Finish($obBucket = null)
 	{
 		if($this->isStarted())
 		{
@@ -210,13 +246,15 @@ class CCloudStorageUpload
 				$arUploadInfo
 			);
 
-			if($bSuccess)
-				$this->Delete();
-
-			$this->DeleteOld();
-
 			if ($bSuccess)
 			{
+				$this->Delete();
+
+				if ($obBucket->getQueueFlag())
+				{
+					CCloudFailover::queueCopy($obBucket, $this->_filePath);
+				}
+
 				foreach(GetModuleEvents("clouds", "OnAfterCompleteMultipartUpload", true) as $arEvent)
 				{
 					ExecuteModuleEventEx($arEvent, array($obBucket, array("size" => $ar["FILE_SIZE"]), $this->_filePath));
@@ -232,7 +270,7 @@ class CCloudStorageUpload
 	/**
 	 * @return int
 	*/
-	public function GetPartCount()
+	function GetPartCount()
 	{
 		$ar = $this->GetArray();
 
@@ -245,7 +283,7 @@ class CCloudStorageUpload
 	/**
 	 * @return float
 	*/
-	public function GetPos()
+	function GetPos()
 	{
 		$ar = $this->GetArray();
 
@@ -258,7 +296,7 @@ class CCloudStorageUpload
 	/**
 	 * @return int
 	*/
-	public function getPartSize()
+	function getPartSize()
 	{
 		$ar = $this->GetArray();
 
@@ -271,7 +309,7 @@ class CCloudStorageUpload
 	/**
 	 * @return bool
 	*/
-	public function hasRetries()
+	function hasRetries()
 	{
 		$ar = $this->GetArray();
 		return is_array($ar) && (intval($ar["PART_FAIL_COUNTER"]) < $this->_max_retries);
@@ -280,7 +318,7 @@ class CCloudStorageUpload
 	/**
 	 * @return string
 	*/
-	public function getTempFileName()
+	function getTempFileName()
 	{
 		$ar = $this->GetArray();
 		if(is_array($ar))
@@ -288,5 +326,87 @@ class CCloudStorageUpload
 		else
 			return "";
 	}
+
+	/**
+	 * @param array $arUploadInfo
+	 * @param boolean $bSuccess
+	 * @return boolean
+	*/
+	protected function UpdateProgress($arUploadInfo, $bSuccess)
+	{
+		global $DB;
+
+		if ($bSuccess)
+		{
+			$arFields = array(
+				"NEXT_STEP" => serialize($arUploadInfo),
+				"~PART_NO" => "PART_NO + 1",
+				"PART_FAIL_COUNTER" => 0,
+			);
+			$arBinds = array(
+				"NEXT_STEP" => $arFields["NEXT_STEP"],
+			);
+		}
+		else
+		{
+			$arFields = array(
+				"~PART_FAIL_COUNTER" => "PART_FAIL_COUNTER + 1",
+			);
+			$arBinds = array(
+			);
+		}
+
+		$strUpdate = $DB->PrepareUpdate("b_clouds_file_upload", $arFields);
+		if ($strUpdate != "")
+		{
+			$strSql = "UPDATE b_clouds_file_upload SET ".$strUpdate." WHERE ID = '".$this->_ID."'";
+			if(!$DB->QueryBind($strSql, $arBinds))
+			{
+				unset($this->_cache);
+				return false;
+			}
+		}
+
+		unset($this->_cache);
+		return true;
+	}
+
+	public static function CleanUp($ID = '')
+	{
+		global $DB;
+		if ($ID)
+		{
+			$rs = $DB->Query("
+				SELECT ID, BUCKET_ID, NEXT_STEP
+				FROM b_clouds_file_upload
+				WHERE ID = '".$DB->ForSql($ID)."'
+			");
+		}
+		else
+		{
+			$days = COption::GetOptionInt("clouds", "multipart_upload_keep_days");
+			if ($days > 0)
+			{
+				$seconds = $days * 3600 * 24;
+				$delete_time = ConvertTimeStamp(time() - $seconds, 'FULL');
+				$rs = $DB->Query("
+					SELECT ID, BUCKET_ID, NEXT_STEP
+					FROM b_clouds_file_upload
+					WHERE TIMESTAMP_X < ".$DB->CharToDateFunction($delete_time)
+				);
+			}
+		}
+
+		while ($arBucket = $rs->Fetch())
+		{
+			$obBucket = new CCloudStorageBucket(intval($arBucket["BUCKET_ID"]));
+			if ($obBucket->Init())
+			{
+				$arUploadInfo = unserialize($arBucket["NEXT_STEP"]);
+				$service = $obBucket->GetService();
+				$service->CancelMultipartUpload($obBucket->GetBucketArray(), $arUploadInfo);
+			}
+			$DB->Query("DELETE FROM b_clouds_file_upload WHERE ID = '".$DB->ForSql($arBucket["ID"])."'");
+		}
+	}
 }
-?>

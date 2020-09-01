@@ -5,7 +5,7 @@ $GLOBALS["BLOG_USER_GROUP"] = Array();
 class CAllBlogUserGroup
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		if ((is_set($arFields, "NAME") || $ACTION=="ADD") && strlen($arFields["NAME"]) <= 0)
 		{
@@ -31,7 +31,7 @@ class CAllBlogUserGroup
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
@@ -65,7 +65,7 @@ class CAllBlogUserGroup
 		return True;
 	}
 
-	public static function SetGroupPerms($ID, $blogID, $postID = 0, $permission = BLOG_PERMS_DENY, $permsType = BLOG_PERMS_POST)
+	function SetGroupPerms($ID, $blogID, $postID = 0, $permission = BLOG_PERMS_DENY, $permsType = BLOG_PERMS_POST)
 	{
 		global $DB;
 
@@ -177,7 +177,7 @@ class CAllBlogUserGroup
 	}
 
 	//*************** SELECT *********************/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 

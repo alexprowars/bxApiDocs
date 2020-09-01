@@ -181,7 +181,7 @@ class MailContacts extends \Bitrix\Main\UI\Selector\EntityBase
 			$result = array(
 				array(
 					'id' => 'mailcontacts',
-					'name' => Loc::getMessage('MAIN_UI_SELECTOR_TAB_MAILCONTACTS'),
+					'name' => Loc::getMessage('MAIN_UI_SELECTOR_TAB_MAILCONTACTS2'),
 					'sort' => 1000
 				)
 			);
@@ -201,7 +201,7 @@ class MailContacts extends \Bitrix\Main\UI\Selector\EntityBase
 		$requestFields = (!empty($params['requestFields']) ? $params['requestFields'] : array());
 		$search = $requestFields['searchString'];
 
-		if (strlen($search) > 0)
+		if ($search <> '')
 		{
 			$currentUser = \Bitrix\Main\Engine\CurrentUser::get();
 			if (!is_null($currentUser->getId()))

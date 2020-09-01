@@ -12,6 +12,11 @@ abstract class CBPActivityCondition
 		return new $classname($data);
 	}
 
+	public function collectUsages(CBPActivity $ownerActivity)
+	{
+		return [];
+	}
+
 	public static function ValidateProperties($value = null, CBPWorkflowTemplateUser $user = null)
 	{
 		return array();
@@ -30,4 +35,3 @@ abstract class CBPActivityCondition
 		return call_user_func_array(array($classname, $method), $arParameters);
 	}
 }
-?>

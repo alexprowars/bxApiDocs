@@ -22,6 +22,10 @@ class HttpClient
 	const HTTP_PATCH = "PATCH";
 	const HTTP_DELETE = "DELETE";
 
+	const DEFAULT_SOCKET_TIMEOUT = 30;
+	const DEFAULT_STREAM_TIMEOUT = 60;
+	const DEFAULT_STREAM_TIMEOUT_NO_WAIT = 1;
+
 	const BUF_READ_LEN = 16384;
 	const BUF_POST_LEN = 131072;
 
@@ -31,8 +35,8 @@ class HttpClient
 	protected $proxyPassword;
 
 	protected $resource;
-	protected $socketTimeout = 30;
-	protected $streamTimeout = 60;
+	protected $socketTimeout = self::DEFAULT_SOCKET_TIMEOUT;
+	protected $streamTimeout = self::DEFAULT_STREAM_TIMEOUT;
 	protected $error = array();
 	protected $peerSocketName;
 
@@ -70,9 +74,9 @@ class HttpClient
 	 * @param array $options Optional array with options:
 	 *		"redirect" bool Follow redirects (default true)
 	 *		"redirectMax" int Maximum number of redirects (default 5)
-	 *		"waitResponse" bool Wait for response or disconnect just after request (default true)
+	 *		"waitResponse" bool Read the body or disconnect just after reading headers (default true)
 	 *		"socketTimeout" int Connection timeout in seconds (default 30)
-	 *		"streamTimeout" int Stream reading timeout in seconds (default 60)
+	 *		"streamTimeout" int Stream reading timeout in seconds (default 60 for waitResponse == true and 1 for waitResponse == false)
 	 *		"version" string HTTP version (HttpClient::HTTP_1_0, HttpClient::HTTP_1_1) (default "1.0")
 	 *		"proxyHost" string Proxy host name/address
 	 *		"proxyPort" int Proxy port number
@@ -357,16 +361,16 @@ class HttpClient
 
 			$this->sendRequest($queryMethod, $parsedUrl, $entityBody);
 
-			if(!$this->waitResponse)
-			{
-				$this->disconnect();
-				return true;
-			}
-
 			if(!$this->readHeaders())
 			{
 				$this->disconnect();
 				return false;
+			}
+
+			if(!$this->waitResponse)
+			{
+				$this->disconnect();
+				return true;
 			}
 
 			if($this->redirect && ($location = $this->responseHeaders->get("Location")) !== null && $location <> '')
@@ -467,14 +471,19 @@ class HttpClient
 	}
 
 	/**
-	 * Sets response waiting option.
+	 * Sets response body waiting option.
 	 *
-	 * @param bool $value If true, wait for response. If false, return just after request (default true).
+	 * @param bool $value If true, wait for response body. If false, disconnect just after reading headers (default true).
 	 * @return $this
 	 */
 	public function waitResponse($value)
 	{
 		$this->waitResponse = (bool)$value;
+		if(!$this->waitResponse)
+		{
+			$this->setStreamTimeout(self::DEFAULT_STREAM_TIMEOUT_NO_WAIT);
+		}
+
 		return $this;
 	}
 

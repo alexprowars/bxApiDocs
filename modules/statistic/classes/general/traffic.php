@@ -1,15 +1,5 @@
-<?
+<?php
 
-/**
- * <b>CTraffic</b> - класс для получения общих данных по посещаемости сайта.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/statistic/classes/ctraffic/index.php
- * @author Bitrix
- */
 class CAllTraffic
 {
 	public static function DynamicDays($date1="", $date2="", $site_id="")
@@ -46,11 +36,12 @@ class CAllTraffic
 			$stmp = MakeTimeStamp($DATE, $DATE_FORMAT=="SHORT" ? FORMAT_DATE : FORMAT_DATETIME);
 			$strWhere = "WHERE ".CStatistics::DBDateCompare("DATE_STAT", ConvertTimeStamp($stmp));
 		}
-		$HOUR = date("G",$stmp);	// 0..23
-		$WEEKDAY = date("w",$stmp);	// 0..6
-		$MONTH = date("n",$stmp);	// 1..12
 
-		static $arKeys = array("HOUR", "WEEKDAY", "MONTH");
+		$arKeys = array(
+			"HOUR" => date("G",$stmp),
+			"WEEKDAY" => date("w",$stmp),
+			"MONTH" => date("n",$stmp),
+		);
 		static $arPreKeys = array("HITS"=>0,"FAVORITES"=>0,"SESSIONS"=>0,"C_HOSTS"=>0,"GUESTS"=>0,"NEW_GUESTS"=>0);
 
 		$rows = false;
@@ -67,9 +58,9 @@ class CAllTraffic
 				}
 				else
 				{
-					foreach ($arKeys as $key)
+					foreach ($arKeys as $key => $v)
 					{
-						$k = $key."_".$name."_".${$key};
+						$k = $key."_".$name."_".$v;
 						$arFields[$k] = "$k ".($SIGN==="-"? "-": "+")." ".intval($value);
 					}
 				}
@@ -82,11 +73,13 @@ class CAllTraffic
 		if ($SITE_ID===false)
 		{
 			$SITE_ID = "";
-			if (defined("ADMIN_SECTION") && ADMIN_SECTION===true) $SITE_ID = "";
-			elseif (defined("SITE_ID")) $SITE_ID = SITE_ID;
+			if (defined("ADMIN_SECTION") && ADMIN_SECTION===true)
+				$SITE_ID = "";
+			elseif (defined("SITE_ID"))
+				$SITE_ID = SITE_ID;
 		}
 
-		if (strlen($SITE_ID)>0 && is_array($arParamSite) && count($arParamSite)>0)
+		if ($SITE_ID <> '' && is_array($arParamSite) && count($arParamSite)>0)
 		{
 			$arFields = array();
 			foreach($arParamSite as $name=>$value)
@@ -97,9 +90,9 @@ class CAllTraffic
 				}
 				else
 				{
-					foreach ($arKeys as $key)
+					foreach ($arKeys as $key => $v)
 					{
-						$k = $key."_".$name."_".${$key};
+						$k = $key."_".$name."_".$v;
 						$arFields[$k] = "$k ".($SIGN==="-"? "-": "+")." ".intval($value);
 					}
 				}
@@ -110,4 +103,3 @@ class CAllTraffic
 		return $rows;
 	}
 }
-?>

@@ -1,54 +1,17 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CPostingTemplate</b> - класс для работы с шаблонами генерации выпусков подписки.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/index.php
- * @author Bitrix
- */
 class CPostingTemplate
 {
 	var $LAST_ERROR = "";
 
 	//Get list
-	
-	/**
-	* <p>Метод возвращает список шаблонов. Метод статический.</p>
-	*
-	*
-	* @return array <p>Возвращается массив относительных путей к подкаталогам
-	* каталога <code>/bitrix/php_interface/subscribe/templates</code>.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* //get template directories
-	* $arTemplates = <b>CPostingTemplate::GetList</b>();
-	* foreach($arTemplates as $template_dir):
-	* ?&gt;
-	*     &lt;p&gt;&lt;?echo $template_dir?&gt;&lt;/p&gt;
-	* &lt;?
-	* endforeach;
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/cpostingtemplate.getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList()
 	{
 		$io = CBXVirtualIo::GetInstance();
 		$arTemplates = array();
 
-		$dir = substr(getLocalPath("php_interface/subscribe/templates", BX_PERSONAL_ROOT), 1); //cut leading slash
+		$dir = mb_substr(getLocalPath("php_interface/subscribe/templates", BX_PERSONAL_ROOT), 1); //cut leading slash
 		$abs_dir = $_SERVER["DOCUMENT_ROOT"]."/".$dir;
 		if ($io->DirectoryExists($abs_dir))
 		{
@@ -65,33 +28,6 @@ class CPostingTemplate
 		return $arTemplates;
 	}
 
-	
-	/**
-	* <p>Метод возвращает шаблон по его идентификатору (относительному пути). Метод статический.</p>
-	*
-	*
-	* @param string $path = "" Относительный путь к каталогу шаблона.
-	*
-	* @return array <p>Возвращается массив формируемый в файле description.php дополненный
-	* элементом "path" равным относительному пути к каталогу шаблона. </p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arTemplate =
-	* 	Array(
-	* 	"NAME"=&gt;"Дайджест новостей",
-	* 	"DESCRIPTION"=&gt;"Шаблон генерации дайджеста новостей."
-	* 	);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/cpostingtemplate.getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($path="")
 	{
 		global $MESS;
@@ -113,42 +49,19 @@ class CPostingTemplate
 		return $arTemplate;
 	}
 
-	
-	/**
-	* <p>Метод проверяет существование каталога шаблона. Метод статический.</p>
-	*
-	*
-	* @param string $path = "" Относительный путь к каталогу шаблона.
-	*
-	* @return bool <p>true, если каталог шаблона существует, и false в противном случае.
-	* </p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if(!CPostingTemplate::IsExists("bitrix/php_interface/subscribe/templates/news"))
-	* 	echo "Указанный шаблон не существует.";
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/cpostingtemplate.isexists.php
-	* @author Bitrix
-	*/
 	public static function IsExists($path="")
 	{
 		$io = CBXVirtualIo::GetInstance();
 
-		$dir = substr(getLocalPath("php_interface/subscribe/templates", BX_PERSONAL_ROOT), 1);
-		if (strpos($path, $dir."/") === 0)
+		$dir = mb_substr(getLocalPath("php_interface/subscribe/templates", BX_PERSONAL_ROOT), 1);
+		if (mb_strpos($path, $dir."/") === 0)
 		{
-			$template = substr($path, strlen($dir) + 1);
+			$template = mb_substr($path, mb_strlen($dir) + 1);
 			if(
-				strpos($template, "\0") !== false
-				|| strpos($template, "\\") !== false
-				|| strpos($template, "/") !== false
-				|| strpos($template, "..") !== false
+				mb_strpos($template, "\0") !== false
+				|| mb_strpos($template, "\\") !== false
+				|| mb_strpos($template, "/") !== false
+				|| mb_strpos($template, "..") !== false
 			)
 			{
 				return false;
@@ -159,38 +72,6 @@ class CPostingTemplate
 		return false;
 	}
 
-	
-	/**
-	* <p>Метод выбирает шаблон для генерации выпуска рассылки в соответствии с расписанием.</p> <p>Сначала делается выборка всех рассылок отмеченных как активные и автоматические. Затем для каждой из них выполняется проверка на необходимость генерации выпуска. Как только найдена такая рассылка для нее вызывается метод CPostingTemplate::AddPosting и на этом функция Execute завершает свою работу.</p> <p>Этот метод предназначен для вызова из сценария cron'а или агента.  Метод статический.</p>
-	*
-	*
-	* @return string <p>Если была найдена хотя бы одна активная и автоматическая
-	* рассылка, то возвращается строка для вызова из агента, иначе
-	* возвращается пустая строка.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* #!/usr/bin/php
-	* &lt;?php
-	* //Здесь необходимо указать ваш DOCUMENT_ROOT!
-	* $_SERVER["DOCUMENT_ROOT"] = "/opt/www/html";
-	* $DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
-	* define("NO_KEEP_STATISTIC", true);
-	* define("NOT_CHECK_PERMISSIONS", true);
-	* set_time_limit(0);
-	* define("LANG", "ru");
-	* require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
-	* if (CModule::IncludeModule("subscribe"))
-	*     <b>CPostingTemplate::Execute</b>();
-	* require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/cpostingtemplate.execute.php
-	* @author Bitrix
-	*/
 	public static function Execute()
 	{
 		$rubrics = CRubric::GetList(array(), array("ACTIVE"=>"Y", "AUTO"=>"Y"));
@@ -255,31 +136,6 @@ class CPostingTemplate
 		return $result;
 	}
 
-	
-	/**
-	* <p>Метод генерации выпуска на основании шаблона. Метод статический.</p>   <p>Сначала ищется и подключается языковой файл шаблона. Поиск осуществляется по пути &lt;шаблон&gt;&gt;/lang/&lt;идентификатор языка сайта к которому привязана рассылка&gt;/template.php. Затем исполняется (подключается файл &lt;шаблон&gt;&gt;/lang/template.php) шаблон. Весь вывод шаблона становится телом письма, а массив возвращаемый из него становится полями выпуска.</p> <p>Если шаблон вернул не массив, а false, то выпуск не будет создан. При этом отметка времени о формировании будет сделана.   <br></p> <p> </p> <p>Если в этом массиве есть элемент FILES, к выпуску добавляются вложения. Элементами этого массива должны быть массивы формата:   <br></p> <pre bgcolor="#323232" style="padding:5px;">Array(<br>    "name" =&gt; "название файла",<br>    "size" =&gt; "размер",<br>    "tmp_name" =&gt; "временный путь на сервере",<br>    "type" =&gt; "тип загружаемого файла");</pre>  Массив такого вида может быть сформирован с помощью функии <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/makefilearray.php">CFile::MakeFileArray</a>. <p></p>   <p>А если в этом массиве есть элемент DO_NOT_SEND и его значение равно "Y", то выпуск не будет отправлен. Может быть использовано для отладки генерации или премодерации автоматических выпусков.</p>
-	*
-	*
-	* @param array $arRubric  Массив со значениями <a
-	* href="http://dev.1c-bitrix.ru/api_help/subscribe/classes/crubric/crubric.fields.php">полей объекта
-	* "Рассылка"</a>. 	и дополнительными полями:         <br>        	SITE_ID -
-	* идентификатор сайта рассылки;         <br>        	START_TIME - время
-	* предыдущего запуска шаблона в формате "FULL" текущего сайта;         <br> 
-	*       	END_TIME - время текущего запуска шаблона в формате "FULL" текущего
-	* сайта.
-	*
-	* @return void <p>Нет.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $rubrics = CRubric::GetList(array(), array("ID"=&gt;$ID));<br>if($arRubric=$rubrics-&gt;Fetch())<br>{<br>    $arRubric["START_TIME"] = $START_TIME;<br>    $arRubric["END_TIME"] = $END_TIME;<br>    $arRubric["SITE_ID"] = $arRubric["LID"];<br>    CPostingTemplate::AddPosting($arRubric);<br>}<br>
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/subscribe/classes/cpostingtemplate/cpostingtemplate.addposting.php
-	* @author Bitrix
-	*/
 	public static function AddPosting($arRubric)
 	{
 		global $DB, $USER, $MESS;
@@ -341,7 +197,7 @@ class CPostingTemplate
 	public static function ParseDaysOfMonth($strDaysOfMonth)
 	{
 		$arResult=array();
-		if(strlen($strDaysOfMonth) > 0)
+		if($strDaysOfMonth <> '')
 		{
 			$arDoM = explode(",", $strDaysOfMonth);
 			$arFound = array();
@@ -373,7 +229,7 @@ class CPostingTemplate
 
 	public static function ParseDaysOfWeek($strDaysOfWeek)
 	{
-		if(strlen($strDaysOfWeek) <= 0)
+		if($strDaysOfWeek == '')
 			return false;
 
 		$arResult = array();
@@ -401,7 +257,7 @@ class CPostingTemplate
 
 	public static function ParseTimesOfDay($strTimesOfDay)
 	{
-		if(strlen($strTimesOfDay) <= 0)
+		if($strTimesOfDay == '')
 			return false;
 
 		$arResult = array();

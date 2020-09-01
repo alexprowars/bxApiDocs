@@ -78,7 +78,7 @@ class Bitrix24 extends Provider
 				[
 					'WORD1' => $words[0],
 					'WORD2' => isset($words[1]) ? $words[1] : '',
-					'TLDS' => array_map('strtolower', $tld)
+					'TLDS' => array_map('mb_strtolower', $tld)
 				]
 			);
 			if ($res && isset($res['result']) && is_array($res['result']))

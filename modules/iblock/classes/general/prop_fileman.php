@@ -1,22 +1,31 @@
 <?
-IncludeModuleLangFile(__FILE__);
+use Bitrix\Main\Localization\Loc,
+	Bitrix\Iblock;
+
+Loc::loadMessages(__FILE__);
 
 class CIBlockPropertyFileMan
 {
+	const USER_TYPE = 'FileMan';
+
 	public static function GetUserTypeDescription()
 	{
 		return array(
-			"PROPERTY_TYPE" =>"S",
-			"USER_TYPE" =>"FileMan",
-			"GetPropertyFieldHtml" =>array("CIBlockPropertyFileMan","GetPropertyFieldHtml"),
-			"GetPropertyFieldHtmlMulty" => array('CIBlockPropertyFileMan','GetPropertyFieldHtmlMulty'),
-			"ConvertToDB" => array("CIBlockPropertyFileMan","ConvertToDB"),
-			"ConvertFromDB" => array("CIBlockPropertyFileMan","ConvertFromDB"),
-			"GetSettingsHTML" => array("CIBlockPropertyFileMan","GetSettingsHTML"),
+			"PROPERTY_TYPE" => Iblock\PropertyTable::TYPE_STRING,
+			"USER_TYPE" => self::USER_TYPE,
+			"DESCRIPTION" => Loc::getMessage("IBLOCK_PROP_FILEMAN_DESC"),
+			"GetPropertyFieldHtml" => array(__CLASS__, "GetPropertyFieldHtml"),
+			"GetPropertyFieldHtmlMulty" => array(__CLASS__, "GetPropertyFieldHtmlMulty"),
+			"ConvertToDB" => array(__CLASS__, "ConvertToDB"),
+			"ConvertFromDB" => array(__CLASS__, "ConvertFromDB"),
+			"GetSettingsHTML" => array(__CLASS__, "GetSettingsHTML"),
+			'GetUIEntityEditorProperty' => array(__CLASS__, 'GetUIEntityEditorProperty'),
+			'GetUIEntityEditorPropertyEditHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyEditHtml'),
+			'GetUIEntityEditorPropertyViewHtml' => array(__CLASS__, 'GetUIEntityEditorPropertyViewHtml'),
 		);
 	}
 
-	static public function GetPropertyFieldHtmlMulty($arProperty, $arValues, $strHTMLControlName)
+	public static function GetPropertyFieldHtmlMulty($arProperty, $arValues, $strHTMLControlName)
 	{
 		if($strHTMLControlName["MODE"]=="FORM_FILL" && CModule::IncludeModule('fileman'))
 		{
@@ -59,7 +68,7 @@ class CIBlockPropertyFileMan
 				$return .= '<input type="text" name="'.htmlspecialcharsbx($strHTMLControlName["VALUE"]."[$intPropertyValueID][VALUE]").'" size="'.$arProperty["COL_COUNT"].'" value="'.htmlspecialcharsEx($arOneValue["VALUE"]).'">';
 
 				if (($arProperty["WITH_DESCRIPTION"]=="Y") && ('' != trim($strHTMLControlName["DESCRIPTION"])))
-					$return .= ' <span title="'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]."[$intPropertyValueID][DESCRIPTION]").'" value="'.htmlspecialcharsEx($arOneValue["DESCRIPTION"]).'" size="18" type="text"></span>';
+					$return .= ' <span title="'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]."[$intPropertyValueID][DESCRIPTION]").'" value="'.htmlspecialcharsEx($arOneValue["DESCRIPTION"]).'" size="18" type="text"></span>';
 
 				$return .= '</td></tr>';
 			}
@@ -67,10 +76,10 @@ class CIBlockPropertyFileMan
 			$return .= '<tr><td>';
 			$return .= '<input type="text" name="'.htmlspecialcharsbx($strHTMLControlName["VALUE"]."[n0][VALUE]").'" size="'.$arProperty["COL_COUNT"].'" value="">';
 			if (($arProperty["WITH_DESCRIPTION"]=="Y") && ('' != trim($strHTMLControlName["DESCRIPTION"])))
-				$return .= ' <span title="'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]."[n0][DESCRIPTION]").'" value="" size="18" type="text"></span>';
+				$return .= ' <span title="'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]."[n0][DESCRIPTION]").'" value="" size="18" type="text"></span>';
 			$return .= '</td></tr>';
 
-			$return .= '<tr><td><input type="button" value="'.GetMessage("IBLOCK_PROP_FILEMAN_ADD").'" onClick="addNewRow(\'tb'.$table_id.'\')"></td></tr>';
+			$return .= '<tr><td><input type="button" value="'.Loc::getMessage("IBLOCK_PROP_FILEMAN_ADD").'" onClick="BX.IBlock.Tools.addNewRow(\'tb'.$table_id.'\')"></td></tr>';
 			return $return.'</table>';
 		}
 	}
@@ -79,7 +88,7 @@ class CIBlockPropertyFileMan
 	{
 		global $APPLICATION;
 
-		if (strLen(trim($strHTMLControlName["FORM_NAME"])) <= 0)
+		if (trim($strHTMLControlName["FORM_NAME"]) == '')
 			$strHTMLControlName["FORM_NAME"] = "form_element";
 		$name = preg_replace("/[^a-zA-Z0-9_]/i", "x", htmlspecialcharsbx($strHTMLControlName["VALUE"]));
 
@@ -118,7 +127,7 @@ class CIBlockPropertyFileMan
 
 			if (($arProperty["WITH_DESCRIPTION"]=="Y") && ('' != trim($strHTMLControlName["DESCRIPTION"])))
 			{
-				$return .= ' <span title="'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.GetMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]).'" value="'.htmlspecialcharsEx($value["DESCRIPTION"]).'" size="18" type="text"></span>';
+				$return .= ' <span title="'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_TITLE").'">'.Loc::getMessage("IBLOCK_PROP_FILEMAN_DESCRIPTION_LABEL").':<input name="'.htmlspecialcharsEx($strHTMLControlName["DESCRIPTION"]).'" value="'.htmlspecialcharsEx($value["DESCRIPTION"]).'" size="18" type="text"></span>';
 			}
 
 			return $return;
@@ -147,9 +156,9 @@ class CIBlockPropertyFileMan
 	public static function ConvertFromDB($arProperty, $value)
 	{
 		$return = array();
-		if (strLen(trim($value["VALUE"])) > 0)
+		if (trim($value["VALUE"]) <> '')
 			$return["VALUE"] = $value["VALUE"];
-		if (strLen(trim($value["DESCRIPTION"])) > 0)
+		if (trim($value["DESCRIPTION"]) <> '')
 			$return["DESCRIPTION"] = $value["DESCRIPTION"];
 		return $return;
 	}
@@ -163,5 +172,30 @@ class CIBlockPropertyFileMan
 		return '';
 	}
 
+	public static function GetUIEntityEditorProperty($settings, $value)
+	{
+		return [
+			'type' => 'custom'
+		];
+	}
+
+	public static function GetUIEntityEditorPropertyEditHtml(array $params = []) : string
+	{
+		$settings = $params['SETTINGS'] ?? [];
+		$value = $params['VALUE'] ?? '';
+		$paramsHTMLControl = [
+			'MODE' => 'iblock_element_admin',
+			'VALUE' => $params['FIELD_NAME'] ?? '',
+		];
+		return self::GetPropertyFieldHtml($settings, $value, $paramsHTMLControl);
+	}
+
+	public static function GetUIEntityEditorPropertyViewHtml(array $params = []) : string
+	{
+		$result = '';
+		if(!empty($params['VALUE']))
+		{
+		}
+		return $result;
+	}
 }
-?>

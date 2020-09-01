@@ -1,29 +1,37 @@
 <?
+use Bitrix\Catalog;
+
 IncludeModuleLangFile(__FILE__);
 
 class CCatalogStoreProductAll
 {
 	protected static function CheckFields($action, &$arFields)
 	{
+		/** @global CMain $APPLICATION */
+		global $APPLICATION;
 		if ((($action == 'ADD') || isset($arFields["STORE_ID"])) && intval($arFields["STORE_ID"])<=0)
 		{
-			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CP_EMPTY_STORE"));
+			$APPLICATION->ThrowException(GetMessage("CP_EMPTY_STORE"));
 			return false;
 		}
 		if ((($action == 'ADD') || isset($arFields["PRODUCT_ID"])) && intval($arFields["PRODUCT_ID"])<=0)
 		{
-			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CP_EMPTY_PRODUCT"));
+			$APPLICATION->ThrowException(GetMessage("CP_EMPTY_PRODUCT"));
 			return false;
 		}
 		if  (!is_numeric($arFields["AMOUNT"]))
 		{
-			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("CP_FALSE_AMOUNT"));
+			$APPLICATION->ThrowException(GetMessage("CP_FALSE_AMOUNT"));
 			return false;
 		}
 
 		return true;
 	}
 
+	/**
+	 * @param array $arFields
+	 * @return bool|int
+	 */
 	public static function UpdateFromForm($arFields)
 	{
 		$rsProps = CCatalogStoreProduct::GetList(array(),array("PRODUCT_ID"=>$arFields['PRODUCT_ID'], "STORE_ID"=>$arFields['STORE_ID']),false,false,array('ID'));
@@ -54,15 +62,14 @@ class CCatalogStoreProductAll
 		return true;
 	}
 
-	public static function OnIBlockElementDelete($productId)
-	{
-		global $DB;
-		$productId = (int)$productId;
-		if($productId <= 0)
-			return false;
-
-		return $DB->Query("DELETE FROM b_catalog_store_product WHERE PRODUCT_ID = ".$productId." ", true);
-	}
+	/**
+	 * @deprecated deprecated since catalog 17.6.0
+	 * @see \Bitrix\Catalog\Model\Product::delete
+	 *
+	 * @param $productId
+	 * @return void
+	 */
+	public static function OnIBlockElementDelete($productId) {}
 
 	public static function Delete($id)
 	{

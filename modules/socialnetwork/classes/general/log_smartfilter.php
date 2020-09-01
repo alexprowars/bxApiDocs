@@ -23,9 +23,9 @@ class CAllSocNetLogSmartFilter
 			"SELECT ".$arSqls["SELECT"]." ".
 			"FROM b_sonet_log_smartfilter SLSF ".
 			"	".$arSqls["FROM"]." ";
-		if (strlen($arSqls["WHERE"]) > 0)
+		if ($arSqls["WHERE"] <> '')
 			$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-		if (strlen($arSqls["ORDERBY"]) > 0)
+		if ($arSqls["ORDERBY"] <> '')
 			$strSql .= "ORDER BY ".$arSqls["ORDERBY"]." ";
 
 		$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
@@ -33,7 +33,7 @@ class CAllSocNetLogSmartFilter
 		return $dbRes;
 	}
 
-	public static function DeleteEx($user_id)
+	function DeleteEx($user_id)
 	{
 		global $DB;
 		
@@ -48,15 +48,13 @@ class CAllSocNetLogSmartFilter
 		if ($DB->Query($strSQL, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__))
 			return true;
 		else
-			return false;		
+			return false;
 	}
 
 	public static function GetDefaultValue($user_id)
 	{
 		if (intval($user_id) <= 0)
 			return false;
-
-		global $CACHE_MANAGER;
 
 		if(defined("BX_COMP_MANAGED_CACHE"))
 			$ttl = 2592000;

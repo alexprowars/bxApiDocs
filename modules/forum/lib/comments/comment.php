@@ -39,7 +39,8 @@ class Comment extends BaseObject
 			"USE_SMILES" => ($params["USE_SMILES"] == "Y" ? "Y" : "N"),
 			"APPROVED" => $this->topic["APPROVED"],
 			"XML_ID" => $this->getEntity()->getXmlId(),
-			"AUX" => isset($params["AUX"]) ? $params["AUX"] : 'N',
+			"AUX" => ($params["AUX"] ?? 'N'),
+			"AUX_DATA" => ($params["AUX_DATA"] ?? ''),
 		);
 		if (array_key_exists("POST_DATE", $params))
 		{
@@ -132,8 +133,8 @@ class Comment extends BaseObject
 	 */
 	public function add(array $params)
 	{
-		$aux = (isset($params['AUX']) && $params['AUX'] == "Y");
-		$auxData = (isset($params['AUX_DATA']) ? $params['AUX_DATA'] : '');
+		$aux = (isset($params['AUX']) && $params['AUX'] === "Y");
+		$auxData = ($params['AUX_DATA'] ?? '');
 
 		$params = array(
 			"SOURCE_ID" => $params["SOURCE_ID"],
@@ -151,7 +152,8 @@ class Comment extends BaseObject
 			"AUTHOR_REAL_IP" => "<no address>",
 			"GUEST_ID" => $_SESSION["SESS_GUEST_ID"],
 
-			"AUX" => $params["AUX"]
+			"AUX" => $params["AUX"],
+			"AUX_DATA" => $auxData,
 		);
 
 		if ($this->prepareFields($params, $this->errorCollection))

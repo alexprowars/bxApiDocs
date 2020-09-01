@@ -25,9 +25,11 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 		if ($this->isTestMode($payment))
 			$test = '_TEST';
 
+		$paymentShouldPay = (float)$this->getBusinessValue($payment, 'PAYMENT_SHOULD_PAY');
+
 		$signatureValue = md5(
 			$this->getBusinessValue($payment, 'ROBOXCHANGE_SHOPLOGIN').":".
-			$this->getBusinessValue($payment, 'PAYMENT_SHOULD_PAY').":".
+			$paymentShouldPay.":".
 			$this->getBusinessValue($payment, 'PAYMENT_ID').":".
 			$this->getBusinessValue($payment, 'ROBOXCHANGE_SHOPPASSWORD'.$test).':'.
 			'SHP_BX_PAYSYSTEM_CODE='.$payment->getPaymentSystemId().':'.
@@ -39,6 +41,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 			'PS_MODE' => $this->service->getField('PS_MODE'),
 			'SIGNATURE_VALUE' => $signatureValue,
 			'BX_PAYSYSTEM_CODE' => $payment->getPaymentSystemId(),
+			'PAYMENT_SHOULD_PAY' => $paymentShouldPay,
 		);
 		$this->setExtraParams($params);
 
@@ -87,8 +90,8 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 	 */
 	private function isCorrectSum(Payment $payment, Request $request)
 	{
-		$sum = PriceMaths::roundByFormatCurrency($request->get('OutSum'), $payment->getField('CURRENCY'));
-		$paymentSum = PriceMaths::roundByFormatCurrency($this->getBusinessValue($payment, 'PAYMENT_SHOULD_PAY'), $payment->getField('CURRENCY'));
+		$sum = PriceMaths::roundPrecision($request->get('OutSum'));
+		$paymentSum = PriceMaths::roundPrecision($this->getBusinessValue($payment, 'PAYMENT_SHOULD_PAY'));
 
 		return $paymentSum == $sum;
 	}
@@ -97,7 +100,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 	 * @param Request $request
 	 * @return mixed
 	 */
-	static public function getPaymentIdFromRequest(Request $request)
+	public function getPaymentIdFromRequest(Request $request)
 	{
 		return $request->get('InvId');
 	}
@@ -109,7 +112,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 	{
 		return array(
 			'pay' => array(
-				self::ACTIVE_URL => 'https://merchant.roboxchange.com/Index.aspx'
+				self::ACTIVE_URL => 'https://auth.robokassa.ru/Merchant/Index.aspx'
 			)
 		);
 	}
@@ -129,10 +132,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 		}
 		else
 		{
-			PaySystem\ErrorLog::add(array(
-				'ACTION' => 'processRequest',
-				'MESSAGE' => 'Incorrect hash'
-			));
+			PaySystem\Logger::addError('Roboxchange: processRequest: Incorrect hash');
 			$result->addError(new Error('Incorrect hash'));
 		}
 
@@ -172,10 +172,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 		}
 		else
 		{
-			PaySystem\ErrorLog::add(array(
-				'ACTION' => 'processNoticeAction',
-				'MESSAGE' => 'Incorrect sum'
-			));
+			PaySystem\Logger::addError('Roboxchange: processNoticeAction: Incorrect sum');
 			$result->addError(new Error('Incorrect sum'));
 		}
 
@@ -194,7 +191,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 	/**
 	 * @return array
 	 */
-	static public function getCurrencyList()
+	public function getCurrencyList()
 	{
 		return array('RUB');
 	}
@@ -204,7 +201,7 @@ class RoboxchangeHandler extends PaySystem\ServiceHandler
 	 * @param Request $request
 	 * @return mixed
 	 */
-	static public function sendResponse(PaySystem\ServiceResult $result, Request $request)
+	public function sendResponse(PaySystem\ServiceResult $result, Request $request)
 	{
 		global $APPLICATION;
 		if ($result->isResultApplied())

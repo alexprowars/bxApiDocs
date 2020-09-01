@@ -8,7 +8,7 @@ use Bitrix\Blog\Item\Permissions;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Socialnetwork\ComponentHelper;
 
-class BlogPost extends \Bitrix\Main\Engine\Controller
+class BlogPost extends \Bitrix\Socialnetwork\Controller\Base
 {
 	public function getDataAction(array $params = [])
 	{
@@ -306,7 +306,7 @@ class BlogPost extends \Bitrix\Main\Engine\Controller
 					{
 						if ($type == 'SG')
 						{
-							$sonetGroupId = intVal(str_replace("SG", "", $code));
+							$sonetGroupId = intval(str_replace("SG", "", $code));
 
 							$canPublish = (
 								$currentAdmin
@@ -369,6 +369,55 @@ class BlogPost extends \Bitrix\Main\Engine\Controller
 			$this->addError(new Error(Loc::getMessage('SONET_CONTROLLER_LIVEFEED_BLOGPOST_SHARE_PREMODERATION'), 'SONET_CONTROLLER_LIVEFEED_BLOGPOST_SHARE_PREMODERATION'));
 			return null;
 		}
+	}
+
+	public function addAction(array $params = [])
+	{
+		global $APPLICATION;
+
+		try
+		{
+			$postId = \Bitrix\Socialnetwork\Item\Helper::addBlogPost($params, $this->getScope());
+			if ($postId <= 0)
+			{
+				$e = $APPLICATION->getException();
+				throw new \Exception($e ? $e->getString() : 'Cannot add blog post');
+			}
+		}
+		catch (\Exception $e)
+		{
+			$this->addError(new Error($e->getMessage(), $e->getCode()));
+			return null;
+		}
+
+		return [
+			'id' => $postId
+		];
+	}
+
+	public function updateAction($id = 0, array $params = [])
+	{
+		global $APPLICATION;
+
+		try
+		{
+			$params['POST_ID'] = $id;
+			$postId = \Bitrix\Socialnetwork\Item\Helper::updateBlogPost($params, $this->getScope());
+			if ($postId <= 0)
+			{
+				$e = $APPLICATION->getException();
+				throw new \Exception($e ? $e->getString() : 'Cannot update blog post');
+			}
+		}
+		catch (\Exception $e)
+		{
+			$this->addError(new Error($e->getMessage(), $e->getCode()));
+			return null;
+		}
+
+		return [
+			'id' => $postId
+		];
 	}
 }
 

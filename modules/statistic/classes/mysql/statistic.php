@@ -1,24 +1,13 @@
-<?
+<?php
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/statistic/classes/general/statistic.php");
 
-
-/**
- * <b>CStatistics</b> - класс содержащий общие методы работы с модулем "Статистика".
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/statistic/classes/cstatistics/index.php
- * @author Bitrix
- */
 class CStatistics extends CAllStatistics
 {
 	public static function CleanUpTableByDate($cleanup_date, $table_name, $date_name)
 	{
 		$err_mess = "File: ".__FILE__."<br>Line: ";
 		$DB = CDatabase::GetModuleConnection('statistic');
-		if (strlen($cleanup_date)>0)
+		if ($cleanup_date <> '')
 		{
 			$stmp = MkDateTime(ConvertDateTime($cleanup_date,"D.M.Y"),"d.m.Y");
 			if ($stmp)
@@ -583,7 +572,7 @@ class CStatistics extends CAllStatistics
 				$SITE_ID = SITE_ID;
 			}
 		}
-		if (strlen($SITE_ID)>0)
+		if ($SITE_ID <> '')
 		{
 			$strSql = "SELECT D.ID FROM b_stat_day_site D WHERE D.DATE_STAT=CURDATE() AND SITE_ID = '".$DB->ForSql($SITE_ID, 2)."'";
 			$rs = $DB->Query($strSql, false, $err_mess.__LINE__);
@@ -680,5 +669,3 @@ class CStatistics extends CAllStatistics
 		return "UNIX_TIMESTAMP(".$date1.")-UNIX_TIMESTAMP(".$date2.")";
 	}
 }
-
-?>

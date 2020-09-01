@@ -10,7 +10,7 @@
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/mail/classes/general/mail.php");
 class CMailbox extends CAllMailBox
 {
-	public static function CleanUp()
+	function CleanUp()
 	{
 		global $DB;
 		$days = COption::GetOptionInt("mail", "time_keep_log", B_MAIL_KEEP_LOG);
@@ -35,20 +35,13 @@ class CMailUtil extends CAllMailUtil
 {
 	public static function IsSizeAllowed($size)
 	{
-		global $DB;
 		global $B_MAIL_MAX_ALLOWED;
-		if($B_MAIL_MAX_ALLOWED===false)
-		{
-			$db_max_allowed = $DB->Query("SHOW VARIABLES LIKE 'MAX_ALLOWED_PACKET'");
-			$ar_max_allowed = $db_max_allowed->Fetch();
-			$B_MAIL_MAX_ALLOWED = IntVal($ar_max_allowed["Value"]);
-		}
 
-		if($B_MAIL_MAX_ALLOWED<=$size)
-		{
-			return false;
-		}
-		return true;
+		$dbConnection = \Bitrix\Main\Application::getConnection();
+
+		$B_MAIL_MAX_ALLOWED = $dbConnection->getMaxAllowedPacket();
+
+		return $B_MAIL_MAX_ALLOWED > $size;
 	}
 }
 

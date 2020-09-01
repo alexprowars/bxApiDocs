@@ -57,7 +57,7 @@ class CAllForumMessage
 			$iUserID = intVal($iUserID);
 			if ($iUserID <= 0 || intVal($arMessage["AUTHOR_ID"]) != $iUserID)
 				return false;
-			if (COption::GetOptionString("forum", "USER_EDIT_OWN_POST", "N") == "Y")
+			if (COption::GetOptionString("forum", "USER_EDIT_OWN_POST", "Y") == "Y")
 				return true;
 			$iCnt = CForumMessage::GetList(array("ID" => "ASC"), array("TOPIC_ID"=>$arTopic["ID"], ">ID"=>$MID), True);
 			if (intVal($iCnt) <= 0)
@@ -119,7 +119,17 @@ class CAllForumMessage
 			}
 			else
 			{
-				$bDeduplication = ($arForum['DEDUPLICATION'] === 'Y');
+				if (
+					isset($arFields['AUX'])
+					&& $arFields['AUX'] == 'Y'
+				)
+				{
+					$bDeduplication = false;
+				}
+				else
+				{
+					$bDeduplication = ($arForum['DEDUPLICATION'] === 'Y');
+				}
 			}
 		}
 
@@ -158,6 +168,11 @@ class CAllForumMessage
 						"text" => GetMessage("F_ERR_MESSAGE_ALREADY_EXISTS"));
 				}
 			}
+		}
+
+		if (!empty($arFields['POST_MESSAGE']))
+		{
+			$arFields["POST_MESSAGE"] = \Bitrix\Main\Text\Emoji::encode($arFields["POST_MESSAGE"]);
 		}
 
 		if (!is_set($arFields, "FILES"))
@@ -237,63 +252,6 @@ class CAllForumMessage
 		return True;
 	}
 
-	
-	/**
-	* <p>Изменяет параметры существующего сообщения с кодом <i>ID</i> на параметры, указанные в массиве <i>arFields</i>. Возвращает код изменяемого сообщения. Метод статический.</p>
-	*
-	*
-	* @param int $intID  Код сообщения, параметры которого необходимо изменить.
-	*
-	* @param array $arFields  Массив вида Array(<i>field1</i>=&gt;<i>value1</i>[, <i>field2</i>=&gt;<i>value2</i> [, ..]]),  		где
-	* <br><br><i>field</i> - название поля;<br><i>value</i> - значение поля.<br><br> 		Поля
-	* перечислены в <a href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cforummessage">списке
-	* полей сообщения</a>.
-	*
-	* @param bool $skip_counts  Если этот параметр установлен в значение true, то при изменении
-	* сообщения не будут автоматически обсчитаны статистические
-	* данные. 		Это ускоряет работу функции, но создает логические
-	* ошибки в данных. 		Необязательный. По умолчанию равен False.
-	*
-	* @param string $strUploadDir  Каталог для загрузки файлов. Должен быть задан относительно
-	* главного каталога для загрузки. 		Необязательный. По умолчанию
-	* равен "forum".
-	*
-	* @return int <p>Возвращает код измененного сообщения. В случае ошибки
-	* изменения возвращает False.</p><h4>Примечания</h4><p>Перед изменением
-	* сообщения следует проверить возможность изменения методом <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/developer/cforummessage/canuserupdatemessage.php">CForumMessage::CanUserUpdateMessage</a>.</p><p>Для
-	* добавления и изменения сообщения и темы рекомендуется
-	* пользоваться высокоуровневой функцией <a
-	* href="http://dev.1c-bitrix.ru/api_help/forum/functions/forumaddmessage.php">ForumAddMessage</a>.</p>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* // Добавление информации о редактировании на форумах, где есть только логины: 
-	* // 1. Не стоит использовать время PHP (время PHP и БД довольно часто различается, а сейчас в форуме, практически, везде используется время БД);
-	* // 2. Нельзя показывать логин пользователя без его разрешения.
-	* 
-	* &lt;?
-	* $arUser = CForumUser::GetByUSER_ID($USER-&gt;GetID());
-	* $arFields = array( 
-	*    "POST_MESSAGE" =&gt; $_POST["POST_MESSAGE"], 
-	*    "EDIT_DATE" =&gt; "", 
-	*    "EDITOR_ID" =&gt; $USER-&gt;GetID(), 
-	*    "EDITOR_NAME" =&gt; trim($arUser["SHOW_NAME"] == "Y" ? $USER-&gt;GetFullName() : $USER-&gt;GetLogin()));
-	* $arFields["EDITOR_NAME"] = (empty($arFields["EDITOR_NAME"]) ? $USER-&gt;GetLogin() : $arFields["EDITOR_NAME"]);
-	* CForumMessage::Update($MID, $arFields);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/forum/fields.php#cforummessage">Поля сообщения</a>
-	* </li></ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/forum/developer/cforummessage/update.php
-	* @author Bitrix
-	*/
 	public static function Update($ID, $arFields, $skip_counts = false, $strUploadDir = false)
 	{
 		global $DB, $USER_FIELD_MANAGER;
@@ -464,12 +422,12 @@ class CAllForumMessage
 				if ($arMessage_prev["FORUM_INFO"]["INDEXATION"] == "Y" &&
 					$arMessage["FORUM_INFO"]["INDEXATION"] != "Y")
 				{
-					CSearch::DeleteIndex("forum", $ID);
+					\CSearch::DeleteIndex("forum", $ID);
 				}
 				elseif ($arMessage["FORUM_INFO"]["INDEXATION"] == "Y" &&
 					$arMessage_prev["APPROVED"] != "N" && $arMessage["APPROVED"] == "N")
 				{
-					CSearch::DeleteIndex("forum", $ID);
+					\CSearch::DeleteIndex("forum", $ID);
 				}
 				elseif ($arMessage["APPROVED"] == "Y")
 				{
@@ -564,7 +522,19 @@ class CAllForumMessage
 			$arSearchInd["URL"] = CForumNew::PreparePath2Message($arParams["DEFAULT_URL"], $urlPatterns);
 		}
 		CSearch::DeleteIndex("forum", $ID);
-		CSearch::Index("forum", $ID, $arSearchInd, true);
+		/***************** Events onMessageIsIndexed ***********************/
+		$index = true;
+		foreach(GetModuleEvents("forum", "onMessageIsIndexed", true) as $arEvent)
+		{
+			if (ExecuteModuleEventEx($arEvent, array($ID, $arMessage, &$arSearchInd)) === false)
+			{
+				$index = false;
+				break;
+			}
+		}
+		/***************** /Events *****************************************/
+		if ($index == true)
+			CSearch::Index("forum", $ID, $arSearchInd, true);
 	}
 
 	public static function Delete($ID)
@@ -783,40 +753,53 @@ class CAllForumMessage
 	}
 
 	//---------------> Message utils
-	public static function GetMessagePage($ID, $mess_per_page, $arUserGroups, $TID = false, $arAddParams = array())
+	public static function GetMessagePage($ID, $messagePerPage, $arUserGroups, $TID = 0, $addParams = [])
 	{
-		$ID = intVal($ID);
-		$mess_per_page = intVal($mess_per_page);
+		$ID = intval($ID);
+		$TID = intval($TID);
+		$messagePerPage = intval($messagePerPage);
 
-		$arAddParams = (is_array($arAddParams) ? $arAddParams : array($arAddParams));
-		$arAddParams["ORDER_DIRECTION"] = ($arAddParams["ORDER_DIRECTION"] == "DESC" ? "DESC" : "ASC");
-		$arAddParams["FILTER"] = (is_array($arAddParams["FILTER"]) ? $arAddParams["FILTER"] : array());
-
-		if ($mess_per_page <= 0)
+		if ($messagePerPage <= 0 || $ID <= 0)
 			return 0;
 
-		if (!empty($arAddParams["PERMISSION_EXTERNAL"])):
-			$arMessage = array("TOPIC_ID" => $TID);
-			$permission = $arAddParams["PERMISSION_EXTERNAL"];
-		else:
-			$arMessage = CForumMessage::GetByID($ID, array("FILTER" => "N"));
-			$permission = CForumNew::GetUserPermission($arMessage["FORUM_ID"], $arUserGroups);
-		endif;
+		$addParams = (is_array($addParams) ? $addParams : []);
 
-		$arFilter = $arAddParams["FILTER"] + array("TOPIC_ID" => $arMessage["TOPIC_ID"]);
-		if ($permission < "Q"):
-			$arFilter["APPROVED"] = "Y";
-		endif;
+		$permission = \Bitrix\Forum\Permission::CAN_READ;
+		if (!empty($addParams["PERMISSION_EXTERNAL"]))
+		{
+			$permission = $addParams["PERMISSION_EXTERNAL"];
+		}
+		else if ($message = CForumMessage::GetByID($ID, array("FILTER" => "N")))
+		{
+			$permission = CForumNew::GetUserPermission($message["FORUM_ID"], $arUserGroups);
+		}
+		else if ($TID > 0 && ($topic = \Bitrix\Forum\Topic::getById($TID)))
+		{
+			$permission = CForumNew::GetUserPermission($topic["FORUM_ID"], $arUserGroups);
+		}
 
-		if ($arAddParams["ORDER_DIRECTION"] == "DESC"):
-			$arFilter[">ID"] = $ID;
-		else:
-			$arFilter["<ID"] = $ID;
-		endif;
+		$filter = (is_array($addParams["FILTER"]) ? $addParams["FILTER"] : []);
+		if ($permission < "Q")
+		{
+			$filter["APPROVED"] = "Y";
+		}
+		if ($TID > 0)
+		{
+			$filter["TOPIC_ID"] = $TID;
+		}
 
-		$iCnt = CForumMessage::GetList(array("ID" => $arAddParams["ORDER_DIRECTION"]), $arFilter, True);
-		$iCnt = intVal($iCnt);
-		return intVal($iCnt/$mess_per_page) + 1;
+		$order = ($addParams["ORDER_DIRECTION"] == "DESC" ? "DESC" : "ASC");
+		if ($order == "DESC")
+		{
+			$filter[">ID"] = $ID;
+		}
+		else
+		{
+			$filter["<ID"] = $ID;
+		}
+
+		$iCnt = intval(intval(CForumMessage::GetList(array("ID" => $order), $filter, true)) / $messagePerPage);
+		return ++$iCnt;
 	}
 
 	public static function SendMailMessage($MID, $arFields = array(), $strLang = false, $mailTemplate = false)
@@ -1196,7 +1179,7 @@ class CAllForumMessage
 	public static function GetMentionedUserID($strMessage)
 	{
 		$arMentionedUserID = array();
-								
+
 		if (strlen($strMessage) > 0)
 		{
 			preg_match_all("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/is".BX_UTF_PCRE_MODIFIER, $strMessage, $arMention);
@@ -1213,7 +1196,7 @@ class CAllForumMessage
 class _CMessageDBResult extends CDBResult
 {
 	var $sNameTemplate = '';
-	public function _CMessageDBResult($res, $params = array())
+	function _CMessageDBResult($res, $params = array())
 	{
 		$this->sNameTemplate = (!empty($params["sNameTemplate"]) ? $params["sNameTemplate"] : '');
 		$this->checkUserFields = false;
@@ -1226,7 +1209,7 @@ class _CMessageDBResult extends CDBResult
 		}
 		parent::CDBResult($res);
 	}
-	public function Fetch()
+	function Fetch()
 	{
 		global $DB;
 		$arFields = array();
@@ -1537,45 +1520,26 @@ class CALLForumFiles
 
 	public static function Save(&$arFields, $arParams, $bCheckFields = true)
 	{
-		global $DB;
-		if ($bCheckFields && !CForumFiles::CheckFields($arFields, $arParams, "ADD"))
-			return false;
-		$arFiles = array();
-		$arParams = (is_array($arParams) ? $arParams : array($arParams));
-		$strUploadDir = (!is_set($arParams, "upload_dir") ? "forum/upload" : $arParams["upload_dir"]);
-		$arParams = array("FORUM_ID" => intVal($arParams["FORUM_ID"]), "USER_ID" => intVal($arParams["USER_ID"]),
-			"TOPIC_ID" => 0, "MESSAGE_ID" => 0);
-		foreach ($arFields as $key => $val):
-			$val["MODULE_ID"] = "forum";
-			$val["FILE_ID"] = intVal($val["FILE_ID"]);
-			$val["old_file"] = intVal($val["old_file"]);
-			if ($val["FILE_ID"] <= 0 && $val["old_file"] > 0)
-				$val["FILE_ID"] = $val["old_file"];
-			$old_file = $val["FILE_ID"];
-			unset($val["old_file"]);
-			if (!empty($val["name"])):
+		if ($bCheckFields)
+		{
+			$result = \Bitrix\Forum\File::checkFiles(\Bitrix\Forum\Forum::getById($arParams["FORUM_ID"]), $arFields, $arParams);
+			if (!$result->isSuccess())
 			{
-				$res = CFile::SaveFile($val, $strUploadDir, true, true);
-				$DB->Commit();
-				if ($res > 0)
-				{
-					CForumFiles::Add($res, $arParams);
-					$arFiles[$res] = $arParams;
-				}
-				if (($res > 0 || !empty($val["del"])) && $old_file > 0)
-				{
-					CFile::Delete($old_file);
-					unset($arFields[$key]);
-				}
+				return false;
 			}
-			elseif (!empty($val["del"])):
-				CFile::Delete($val["FILE_ID"]);
-				unset($arFields[$key]);
-			else:
-				$arFiles[$val["FILE_ID"]] = $val;
-			endif;
-		endforeach;
-		return $arFiles;
+		}
+
+		$result = \Bitrix\Forum\File::saveFiles($arFields, $arParams);
+
+		$files = [];
+		foreach ($arFields as $file)
+		{
+			if ($file["FILE_ID"] > 0)
+			{
+				$files[$file["FILE_ID"]] = $file;
+			}
+		}
+		return $files;
 	}
 
 	public static function UpdateByID($ID, $arFields)

@@ -193,8 +193,8 @@ abstract class Base
 				while($site = $res->fetch())
 				{
 					$siteList[$site["ID"]] = array(
-						"DIR" => (strlen(trim($site["DIR"])) > 0 ? $site["DIR"] : "/"),
-						"SERVER_NAME" => (strlen(trim($site["SERVER_NAME"])) > 0 ? $site["SERVER_NAME"] : Option::get("main", "server_name", $_SERVER["HTTP_HOST"]))
+						"DIR" => (trim($site["DIR"]) <> '' ? $site["DIR"] : "/"),
+						"SERVER_NAME" => (trim($site["SERVER_NAME"]) <> '' ? $site["SERVER_NAME"] : Option::get("main", "server_name", $_SERVER["HTTP_HOST"]))
 					);
 				}
 			}

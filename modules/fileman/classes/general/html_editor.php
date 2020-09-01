@@ -12,7 +12,6 @@ class CHTMLEditor
 		$arComponents;
 
 	private
-		$siteId,
 		$content,
 		$id,
 		$name,
@@ -22,8 +21,7 @@ class CHTMLEditor
 		$bAllowPhp,
 		$display,
 		$inputName,
-		$inputId,
-		$cssPath;
+		$inputId;
 
 	const CACHE_TIME = 31536000; // 365 days
 
@@ -85,7 +83,7 @@ class CHTMLEditor
 						{
 							return BXHtmlEditor.editors[id] || false;
 						},
-						OnBeforeUnload: function(e)
+						OnBeforeUnload: function()
 						{
 							for (var id in BXHtmlEditor.editors)
 							{
@@ -96,10 +94,6 @@ class CHTMLEditor
 									!BXHtmlEditor.editors[id].IsSubmited() &&
 									BXHtmlEditor.editors[id].beforeUnloadHandlerAllowed !== false)
 								{
-									if (typeof(BX.PULL) != 'undefined' && typeof(BX.PULL.tryConnectDelay) == 'function') // TODO change to right code in near future (e.shelenkov)
-									{
-										BX.PULL.tryConnectDelay();
-									}
 									if(typeof(BX.desktopUtils) != 'undefined' && typeof(BX.desktopUtils.isChangedLocationToBx) == 'function' && BX.desktopUtils.isChangedLocationToBx())
 									{
 										return;
@@ -176,7 +170,7 @@ class CHTMLEditor
 		</script><?
 
 		$basePath = '/bitrix/js/fileman/html_editor/';
-		$this->id = (isset($arParams['id']) && strlen($arParams['id']) > 0) ? $arParams['id'] : 'bxeditor'.substr(uniqid(mt_rand(), true), 0, 4);
+		$this->id = (isset($arParams['id']) && $arParams['id'] <> '') ? $arParams['id'] : 'bxeditor'.mb_substr(uniqid(mt_rand(), true), 0, 4);
 		$this->id = preg_replace("/[^a-zA-Z0-9_:\.]/is", "", $this->id);
 		if (isset($arParams['name']))
 		{
@@ -206,6 +200,8 @@ class CHTMLEditor
 			'rel' => array('date', 'timer')
 		));
 		CUtil::InitJSCore(array('html_editor'));
+
+		\Bitrix\Main\UI\Extension::load(['ajax']);
 
 		foreach(GetModuleEvents("fileman", "OnBeforeHTMLEditorScriptRuns", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent);
@@ -245,6 +241,7 @@ class CHTMLEditor
 				$siteId = CSite::GetDefSite();
 			}
 		}
+
 		if (!isset($siteId) && defined(SITE_ID))
 		{
 			$siteId = SITE_ID;
@@ -364,7 +361,10 @@ class CHTMLEditor
 
 		if(!isset($arParams["initConponentParams"]))
 			$arParams["initConponentParams"] = $arParams["showTaskbars"] !== false && $arParams["showComponents"] && ($arParams['limitPhpAccess'] || $arParams['bAllowPhp']);
-		$arParams["actionUrl"] = $arParams["bbCode"] ? '/bitrix/tools/html_editor_action.php' : '/bitrix/admin/fileman_html_editor_action.php';
+		if (empty($arParams["actionUrl"]))
+		{
+			$arParams["actionUrl"] = $arParams["bbCode"] ? '/bitrix/tools/html_editor_action.php' : '/bitrix/admin/fileman_html_editor_action.php';
+		}
 
 		$arParams["lazyLoad"] = isset($arParams["lazyLoad"]) ? $arParams["lazyLoad"] : false;
 
@@ -407,7 +407,8 @@ class CHTMLEditor
 			'pasteSetDecor' => $userSettings['paste_clear_decor'] != 'N',
 			'pasteClearTableDimen' => $userSettings['paste_clear_table_dimen'] != 'N',
 			'linkDialogType' => $userSettings['link_dialog_type'],
-			'lazyLoad' => $arParams["lazyLoad"]
+			'lazyLoad' => $arParams["lazyLoad"],
+			'siteId' => $siteId
 		);
 
 		if (($this->bAllowPhp || $arParams['limitPhpAccess']) && $arParams["showTaskbars"] !== false)
@@ -422,7 +423,16 @@ class CHTMLEditor
 			$this->jsConfig["uploadImagesFromClipboard"] = $arParams["uploadImagesFromClipboard"];
 
 		if (isset($arParams["useFileDialogs"]))
+		{
 			$this->jsConfig["useFileDialogs"] = $arParams["useFileDialogs"];
+		}
+		elseif (\Bitrix\Main\ModuleManager::isModuleInstalled('bitrix24'))
+		{
+			$this->jsConfig["useFileDialogs"] = false;
+		}
+
+		if (isset($arParams["useLinkStat"]))
+			$this->jsConfig["useLinkStat"] = $arParams["useLinkStat"];
 
 		if (isset($arParams["showTaskbars"]))
 			$this->jsConfig["showTaskbars"] = $arParams["showTaskbars"];
@@ -471,15 +481,18 @@ class CHTMLEditor
 		if (isset($arParams["normalBodyWidth"]))
 			$this->jsConfig["normalBodyWidth"] = $arParams["normalBodyWidth"];
 
+		if (isset($arParams['autoLink']))
+			$this->jsConfig['autoLink'] = $arParams['autoLink'];
+
 		return $arParams;
 	}
 
-	public static function GetActualPath($path)
+	function GetActualPath($path)
 	{
 		return $path.'?'.@filemtime($_SERVER['DOCUMENT_ROOT'].$path);
 	}
 
-	public function Show($arParams)
+	function Show($arParams)
 	{
 		CJSCore::Init(array('window', 'ajax', 'fx'));
 
@@ -501,13 +514,13 @@ class CHTMLEditor
 		}
 	}
 
-	public function BuildSceleton($display = true)
+	function BuildSceleton($display = true)
 	{
 		$width = isset($this->jsConfig['width']) && intval($this->jsConfig['width']) > 0 ? $this->jsConfig['width'] : "100%";
 		$height = isset($this->jsConfig['height']) && intval($this->jsConfig['height']) > 0 ? $this->jsConfig['height'] : "100%";
 
-		$widthUnit = strpos($width, "%") === false ? "px" : "%";
-		$heightUnit = strpos($height, "%") === false ? "px" : "%";
+		$widthUnit = mb_strpos($width, "%") === false ? "px" : "%";
+		$heightUnit = mb_strpos($height, "%") === false ? "px" : "%";
 		$width = intval($width);
 		$height = intval($height);
 
@@ -544,7 +557,7 @@ class CHTMLEditor
 	<?
 	}
 
-	public function Run($display = true)
+	function Run($display = true)
 	{
 		$content = $this->jsConfig['content'];
 		$templates = $this->jsConfig['templates'];
@@ -570,7 +583,7 @@ class CHTMLEditor
 		</script><?
 	}
 
-	public static function SafeJsonEncode($data = array())
+	function SafeJsonEncode($data = array())
 	{
 		try
 		{
@@ -583,7 +596,7 @@ class CHTMLEditor
 		return $json;
 	}
 
-	public static function InitLangMess()
+	function InitLangMess()
 	{
 		$mess_lang = \Bitrix\Main\Localization\Loc::loadLanguageFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/fileman/classes/general/html_editor_js.php');
 		?><script>BX.message(<?=CUtil::PhpToJSObject($mess_lang, false);?>);</script><?
@@ -614,7 +627,7 @@ class CHTMLEditor
 		global $CACHE_MANAGER;
 
 		$allowed = trim(COption::GetOptionString('fileman', "~allowed_components", ''));
-		$mask = $allowed === '' ? 0 : substr(md5($allowed), 0, 10);
+		$mask = $allowed === ''? 0 : mb_substr(md5($allowed), 0, 10);
 
 		$lang = isset($Params['lang']) ? $Params['lang'] : LANGUAGE_ID;
 		$component_type = '';
@@ -679,7 +692,7 @@ class CHTMLEditor
 	{
 		foreach ($arEls as $elName => $arEl)
 		{
-			if (strpos($path, ",") !== false)
+			if (mb_strpos($path, ",") !== false)
 			{
 				if (isset($arEl['*']))
 				{
@@ -746,7 +759,7 @@ class CHTMLEditor
 
 	public static function RequestAction($action = '')
 	{
-		global $USER, $APPLICATION;
+		global $USER;
 		$result = array();
 
 		switch($action)
@@ -765,11 +778,9 @@ class CHTMLEditor
 				$componentFilter = isset($_REQUEST['componentFilter']) ? $_REQUEST['componentFilter'] : false;
 				$result = self::GetComponents($siteTemplate, true, $componentFilter);
 				break;
-
 			case "video_oembed":
 				$result = self::GetVideoOembed($_REQUEST['video_source']);
 				break;
-
 			// Snippets actions
 			case "load_snippets_list":
 				if (!$USER->CanDoOperation('fileman_view_file_structure'))
@@ -1033,7 +1044,6 @@ class CHTMLEditor
 									$file["uploadedPath"] = $newPath;
 									return true;
 								}
-								return false;
 							}
 						}
 					)),
@@ -1044,7 +1054,7 @@ class CHTMLEditor
 				break;
 		}
 
-		self::ShowResponse(intVal($_REQUEST['reqId']), $result);
+		self::ShowResponse(intval($_REQUEST['reqId']), $result);
 	}
 
 	public static function ShowResponse($reqId = false, $Res = false)
@@ -1053,7 +1063,7 @@ class CHTMLEditor
 		{
 			if ($reqId === false)
 			{
-				$reqId = intVal($_REQUEST['reqId']);
+				$reqId = intval($_REQUEST['reqId']);
 			}
 
 			if ($reqId)
@@ -1187,19 +1197,58 @@ class CHTMLEditor
 
 	public static function GetVideoOembed($url = '')
 	{
-		// Get oembed url
-		$oembed = self::GetOembedUrlInfo($url);
 		$output = array('result' => false, 'error' => "");
-
-		$http = new \Bitrix\Main\Web\HttpClient();
-		$resp = $http->get($oembed['url']);
-		if ($resp === false)
+		if(empty($url))
 		{
+			return $output;
+		}
+
+		$metaData = \Bitrix\Main\UrlPreview\UrlPreview::fetchVideoMetaData($url);
+		if($metaData && isset($metaData['EMBED']))
+		{
+			$output['result'] = true;
+			$output['data'] = array(
+				'html' => $metaData['EMBED'],
+				'title' => $metaData['TITLE'],
+				'provider' => $metaData['EXTRA']['PROVIDER_NAME'],
+				'width' => intval($metaData['EXTRA']['VIDEO_WIDTH']),
+				'height' => intval($metaData['EXTRA']['VIDEO_HEIGHT']),
+			);
+		}
+		else
+		{
+			if($metaData &&
+				isset($metaData['EXTRA']['VIDEO']) &&
+				!empty($metaData['EXTRA']['VIDEO']) &&
+				$metaData['EXTRA']['VIDEO_TYPE'] != 'application/x-shockwave-flash'
+			)
+			{
+				$output = self::getRemoteVideoUrlInfo($metaData['EXTRA']['VIDEO']);
+				if($output['result'] == true)
+				{
+					unset($output['data']['local']);
+					$output['data']['remote'] = true;
+					$output['data']['title'] = $metaData['TITLE'];
+					if(isset($metaData['EXTRA']['VIDEO_WIDTH']))
+					{
+						$output['data']['width'] = $metaData['EXTRA']['VIDEO_WIDTH'];
+					}
+					if(isset($metaData['EXTRA']['VIDEO_HEIGHT']))
+					{
+						$output['data']['height'] = $metaData['EXTRA']['VIDEO_HEIGHT'];
+					}
+					if(isset($metaData['EXTRA']['VIDEO_TYPE']))
+					{
+						$output['data']['mimeType'] = $metaData['EXTRA']['VIDEO_TYPE'];
+					}
+					return $output;
+				}
+			}
 			$io = CBXVirtualIo::GetInstance();
 			$path = $url;
 			$serverPath = self::GetServerPath();
 
-			if (strpos($path, $serverPath) !== false)
+			if (mb_strpos($path, $serverPath) !== false)
 			{
 				$path = str_replace($serverPath, '', $path);
 			}
@@ -1214,54 +1263,46 @@ class CHTMLEditor
 			}
 			else
 			{
-				$path = $url;
-				$http = new \Bitrix\Main\Web\HttpClient();
-				$resp1 = $http->get($path);
-				if ($resp1 !== false)
-				{
-					$output['data'] = array(
-						'local' => true,
-						'path' => $url
-					);
-				}
-				$output['result'] = true;
+				$output = self::getRemoteVideoUrlInfo($url);
 			}
+		}
+		return $output;
+	}
 
-			if (!$output['result'])
+	protected static function getRemoteVideoUrlInfo($path)
+	{
+		$output = array('result' => false, 'error' => "");
+		$http = new \Bitrix\Main\Web\HttpClient();
+		//prevents proxy to LAN
+		$http->setPrivateIp(false);
+		$http->setTimeout(5);
+		$http->setStreamTimeout(5);
+		$resp1 = $http->head($path);
+		if ($resp1 !== false)
+		{
+			if($resp1 == '403 Forbidden' || $http->getStatus() == '403')
 			{
-				$error = $http->getError();
-				foreach($error as $errorCode => $errorMessage)
-				{
-					$output['error'] .=  '['.$errorCode.'] '.$errorMessage.";\n";
-				}
+				$output['error'] .=  '[FVID403] '.GetMessage('HTMLED_VIDEO_FORBIDDEN').";\n";
+			}
+			elseif($resp1 == 'Not Found' || $http->getStatus() == '404' || $http->getContentType() == 'text/html')
+			{
+				$output['error'] .=  '[FVID404] '.GetMessage('HTMLED_VIDEO_NOT_FOUND').";\n";
+			}
+			else
+			{
+				$output['result'] = true;
+				$output['data'] = array(
+					'local' => true,
+					'path' => $path,
+				);
 			}
 		}
 		else
 		{
-			$resParams = json_decode($resp, true);
-			if ($resParams && is_array($resParams))
+			$error = $http->getError();
+			foreach($error as $errorCode => $errorMessage)
 			{
-				if (!defined('BX_UTF') || BX_UTF !== true)
-				{
-					$resParams['title'] = CharsetConverter::ConvertCharset($resParams['title'], 'UTF-8', SITE_CHARSET);
-					$resParams['html'] = CharsetConverter::ConvertCharset($resParams['html'], 'UTF-8', SITE_CHARSET);
-					$resParams['provider_name'] = CharsetConverter::ConvertCharset($resParams['provider_name'], 'UTF-8', SITE_CHARSET);
-
-				}
-
-				$resParams['html'] = preg_replace("/https?:\/\//is", '//', $resParams['html']);
-				$output['result'] = true;
-				$output['data'] = array(
-					'html' => $resParams['html'],
-					'title' => $resParams['title'],
-					'width' => intval($resParams['width']),
-					'height' => intval($resParams['height']),
-					'provider' => $resParams['provider_name']
-				);
-			}
-			else
-			{
-				$output['error'] .=  '[FVID404] '.GetMessage('HTMLED_VIDEO_NOT_FOUND').";\n";
+				$output['error'] .=  '['.$errorCode.'] '.$errorMessage.";\n";
 			}
 		}
 
@@ -1270,7 +1311,7 @@ class CHTMLEditor
 
 	public static function GetServerPath()
 	{
-		if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME) > 0)
+		if (defined("SITE_SERVER_NAME") && SITE_SERVER_NAME <> '')
 			$server_name = SITE_SERVER_NAME;
 		if (!$server_name)
 			$server_name = COption::GetOptionString("main", "server_name", "");
@@ -1291,31 +1332,6 @@ class CHTMLEditor
 		return $serverPath;
 	}
 
-	public static function GetOembedUrlInfo($url = '')
-	{
-		$res = array(
-			'url' => '',
-			'provider' => ''
-		);
-		if (preg_match('/(youtube.com)|(youtu.be)/i', $url))
-		{
-			$res['url'] = 'http://www.youtube.com/oembed?url='.urlencode($url).'&format=json';
-			$res['provider'] = 'youtube';
-		}
-		elseif (preg_match('/vimeo.com/i', $url))
-		{
-			$res['url'] = 'http://vimeo.com/api/oembed.json?url='.urlencode($url);
-			$res['provider'] = 'vimeo';
-		}
-		elseif (preg_match('/rutube.ru/i', $url))
-		{
-			$res['url'] = 'http://rutube.ru/api/oembed/?url='.urlencode($url).'&format=json';
-			$res['provider'] = 'rutube';
-		}
-
-		return $res;
-	}
-
 	private static function GetSettingKey($params = array())
 	{
 		$settingsKey = "user_settings_".$params["bbCode"];
@@ -1327,7 +1343,7 @@ class CHTMLEditor
 		{
 			foreach($params["controlsMap"] as $control)
 			{
-				if ($control && (strtolower($control['id']) == 'bbcode' || strtolower($control['id']) == 'changeview'))
+				if ($control && (mb_strtolower($control['id']) == 'bbcode' || mb_strtolower($control['id']) == 'changeview'))
 				{
 					$settingsKey .= '_'.$control['id'];
 				}

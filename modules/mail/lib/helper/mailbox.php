@@ -2,9 +2,11 @@
 
 namespace Bitrix\Mail\Helper;
 
+use Bitrix\Mail;
+use Bitrix\Mail\MailboxTable;
 use Bitrix\Main;
 use Bitrix\Main\ORM;
-use Bitrix\Mail;
+use Bitrix\Main\ORM\Query\Query;
 
 abstract class Mailbox
 {
@@ -13,16 +15,19 @@ abstract class Mailbox
 	const SYNC_TIME_QUOTA = 280;
 
 	protected $mailbox;
+	protected $dirsHelper;
 	protected $filters;
 	protected $session;
 	protected $startTime, $syncTimeout, $checkpoint;
-	protected $syncParams = array();
+	protected $syncParams = [];
 	protected $errors, $warnings;
-	protected $lastSyncResult = array(
+	protected $lastSyncResult = [
 		'newMessages' => 0,
+		'newMessagesNotify' => 0,
 		'deletedMessages' => 0,
-		'updatedMessages' => 0
-	);
+		'updatedMessages' => 0,
+		'newMessageId' => null,
+	];
 
 	/**
 	 * Creates active mailbox helper instance by ID
@@ -136,7 +141,7 @@ abstract class Mailbox
 			}
 		}
 
-		$this->syncTimeout = min(max(0, ini_get('max_execution_time')) ?: static::SYNC_TIMEOUT, static::SYNC_TIMEOUT);
+		$this->syncTimeout = static::getTimeout();
 
 		$this->mailbox = $mailbox;
 
@@ -147,18 +152,6 @@ abstract class Mailbox
 		$this->session = md5(uniqid(''));
 		$this->errors = new Main\ErrorCollection();
 		$this->warnings = new Main\ErrorCollection();
-	}
-
-	protected function reloadMailboxOptions()
-	{
-		$mailbox = static::prepareMailbox(array('=ID' => $this->mailbox['ID']));
-
-		if (!empty($mailbox['OPTIONS']) && is_array($mailbox['OPTIONS']))
-		{
-			$this->mailbox['OPTIONS'] = $mailbox['OPTIONS'];
-		}
-
-		$this->normalizeMailboxOptions();
 	}
 
 	protected function normalizeMailboxOptions()
@@ -176,7 +169,7 @@ abstract class Mailbox
 
 	protected function isTimeQuotaExceeded()
 	{
-		return time() - $this->startTime > ceil($this->syncTimeout * 0.9);
+		return time() - $this->startTime > ceil(static::getTimeout() * 0.9);
 	}
 
 	public function setCheckpoint()
@@ -195,7 +188,7 @@ abstract class Mailbox
 			return 0;
 		}
 
-		if (time() - $this->mailbox['SYNC_LOCK'] < $this->syncTimeout)
+		if (time() - $this->mailbox['SYNC_LOCK'] < static::getTimeout())
 		{
 			return 0;
 		}
@@ -207,11 +200,13 @@ abstract class Mailbox
 			return 0;
 		}
 
+		$this->session = md5(uniqid(''));
+
 		$this->syncOutgoing();
 
 		$lockSql = sprintf(
 			'UPDATE b_mail_mailbox SET SYNC_LOCK = %u WHERE ID = %u AND (SYNC_LOCK IS NULL OR SYNC_LOCK < %u)',
-			$this->mailbox['SYNC_LOCK'], $this->mailbox['ID'], $this->mailbox['SYNC_LOCK'] - $this->syncTimeout
+			$this->mailbox['SYNC_LOCK'], $this->mailbox['ID'], $this->mailbox['SYNC_LOCK'] - static::getTimeout()
 		);
 		if (!$DB->query($lockSql)->affectedRowsCount())
 		{
@@ -223,8 +218,6 @@ abstract class Mailbox
 		{
 			$mailboxSyncManager->setSyncStartedData($this->mailbox['ID']);
 		}
-
-		$this->session = md5(uniqid(''));
 
 		$count = $this->syncInternal();
 		$success = $count !== false && $this->errors->isEmpty();
@@ -255,7 +248,7 @@ abstract class Mailbox
 		$this->mailbox['OPTIONS']['next_sync'] = time() + $interval;
 
 		$optionsValue = $this->mailbox['OPTIONS'];
-		unset($optionsValue['imap']['dirsMd5']);
+
 		$unlockSql = sprintf(
 			"UPDATE b_mail_mailbox SET SYNC_LOCK = %d, OPTIONS = '%s' WHERE ID = %u AND SYNC_LOCK = %u",
 			$syncUnlock,
@@ -279,6 +272,8 @@ abstract class Mailbox
 			),
 			true
 		);
+
+		$this->notifyNewMessages();
 
 		if ($this->mailbox['USER_ID'] > 0)
 		{
@@ -319,6 +314,8 @@ abstract class Mailbox
 						array(
 							'id' => $this->mailbox['ID'],
 							'status' => sprintf('%.3f', $status),
+							'sessid' => $this->syncParams['sessid'] ?: $this->session,
+							'timestamp' => microtime(true),
 						),
 						$params
 					),
@@ -343,7 +340,7 @@ abstract class Mailbox
 
 		$startTime = time();
 
-		if (time() - $this->mailbox['SYNC_LOCK'] < $this->syncTimeout)
+		if (time() - $this->mailbox['SYNC_LOCK'] < static::getTimeout())
 		{
 			return false;
 		}
@@ -357,7 +354,7 @@ abstract class Mailbox
 
 		$lockSql = sprintf(
 			'UPDATE b_mail_mailbox SET SYNC_LOCK = %u WHERE ID = %u AND (SYNC_LOCK IS NULL OR SYNC_LOCK < %u)',
-			$startTime, $this->mailbox['ID'], $startTime - $this->syncTimeout
+			$startTime, $this->mailbox['ID'], $startTime - static::getTimeout()
 		);
 		if ($DB->query($lockSql)->affectedRowsCount())
 		{
@@ -418,7 +415,7 @@ abstract class Mailbox
 				$where
 			));
 
-			if ($this->isTimeQuotaExceeded() || time() - $this->checkpoint > 20)
+			if ($this->isTimeQuotaExceeded() || time() - $this->checkpoint > 15)
 			{
 				$result = false;
 
@@ -437,6 +434,59 @@ abstract class Mailbox
 		}
 
 		return $result;
+	}
+
+	public function dismissDeletedUidMessages()
+	{
+		global $DB;
+
+		$startTime = time();
+
+		if (time() - $this->mailbox['SYNC_LOCK'] < static::getTimeout())
+		{
+			return false;
+		}
+
+		if ($this->isTimeQuotaExceeded())
+		{
+			return false;
+		}
+
+		$syncUnlock = $this->mailbox['SYNC_LOCK'];
+
+		$lockSql = sprintf(
+			'UPDATE b_mail_mailbox SET SYNC_LOCK = %u WHERE ID = %u AND (SYNC_LOCK IS NULL OR SYNC_LOCK < %u)',
+			$startTime, $this->mailbox['ID'], $startTime - static::getTimeout()
+		);
+		if ($DB->query($lockSql)->affectedRowsCount())
+		{
+			$this->mailbox['SYNC_LOCK'] = $startTime;
+		}
+		else
+		{
+			return false;
+		}
+
+		$minSyncTime = Mail\MailboxDirectory::getMinSyncTime($this->mailbox['ID']);
+
+		Mail\MailMessageUidTable::deleteList(
+			[
+				'=MAILBOX_ID'  => $this->mailbox['ID'],
+				'>DELETE_TIME' => 0,
+				'<DELETE_TIME' => $minSyncTime,
+			]
+		);
+
+		$unlockSql = sprintf(
+			"UPDATE b_mail_mailbox SET SYNC_LOCK = %d WHERE ID = %u AND SYNC_LOCK = %u",
+			$syncUnlock, $this->mailbox['ID'], $this->mailbox['SYNC_LOCK']
+		);
+		if ($DB->query($unlockSql)->affectedRowsCount())
+		{
+			$this->mailbox['SYNC_LOCK'] = $syncUnlock;
+		}
+
+		return true;
 	}
 
 	public function cleanup()
@@ -526,6 +576,7 @@ abstract class Mailbox
 				'filter' => array(
 					$replaces,
 					'=MAILBOX_ID' => $this->mailbox['ID'],
+					'=DELETE_TIME' => 'IS NULL',
 				),
 			))->fetch();
 		}
@@ -538,6 +589,7 @@ abstract class Mailbox
 				array(
 					'=ID' => $exists['ID'],
 					'=MAILBOX_ID' => $this->mailbox['ID'],
+					'=DELETE_TIME' => 'IS NULL',
 				),
 				array_merge(
 					$fields,
@@ -555,7 +607,8 @@ abstract class Mailbox
 		}
 		else
 		{
-			$result = Mail\MailMessageUidTable::add(array_merge(
+			$checkResult = new ORM\Data\AddResult();
+			$addFields = array_merge(
 				array(
 					'MESSAGE_ID'  => 0,
 				),
@@ -566,7 +619,20 @@ abstract class Mailbox
 					'TIMESTAMP_X' => $now,
 					'DATE_INSERT' => $now,
 				)
-			))->isSuccess();
+			);
+			Mail\MailMessageUidTable::checkFields($checkResult, null, $addFields);
+			if (!$checkResult->isSuccess())
+			{
+				return false;
+			}
+
+			Mail\MailMessageUidTable::mergeData($addFields, [
+				'MSG_UID' => $addFields['MSG_UID'],
+				'HEADER_MD5' => $addFields['HEADER_MD5'],
+				'SESSION_ID' => $addFields['SESSION_ID'],
+				'TIMESTAMP_X' => $addFields['TIMESTAMP_X'],
+			]);
+			$result = true;
 		}
 
 		return $result;
@@ -588,20 +654,12 @@ abstract class Mailbox
 
 	protected function unregisterMessages($filter, $eventData = [])
 	{
-		return Mail\MailMessageUidTable::deleteList(
+		return Mail\MailMessageUidTable::deleteListSoft(
 			array_merge(
 				$filter,
 				array(
 					'=MAILBOX_ID' => $this->mailbox['ID'],
 				)
-			),
-			array_map(
-				function ($item)
-				{
-					$item['MAILBOX_ID'] = $this->mailbox['ID'];
-					return $item;
-				},
-				$eventData
 			)
 		);
 	}
@@ -661,14 +719,15 @@ abstract class Mailbox
 	protected function createMessage(Main\Mail\Mail $message, array $fields = array())
 	{
 		$messageUid = sprintf('%x%x', time(), rand(0, 0xffffffff));
+		$body = sprintf(
+			'%1$s%3$s%3$s%2$s',
+			$message->getHeaders(),
+			$message->getBody(),
+			$message->getMailEol()
+		);
 
 		$messageId = $this->cacheMessage(
-			sprintf(
-				'%1$s%3$s%3$s%2$s',
-				$message->getHeaders(),
-				$message->getBody(),
-				$message->getMailEol()
-			),
+			$body,
 			array(
 				'outcome' => true,
 				'draft' => false,
@@ -721,7 +780,7 @@ abstract class Mailbox
 				),
 				'filter' => array(
 					'>=UPLOAD_QUEUE.SYNC_STAGE' => 0,
-					'<UPLOAD_QUEUE.SYNC_LOCK' => time() - $this->syncTimeout,
+					'<UPLOAD_QUEUE.SYNC_LOCK' => time() - static::getTimeout(),
 					'<UPLOAD_QUEUE.ATTEMPTS' => 5,
 				),
 				'order' => array(
@@ -736,7 +795,7 @@ abstract class Mailbox
 		while ($excerpt = $res->fetch())
 		{
 			$n = $excerpt['UPLOAD_ATTEMPTS'] + 1;
-			$interval = min($this->syncTimeout * pow($n, $n), 3600 * 24 * 7);
+			$interval = min(static::getTimeout() * pow($n, $n), 3600 * 24 * 7);
 
 			if ($excerpt['UPLOAD_LOCK'] > time() - $interval)
 			{
@@ -763,7 +822,7 @@ abstract class Mailbox
 			max(1, $excerpt['UPLOAD_STAGE']),
 			$DB->forSql($excerpt['ID']),
 			$excerpt['MAILBOX_ID'],
-			$syncLock - $this->syncTimeout
+			$syncLock - static::getTimeout()
 		);
 		if (!$DB->query($lockSql)->affectedRowsCount())
 		{
@@ -823,7 +882,7 @@ abstract class Mailbox
 		{
 			$field = sprintf('__FIELD_%s', $field);
 
-			if (strlen($excerpt[$field]) == 255 && '' != $excerpt['__HEADER'] && empty($parsedHeader))
+			if (mb_strlen($excerpt[$field]) == 255 && '' != $excerpt['__HEADER'] && empty($parsedHeader))
 			{
 				$parsedHeader = \CMailMessage::parseHeader($excerpt['__HEADER'], LANG_CHARSET);
 
@@ -1261,6 +1320,7 @@ abstract class Mailbox
 	}
 
 	abstract protected function syncInternal();
+	abstract public function listDirs($pattern, $useDb = false);
 	abstract public function uploadMessage(Main\Mail\Mail $message, array &$excerpt);
 	abstract public function downloadMessage(array &$excerpt);
 
@@ -1282,5 +1342,88 @@ abstract class Mailbox
 	protected function setLastSyncResult(array $data)
 	{
 		$this->lastSyncResult = array_merge($this->lastSyncResult, $data);
+	}
+
+	public function getDirsHelper()
+	{
+		if (!$this->dirsHelper)
+		{
+			$this->dirsHelper = new Mail\Helper\MailboxDirectoryHelper($this->mailbox['ID']);
+		}
+
+		return $this->dirsHelper;
+	}
+
+	public function activateSync()
+	{
+		$options = $this->mailbox['OPTIONS'];
+
+		if (!isset($options['activateSync']) || $options['activateSync'] === true)
+		{
+			return false;
+		}
+
+		$entity = MailboxTable::getEntity();
+		$connection = $entity->getConnection();
+
+		$options['activateSync'] = true;
+
+		$query = sprintf(
+			'UPDATE %s SET %s WHERE %s',
+			$connection->getSqlHelper()->quote($entity->getDbTableName()),
+			$connection->getSqlHelper()->prepareUpdate($entity->getDbTableName(), [
+				'SYNC_LOCK' => 0,
+				'OPTIONS'   => serialize($options),
+			])[0],
+			Query::buildFilterSql(
+				$entity,
+				[
+					'ID' => $this->mailbox['ID']
+				]
+			)
+		);
+
+		return $connection->query($query);
+	}
+
+	public function notifyNewMessages()
+	{
+		if (Main\Loader::includeModule('im'))
+		{
+			$lastSyncResult = $this->getLastSyncResult();
+			$count = $lastSyncResult['newMessagesNotify'];
+			$newMessageId = $lastSyncResult['newMessageId'];
+			$message = null;
+
+			if ($count < 1)
+			{
+				return;
+			}
+
+			if ($newMessageId > 0 && $count === 1)
+			{
+				$message = Mail\MailMessageTable::getByPrimary($newMessageId)->fetch();
+
+				if (!empty($message))
+				{
+					Mail\Helper\Message::prepare($message);
+				}
+			}
+
+			Mail\Integration\Im\Notification::add(
+				$this->mailbox['USER_ID'],
+				'new_message',
+				array(
+					'mailboxId' => $this->mailbox['ID'],
+					'count' => $count,
+					'message' => $message,
+				)
+			);
+		}
+	}
+
+	final public static function getTimeout()
+	{
+		return min(max(0, ini_get('max_execution_time')) ?: static::SYNC_TIMEOUT, static::SYNC_TIMEOUT);
 	}
 }

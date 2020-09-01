@@ -1007,7 +1007,7 @@ class ShipmentCollection
 				}
 			}
 		}
-		elseif ($name === 'WEIGHT')
+		elseif (in_array($name, ['WEIGHT', 'PRICE']))
 		{
 			/** @var Shipment $shipment */
 			foreach ($this->getNotSystemItems() as $shipment)

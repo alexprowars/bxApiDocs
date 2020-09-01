@@ -3,7 +3,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CRatingsComponentsWiki
 {
-	public static function OnAddRatingVote($id, $arParams)
+	function OnAddRatingVote($id, $arParams)
 	{
 		if ($arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT')
 		{
@@ -15,12 +15,12 @@ class CRatingsComponentsWiki
 		return false;
 	}
 
-	public static function OnCancelRatingVote($id, $arParams)
+	function OnCancelRatingVote($id, $arParams)
 	{
 		return CRatingsComponentsWiki::OnAddRatingVote($id, $arParams);
 	}
 	
-	public static function BeforeIndex($arParams)
+	function BeforeIndex($arParams)
 	{
 		if (
 			$arParams['PARAM1'] == 'wiki' 

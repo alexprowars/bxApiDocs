@@ -338,7 +338,7 @@ class HighloadBlockTable extends Entity\DataManager
 	{
 		if (!is_array($hlblock))
 		{
-			if (is_int($hlblock) || is_numeric(substr($hlblock, 0, 1)))
+			if (is_int($hlblock) || is_numeric(mb_substr($hlblock, 0, 1)))
 			{
 				// we have an id
 				$hlblock = HighloadBlockTable::getById($hlblock)->fetch();
@@ -478,7 +478,7 @@ class HighloadBlockTable extends Entity\DataManager
 	{
 		if (preg_match(self::ENTITY_ID_MASK, $field['ENTITY_ID'], $matches))
 		{
-			if (substr($field['FIELD_NAME'], -4) == '_REF')
+			if (mb_substr($field['FIELD_NAME'], -4) == '_REF')
 			{
 				/**
 				 * postfix _REF reserved for references to other highloadblocks
@@ -727,7 +727,7 @@ class HighloadBlockTable extends Entity\DataManager
 
 	public static function getMultipleValueTableName($hlblock, $userfield)
 	{
-		return $hlblock['TABLE_NAME'].'_'.strtolower($userfield['FIELD_NAME']);
+		return $hlblock['TABLE_NAME'].'_'.mb_strtolower($userfield['FIELD_NAME']);
 	}
 
 	public static function validateName()

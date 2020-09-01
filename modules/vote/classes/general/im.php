@@ -9,7 +9,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CVoteNotifySchema
 {
-	static public function __construct()
+	public function __construct()
 	{
 	}
 

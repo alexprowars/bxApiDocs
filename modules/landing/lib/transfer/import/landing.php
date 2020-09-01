@@ -19,7 +19,7 @@ class Landing
 	 * @param string $xmlId External id application.
 	 * @return int|null
 	 */
-	protected static function getRepoId(string $appCode, string $xmlId): ?int
+	public static function getRepoId(string $appCode, string $xmlId): ?int
 	{
 		static $items = null;
 
@@ -50,21 +50,28 @@ class Landing
 	 * @param Block $block Block instance.
 	 * @param array $data Data for passing to updateNodes.
 	 * @param Configuration\Structure $structure Additional instance for unpacking files.
+	 * @param bool $ignoreManifest Ignore manifest for detecting files.
 	 * @return array
 	 */
-	protected static function addFilesToBlock(Block $block, array $data, Configuration\Structure $structure): array
+	protected static function addFilesToBlock(Block $block, array $data, Configuration\Structure $structure, $ignoreManifest = false): array
 	{
-		$manifest = $block->getManifest();
+		if (!$ignoreManifest)
+		{
+			$manifest = $block->getManifest();
+		}
 
 		foreach ($data as $selector => &$nodes)
 		{
-			if (!isset($manifest['nodes'][$selector]))
+			if (!$ignoreManifest)
 			{
-				continue;
-			}
-			if ($manifest['nodes'][$selector]['type'] != Node\Type::IMAGE)
-			{
-				continue;
+				if (!isset($manifest['nodes'][$selector]))
+				{
+					continue;
+				}
+				if ($manifest['nodes'][$selector]['type'] != Node\Type::IMAGE)
+				{
+					continue;
+				}
 			}
 			foreach ($nodes as &$node)
 			{
@@ -98,13 +105,76 @@ class Landing
 	}
 
 	/**
+	 * Save new data to the block.
+	 * @param Block $blockInstance Block instance.
+	 * @param array $block Block data.
+	 */
+	public static function saveDataToBlock(Block $blockInstance, array $block): void
+	{
+		// update cards
+		if (isset($block['cards']) && is_array($block['cards']))
+		{
+			$blockInstance->updateCards(
+				$block['cards']
+			);
+		}
+		// update style
+		if (isset($block['style']) && is_array($block['style']))
+		{
+			$updatedStyles = [];
+			foreach ($block['style'] as $selector => $classes)
+			{
+				if ($selector == '#wrapper')
+				{
+					$selector = '#' . $blockInstance->getAnchor($blockInstance->getId());
+				}
+				foreach ((array)$classes as $clPos => $clVal)
+				{
+					$selectorUpd = $selector . '@' . $clPos;
+					if (!in_array($selectorUpd, $updatedStyles))
+					{
+						$updatedStyles[] = $selectorUpd;
+						$blockInstance->setClasses([
+							$selectorUpd => [
+								'classList' => (array)$clVal
+							]
+						]);
+					}
+				}
+			}
+		}
+		// update nodes
+		if (isset($block['nodes']) && is_array($block['nodes']))
+		{
+			$blockInstance->updateNodes($block['nodes']);
+		}
+		// update menu
+		if (isset($block['menu']) && !empty($block['menu']))
+		{
+			$blockInstance->updateNodes($block['menu']);
+		}
+		// update attrs
+		if (isset($block['attrs']) && !empty($block['attrs']))
+		{
+			if (isset($block['attrs']['#wrapper']))
+			{
+				$attrCode = '#' . $blockInstance->getAnchor($blockInstance->getId());
+				$block['attrs'][$attrCode] = $block['attrs']['#wrapper'];
+				unset($block['attrs']['#wrapper']);
+			}
+			$blockInstance->setAttributes($block['attrs']);
+		}
+	}
+
+	/**
 	 * Imports block in to the landing and returns it new id.
 	 * @param LandingCore $landing Landing instance.
 	 * @param array $block Block data.
 	 * @param Configuration\Structure $structure Additional instance for unpacking files.
+	 * @param bool &$pending This block in pending mode.
 	 * @return int
 	 */
-	protected static function importBlock(LandingCore $landing, array $block, Configuration\Structure $structure): int
+	protected static function importBlock(LandingCore $landing, array $block, Configuration\Structure $structure, &$pending = false): int
 	{
 		static $sort = 0;
 
@@ -128,6 +198,38 @@ class Landing
 			}
 			else
 			{
+				$pending = true;
+				$blockId = $landing->addBlock(
+					AppConfiguration::SYSTEM_BLOCK_REST_PENDING,
+					[
+						'PUBLIC' => 'N',
+						'SORT' => $sort,
+						'ANCHOR' => isset($block['anchor'])
+							? $block['anchor']
+							: ''
+					]
+				);
+				if ($blockId)
+				{
+					$sort += 500;
+					$blockInstance = $landing->getBlockById($blockId);
+					if (isset($block['nodes']) && is_array($block['nodes']))
+					{
+						$block['nodes'] = self::addFilesToBlock(
+							$blockInstance,
+							$block['nodes'],
+							$structure,
+							true
+						);
+					}
+					$blockInstance->updateNodes([
+						AppConfiguration::SYSTEM_COMPONENT_REST_PENDING => [
+							'BLOCK_ID' => $blockId,
+							'DATA' => base64_encode(serialize($block))
+						]
+					]);
+					$blockInstance->save();
+				}
 				return $blockId;
 			}
 		}
@@ -151,39 +253,6 @@ class Landing
 		{
 			$sort += 500;
 			$blockInstance = $landing->getBlockById($blockId);
-			// update cards
-			if (isset($block['cards']) && is_array($block['cards']))
-			{
-				$blockInstance->updateCards(
-					$block['cards']
-				);
-			}
-			// update style
-			if (isset($block['style']) && is_array($block['style']))
-			{
-				$updatedStyles = [];
-				foreach ($block['style'] as $selector => $classes)
-				{
-					if ($selector == '#wrapper')
-					{
-						$selector = '#' . $blockInstance->getAnchor($blockInstance->getId());
-					}
-					foreach ((array)$classes as $clPos => $clVal)
-					{
-						$selectorUpd = $selector . '@' . $clPos;
-						if (!in_array($selectorUpd, $updatedStyles))
-						{
-							$updatedStyles[] = $selectorUpd;
-							$blockInstance->setClasses([
-   								$selectorUpd => [
-		   							'classList' => (array)$clVal
-				   				]
-							]);
-						}
-					}
-				}
-			}
-			// update nodes
 			if (isset($block['nodes']) && is_array($block['nodes']))
 			{
 				$block['nodes'] = self::addFilesToBlock(
@@ -191,24 +260,8 @@ class Landing
 					$block['nodes'],
 					$structure
 				);
-				$blockInstance->updateNodes($block['nodes']);
 			}
-			// update menu
-			if (isset($block['menu']) && !empty($block['menu']))
-			{
-				$blockInstance->updateNodes($block['menu']);
-			}
-			// update attrs
-			if (isset($block['attrs']) && !empty($block['attrs']))
-			{
-				if (isset($block['attrs']['#wrapper']))
-				{
-					$attrCode = '#' . $blockInstance->getAnchor($blockInstance->getId());
-					$block['attrs'][$attrCode] = $block['attrs']['#wrapper'];
-					unset($block['attrs']['#wrapper']);
-				}
-				$blockInstance->setAttributes($block['attrs']);
-			}
+			self::saveDataToBlock($blockInstance, $block);
 			$blockInstance->save();
 		}
 
@@ -286,7 +339,7 @@ class Landing
 		// base adding
 		$data['SITE_ID'] = $return['RATIO']['SITE_ID'];
 		$data['ACTIVE'] = 'N';
-		$res = LandingCore::add($data);
+		$res = LandingCore::add(array_merge($data, ['FOLDER_ID' => 0, 'PUBLIC' => 'N']));
 		if ($res->isSuccess())
 		{
 			// save files to landing
@@ -320,11 +373,18 @@ class Landing
 				{
 					if (is_array($blockItem))
 					{
-						$return['RATIO']['BLOCKS'][$oldBlockId] = self::importBlock(
+						$pending = false;
+						$newBlockId = self::importBlock(
 							$landing,
 							$blockItem,
-							$structure
+							$structure,
+							$pending
 						);
+						$return['RATIO']['BLOCKS'][$oldBlockId] = $newBlockId;
+						if ($pending)
+						{
+							$return['RATIO']['BLOCKS_PENDING'][] = $newBlockId;
+						}
 					}
 				}
 			}

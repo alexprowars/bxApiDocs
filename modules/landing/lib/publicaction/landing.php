@@ -898,22 +898,43 @@ class Landing
 				'ENTITY_ID' => $lid,
 				'ENTITY_TYPE' => \Bitrix\Landing\Hook::ENTITY_TYPE_LANDING,
 				'HOOK' => 'FONTS',
-				'CODE' => 'CODE'
+				'CODE' => 'CODE',
+				'PUBLIC' => 'N'
 			);
 			$res = HookDataTable::getList(array(
 				'select' => array(
-					'ID'
+					'ID', 'VALUE'
 				),
 				'filter' => $fields
 			));
 			if ($row = $res->fetch())
 			{
-				HookDataTable::update(
-					$row['ID'],
-					array(
-						'VALUE' => $content
-					)
+				$existsContent = $row['VALUE'];
+
+				// concat new fonts to the exists
+				$found = preg_match_all(
+					'#(<noscript>.*?<style.*?data-id="([^"]+)"[^>]*>[^<]+</style>)#is',
+					$content,
+					$newFonts
 				);
+				if ($found)
+				{
+					foreach ($newFonts[1] as $i => $newFont)
+					{
+						if (mb_strpos($existsContent, '"' . $newFonts[2][$i] . '"') === false)
+						{
+							$existsContent .= $newFont;
+						}
+					}
+				}
+
+				if ($existsContent != $row['VALUE'])
+				{
+					HookDataTable::update(
+						$row['ID'],
+						['VALUE' => $existsContent]
+					);
+				}
 			}
 			else
 			{

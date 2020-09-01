@@ -99,11 +99,21 @@ class Page
 	public function preparePrevPageLogId()
 	{
 		$request = $this->getRequest();
-		$processorInstance = $this->getProcessorInstance();
+		$params = $this->getComponent()->arParams;
 
-		if ($request->get('pplogid') !== null)
+		$prevPageLogId = null;
+		if (isset($params['PREV_PAGE_LOG_ID']))
 		{
-			$prevPageLogIdList = explode('|', trim($request->get('pplogid')));
+			$prevPageLogId = $params['PREV_PAGE_LOG_ID'];
+		}
+		elseif ($request->get('pplogid') !== null)
+		{
+			$prevPageLogId = $request->get('pplogid');
+		}
+
+		if ($prevPageLogId !== null)
+		{
+			$prevPageLogIdList = explode('|', trim($prevPageLogId));
 			foreach($prevPageLogIdList as $key => $val)
 			{
 				preg_match('/^(\d+)$/', $val, $matches);

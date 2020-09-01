@@ -250,11 +250,12 @@ class Recent
 				$item['USER'] = [
 					'ID' => (int)$row['MESSAGE_AUTHOR_ID'],
 				];
+				$item['MESSAGE']['TEXT'] = \CTextParser::convert4mail($item['MESSAGE']['TEXT']);
 			}
 			else
 			{
 				$avatar = \CIMChat::GetAvatarImage($row['CHAT_AVATAR'], 200, false);
-				$color = strlen($row['CHAT_COLOR']) > 0
+				$color = $row['CHAT_COLOR'] <> ''
 					? Color::getColor($row['CHAT_COLOR'])
 					: Color::getColorByNumber(
 						$row['ITEM_ID']
@@ -328,7 +329,12 @@ class Recent
 				{
 					$item['MESSAGE']['TEXT'] = $user['WORK_POSITION'];
 				}
+			}
 
+			$item['OPTIONS'] = [];
+			if ($row['USER_ID'] == 0)
+			{
+				$item['OPTIONS']['DEFAULT_USER_RECORD'] = true;
 			}
 
 			$result[] = $item;
@@ -368,7 +374,7 @@ class Recent
 							else if (is_string($subValue) &&
 									 $subValue &&
 									 in_array($subKey, ['URL', 'AVATAR']) &&
-									 strpos($subValue, 'http') !== 0)
+								mb_strpos($subValue, 'http') !== 0)
 							{
 								$value[$subKey] = \Bitrix\Im\Common::getPublicDomain().$subValue;
 							}
@@ -445,10 +451,10 @@ class Recent
 		$pin = $pin === true? 'Y': 'N';
 
 		$id = $dialogId;
-		if (substr($dialogId, 0, 4) == 'chat')
+		if (mb_substr($dialogId, 0, 4) == 'chat')
 		{
 			$itemTypes = \Bitrix\Im\Chat::getTypes();
-			$id = substr($dialogId, 4);
+			$id = mb_substr($dialogId, 4);
 		}
 		else if ($dialogId === 'notify')
 		{
@@ -472,7 +478,7 @@ class Recent
 		)->fetch();
 		if (!$element)
 		{
-//			if (substr($dialogId, 0, 4) == 'chat')
+//			if (mb_substr($dialogId, 0, 4) == 'chat')
 //			{
 //				if (!\Bitrix\Im\Dialog::hasAccess($dialogId))
 //				{
@@ -579,10 +585,10 @@ class Recent
 		$unread = $unread === true? 'Y': 'N';
 
 		$id = $dialogId;
-		if (substr($dialogId, 0, 4) === 'chat')
+		if (mb_substr($dialogId, 0, 4) === 'chat')
 		{
 			$itemTypes = \Bitrix\Im\Chat::getTypes();
-			$id = substr($dialogId, 4);
+			$id = mb_substr($dialogId, 4);
 		}
 		else if ($dialogId === 'notify')
 		{

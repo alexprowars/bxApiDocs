@@ -4,7 +4,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/blog/general/blog_post_c
 class CBlogPostCategory extends CAllBlogPostCategory
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -19,7 +19,9 @@ class CBlogPostCategory extends CAllBlogPostCategory
 		}
 
 		if (!CBlogPostCategory::CheckFields("ADD", $arFields))
+		{
 			return false;
+		}
 
 		$arInsert = $DB->PrepareInsert("b_blog_post_category", $arFields);
 
@@ -48,7 +50,7 @@ class CBlogPostCategory extends CAllBlogPostCategory
 		return False;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -91,7 +93,7 @@ class CBlogPostCategory extends CAllBlogPostCategory
 	}
 
 	//*************** SELECT *********************/
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 

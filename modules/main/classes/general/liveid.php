@@ -23,7 +23,7 @@ class WLL_User
 	/**
     * Initialize the User with time stamp, userid, flags, context and token.
     */
-	static public function __construct($timestamp, $id, $flags, $context, $token)
+	public function __construct($timestamp, $id, $flags, $context, $token)
 	{
 		WLL_User::setTimestamp($timestamp);
 		WLL_User::setId($id);
@@ -39,7 +39,7 @@ class WLL_User
      * Returns the Unix timestamp as obtained from the SSO token.
      */
 	/*public*/
-	public function getTimestamp()
+	function getTimestamp()
 	{
 		return $this->_timestamp;
 	}
@@ -48,7 +48,7 @@ class WLL_User
      * Sets the Unix timestamp.
      */
 	/*private*/
-	public function setTimestamp($timestamp)
+	function setTimestamp($timestamp)
 	{
 		if (!$timestamp) {
 			//throw new Exception('Error: WLL_User: Null timestamp.');
@@ -72,7 +72,7 @@ class WLL_User
      * Returns the pairwise unique ID for the user.
      */
 	/*public*/
-	public function getId()
+	function getId()
 	{
 		return $this->_id;
 	}
@@ -81,7 +81,7 @@ class WLL_User
      * Sets the pairwise unique ID for the user.
      */
 	/*private*/
-	public function setId($id)
+	function setId($id)
 	{
 		if (!$id) {
 			//throw new Exception('Error: WLL_User: Null id.');
@@ -106,7 +106,7 @@ class WLL_User
      * user token in a session or persistent cookie.
      */
 	/*public*/
-	public function usePersistentCookie()
+	function usePersistentCookie()
 	{
 		return $this->_usePersistentCookie;
 	}
@@ -115,7 +115,7 @@ class WLL_User
      * Sets the usePersistentCookie flag for the user.
      */
 	/*private*/
-	public function setFlags($flags)
+	function setFlags($flags)
 	{
 		$this->_usePersistentCookie = false;
 		if (preg_match('/^\d+$/', $flags)) {
@@ -131,7 +131,7 @@ class WLL_User
      * to the sign-in request, if any.
      */
 	/*public*/
-	public function getContext()
+	function getContext()
 	{
 		return $this->_context;
 	}
@@ -140,7 +140,7 @@ class WLL_User
      * Sets the the Application context.
      */
 	/*private*/
-	public function setContext($context)
+	function setContext($context)
 	{
 		$this->_context = $context;
 	}
@@ -154,7 +154,7 @@ class WLL_User
      * retrieved by calling the ProcessToken method.
      */
 	/*public*/
-	public function getToken()
+	function getToken()
 	{
 		return $this->_token;
 	}
@@ -163,7 +163,7 @@ class WLL_User
      * Sets the the User token.
      */
 	/*private*/
-	public function setToken($token)
+	function setToken($token)
 	{
 		$this->_token = $token;
 	}
@@ -171,12 +171,12 @@ class WLL_User
 
 	var $_error = false;
 
-	public function setError($str)
+	function setError($str)
 	{
 		$this->_error = $str;
 	}
 
-	public function getError()
+	function getError()
 	{
 		if ($this->_error !== false)
 		{
@@ -194,7 +194,7 @@ class WLL_ConsentToken
      * Indicates whether the delegation token is set and has not expired.
      */
 	/*public*/
-	public static function isValid()
+	function isValid()
 	{
 		if (!WLL_ConsentToken::getDelegationToken()) {
 			return false;
@@ -209,7 +209,7 @@ class WLL_ConsentToken
      * true is returned to signify success.
      */
 	/*public*/
-	public function refresh()
+	function refresh()
 	{
 		$wll = $this->_wll;
 		$ct = $wll->refreshConsentToken($this);
@@ -253,7 +253,7 @@ class WLL_ConsentToken
      * Gets the Delegation token.
      */
 	/*public*/
-	public function getDelegationToken()
+	function getDelegationToken()
 	{
 		return $this->_delegationtoken;
 	}
@@ -262,7 +262,7 @@ class WLL_ConsentToken
      * Sets the Delegation token.
      */
 	/*private*/
-	public function setDelegationToken($delegationtoken)
+	function setDelegationToken($delegationtoken)
 	{
 		if (!$delegationtoken) {
 			//throw new Exception('Error: WLL_ConsentToken: Null delegation token.');
@@ -279,7 +279,7 @@ class WLL_ConsentToken
      * Gets the refresh token.
      */
 	/*public*/
-	public function getRefreshToken()
+	function getRefreshToken()
 	{
 		return $this->_refreshtoken;
 	}
@@ -288,7 +288,7 @@ class WLL_ConsentToken
      * Sets the refresh token.
      */
 	/*private*/
-	public function setRefreshToken($refreshtoken)
+	function setRefreshToken($refreshtoken)
 	{
 		$this->_refreshtoken = $refreshtoken;
 	}
@@ -300,7 +300,7 @@ class WLL_ConsentToken
      * Gets the session key.
      */
 	/*public*/
-	public function getSessionKey()
+	function getSessionKey()
 	{
 		return $this->_sessionkey;
 	}
@@ -309,7 +309,7 @@ class WLL_ConsentToken
      * Sets the session key.
      */
 	/*private*/
-	public function setSessionKey($sessionkey)
+	function setSessionKey($sessionkey)
 	{
 		if (!$sessionkey) {
 			//throw new Exception('Error: WLL_ConsentToken: Null session key.');
@@ -326,7 +326,7 @@ class WLL_ConsentToken
      * Gets the expiry time of delegation token.
      */
 	/*public*/
-	public function getExpiry()
+	function getExpiry()
 	{
 		return $this->_expiry;
 	}
@@ -335,7 +335,7 @@ class WLL_ConsentToken
      * Sets the expiry time of delegation token.
      */
 	/*private*/
-	public function setExpiry($expiry)
+	function setExpiry($expiry)
 	{
 		if (!$expiry) {
 			//throw new Exception('Error: WLL_ConsentToken: Null expiry time.');
@@ -358,7 +358,7 @@ class WLL_ConsentToken
      * Gets the list of offers/actions for which the user granted consent.
      */
 	/*public*/
-	public function getOffers()
+	function getOffers()
 	{
 		return $this->_offers;
 	}
@@ -371,7 +371,7 @@ class WLL_ConsentToken
      * the user granted consent.
      */
 	/*public*/
-	public function getOffersString()
+	function getOffersString()
 	{
 		return $this->_offers_string;
 	}
@@ -380,7 +380,7 @@ class WLL_ConsentToken
      * Sets the offers/actions for which user granted consent.
      */
 	/*private*/
-	public function setOffers($offers)
+	function setOffers($offers)
 	{
 		if (!$offers) {
 			//throw new Exception('Error: WLL_ConsentToken: Null offers.');
@@ -409,7 +409,7 @@ class WLL_ConsentToken
      * Gets the location ID.
      */
 	/*public*/
-	public function getLocationID()
+	function getLocationID()
 	{
 		return $this->_locationID;
 	}
@@ -418,7 +418,7 @@ class WLL_ConsentToken
      * Sets the location ID.
      */
 	/*private*/
-	public function setLocationID($locationID)
+	function setLocationID($locationID)
 	{
 		if (!$locationID) {
 			//throw new Exception('Error: WLL_ConsentToken: Null Location ID.');
@@ -435,7 +435,7 @@ class WLL_ConsentToken
      * to the sign-in request, if any.
      */
 	/*public*/
-	public function getContext()
+	function getContext()
 	{
 		return $this->_context;
 	}
@@ -444,7 +444,7 @@ class WLL_ConsentToken
      * Sets the application context.
      */
 	/*private*/
-	public function setContext($context)
+	function setContext($context)
 	{
 		$this->_context = $context;
 	}
@@ -455,7 +455,7 @@ class WLL_ConsentToken
      * Gets the decoded token.
      */
 	/*public*/
-	public function getDecodedToken()
+	function getDecodedToken()
 	{
 		return $this->_decodedtoken;
 	}
@@ -464,7 +464,7 @@ class WLL_ConsentToken
      * Sets the decoded token.
      */
 	/*private*/
-	public function setDecodedToken($decodedtoken)
+	function setDecodedToken($decodedtoken)
 	{
 		$this->_decodedtoken = $decodedtoken;
 	}
@@ -476,7 +476,7 @@ class WLL_ConsentToken
      * Gets the raw token.
      */
 	/*public*/
-	public function getToken()
+	function getToken()
 	{
 		return $this->_token;
 	}
@@ -485,7 +485,7 @@ class WLL_ConsentToken
      * Sets the raw token.
      */
 	/*private*/
-	public function setToken($token)
+	function setToken($token)
 	{
 		$this->_token = $token;
 	}
@@ -494,7 +494,7 @@ class WLL_ConsentToken
      * Makes a copy of the ConsentToken object.
      */
 	/*private*/
-	public function copy($ct)
+	function copy($ct)
 	{
 		$this->_delegationtoken = $ct->_delegationtoken;
 		$this->_refreshtoken = $ct->_refreshtoken;
@@ -509,12 +509,12 @@ class WLL_ConsentToken
 
 	var $_error = false;
 
-	public function setError($str)
+	function setError($str)
 	{
 		$this->_error = $str;
 	}
 
-	public function getError()
+	function getError()
 	{
 		if ($this->_error !== false)
 		{
@@ -536,7 +536,7 @@ class WindowsLiveLogin
      * errors will be logged using the PHP error_log function.
      */
 	/*public*/
-	public function setDebug($debug)
+	function setDebug($debug)
 	{
 		$this->_debug = $debug;
 	}
@@ -548,7 +548,7 @@ class WindowsLiveLogin
      * function.
      */
 	/*private*/
-	public function debug($string)
+	function debug($string)
 	{
 		if ($this->_debug) {
 			echo "$string<br>";
@@ -560,7 +560,7 @@ class WindowsLiveLogin
      * Stub implementation for handling a fatal error.
      */
 	/*private*/
-	public function fatal($string)
+	function fatal($string)
 	{
 		WindowsLiveLogin::debug($string);
 		//throw new Exception($string);
@@ -590,7 +590,7 @@ class WindowsLiveLogin
      *  recommend that your Delegated Authentication application always
      *  be registered for enhanced security and functionality.
      */
-	static public function __construct(
+	public function __construct(
 					$appid=null, $secret=null, $securityalgorithm=null,
 					$force_delauth_nonprovisioned=null,
 					$policyurl=null, $returnurl=null
@@ -637,7 +637,7 @@ class WindowsLiveLogin
      *  Internet. This file contains important confidential information.
      */
 	/*public static*/
-	public static function initFromXml($settingsFile)
+	function initFromXml($settingsFile)
 	{
 		$o = new WindowsLiveLogin();
 		$settings = $o->parseSettings($settingsFile);
@@ -677,7 +677,7 @@ class WindowsLiveLogin
      * an application ID at initialization.
      **/
 	/*public*/
-	public function setAppId($appid)
+	function setAppId($appid)
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		if (!$appid) {
@@ -696,7 +696,7 @@ class WindowsLiveLogin
      * Returns the application ID.
      */
 	/*public*/
-	public function getAppId()
+	function getAppId()
 	{
 		if (!$this->_appid) {
 			WindowsLiveLogin::fatal('Error: getAppId: Application ID was not set. Aborting.');
@@ -714,7 +714,7 @@ class WindowsLiveLogin
      * a secret key at initialization.
      */
 	/*public*/
-	public function setSecret($secret)
+	function setSecret($secret)
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		if (!$secret || (strlen($secret) < 16)) {
@@ -748,7 +748,7 @@ class WindowsLiveLogin
      * key.
      */
 	/*public*/
-	public function setOldSecret($secret)
+	function setOldSecret($secret)
 	{
 		if (!$secret) {
 			return;
@@ -774,7 +774,7 @@ class WindowsLiveLogin
      * elapsed since January 1, 1970.
      */
 	/*public*/
-	public function setOldSecretExpiry($timestamp)
+	function setOldSecretExpiry($timestamp)
 	{
 		if (!$timestamp) {
 			return;
@@ -792,7 +792,7 @@ class WindowsLiveLogin
      * Gets the old secret key expiry time.
      */
 	/*public*/
-	public function getOldSecretExpiry()
+	function getOldSecretExpiry()
 	{
 		return $this->_oldsecretexpiry;
 	}
@@ -804,7 +804,7 @@ class WindowsLiveLogin
      * Sets the version of the security algorithm being used.
      */
 	/*public*/
-	public function setSecurityAlgorithm($securityalgorithm)
+	function setSecurityAlgorithm($securityalgorithm)
 	{
 		$this->_securityalgorithm = $securityalgorithm;
 	}
@@ -813,7 +813,7 @@ class WindowsLiveLogin
      * Gets the version of the security algorithm being used.
      */
 	/*public*/
-	public function getSecurityAlgorithm()
+	function getSecurityAlgorithm()
 	{
 		$securityalgorithm = $this->_securityalgorithm;
 		if (!$securityalgorithm) {
@@ -831,7 +831,7 @@ class WindowsLiveLogin
      * key).
      */
 	/*public*/
-	public function setForceDelAuthNonProvisioned($force_delauth_nonprovisioned)
+	function setForceDelAuthNonProvisioned($force_delauth_nonprovisioned)
 	{
 		$this->_force_delauth_nonprovisioned = $force_delauth_nonprovisioned;
 	}
@@ -843,7 +843,7 @@ class WindowsLiveLogin
      * Sets the privacy policy URL if you did not provide one at initialization time.
      */
 	/*public*/
-	public function setPolicyUrl($policyurl)
+	function setPolicyUrl($policyurl)
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		if (!$policyurl) {
@@ -858,7 +858,7 @@ class WindowsLiveLogin
      * Gets the privacy policy URL for your site.
      */
 	/*public*/
-	public function getPolicyUrl()
+	function getPolicyUrl()
 	{
 		$policyurl = $this->_policyurl;
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
@@ -882,7 +882,7 @@ class WindowsLiveLogin
      *  override the return URL specified during registration.
      */
 	/*public*/
-	public function setReturnUrl($returnurl)
+	function setReturnUrl($returnurl)
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		if (!$returnurl) {
@@ -897,7 +897,7 @@ class WindowsLiveLogin
      * Returns the return URL of your site.
      */
 	/*public*/
-	public function getReturnUrl()
+	function getReturnUrl()
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		$returnurl = $this->_returnurl;
@@ -919,7 +919,7 @@ class WindowsLiveLogin
      *  provided here.
      */
 	/*public*/
-	public function setBaseUrl($baseurl)
+	function setBaseUrl($baseurl)
 	{
 		$this->_baseurl = $baseurl;
 	}
@@ -931,7 +931,7 @@ class WindowsLiveLogin
      * provided here.
      */
 	/*public*/
-	public function getBaseUrl()
+	function getBaseUrl()
 	{
 		$baseurl = $this->_baseurl;
 		if (!$baseurl) {
@@ -948,7 +948,7 @@ class WindowsLiveLogin
      * server. You should not have to change this property.
      */
 	/*public*/
-	public function setSecureUrl($secureurl)
+	function setSecureUrl($secureurl)
 	{
 		$this->_secureurl = $secureurl;
 	}
@@ -958,7 +958,7 @@ class WindowsLiveLogin
      * server. You should not have to use this functon directly.
      */
 	/*public*/
-	public function getSecureUrl()
+	function getSecureUrl()
 	{
 		$secureurl = $this->_secureurl;
 		if (!$secureurl) {
@@ -975,7 +975,7 @@ class WindowsLiveLogin
      * server. You should not have to use or change this property directly.
      */
 	/*public*/
-	public function setConsentBaseUrl($consenturl)
+	function setConsentBaseUrl($consenturl)
 	{
 		$this->_consenturl = $consenturl;
 	}
@@ -985,7 +985,7 @@ class WindowsLiveLogin
      * should not have to use or change this directly.
      */
 	/*public*/
-	public function getConsentBaseUrl()
+	function getConsentBaseUrl()
 	{
 		$consenturl = $this->_consenturl;
 		if (!$consenturl) {
@@ -1004,7 +1004,7 @@ class WindowsLiveLogin
      * response for site-specific use.
      */
 	/*public*/
-	public static function getLoginUrl($context=null, $market=null)
+	function getLoginUrl($context=null, $market=null)
 	{
 		$url  = WindowsLiveLogin::getBaseUrl();
 		$url .= 'wlogin.srf?appid=' . WindowsLiveLogin::getAppId();
@@ -1019,7 +1019,7 @@ class WindowsLiveLogin
      * We recommend that you use the Sign In control instead.
      */
 	/*public*/
-	public static function getLogoutUrl($market=null)
+	function getLogoutUrl($market=null)
 	{
 		$url = WindowsLiveLogin::getBaseUrl();
 		$url .= "logout.srf?appid=" . WindowsLiveLogin::getAppId();
@@ -1036,7 +1036,7 @@ class WindowsLiveLogin
      * @return      a User object on successful sign-in; otherwise null.
      */
 	/*public*/
-	public static function processLogin($query)
+	function processLogin($query)
 	{
 		$action = @$query['action'];
 		if ($action != 'login') {
@@ -1054,7 +1054,7 @@ class WindowsLiveLogin
      * as the context field in the User object.
      */
 	/*public*/
-	public static function processToken($token, $context=null)
+	function processToken($token, $context=null)
 	{
 		if (!$token) {
 			WindowsLiveLogin::debug('Error: processToken: Invalid token specified.');
@@ -1111,7 +1111,7 @@ class WindowsLiveLogin
      * image as response to the 'action=clearcookie' query.
      */
 	/*public*/
-	public static function getClearCookieResponse()
+	function getClearCookieResponse()
 	{
 		$type = "image/gif";
 		$content = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAEALAAAAAABAAEAAAIBTAA7";
@@ -1136,7 +1136,7 @@ class WindowsLiveLogin
 	* 'market' parameter.
 	*/
 	/*public*/
-	public function getConsentUrl($offers, $context=null, $ru=null, $market=null)
+	function getConsentUrl($offers, $context=null, $ru=null, $market=null)
 	{
 		if (!$offers) {
 			//throw new Exception('Error: getConsentUrl: Invalid offers list.');
@@ -1165,7 +1165,7 @@ class WindowsLiveLogin
 	* specifying 'ru' here.
 	*/
 	/*public*/
-	public function getRefreshConsentTokenUrl($offers, $refreshtoken, $ru=null)
+	function getRefreshConsentTokenUrl($offers, $refreshtoken, $ru=null)
 	{
 		$_force_delauth_nonprovisioned = $this->_force_delauth_nonprovisioned;
 		if (!$offers) {
@@ -1200,7 +1200,7 @@ class WindowsLiveLogin
 	* 'market' parameter.
 	*/
 	/*public*/
-	public static function getManageConsentUrl($market=null)
+	function getManageConsentUrl($market=null)
 	{
 		$url  = WindowsLiveLogin::getConsentBaseUrl();
 		$url .= 'ManageConsent.aspx';
@@ -1215,7 +1215,7 @@ class WindowsLiveLogin
 	* of invoking the processConsentToken method.
 	*/
 	/*public*/
-	public static function processConsent($query)
+	function processConsent($query)
 	{
 		$action = @$query['action'];
 		if ($action != 'delauth') {
@@ -1238,7 +1238,7 @@ class WindowsLiveLogin
 	* user has granted consent.
 	*/
 	/*public*/
-	public static function processConsentToken($token, $context=null)
+	function processConsentToken($token, $context=null)
 	{
 		if (!$token) {
 			WindowsLiveLogin::debug('Error: processConsentToken: Null token.');
@@ -1290,7 +1290,7 @@ class WindowsLiveLogin
 	* original token is not modified.
 	*/
 	/*public*/
-	public static function refreshConsentToken($token, $ru=null)
+	function refreshConsentToken($token, $ru=null)
 	{
 		if (!$token) {
 			WindowsLiveLogin::debug("Error: refreshConsentToken: Null consent token.");
@@ -1304,7 +1304,7 @@ class WindowsLiveLogin
 	* The original token is not modified.
 	*/
 	/*public*/
-	public static function refreshConsentToken2($offers_string, $refreshtoken, $ru=null)
+	function refreshConsentToken2($offers_string, $refreshtoken, $ru=null)
 	{
 		$body = WindowsLiveLogin::fetch(WindowsLiveLogin::getRefreshConsentTokenUrl($offers_string, $refreshtoken, $ru));
 		if (!$body) {
@@ -1328,7 +1328,7 @@ class WindowsLiveLogin
 	* Decodes and validates the token.
 	*/
 	/*public*/
-	public function decodeAndValidateToken($token, $cryptkey=null, $signkey=null,
+	function decodeAndValidateToken($token, $cryptkey=null, $signkey=null,
 	$internal_allow_recursion=true)
 	{
 		if (!$cryptkey) {
@@ -1373,7 +1373,7 @@ class WindowsLiveLogin
      * Finally, the string is decrypted using the encryption key.
      */
 	/*public*/
-	public function decodeToken($token, $cryptkey=null)
+	function decodeToken($token, $cryptkey=null)
 	{
 		if (!$cryptkey) {
 			$cryptkey = $this->_cryptkey;
@@ -1403,7 +1403,7 @@ class WindowsLiveLogin
      * key.
      */
 	/*public*/
-	public function signToken($token, $signkey=null)
+	function signToken($token, $signkey=null)
 	{
 		if (!$signkey) {
 			$signkey = $this->_signkey;
@@ -1427,7 +1427,7 @@ class WindowsLiveLogin
      * Extracts the signature from the token and validates it.
      */
 	/*public*/
-	public function validateToken($token, $signkey=null)
+	function validateToken($token, $signkey=null)
 	{
 		if (!$signkey) {
 			$signkey = $this->_signkey;
@@ -1473,7 +1473,7 @@ class WindowsLiveLogin
      * optionally be included in the token.
      */
 	/*public*/
-	public static function getAppVerifier($ip=null)
+	function getAppVerifier($ip=null)
 	{
 		$token  = 'appid=' . WindowsLiveLogin::getAppId() . '&ts=' . WindowsLiveLogin::getTimestamp();
 		$token .= ($ip ? "&ip={$ip}" : '');
@@ -1502,7 +1502,7 @@ class WindowsLiveLogin
      * WLIDResultCallback("<tokenvalue>");
      */
 	/*public*/
-	public static function getAppLoginUrl($siteid=null, $ip=null, $js=null)
+	function getAppLoginUrl($siteid=null, $ip=null, $js=null)
 	{
 		$url  = WindowsLiveLogin::getSecureUrl();
 		$url .= 'wapplogin.srf?app=' . WindowsLiveLogin::getAppVerifier($ip);
@@ -1530,7 +1530,7 @@ class WindowsLiveLogin
      *  seen here.
      */
 	/*public*/
-	public static function getAppSecurityToken($siteid=null, $ip=null)
+	function getAppSecurityToken($siteid=null, $ip=null)
 	{
 		$body = WindowsLiveLogin::fetch(WindowsLiveLogin::getAppLoginUrl($siteid, $ip));
 		if (!$body) {
@@ -1555,7 +1555,7 @@ class WindowsLiveLogin
      * finishes trusted sign-in.
      */
 	/*public*/
-	public static function getAppRetCode()
+	function getAppRetCode()
 	{
 		return 'appid=' . WindowsLiveLogin::getAppId();
 	}
@@ -1577,7 +1577,7 @@ class WindowsLiveLogin
      *  application. Otherwise, an HTTP 200 response is returned.
      */
 	/*public*/
-	public static function getTrustedParams($user, $retcode=null)
+	function getTrustedParams($user, $retcode=null)
 	{
 		$token  = WindowsLiveLogin::getTrustedToken($user);
 		if (!$token) {
@@ -1604,7 +1604,7 @@ class WindowsLiveLogin
      * 'user'.
      */
 	/*public*/
-	public static function getTrustedToken($user)
+	function getTrustedToken($user)
 	{
 		if (!$user) {
 			WindowsLiveLogin::debug('Error: getTrustedToken: Null user specified.');
@@ -1621,7 +1621,7 @@ class WindowsLiveLogin
      * Returns the trusted sign-in URL to use for Windows Live Login server.
      */
 	/*public*/
-	public static function getTrustedLoginUrl()
+	function getTrustedLoginUrl()
 	{
 		return WindowsLiveLogin::getSecureUrl() . 'wlogin.srf';
 	}
@@ -1631,7 +1631,7 @@ class WindowsLiveLogin
      *  Login server.
      */
 	/*public*/
-	public static function getTrustedLogoutUrl()
+	function getTrustedLogoutUrl()
 	{
 		return WindowsLiveLogin::getSecureUrl() . "logout.srf?appid=" + WindowsLiveLogin::getAppId();
 	}
@@ -1642,7 +1642,7 @@ class WindowsLiveLogin
      * Function to parse the settings file.
      */
 	/*private*/
-	public static function parseSettings($settingsFile)
+	function parseSettings($settingsFile)
 	{
 		$settings = array(
 			'appid' => '00163FFF8000E2C5',
@@ -1683,7 +1683,7 @@ class WindowsLiveLogin
      * Web Authentication SDK documentation.
      */
 	/*private*/
-	public static function derive($secret, $prefix)
+	function derive($secret, $prefix)
 	{
 		if (!$secret || !$prefix) {
 			WindowsLiveLogin::fatal("Error: derive: secret or prefix is null.");
@@ -1712,7 +1712,7 @@ class WindowsLiveLogin
      * returned.
      */
 	/*private*/
-	public static function parse($input)
+	function parse($input)
 	{
 		if (!$input) {
 			WindowsLiveLogin::debug("Error: parse: Null input.");
@@ -1739,7 +1739,7 @@ class WindowsLiveLogin
      * token.
      */
 	/*private*/
-	public static function getTimestamp()
+	function getTimestamp()
 	{
 		return time();
 	}
@@ -1748,7 +1748,7 @@ class WindowsLiveLogin
      * Base64-encodes and URL-escapes a string.
      */
 	/*private*/
-	public static function e64($input)
+	function e64($input)
 	{
 		if (is_null($input)) {
 			return;
@@ -1760,7 +1760,7 @@ class WindowsLiveLogin
      * URL-unescapes and Base64-decodes a string.
      */
 	/*private*/
-	public static function u64($input)
+	function u64($input)
 	{
 		if(is_null($input))
 			return;
@@ -1771,7 +1771,7 @@ class WindowsLiveLogin
      * Fetches the contents given a URL.
      */
 	/*private*/
-	public static function fetch($url)
+	function fetch($url)
 	{
 		/*
 		if (!($handle = fopen($url, "rb"))) {
@@ -1796,12 +1796,12 @@ class WindowsLiveLogin
 
 	var $_error = false;
 
-	public function setError($str)
+	function setError($str)
 	{
 		$this->_error = $str;
 	}
 
-	public function getError()
+	function getError()
 	{
 		if ($this->_error !== false)
 		{
@@ -1809,7 +1809,7 @@ class WindowsLiveLogin
 		}
 	}
 
-	public static function OnExternalAuthList()
+	function OnExternalAuthList()
 	{
 		$arResult = Array();
 		if (
@@ -1825,7 +1825,7 @@ class WindowsLiveLogin
 		return $arResult;
 	}
 
-	public static function IsAvailable()
+	function IsAvailable()
 	{
 		return function_exists('mcrypt_decrypt') && (function_exists('mhash') || function_exists('hash'));
 	}

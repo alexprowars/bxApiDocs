@@ -16,7 +16,7 @@ class FeedbackForm
 
 	public function __construct(string $id)
 	{
-		if (!strlen($id))
+		if ($id == '')
 		{
 			throw new ArgumentException(' Feedback form id can not be empty');
 		}

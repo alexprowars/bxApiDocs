@@ -211,7 +211,7 @@ class AddressType extends BaseType
 			&&
 			static::checkRestriction()
 			&&
-			strpos($value, '|') >= 0
+			mb_strpos($value, '|') >= 0
 		)
 		{
 			if($userField['MULTIPLE'] === 'Y')
@@ -239,10 +239,10 @@ class AddressType extends BaseType
 	public static function parseValue(?string $value):array
 	{
 		$coords = '';
-		if(strpos($value, '|') !== false)
+		if(mb_strpos($value, '|') !== false)
 		{
 			list($value, $coords) = explode('|', $value);
-			if($coords !== '' && strpos($coords, ';') !== false)
+			if($coords !== '' && mb_strpos($coords, ';') !== false)
 			{
 				$coords = explode(';', $coords);
 			}

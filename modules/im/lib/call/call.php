@@ -14,6 +14,7 @@ use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Main\Event;
+use Bitrix\Main\Web\JWT;
 
 class Call
 {
@@ -63,7 +64,7 @@ class Call
 	 */
 	public function getId()
 	{
-		return $this->id;
+		return (int)$this->id;
 	}
 
 	/**
@@ -175,7 +176,14 @@ class Call
 			$userState = $user->getState();
 			$states[$userState] = isset($states[$userState]) ? $states[$userState] + 1 : 1;
 		}
-		return $states[CallUser::STATE_READY] >= 2 || ($states[CallUser::STATE_READY] >= 1 && $states[CallUser::STATE_CALLING] >= 1);
+		if($this->type == static::TYPE_PERMANENT)
+		{
+			 return $states[CallUser::STATE_READY] >= 1;
+		}
+		else
+		{
+			return $states[CallUser::STATE_READY] >= 2 || ($states[CallUser::STATE_READY] >= 1 && $states[CallUser::STATE_CALLING] >= 1);
+		}
 	}
 
 	public function getSignaling()
@@ -418,9 +426,9 @@ class Call
 		AddEventToStatFile("im", "im_call_finish", $this->id, $callLength, "call_length");
 		if($chatType)
 		{
-			AddEventToStatFile("im_call_finish", "chat_type", $this->id, $chatType);
+			AddEventToStatFile("im","im_call_finish", $this->id, $chatType, "chat_type");
 		}
-		AddEventToStatFile("im_call_finish", "status", $this->id, $finishStatus);
+		AddEventToStatFile("im","im_call_finish", $this->id, $finishStatus, "status");
 	}
 
 	public function getMaxUsers()
@@ -431,6 +439,46 @@ class Call
 		}
 
 		return (int)Option::get('im', 'turn_server_max_users');
+	}
+
+	public function getLogToken(int $userId = 0, int $ttl = 3600) : string
+	{
+		$userId = $userId ?: $this->getCurrentUserId();
+		if(!$userId)
+		{
+			return  '';
+		}
+		if (Loader::includeModule("bitrix24") && defined('BX24_HOST_NAME'))
+		{
+			$portalId = BX24_HOST_NAME;
+		}
+		else if (defined('IM_CALL_LOG_HOST'))
+		{
+			$portalId = IM_CALL_LOG_HOST;
+		}
+		else
+		{
+			return '';
+		}
+		$secret = Option::get('im', 'call_log_secret');
+		if ($secret == '')
+		{
+			return '';
+		}
+		return JWT::encode(
+			[
+				'prt' => $portalId,
+				'call' => $this->getId(),
+				'usr' => $userId,
+				'exp' => (new DateTime())->getTimestamp() + $ttl
+			],
+			$secret
+		);
+	}
+
+	public static function getLogService() : string
+	{
+		return (string)Option::get('im', 'call_log_service');
 	}
 
 	public static function getMaxCallServerParticipants()
@@ -545,7 +593,7 @@ class Call
 		$instance = new static();
 
 		$instance->id = $fields['ID'];
-		$instance->type = $fields['TYPE'];
+		$instance->type = (int)$fields['TYPE'];
 		$instance->initiatorId = $fields['INITIATOR_ID'];
 		$instance->isPublic = $fields['IS_PUBLIC'];
 		$instance->publicId = $fields['PUBLIC_ID'];
@@ -622,11 +670,9 @@ class Call
 		return (bool)Option::get("im", "call_server_enabled");
 	}
 
-	protected function getCurrentUserId()
+	protected function getCurrentUserId() : int
 	{
-		global $USER;
-
-		return $USER->getId();
+		return $GLOBALS['USER'] ? (int)$GLOBALS['USER']->getId() : 0;
 	}
 
 	public static function onVoximplantConferenceFinished(Event $event)

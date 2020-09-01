@@ -195,7 +195,7 @@ class RestActivityTable extends Entity\DataManager
 	public static function getLocalization($field, $langId)
 	{
 		$result = '';
-		$langId = strtoupper($langId);
+		$langId = mb_strtoupper($langId);
 		if (is_string($field))
 			$result = $field;
 		elseif (!empty($field[$langId]))

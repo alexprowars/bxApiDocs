@@ -1874,7 +1874,7 @@ abstract class Base extends \CBitrixComponent
 		if (!empty($order))
 		{
 			foreach (array_keys($order) as $field)
-				$select[] = strtoupper($field);
+				$select[] = mb_strtoupper($field);
 			unset($field);
 		}
 		if (!empty($select))
@@ -2123,7 +2123,7 @@ abstract class Base extends \CBitrixComponent
 		{
 			$name = $conditionNameMap[$condition['CLASS_ID']];
 		}
-		elseif (strpos($condition['CLASS_ID'], 'CondIBProp') !== false)
+		elseif (mb_strpos($condition['CLASS_ID'], 'CondIBProp') !== false)
 		{
 			$name = $condition['CLASS_ID'];
 		}
@@ -2197,10 +2197,10 @@ abstract class Base extends \CBitrixComponent
 				}
 				else
 				{
-					if (($ind = strpos($name, 'CondIBProp')) !== false)
+					if (($ind = mb_strpos($name, 'CondIBProp')) !== false)
 					{
 						list($prefix, $iblock, $propertyId) = explode(':', $name);
-						$operator = $ind > 0 ? substr($prefix, 0, $ind) : '';
+						$operator = $ind > 0? mb_substr($prefix, 0, $ind) : '';
 
 						$catalogInfo = \CCatalogSku::GetInfoByIBlock($iblock);
 						if (!empty($catalogInfo))
@@ -3703,7 +3703,7 @@ abstract class Base extends \CBitrixComponent
 			$checkFields = array();
 			foreach (array_keys($offersOrder) as $code)
 			{
-				$code = strtoupper($code);
+				$code = mb_strtoupper($code);
 				if ($code == 'ID' || $code == 'AVAILABLE')
 					continue;
 				$checkFields[] = $code;
@@ -3967,8 +3967,8 @@ abstract class Base extends \CBitrixComponent
 	protected function getOffersSort()
 	{
 		$offersOrder = array(
-			strtoupper($this->arParams['OFFERS_SORT_FIELD']) => $this->arParams['OFFERS_SORT_ORDER'],
-			strtoupper($this->arParams['OFFERS_SORT_FIELD2']) => $this->arParams['OFFERS_SORT_ORDER2']
+			mb_strtoupper($this->arParams['OFFERS_SORT_FIELD']) => $this->arParams['OFFERS_SORT_ORDER'],
+			mb_strtoupper($this->arParams['OFFERS_SORT_FIELD2']) => $this->arParams['OFFERS_SORT_ORDER2']
 		);
 		if (!isset($offersOrder['ID']))
 			$offersOrder['ID'] = 'DESC';
@@ -4175,7 +4175,7 @@ abstract class Base extends \CBitrixComponent
 		}
 		else
 		{
-			$action = strtoupper($this->request->get($this->arParams['ACTION_VARIABLE']));
+			$action = mb_strtoupper($this->request->get($this->arParams['ACTION_VARIABLE']));
 		}
 
 		$productId = (int)$this->request->get($this->arParams['PRODUCT_ID_VARIABLE']);

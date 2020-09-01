@@ -8,21 +8,22 @@
 ##############################################
 */
 IncludeModuleLangFile(__FILE__);
-
-/**
- * <b>CDiskQuota</b> - класс для работы с дисковыми квотами.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cdiskquota/index.php
- * @author Bitrix
- */
 class CAllDiskQuota
 {
 	var $max_execution_time = 20; // 20 sec
 	var $LAST_ERROR = false;
+	private static $instance;
+
+	public static function getInstance()
+	{
+		if (!isset(self::$instance))
+		{
+			$c = __CLASS__;
+			self::$instance = new $c;
+		}
+
+		return self::$instance;
+	}
 
 	public function __construct($params = array())
 	{
@@ -30,11 +31,11 @@ class CAllDiskQuota
 			$this->max_execution_time = intval($params["max_execution_time"]);
 	}
 
-	static function SetDBSize()
+	function SetDBSize()
 	{
 	}
 
-	public function SetDirSize($path="", $name="", $recount=false, $skip_dir = false)
+	function SetDirSize($path="", $name="", $recount=false, $skip_dir = false)
 	{
 		if (empty($name))
 			$name = $path;
@@ -115,7 +116,7 @@ class CAllDiskQuota
 		return array("status" => "error");
 	}
 
-	public function GetDirListSimple($path, $check_time = true, $skip_dir=false)
+	function GetDirListSimple($path, $check_time = true, $skip_dir=false)
 	{
 		$path = str_replace("//", "/", $path."/");
 		$res = array();
@@ -167,7 +168,7 @@ class CAllDiskQuota
 		return array("tree" => $res, "status" => "done", "last_file" => $path.$file, "size" => $size);
 	}
 
-	public function GetDirListFromLastFile($path, $path_to_last_file="", $check_time = true, $skip_dir = false)
+	function GetDirListFromLastFile($path, $path_to_last_file="", $check_time = true, $skip_dir = false)
 	{
 		$path = str_replace("//", "/", $path."/");
 		$path_to_last_file = str_replace("//", "/", $path_to_last_file);
@@ -224,7 +225,7 @@ class CAllDiskQuota
 		return array("tree" => $res, "status" => "done", "last_file" => $path.$file, "size" => $size);
 	}
 
-	public function Recount($id, $recount=false)
+	function Recount($id, $recount=false)
 	{
 		if ((COption::GetOptionInt("main", "disk_space") <= 0))
 			return true;
@@ -259,7 +260,7 @@ class CAllDiskQuota
 		return $result;
 	}
 
-	public function GetDiskQuota()
+	function GetDiskQuota()
 	{
 		if (COption::GetOptionInt("main", "disk_space") <= 0)
 			return true;

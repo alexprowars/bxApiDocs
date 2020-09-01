@@ -26,7 +26,7 @@ class Dialog
 	{
 		if (\Bitrix\Im\Common::isChatId($dialogId))
 		{
-			$chatId = substr($dialogId, 4);
+			$chatId = (int)mb_substr($dialogId, 4);
 		}
 		else
 		{
@@ -62,7 +62,7 @@ class Dialog
 
 		if (\Bitrix\Im\Common::isChatId($dialogId))
 		{
-			$chatId = intval(substr($dialogId, 4));
+			$chatId = intval(mb_substr($dialogId, 4));
 
 			$sql =
 				'SELECT C.ID CHAT_ID, R.ID RID,
@@ -109,9 +109,9 @@ class Dialog
 					$crmEntityType = null;
 					$crmEntityId = null;
 
-					if (strlen($chatData['CHAT_ENTITY_TYPE']) > 0)
+					if ($chatData['CHAT_ENTITY_DATA_1'] <> '')
 					{
-						$fieldData = explode("|", $chatData['CHAT_ENTITY_TYPE']);
+						$fieldData = explode("|", $chatData['CHAT_ENTITY_DATA_1']);
 						if ($fieldData[0] == 'Y')
 						{
 							$crmEntityType = $fieldData[1];

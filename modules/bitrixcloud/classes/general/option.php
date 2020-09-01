@@ -158,13 +158,22 @@ abstract class CAllBitrixCloudOption
 	}
 	/**
 	 *
+	 * @return boolean
+	 *
+	 */
+	public function isExists()
+	{
+		return (count($this->_read_db()) > 0);
+	}
+	/**
+	 *
 	 * @return array[string]string
 	 *
 	 */
 	public function getArrayValue()
 	{
 		global $CACHE_MANAGER;
-		if (strlen($this->name) <= 0)
+		if ($this->name == '')
 			return /*.(array[string]string).*/ array();
 
 		if (!isset($this->value))
@@ -220,7 +229,7 @@ abstract class CAllBitrixCloudOption
 	public function setArrayValue($value)
 	{
 		global $CACHE_MANAGER;
-		if (strlen($this->name) > 0)
+		if ($this->name <> '')
 		{
 			$stored = $this->getArrayValue();
 			if ($stored !== $value)

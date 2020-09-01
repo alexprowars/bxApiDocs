@@ -4,7 +4,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/blog/general/blog_trackb
 class CBlogTrackback extends CAllBlogTrackback
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -53,7 +53,7 @@ class CBlogTrackback extends CAllBlogTrackback
 		return $ID;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -98,7 +98,7 @@ class CBlogTrackback extends CAllBlogTrackback
 	}
 
 	//*************** SELECT *********************/
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 
@@ -175,7 +175,7 @@ class CBlogTrackback extends CAllBlogTrackback
 			}
 			else
 			{
-				// Ð¢ÐžÐ›Ð¬ÐšÐž Ð”Ð›Ð¯ MYSQL!!! Ð”Ð›Ð¯ ORACLE Ð”Ð Ð£Ð“ÐžÐ™ ÐšÐžÐ”
+				// ÒÎËÜÊÎ ÄËß MYSQL!!! ÄËß ORACLE ÄÐÓÃÎÉ ÊÎÄ
 				$cnt = $dbRes->SelectedRowsCount();
 			}
 

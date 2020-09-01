@@ -468,7 +468,7 @@ final class SystemField
 	 */
 	private static function getStorageTableName(string $code)
 	{
-		return self::STORAGE_TABLE_NAME_PREFIX.''.strtolower($code);
+		return self::STORAGE_TABLE_NAME_PREFIX.''.mb_strtolower($code);
 	}
 
 	/**
@@ -946,7 +946,7 @@ final class SystemField
 
 	private static function getFormRowFieldName(string $field)
 	{
-		return self::FIELD_NAME_PREFIX.strtoupper($field);
+		return self::FIELD_NAME_PREFIX.mb_strtoupper($field);
 	}
 
 	/**
@@ -955,7 +955,7 @@ final class SystemField
 	 */
 	private static function getFormRowFieldId(string $field)
 	{
-		return self::FIELD_ID_PREFIX.strtolower($field).'_id';
+		return self::FIELD_ID_PREFIX.mb_strtolower($field).'_id';
 	}
 
 	/**

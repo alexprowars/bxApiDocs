@@ -78,7 +78,7 @@ class ExportPath
 
 			foreach ($pathList as $testPath)
 			{
-				if (substr($testPath, -4) === '.php')
+				if (mb_substr($testPath, -4) === '.php')
 				{
 					if (Translate\IO\Path::isLangDir($testPath))
 					{
@@ -106,7 +106,7 @@ class ExportPath
 			if ($this->totalItems > 0)
 			{
 				$this->exportFileName = $this->generateExportFileName($path, $this->languages);
-				$this->createExportTempFile();
+				$this->createExportTempFile($this->exportFileName);
 			}
 
 			$this->saveProgressParameters();
@@ -142,7 +142,7 @@ class ExportPath
 			$exportingPath = $this->pathList[$pos];
 
 			// file
-			if (substr($exportingPath, -4) === '.php')
+			if (mb_substr($exportingPath, -4) === '.php')
 			{
 				$langFilePath = Translate\IO\Path::replaceLangId($exportingPath, '#LANG_ID#');
 

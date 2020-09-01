@@ -125,9 +125,9 @@ abstract class BasketItemBase extends Internals\CollectableEntity
 		if ($basketCode !== null)
 		{
 			$basketItem->internalId = $basketCode;
-			if (strpos($basketCode, 'n') === 0)
+			if (mb_strpos($basketCode, 'n') === 0)
 			{
-				$internalId = intval(substr($basketCode, 1));
+				$internalId = intval(mb_substr($basketCode, 1));
 				if ($internalId > static::$idBasket)
 				{
 					static::$idBasket = $internalId;

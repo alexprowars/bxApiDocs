@@ -2,19 +2,19 @@
 
 /**
  * yandex errors:
- * - no_auth (С‚РѕРєРµРЅ РєСЂРёРІРѕР№, РєРѕСЂРѕС‚РєРёР№)
- * - not_permitted (С‚РѕРєРµРЅ РєСЂРёРІРѕР№, РґР»РёРЅРЅС‹Р№ РёР»Рё РЅРµРїСЂР°РІРёР»СЊРЅС‹Р№)
- * - occupied (Р»РѕРіРёРЅ Р·Р°РЅСЏС‚)
- * - no_user (РЅРµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ)
- * - no_login (РЅРµ РїРµСЂРµРґР°РЅ Р»РѕРіРёРЅ)
- * - not_found (РЅРµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ)
+ * - no_auth (токен кривой, короткий)
+ * - not_permitted (токен кривой, длинный или неправильный)
+ * - occupied (логин занят)
+ * - no_user (нет пользователя)
+ * - no_login (не передан логин)
+ * - not_found (нет пользователя)
  */
 
 
 class CMailDomain
 {
 
-	static public function __construct()
+	public function __construct()
 	{
 	}
 
@@ -101,7 +101,7 @@ class CMailDomain
 
 		if ($result !== false)
 		{
-			if (strtolower($result['name']) == $domain)
+			if (mb_strtolower($result['name']) == $domain)
 			{
 				return array(
 					'domain' => $result['name'],

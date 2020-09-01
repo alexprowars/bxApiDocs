@@ -312,7 +312,7 @@ class CSupportTimetableCache
 		return $res;
 	}
 	
-	public static function SortMethodH($a, $b)
+	function SortMethodH($a, $b)
 	{
 		if($a["F"] == $b["F"])
 		{
@@ -357,7 +357,7 @@ class CSupportTimetableCache
 				}
 				if($h > $hC)
 				{
-					// РѕСЃС‚Р°С‚РєРё $wC РІ СЂРµР·СѓР»СЊС‚Р°С‚
+					// остатки $wC в результат
 					for($i = $w; $i <= $wC; $i++) $res[$dtC][] = array("F" => $arrW[$i]["F"], "T" => $arrW[$i]["T"]);
 					break;
 				}
@@ -604,7 +604,7 @@ class CSupportTimetableCache
 				return;
 			}
 
-			//РџРµСЂРµРґ РїРµСЂРµСЃС‡РµС‚РѕРј РїСЂРѕРІРµСЂРёС‚СЊ РІ С†РµРЅС‚СЂР°Р»СЊРЅРѕР№ Р±Р°Р·Рµ С‡С‚Рѕ РґР°РЅРЅС‹С… РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ РЅРµС‚, РЅР° СЃР»СѓС‡Р№ Р·РґРµСЂР¶РєРё РїРµСЂРµРґР°С‡Рј РґР°РЅРЅС‹С… РІ РґРѕС‡РµСЂРЅСЋСЋ Р±Р°Р·Сѓ(С‚РѕР»СЊРєРѕ РґР»СЏ MYSQL)
+			//Перед пересчетом проверить в центральной базе что данных действительно нет, на случй здержки передачм данных в дочернюю базу(только для MYSQL)
 			if(is_array($arFromGetEndDate))
 			{
 				$res = self::getEndDate($arFromGetEndDate["SLA"], $arFromGetEndDate["PERIOD_MIN"], $arFromGetEndDate["DATE_FROM"], true);
@@ -735,12 +735,12 @@ class CSupportTimetableCache
 		return null;
 	}
 
-	public static function UpdateDiscardedTickets()
+	function UpdateDiscardedTickets()
 	{
 		return "";
 	}
 	
-	//$dateFrom - РІСЂРµРјСЏ СЃРµСЂРІРµСЂР° СЃ С‡Р°СЃРѕРІС‹Рј РїРѕСЏСЃРѕРј РёР· РЅР°СЃС‚СЂРѕРµРє С‚РµРєСѓС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+	//$dateFrom - время сервера с часовым поясом из настроек текущего пользователя
 	static function getEndDate($sla, $periodMin0, $dateFrom, $secondTry = false)
 	{
 		global $DB;
@@ -824,7 +824,7 @@ class CSupportTimetableCache
 		return null;
 	}
 	
-	public static function StartAgent()
+	function StartAgent()
 	{
 		CAgent::RemoveAgent("CSupportTimetableCache::toCache();", "support");
 		$NOTIFY_AGENT_ID = CAgent::AddAgent("CSupportTimetableCache::toCache();", "support", "N", 7*86400);

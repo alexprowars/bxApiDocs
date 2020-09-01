@@ -3,7 +3,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/socialnetwork/classes/ge
 
 class CSocNetLogSmartFilter extends CAllSocNetLogSmartFilter
 {
-	public static function Set($user_id, $type)
+	function Set($user_id, $type)
 	{
 		global $DB;
 
@@ -23,7 +23,10 @@ class CSocNetLogSmartFilter extends CAllSocNetLogSmartFilter
 		$res = $DB->Query($strSQL, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
 
 		if ($res)
-			CPHPCache::Clean('sonet_smartfilter_default_'.$user_id, '/sonet/log_smartfilter/');
+		{
+			$cache = new \CPHPCache();
+			$cache->clean('sonet_smartfilter_default_'.$user_id, '/sonet/log_smartfilter/');
+		}
 	}
 }
 ?>

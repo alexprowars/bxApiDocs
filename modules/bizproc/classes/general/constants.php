@@ -1,4 +1,7 @@
 <?
+use Bitrix\Main\Localization\Loc;
+Loc::loadMessages(__FILE__);
+
 class CBPActivityExecutionStatus
 {
 	const Initialized = 0;
@@ -141,40 +144,54 @@ class CBPActivityExecutorOperationType
 
 class CBPDocumentEventType
 {
-	const None = 0;		//   0
-	const Create = 1;	//   1
-	const Edit = 2;		//  10
-	const Delete = 4;	// 100
+	const None = 0;
+	const Create = 1;
+	const Edit = 2;
+	const Delete = 4;
+	const Automation = 8;
+	const Manual = 16;
+	const Script = 32;
 
 	public static function Out($v)
 	{
-		$result = "";
+		$result = [];
 
 		if ($v == self::None)
-			$result .= "None";
+		{
+			$result[] = "None";
+		}
 
 		if (($v & self::Create) != 0)
 		{
-			if (strlen($result) > 0)
-				$result .= ", ";
-			$result .= "Create";
+			$result[] = "Create";
 		}
 
 		if (($v & self::Edit) != 0)
 		{
-			if (strlen($result) > 0)
-				$result .= ", ";
-			$result .= "Edit";
+			$result[] = "Edit";
 		}
 
 		if (($v & self::Delete) != 0)
 		{
-			if (strlen($result) > 0)
-				$result .= ", ";
-			$result .= "Delete";
+			$result[] = "Delete";
 		}
 
-		return $result;
+		if (($v & self::Automation) != 0)
+		{
+			$result[] = "Automation";
+		}
+
+		if (($v & self::Manual) != 0)
+		{
+			$result[] = "Manual";
+		}
+
+		if (($v & self::Script) != 0)
+		{
+			$result[] = "Script";
+		}
+
+		return implode(', ', $result);
 	}
 }
 
@@ -183,6 +200,7 @@ class CBPCanUserOperateOperation
 	const ViewWorkflow = 0;
 	const StartWorkflow = 1;
 	const CreateWorkflow = 4;
+	const CreateAutomation = 5;
 	const WriteDocument = 2;
 	const ReadDocument = 3;
 }
@@ -237,6 +255,29 @@ class CBPTaskUserStatus
 	const No = 2;
 	const Ok = 3;
 	const Cancel = 4;
+
+	public static function resolveStatus($name)
+	{
+		switch(mb_strtolower((string)$name))
+		{
+			case '0':
+			case 'waiting':
+				return self::Waiting;
+			case '1':
+			case 'yes':
+				return self::Yes;
+			case '2':
+			case 'no':
+				return self::No;
+			case '3':
+			case 'ok':
+				return self::Ok;
+			case '4':
+			case 'cancel':
+				return self::Cancel;
+		}
+		return null;
+	}
 }
 
 class CBPTaskChangedStatus
@@ -245,4 +286,20 @@ class CBPTaskChangedStatus
 	const Update = 2;
 	const Delegate = 3;
 	const Delete = 4;
+}
+
+class CBPTaskDelegationType
+{
+	const Subordinate = 0; // default value
+	const AllEmployees = 1;
+	const None = 2;
+
+	public static function getSelectList()
+	{
+		return array(
+			self::Subordinate => Loc::getMessage('BPCG_CONSTANTS_DELEGATION_TYPE_SUBORDINATE'),
+			self::AllEmployees => Loc::getMessage('BPCG_CONSTANTS_DELEGATION_TYPE_ALL_EMPLOYEES'),
+			self::None => Loc::getMessage('BPCG_CONSTANTS_DELEGATION_TYPE_NONE')
+		);
+	}
 }

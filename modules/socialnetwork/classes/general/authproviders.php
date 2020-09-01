@@ -324,7 +324,7 @@ class CSocNetGroupAuthProvider extends CAuthProvider implements IProviderInterfa
 		return array("HTML"=>$html, "SELECTED"=>($currElements <> ''));
 	}
 
-	static public function GetNames($arCodes)
+	public function GetNames($arCodes)
 	{
 		$arID = array();
 		foreach ($arCodes as $code)

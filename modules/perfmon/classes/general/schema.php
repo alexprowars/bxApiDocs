@@ -4,7 +4,7 @@ class CPerfomanceSchema
 {
 	var $data_relations = null;
 
-	public function Init()
+	function Init()
 	{
 		if (!isset($this->data_relations))
 		{
@@ -41,7 +41,7 @@ class CPerfomanceSchema
 		}
 	}
 
-	public function GetChildren($table_name)
+	function GetChildren($table_name)
 	{
 		$this->Init();
 		$result = array();
@@ -49,10 +49,10 @@ class CPerfomanceSchema
 		{
 			if (array_key_exists($table_name, $arModuleTables))
 				$key = $table_name;
-			elseif (array_key_exists(strtolower($table_name), $arModuleTables))
-				$key = strtolower($table_name);
-			elseif (array_key_exists(strtoupper($table_name), $arModuleTables))
-				$key = strtoupper($table_name);
+			elseif (array_key_exists(mb_strtolower($table_name), $arModuleTables))
+				$key = mb_strtolower($table_name);
+			elseif (array_key_exists(mb_strtoupper($table_name), $arModuleTables))
+				$key = mb_strtoupper($table_name);
 			else
 				$key = '';
 
@@ -74,7 +74,7 @@ class CPerfomanceSchema
 		return $result;
 	}
 
-	public function GetParents($table_name)
+	function GetParents($table_name)
 	{
 		$this->Init();
 		$result = array();
@@ -89,8 +89,8 @@ class CPerfomanceSchema
 						$child_table_name = trim($child_table_name, "^");
 						if (
 							$child_table_name === $table_name
-							|| $child_table_name === strtolower($table_name)
-							|| $child_table_name === strtoupper($table_name)
+							|| $child_table_name === mb_strtolower($table_name)
+							|| $child_table_name === mb_strtoupper($table_name)
 						)
 							$result[$child_column] = array(
 								"PARENT_TABLE" => $parent_table_name,

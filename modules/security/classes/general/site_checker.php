@@ -308,7 +308,7 @@ class CSecuritySiteChecker
 	/**
 	 *
 	 */
-	static public function isAnyCheckingExists()
+	public function isAnyCheckingExists()
 	{
 
 	}

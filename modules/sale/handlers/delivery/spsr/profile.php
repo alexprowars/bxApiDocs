@@ -42,7 +42,7 @@ class SpsrProfile extends \Bitrix\Sale\Delivery\Services\Base
 		elseif(isset($this->config['MAIN']['SERVICE_TYPE']) && intval($this->config['MAIN']['SERVICE_TYPE']) > 0)
 			$this->serviceType = $this->config['MAIN']['SERVICE_TYPE'];
 
-		if($this->serviceType > 0)
+		if($this->id <= 0 && $this->serviceType > 0)
 		{
 			$srvRes = $this->spsrHandler->getServiceTypes();
 			$srvTypes = $srvRes->getData();
@@ -80,11 +80,11 @@ class SpsrProfile extends \Bitrix\Sale\Delivery\Services\Base
 	 */
 	protected function 	inheritParams()
 	{
-		if(strlen($this->name) <= 0) $this->name = $this->spsrHandler->getName();
+		if($this->name == '') $this->name = $this->spsrHandler->getName();
 		if(intval($this->logotip) <= 0) $this->logotip = $this->spsrHandler->getLogotip();
-		if(strlen($this->description) <= 0) $this->description = $this->spsrHandler->getDescription();
+		if($this->description == '') $this->description = $this->spsrHandler->getDescription();
 		if(empty($this->trackingParams)) $this->trackingParams = $this->spsrHandler->getTrackingParams();
-		if(strlen($this->trackingClass) <= 0) $this->trackingClass = $this->spsrHandler->getTrackingClass();
+		if($this->trackingClass == '') $this->trackingClass = $this->spsrHandler->getTrackingClass();
 
 		$parentES = \Bitrix\Sale\Delivery\ExtraServices\Manager::getExtraServicesList($this->parentId);
 		$allowEsCodes = self::getProfileES($this->serviceType);
@@ -94,7 +94,7 @@ class SpsrProfile extends \Bitrix\Sale\Delivery\Services\Base
 			foreach($parentES as $esFields)
 			{
 				if(
-					strlen($esFields['CODE']) > 0
+					$esFields['CODE'] <> ''
 					&& !$this->extraServices->getItemByCode($esFields['CODE'])
 					&& in_array($esFields['CODE'], $allowEsCodes)
 				)
@@ -112,7 +112,7 @@ class SpsrProfile extends \Bitrix\Sale\Delivery\Services\Base
 	 */
 	protected function calculateConcrete(Shipment $shipment)
 	{
-		$srvRes = $this->spsrHandler->getServiceTypes();
+		$srvRes = $this->spsrHandler->getServiceTypes($shipment);
 		$srvList = $srvRes->getData();
 
 		if(empty($srvList[$this->serviceType]['Name']))
@@ -174,10 +174,6 @@ class SpsrProfile extends \Bitrix\Sale\Delivery\Services\Base
 				)
 			)
 		);
-
-		if($this->serviceType != 20) //colibri
-		{
-		}
 
 		return $result;
 	}

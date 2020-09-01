@@ -1,7 +1,7 @@
 <?
 class CRsaBcmathProvider extends CRsaProvider
 {
-	static public function LoadKeys()
+	public function LoadKeys()
 	{
 		$arKeys = unserialize(COption::GetOptionString("main", "~rsa_keys_bcmath", ""));
 		if(!is_array($arKeys))
@@ -9,7 +9,7 @@ class CRsaBcmathProvider extends CRsaProvider
 		return $arKeys;
 	}
 
-	static public function SaveKeys($arKeys)
+	public function SaveKeys($arKeys)
 	{
 		COption::SetOptionString("main", "~rsa_keys_bcmath", serialize($arKeys));
 	}
@@ -34,7 +34,7 @@ class CRsaBcmathProvider extends CRsaProvider
 		return $out;
 	}
 	    
-	static public function Keygen($keylen=false)
+	public function Keygen($keylen=false)
 	{
 		if($keylen === false)
 			$keylen = 512;

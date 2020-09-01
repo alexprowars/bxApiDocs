@@ -192,7 +192,7 @@ class CBitrixCloudCDNConfig
 	 * @return bool
 	 *
 	 */
-	static public function isKernelPrefix($prefix)
+	public function isKernelPrefix($prefix)
 	{
 		return preg_match("#^/bitrix/#", $prefix) > 0;
 	}
@@ -470,7 +470,7 @@ class CBitrixCloudCDNConfig
 	 * @return bool
 	 *
 	 */
-	static public function lock()
+	public function lock()
 	{
 		return CBitrixCloudOption::lock();
 	}
@@ -478,7 +478,7 @@ class CBitrixCloudCDNConfig
 	 * @return void
 	 *
 	 */
-	static public function unlock()
+	public function unlock()
 	{
 		CBitrixCloudOption::unlock();
 	}

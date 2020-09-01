@@ -334,7 +334,7 @@ class Manager
 	public static function detectType(string $path): ?string
 	{
 		$path = parse_url($path)['path'];
-		$type = strtolower(substr(strrchr($path, '.'), 1));
+		$type = mb_strtolower(mb_substr(strrchr($path, '.'), 1));
 		switch ($type)
 		{
 			case 'js':
@@ -365,7 +365,7 @@ class Manager
 		$linkType = '';
 		foreach ($available as $type => $value)
 		{
-			if (strpos($path, $type) !== false)
+			if (mb_strpos($path, $type) !== false)
 			{
 				$linkType = $value;
 				break;

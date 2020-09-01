@@ -352,7 +352,7 @@ class Basket
 						$result->addError(new Main\Error(Loc::getMessage('BX_CATALOG_PRODUCT_BASKET_ERR_NO_PRODUCT')));
 						return $result;
 					}
-					elseif (strpos($elementFields["~XML_ID"], '#') === false)
+					elseif (mb_strpos($elementFields["~XML_ID"], '#') === false)
 					{
 						$elementFields["~XML_ID"] = $parent['XML_ID'].'#'.$elementFields["~XML_ID"];
 					}

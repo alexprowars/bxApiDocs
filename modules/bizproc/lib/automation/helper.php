@@ -25,9 +25,9 @@ class Helper
 			if (!is_scalar($user))
 				continue;
 
-			if (substr($user, 0, 5) === "user_")
+			if (mb_substr($user, 0, 5) === "user_")
 			{
-				$user = intval(substr($user, 5));
+				$user = intval(mb_substr($user, 5));
 				if (($user > 0) && !in_array($user, $result))
 				{
 					$userInfo = self::getUserInfo($user);
@@ -187,7 +187,7 @@ class Helper
 				);
 			}
 
-			if (!$found && strpos($file, '{') === 0)
+			if (!$found && mb_strpos($file, '{') === 0)
 			{
 				$result[] = [
 					'id' => $file,
@@ -203,7 +203,7 @@ class Helper
 	public static function convertExpressions($source, array $documentType)
 	{
 		$source = (string)$source;
-		list($ids, $names) = static::getFieldsMap($documentType);
+		[$ids, $names] = static::getFieldsMap($documentType);
 
 		$converter = function ($matches) use ($ids, $names)
 		{
@@ -246,18 +246,18 @@ class Helper
 	public static function unConvertExpressions($source, array $documentType)
 	{
 		$source = (string)$source;
-		list($ids, $names) = static::getFieldsMap($documentType);
+		[$ids, $names] = static::getFieldsMap($documentType);
 
 		$converter = function ($matches) use ($ids, $names)
 		{
 			$matches['mixed'] = htmlspecialcharsback($matches['mixed']);
 
-			if (strpos($matches['mixed'], '~') === 0)
+			if (mb_strpos($matches['mixed'], '~') === 0)
 			{
-				$len = strpos($matches['mixed'], '#');
+				$len = mb_strpos($matches['mixed'], '#');
 				$expression = ($len === false)
-					? substr($matches['mixed'], 1)
-					: substr($matches['mixed'], 1,$len - 1)
+					? mb_substr($matches['mixed'], 1)
+					: mb_substr($matches['mixed'], 1, $len - 1)
 				;
 				return '{='.trim($expression).'}';
 			}
@@ -337,11 +337,11 @@ class Helper
 					'Id' => $id,
 					'Name' => $field['Name'],
 					'Type' => $field['Type'],
-					'BaseType' => $field['BaseType'],
+					'BaseType' => $field['BaseType'] ?? $field['Type'],
 					'Expression' => '{{'.$field['Name'].'}}',
 					'SystemExpression' => '{=Document:'.$id.'}',
 					'Options' => $field['Options'],
-					'Multiple' => $field['Multiple'],
+					'Multiple' => $field['Multiple'] ?? false,
 				);
 			}
 		}
@@ -363,7 +363,7 @@ class Helper
 		{
 			foreach ($docGroups as $id => $groupName)
 			{
-				if (!$groupName || strpos($id, 'group_') === 0)
+				if (!$groupName || mb_strpos($id, 'group_') === 0)
 				{
 					continue;
 				}
@@ -408,23 +408,23 @@ class Helper
 			'workTime' => false
 		);
 
-		if (strpos($interval, '=dateadd(') === 0 || strpos($interval, '=workdateadd(') === 0)
+		if (mb_strpos($interval, '=dateadd(') === 0 || mb_strpos($interval, '=workdateadd(') === 0)
 		{
-			if (strpos($interval, '=workdateadd(') === 0)
+			if (mb_strpos($interval, '=workdateadd(') === 0)
 			{
-				$interval = substr($interval, 13, -1); // cut =workdateadd(...)
+				$interval = mb_substr($interval, 13, -1); // cut =workdateadd(...)
 				$result['workTime'] = true;
 			}
 			else
 			{
-				$interval = substr($interval, 9, -1); // cut =dateadd(...)
+				$interval = mb_substr($interval, 9, -1); // cut =dateadd(...)
 			}
 
 			$arguments = explode(',', $interval);
 			$result['basis'] = trim($arguments[0]);
 
 			$arguments[1] = trim($arguments[1], '"\'');
-			$result['type'] = strpos($arguments[1], '-') === 0 ? DelayInterval::TYPE_BEFORE : DelayInterval::TYPE_AFTER;
+			$result['type'] = mb_strpos($arguments[1], '-') === 0 ? DelayInterval::TYPE_BEFORE : DelayInterval::TYPE_AFTER;
 
 			preg_match_all('/\s*([\d]+)\s*(i|h|d)\s*/i', $arguments[1], $matches);
 			foreach ($matches[0] as $i => $match)
@@ -532,6 +532,21 @@ class Helper
 		}
 
 		return array('h' => $pairs[0], 'i' => $pairs[1]);
+	}
+
+	public static function countAllRobots(array $documentType, array $statuses): int
+	{
+		$cnt = 0;
+		foreach ($statuses as $status)
+		{
+			$template = new Engine\Template($documentType, $status);
+			if ($template->getId() > 0)
+			{
+				$cnt += count($template->getRobots());
+			}
+		}
+
+		return $cnt;
 	}
 
 	private static function getUserInfo($userID, $format = '', $htmlEncode = false)

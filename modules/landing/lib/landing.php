@@ -963,7 +963,7 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 					);
 				}
 			}
-			else
+			else if ($this->siteRow['LANDING_ID_INDEX'] != $this->id)
 			{
 				Manager::getApplication()->addChainItem(
 					$this->title,
@@ -1050,7 +1050,7 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 		ob_end_clean();
 
 		// implode content and templates parts
-		if ($content && strpos($content, '#CONTENT#') !== false)
+		if ($content && mb_strpos($content, '#CONTENT#') !== false)
 		{
 			$content = str_replace('#CONTENT#', $contentMain, $content);
 		}
@@ -1226,7 +1226,7 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 				{
 					return 'href="' . PublicAction\Utils::getIblockURL(
 							$href[2],
-							strtolower($href[1])
+							mb_strtolower($href[1])
 						) . '"';
 				},
 				$content);
@@ -1262,11 +1262,11 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 			);
 			for ($i = 0, $c = count($matches[0]); $i < $c; $i++)
 			{
-				if (strtoupper($matches[2][$i]) == 'LANDING')
+				if (mb_strtoupper($matches[2][$i]) == 'LANDING')
 				{
 					$urls['LANDING'][] = $matches[3][$i];
 				}
-				else if (strtoupper($matches[2][$i]) == 'DYNAMIC')
+				else if (mb_strtoupper($matches[2][$i]) == 'DYNAMIC')
 				{
 					[$dynamicId, ] = explode('_', $matches[3][$i]);
 					$urls['DYNAMIC'][] = $dynamicId;
@@ -1380,14 +1380,14 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 					function($matches) use($urls, $landingFull, $isIframe)
 					{
 						$dynamicPart = '';
-						$matches[2] = strtoupper($matches[2]);
+						$matches[2] = mb_strtoupper($matches[2]);
 						if ($matches[2] == 'DYNAMIC')
 						{
 							$matches[2] = 'LANDING';
-							if (($underPos = strpos($matches[3], '_')) !== false)
+							if (($underPos = mb_strpos($matches[3], '_')) !== false)
 							{
-								$dynamicPart = substr($matches[3], $underPos);
-								$matches[3] = substr($matches[3], 0, $underPos);
+								$dynamicPart = mb_substr($matches[3], $underPos);
+								$matches[3] = mb_substr($matches[3], 0, $underPos);
 							}
 							[$dynamicId, ] = explode('_', $matches[3]);
 							$matches[3] = $dynamicId;
@@ -1401,11 +1401,7 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 								{
 									$landingUrl = $landingFull[$matches[3]];
 								}
-								$url = substr(
-									$landingUrl,
-									0,
-									strlen($landingUrl) - 1
-								);
+								$url = mb_substr($landingUrl, 0, mb_strlen($landingUrl) - 1);
 								$url .= $dynamicPart . ($isIframe ? '/?IFRAME=Y' : '/');
 							}
 							else
@@ -1714,6 +1710,26 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 		{
 			$needUpdate = true;
 			$this->version = 3;
+			Assets\PreProcessing\Icon::processingLanding($this->id);
+			Assets\Manager::rebuildWebpackForLanding($this->id);
+		}
+		if ($this->version <= 3)
+		{
+			$needUpdate = true;
+			$this->version = 4;
+			Assets\PreProcessing\Font::processingLanding($this->id);
+		}
+		if ($this->version <= 4)
+		{
+			$needUpdate = true;
+			$this->version = 5;
+			Hook\Page\ThemeFonts::migrateFromTypoThemes($this->id, $this->siteId);
+		}
+		if ($this->version <= 5)
+		{
+			// fix 126641
+			$needUpdate = true;
+			$this->version = 6;
 			Assets\PreProcessing\Icon::processingLanding($this->id);
 			Assets\Manager::rebuildWebpackForLanding($this->id);
 		}

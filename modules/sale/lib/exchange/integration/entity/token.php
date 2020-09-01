@@ -34,7 +34,7 @@ class Token extends EO_B24integrationToken
 	 */
 	public function update(array $fields = [])
 	{
-		if (isset($fields["guid"]) && strlen($fields["guid"]) > 0)
+		if (isset($fields["guid"]) && $fields["guid"] <> '')
 		{
 			$this->setGuid($fields["guid"]);
 		}

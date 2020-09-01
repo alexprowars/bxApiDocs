@@ -1256,9 +1256,9 @@ abstract class OrderBase extends Internals\Entity
 			$this->setFieldNoDemand('CREATED_BY', $fields['CREATED_BY']);
 		}
 
-		if (array_key_exists('REASON_MARKED', $fields) && strlen($fields['REASON_MARKED']) > 255)
+		if (array_key_exists('REASON_MARKED', $fields) && mb_strlen($fields['REASON_MARKED']) > 255)
 		{
-			$fields['REASON_MARKED'] = substr($fields['REASON_MARKED'], 0, 255);
+			$fields['REASON_MARKED'] = mb_substr($fields['REASON_MARKED'], 0, 255);
 		}
 
 		$fields['RUNNING'] = 'Y';
@@ -1304,9 +1304,9 @@ abstract class OrderBase extends Internals\Entity
 			$fields['VERSION'] = intval($this->getField('VERSION')) + 1;
 			$this->setFieldNoDemand('VERSION', $fields['VERSION']);
 
-			if (array_key_exists('REASON_MARKED', $fields) && strlen($fields['REASON_MARKED']) > 255)
+			if (array_key_exists('REASON_MARKED', $fields) && mb_strlen($fields['REASON_MARKED']) > 255)
 			{
-				$fields['REASON_MARKED'] = substr($fields['REASON_MARKED'], 0, 255);
+				$fields['REASON_MARKED'] = mb_substr($fields['REASON_MARKED'], 0, 255);
 			}
 
 			$r = static::updateInternal($this->getId(), $fields);

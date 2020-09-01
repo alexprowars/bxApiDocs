@@ -84,8 +84,9 @@ class CTimeZone
 		$cookie_prefix = COption::GetOptionString('main', 'cookie_name', 'BITRIX_SM');
 		if(self::IsAutoTimeZone(trim($USER->GetParam("AUTO_TIME_ZONE"))))
 		{
+			$cookieDate = (new \Bitrix\Main\Type\DateTime())->add("12M");
 			$APPLICATION->AddHeadString(
-				'<script type="text/javascript">var bxDate = new Date(); document.cookie="'.$cookie_prefix.'_TIME_ZONE="+bxDate.getTimezoneOffset()+"; path=/; expires=Fri, 01-Jan-2038 00:00:00 GMT"</script>', true
+				'<script type="text/javascript">var bxDate = new Date(); document.cookie="'.$cookie_prefix.'_TIME_ZONE="+bxDate.getTimezoneOffset()+"; path=/; expires='.$cookieDate->format("r").'"</script>', true
 			);
 		}
 		elseif(isset($_COOKIE[$cookie_prefix."_TIME_ZONE"]))
@@ -184,7 +185,7 @@ class CTimeZone
 				{
 					$autoTimeZone = trim($arUser["AUTO_TIME_ZONE"]);
 					$userZone = $arUser["TIME_ZONE"];
-					$factOffset = $arUser["TIME_ZONE_OFFSET"];
+					$factOffset = intval($arUser["TIME_ZONE_OFFSET"]);
 				}
 			}
 			elseif(is_object($USER))
@@ -212,6 +213,11 @@ class CTimeZone
 					{
 						//auto time zone from cookie
 						$userOffset = -($cookie)*60;
+					}
+					elseif(is_object($USER))
+					{
+						//auto time zone from the session, set on Authorize
+						return intval($USER->GetParam("TIME_ZONE_OFFSET"));
 					}
 				}
 				else

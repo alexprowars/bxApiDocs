@@ -108,7 +108,7 @@ class WorkflowTemplateTable extends Main\Entity\DataManager
 			$useCompression = \CBPWorkflowTemplateLoader::useGZipCompression();
 		}
 
-		if (strlen($value) > 0)
+		if ($value <> '')
 		{
 			if ($useCompression)
 			{

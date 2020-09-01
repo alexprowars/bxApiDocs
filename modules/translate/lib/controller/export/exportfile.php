@@ -61,7 +61,7 @@ class ExportFile
 
 		$this->exportFileName = $this->generateExportFileName($path, $this->languages);
 
-		$csvFile = $this->createExportTempFile();
+		$csvFile = $this->createExportTempFile($this->exportFileName);
 		$csvFile->openWrite( Main\IO\FileStreamOpenMode::APPEND);
 
 		$fullPaths = [];

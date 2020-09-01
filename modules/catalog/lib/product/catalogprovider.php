@@ -270,7 +270,7 @@ if (Main\Loader::includeModule('sale'))
 			{
 				if ($entityData['TYPE'] != Catalog\ProductTable::TYPE_OFFER)
 					continue;
-				if (strpos($products[$entityData['ID']]['PRODUCT_DATA']['~XML_ID'], '#') !== false)
+				if (mb_strpos($products[$entityData['ID']]['PRODUCT_DATA']['~XML_ID'], '#') !== false)
 					continue;
 				$offerList[] = $entityData['ID'];
 			}
@@ -885,7 +885,7 @@ if (Main\Loader::includeModule('sale'))
 
 						}
 
-						if (!empty($proxyCatalogSkuData[$item["ITEM_ID"]]) && strpos($elementData["XML_ID"], '#') === false)
+						if (!empty($proxyCatalogSkuData[$item["ITEM_ID"]]) && mb_strpos($elementData["XML_ID"], '#') === false)
 						{
 							$parentSkuData = $proxyCatalogSkuData[$item["ITEM_ID"]];
 							if (!empty($proxyParentData[$parentSkuData['ID']]) && is_array($proxyParentData[$parentSkuData['ID']]))
@@ -4021,9 +4021,9 @@ if (Main\Loader::includeModule('sale'))
 			foreach ($fields as $name => $value)
 			{
 				$clearName = $name;
-				if (substr($clearName, 0, 1) == '~')
+				if (mb_substr($clearName, 0, 1) == '~')
 				{
-					$clearName = substr($clearName, 1, strlen($clearName));
+					$clearName = mb_substr($clearName, 1, mb_strlen($clearName));
 				}
 
 				if (!in_array($clearName, $clearFields))

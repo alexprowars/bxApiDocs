@@ -315,13 +315,13 @@ final class CheckManager
 				}
 
 				$error = new Errors\Error($errorMessage);
+				Logger::addError($error->getMessage(), $check['CASHBOX_ID']);
 			}
 			else
 			{
 				$error = new Errors\Warning($errorMessage);
+				Logger::addWarning($error->getMessage(), $check['CASHBOX_ID']);
 			}
-
-			Manager::writeToLog($check['CASHBOX_ID'], $error);
 
 			$event = new Main\Event('sale', static::EVENT_ON_CHECK_PRINT_ERROR, array($data));
 			$event->send();
@@ -341,6 +341,8 @@ final class CheckManager
 
 			if ($updateResult->isSuccess())
 			{
+				self::addStatisticOnSuccessCheckPrint($checkId);
+
 				/** @ToDO Will be removed after OrderCheckCollection is realized */
 				if (
 					class_exists('\Bitrix\Crm\Order\Order')
@@ -390,6 +392,17 @@ final class CheckManager
 		}
 
 		return $result;
+	}
+
+	private function addStatisticOnSuccessCheckPrint($checkId)
+	{
+		$check = self::getObjectById($checkId);
+
+		$cashbox = Manager::getObjectById($check->getField('CASHBOX_ID'));
+		if ($cashbox)
+		{
+			AddEventToStatFile('sale', 'checkPrint', $checkId, $cashbox::getCode());
+		}
 	}
 
 	/**
@@ -1167,7 +1180,7 @@ final class CheckManager
 	public static function collectInfo(array $filter = array())
 	{
 		$result = array();
-		
+
 		$typeMap = CheckManager::getCheckTypeMap();
 
 		$dbRes = static::getList(

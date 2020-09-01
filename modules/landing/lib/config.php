@@ -19,7 +19,6 @@ class Config
 			'disable_namespace' => [],
 			'enable_namespace' => [],
 			'public_wrapper_block' => true,
-			'google_font' => true,
 			'icon_src' => '/bitrix/templates/landing24/assets/vendor/icon/',
 			'icon_vendors' => [
 				'fa',

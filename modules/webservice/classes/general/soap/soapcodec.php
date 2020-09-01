@@ -5,16 +5,16 @@ class CSOAPCodec
 	var $outputVars = array();
 	var $typensVars = array();
 
-    static function CSOAPCodec()
+    function CSOAPCodec()
     {
     }
 
-    public function setTypensVars($vars)
+    function setTypensVars($vars)
     {
     	$this->typensVars = $vars;
     }
 
-    public function setOutputVars($functionName)
+    function setOutputVars($functionName)
     {
     	if (!isset($this->typensVars[$functionName]["output"]))
     	{
@@ -25,7 +25,7 @@ class CSOAPCodec
     	$this->outputVars = $this->typensVars[$functionName]["output"];
     }
 
-	public static function _validateSimpleType($dataType, $value)
+	function _validateSimpleType($dataType, $value)
 	{
 		global $xsd_simple_type;
 		if (!isset($xsd_simple_type[$dataType]))
@@ -47,7 +47,7 @@ class CSOAPCodec
 		}
 	}
 
-	public static function _validateClassType($classType, $value)
+	function _validateClassType($classType, $value)
 	{
 		$phpClassType = strtolower($classType);
 		$phpValue = strtolower(get_class($value));
@@ -58,7 +58,7 @@ class CSOAPCodec
 		}
 	}
 
-	public static function _validateType($dataType, $value)
+	function _validateType($dataType, $value)
 	{
 		global $xsd_simple_type;
 		if (isset($xsd_simple_type[$dataType]))
@@ -92,14 +92,14 @@ class CSOAPCodec
 		}
 	}
 
-	public static function _errorTypeValidation($dataType, $value)
+	function _errorTypeValidation($dataType, $value)
 	{
 		CSOAPServer::ShowSOAPFault("_errorTypeValidation(): Type validation for func. failed: {$dataType} != ".gettype($value));
     	exit();
 	}
 
 	// Encodes a PHP variable into a SOAP datatype.
-    public function encodeValue($name, $value, $complexDataTypeName = "")
+    function encodeValue($name, $value, $complexDataTypeName = "")
     {
     	global $xsd_simple_type;
     	if (!is_array($this->outputVars) or !count($this->outputVars))
@@ -331,9 +331,9 @@ class CSOAPCodec
             			if ($decoded)
             				$this->_validateClassType("CXMLCreator", $decoded);
 
-            			if (!$decoded and !$strict)
+            			if (!$decoded and $strict)
 						{
-							CSOAPServer::ShowSOAPFault("Request has no enought params of strict type to be decoded. ");
+							CSOAPServer::ShowSOAPFault("Request has not enough params of strict type to be decoded. ");
 			            	exit();
 						}
 

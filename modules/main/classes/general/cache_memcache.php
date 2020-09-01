@@ -9,12 +9,12 @@ class CPHPCacheMemcache implements ICacheBackend
 	var $read = false;
 	// unfortunately is not available for memcache...
 
-	public function __construct()
+	function __construct()
 	{
 		$this->CPHPCacheMemcache();
 	}
 
-	public static function CPHPCacheMemcache()
+	function CPHPCacheMemcache()
 	{
 		if(!is_object(self::$obMemcache))
 			self::$obMemcache = new Memcache;
@@ -28,7 +28,7 @@ class CPHPCacheMemcache implements ICacheBackend
 		{
 			if(self::$obMemcache->connect(BX_MEMCACHE_HOST, $port))
 			{
-				// define("BX_MEMCACHE_CONNECTED", true);
+				define("BX_MEMCACHE_CONNECTED", true);
 				register_shutdown_function(array("CPHPCacheMemcache", "close"));
 			}
 		}
@@ -39,18 +39,18 @@ class CPHPCacheMemcache implements ICacheBackend
 			$this->sid = "BX";
 	}
 
-	public static function close()
+	function close()
 	{
 		if(defined("BX_MEMCACHE_CONNECTED") && is_object(self::$obMemcache))
 			self::$obMemcache->close();
 	}
 
-	public static function IsAvailable()
+	function IsAvailable()
 	{
 		return defined("BX_MEMCACHE_CONNECTED");
 	}
 
-	public function clean($basedir, $initdir = false, $filename = false)
+	function clean($basedir, $initdir = false, $filename = false)
 	{
 		if(is_object(self::$obMemcache))
 		{
@@ -101,7 +101,7 @@ class CPHPCacheMemcache implements ICacheBackend
 		return false;
 	}
 
-	public function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
+	function read(&$arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		if(!isset(self::$basedir_version[$basedir]))
 			self::$basedir_version[$basedir] = self::$obMemcache->get($this->sid.$basedir);
@@ -128,7 +128,7 @@ class CPHPCacheMemcache implements ICacheBackend
 		return true;
 	}
 
-	public function write($arAllVars, $basedir, $initdir, $filename, $TTL)
+	function write($arAllVars, $basedir, $initdir, $filename, $TTL)
 	{
 		if(!isset(self::$basedir_version[$basedir]))
 			self::$basedir_version[$basedir] = self::$obMemcache->get($this->sid.$basedir);
@@ -156,7 +156,7 @@ class CPHPCacheMemcache implements ICacheBackend
 		self::$obMemcache->set(self::$basedir_version[$basedir]."|".$initdir_version."|".$filename, $arAllVars, 0, time()+intval($TTL));
 	}
 
-	public static function IsCacheExpired($path)
+	function IsCacheExpired($path)
 	{
 		return false;
 	}

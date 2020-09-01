@@ -8,17 +8,6 @@
 
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CMenu</b> - класс для работы с меню.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/index.php
- * @author Bitrix
- */
 class CMenu
 {
 	var $type = "left";
@@ -37,81 +26,12 @@ class CMenu
 		$this->type = $type;
 	}
 
-	public function disableDebug()
+	function disableDebug()
 	{
 		$this->debug = false;
 	}
 
-	
-	/**
-	* <p>Инициализирует (заполняет пунктами) объект класса CMenu. Возвращает "true" если в каталоге сайта найден файл меню <nobr><b>.</b><i>тип меню</i><b>.menu.php</b></nobr> (поиск идет вверх по иерархии начиная с каталога <i>dir</i>), и "false" в противном случае. Нестатический метод.</p>
-	*
-	*
-	* @param string $InitDir  Папка, начиная с которой, объект будет искать файл <nobr><b>.</b><i>тип
-	* меню</i><b>.menu.php</b></nobr> (файл с параметрами и пунктами меню).
-	*
-	* @param bool $MenuExt = false Если значение - "true", то для формирования массива меню, помимо
-	* файлов <nobr><b>.</b><i>тип меню</i><b>.menu.php</b></nobr> будут также подключаться
-	* файлы с именами вида <nobr><b>.</b><i>тип меню</i><b>.menu_ext.php</b></nobr>. В которых
-	* вы можете манипулировать массивом меню <b>$aMenuLinks</b> произвольно, по
-	* вашему усмотрению (например, дополнять пункты меню значениями из
-	* инфо-блоков).<br>Необязателен. По умолчанию - "false".
-	*
-	* @param string $template = false Шаблон для вывода меню. <br>Необязателен. По умолчанию - "false", что
-	* означает искать шаблон меню сначала в файле <nobr><b>/bitrix/templates/</b><i>ID
-	* текущего шаблона сайта</i><b>/</b><i>тип меню</i><b>.menu_template.php</b></nobr>, затем
-	* если шаблон не будет найден, то искать в файле
-	* <nobr><b>/bitrix/templates/.default/</b><i>тип меню</i><b>.menu_template.php</b></nobr>. В самом
-	* шаблоне меню вам будут доступны следующие предустановленные
-	* переменные: 	<ul> <li> <b>$arMENU</b> - копия массива меню 		</li> <li> <b>$arMENU_LINK</b> -
-	* ссылка на текущий массив меню 		</li> <li> <b>$TEXT</b> - текст текущего
-	* пункта меню 		</li> <li> <b>$LINK</b> - ссылка текущего пункта меню 		</li> <li>
-	* <b>$SELECTED</b> - выбран ли пункт меню в данный момент 		</li> <li> <b>$PERMISSION</b> -
-	* доступ на страницу указанную в $LINK, возможны следующие значения:
-	* 			<ul> <li> <b>D</b> - доступ запрещён 				</li> <li> <b>R</b> - чтение (право
-	* просмотра содержимого файла) 				</li> <li> <b>U</b> - документооборот
-	* (право на редактирование файла в режиме документооборота) 				</li>
-	* <li> <b>W</b> - запись (право на прямое редактирование) 				</li> <li> <b>X</b> -
-	* полный доступ (право на прямое редактирование файла и право на
-	* изменение прав доступа на данных файл) 			</li> </ul> </li> <li>
-	* <b>$ADDITIONAL_LINKS</b> - дополнительные ссылки для подсветки меню 		</li> <li>
-	* <b>$ITEM_TYPE</b> - "D" - директория (если $LINK заканчивается на "/"), иначе "P" -
-	* страница 		</li> <li> <b>$ITEM_INDEX</b> - порядковый номер пункта меню 		</li> <li>
-	* <b>$PARAMS</b> - параметры пунктов меню 	</li> </ul> 	При этом в шаблоне для
-	* построения меню необходимо будет инициализировать следующие
-	* перменные: 	<ul> <li> <b>$sMenuProlog</b> - HTML который будет добавлен перед
-	* пунктами меню 		</li> <li> <b>$sMenuEpilog</b> - HTML который будет добавлен после
-	* пунктов меню 		</li> <li> <b>$sMenuBody</b> - HTML представляющий из себя один
-	* пункт меню 		</li> <li> <b>$sMenu</b> - HTML представляющий из себя все меню
-	* целиком (только для метода GetMenuHtmlEx) 	</li> </ul>
-	*
-	* @param mixed $onlyCurrentDir = false Если значение - "true", то отключается поиск файла меню в
-	* родительских каталогах.
-	*
-	* @return bool 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $lm = new CMenu("left");
-	* <b>$lm-&gt;Init</b>($APPLICATION-&gt;GetCurDir(), true);
-	* $lm-&gt;template = "/bitrix/templates/demo/left.menu_template.php";
-	* echo $lm-&gt;GetMenuHtml();
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&amp;CHAPTER_ID=04708"
-	* >Меню</a></li> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/getmenu.php">CMain::GetMenu</a>
-	* </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/init.php
-	* @author Bitrix
-	*/
-	public function Init($InitDir, $bMenuExt=false, $template=false, $onlyCurrentDir=false)
+	function Init($InitDir, $bMenuExt=false, $template=false, $onlyCurrentDir=false)
 	{
 		global $USER;
 		if(
@@ -172,7 +92,7 @@ class CMenu
 			if($Dir == "")
 				break;
 
-			$pos = strrpos($Dir, "/");
+			$pos = bxstrrpos($Dir, "/");
 			if($pos===false || $onlyCurrentDir == true)
 				break;
 
@@ -206,7 +126,7 @@ class CMenu
 				if($Dir == "")
 					break;
 
-				$pos = strrpos($Dir, "/");
+				$pos = bxstrrpos($Dir, "/");
 				if($pos===false || $onlyCurrentDir == true)
 					break;
 
@@ -217,7 +137,7 @@ class CMenu
 		return $bFounded;
 	}
 
-	public function RecalcMenu($bMultiSelect = false, $bCheckSelected = true)
+	function RecalcMenu($bMultiSelect = false, $bCheckSelected = true)
 	{
 		if($this->bMenuCalc !== false)
 			return true;
@@ -525,37 +445,7 @@ class CMenu
 		return false;
 	}
 
-	
-	/**
-	* <p>Возвращает HTML представляющий из себя меню. В отличие от метода <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/getmenuhtml.php">CMenu::GetMenuHtml</a> шаблон меню будет подключаться только один раз. Нестатический метод.</p> <p class="note"><b>Примечание</b>. В шаблоне меню, используемом методом, в обязательном порядке необходимо инициализировать переменную <b>$sMenu</b>, в которой должен храниться HTML представляющий из себя все меню целиком.</p>
-	*
-	*
-	* @return string 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $lm = new CMenu("left");
-	* $lm-&gt;Init($APPLICATION-&gt;GetCurDir(), true);
-	* $lm-&gt;template = "/bitrix/templates/demo/left.menu_template.php";
-	* echo <b>$lm-&gt;GetMenuHtmlEx</b>();
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&amp;CHAPTER_ID=04708" >Меню</a>
-	* </li> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/getmenuhtml.php">CMenu::GetMenuHtml</a> </li>
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/getmenuhtml.php">CMain::GetMenuHtml</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/getmenuhtmlex.php">CMain::GetMenuHtmlEx</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/getmenuhtmlex.php
-	* @author Bitrix
-	*/
-	public function GetMenuHtmlEx()
+	function GetMenuHtmlEx()
 	{
 		/**
 		 * @global CAllMain $APPLICATION
@@ -618,38 +508,7 @@ class CMenu
 	}
 
 
-	
-	/**
-	* <p>Возвращает HTML представляющий из себя меню. Нестатический метод.</p>
-	*
-	*
-	* @return string 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $lm = new CMenu("left");
-	* $lm-&gt;Init($APPLICATION-&gt;GetCurDir(), true);
-	* $lm-&gt;template = "/bitrix/templates/demo/left.menu_template.php";
-	* echo <b>$lm-&gt;GetMenuHtml</b>();
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=43&amp;CHAPTER_ID=04708"
-	* >Меню</a></li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/getmenuhtmlex.php">CMenu::GetMenuHtmlEx</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/getmenuhtml.php">CMain::GetMenuHtml</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cmain/getmenuhtmlex.php">CMain::GetMenuHtmlEx</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cmenu/getmenuhtml.php
-	* @author Bitrix
-	*/
-	public function GetMenuHtml()
+	function GetMenuHtml()
 	{
 		/**
 		 * @global CAllMain $APPLICATION
@@ -744,7 +603,7 @@ class CMenuCustom
 {
 	var $arItems = array();
 
-	public function AddItem($type="left", $arItem=array())
+	function AddItem($type="left", $arItem=array())
 	{
 		if (count($arItem) <= 0)
 			return;
@@ -778,7 +637,7 @@ class CMenuCustom
 	}
 
 
-	public function GetItems($type="left")
+	function GetItems($type="left")
 	{
 		if (array_key_exists($type, $this->arItems))
 			return $this->arItems[$type];

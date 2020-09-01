@@ -6,7 +6,7 @@ class CAllTicketSLA
 	const SLA_SITE = 1;
 	const SITE_SLA = 2;
 
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "support";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
@@ -14,7 +14,7 @@ class CAllTicketSLA
 	}
 
 	// add new or modify exist SLA
-	public static function Set($arFields, $id, $checkRights=true)
+	function Set($arFields, $id, $checkRights=true)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: Set<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -172,7 +172,7 @@ class CAllTicketSLA
 	}
 
 	// delete SLA
-	public static function Delete($id, $checkRights=true)
+	function Delete($id, $checkRights=true)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: Delete<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -219,7 +219,7 @@ class CAllTicketSLA
 	}
 
 	// get SLA by ID
-	public static function GetByID($id)
+	function GetByID($id)
 	{
 		$id = intval($id);
 		if ($id<=0) return false;
@@ -230,7 +230,7 @@ class CAllTicketSLA
 	}
 
 	// get shedule array by SLA ID
-	public static function GetSheduleArray($slaID)
+	function GetSheduleArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetSheduleArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -274,7 +274,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetGroupArray($slaID)
+	function GetGroupArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetGroupArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -306,7 +306,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetSiteArray($slaID)
+	function GetSiteArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetSiteArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -321,7 +321,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetSiteArrayForAllSLA($p = self::SLA_SITE) //self::SITE_SLA
+	function GetSiteArrayForAllSLA($p = self::SLA_SITE) //self::SITE_SLA
 	{
 		static $GetSiteArrayForAllSLACache;
 		if($p !== self::SITE_SLA)
@@ -350,7 +350,7 @@ class CAllTicketSLA
 		return $GetSiteArrayForAllSLACache[$p];
 	}
 
-	public static function GetCategoryArray($slaID)
+	function GetCategoryArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetCategoryArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -365,7 +365,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetCriticalityArray($slaID)
+	function GetCriticalityArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetCriticalityArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -380,7 +380,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetMarkArray($slaID)
+	function GetMarkArray($slaID)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetMarkArray<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -395,7 +395,7 @@ class CAllTicketSLA
 		return $arResult;
 	}
 
-	public static function GetDropDown($siteID="")
+	function GetDropDown($siteID="")
 	{
 		if (strlen($siteID)>0 && strtoupper($siteID)!="ALL")
 		{
@@ -407,7 +407,7 @@ class CAllTicketSLA
 		return $rs;
 	}
 
-	public static function GetForUser($siteID=false, $userID=false)
+	function GetForUser($siteID=false, $userID=false)
 	{
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetForUser<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -452,7 +452,7 @@ class CAllTicketSLA
 		return $slaID;
 	}
 	
-	public static function GetSLA( $siteID, $userID, $categoryID = null, $coupon = ""  )
+	function GetSLA( $siteID, $userID, $categoryID = null, $coupon = ""  )
 	{
 		global $DB;
 		$err_mess = (CAllTicketSLA::err_mess())."<br>Function: GetSLA<br>Line: ";

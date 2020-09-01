@@ -24,14 +24,22 @@ class CComponentParamsManager
 
 		if (!isset($config['id']))
 		{
-			$config['id'] = 'bx_comp_params_manager_'.substr(uniqid(mt_rand(), true), 0, 4);
+			$config['id'] = 'bx_comp_params_manager_'.mb_substr(uniqid(mt_rand(), true), 0, 4);
 		}
 
 		$mess_lang = self::GetLangMessages();
 		?>
 		<script type="text/javascript">
 			BX.message(<?=CUtil::PhpToJSObject($mess_lang, false);?>);
-			top.oBXComponentParamsManager = window.oBXComponentParamsManager = new BXComponentParamsManager(<?=CUtil::PhpToJSObject($config)?>);
+			if (window.BXComponentParamsManager)
+			{
+				window.oBXComponentParamsManager = new BXComponentParamsManager(<?=CUtil::PhpToJSObject($config)?>);
+			}
+			else
+			{
+				window.oBXComponentParamsManager = new top.BXComponentParamsManager(<?=CUtil::PhpToJSObject($config)?>);
+			}
+			top.oBXComponentParamsManager = window.oBXComponentParamsManager;
 		</script>
 		<?
 
@@ -48,13 +56,33 @@ class CComponentParamsManager
 	{
 		if (isset($_REQUEST['component_params_manager']))
 		{
-			$reqId = intVal($_REQUEST['component_params_manager']);
+			$reqId = intval($_REQUEST['component_params_manager']);
 			$result = self::GetComponentProperties(
 				$_REQUEST['component_name'],
 				$_REQUEST['component_template'],
 				$_REQUEST['site_template'],
 				$_REQUEST['current_values']
 			);
+
+			$templateMatch = false;
+			for ($i = 0, $l = count($result['templates']); $i < $l; $i++)
+			{
+				if ($result['templates'][$i]['NAME'] == $_REQUEST['component_template'] || ($_REQUEST['component_template'] == '' && $result['templates'][$i]['NAME'] == '.default'))
+				{
+					$templateMatch = true;
+					break;
+				}
+			}
+			if (!$templateMatch && $l > 0)
+			{
+				$result = self::GetComponentProperties(
+					$_REQUEST['component_name'],
+					$result['templates'][0]['NAME'],
+					$_REQUEST['site_template'],
+					$_REQUEST['current_values']
+				);
+			}
+
 			$result['description'] = CComponentUtil::GetComponentDescr($_REQUEST['component_name']);
 			?>
 			<script>
@@ -208,7 +236,7 @@ class CComponentParamsManager
 						'mode' => $fd['ONLY_ML'] ? 'medialib' : 'select',
 						'value' => '...',
 						'event' => "BX_FD_".$fd['NAME'],
-						'id' => "bx_fd_input_".strtolower($fd['NAME']),
+						'id' => "bx_fd_input_".mb_strtolower($fd['NAME']),
 						'MedialibConfig' => array(
 							"event" => "bx_ml_event_".$fd['NAME'],
 							"arResultDest" => Array("FUNCTION_NAME" => "BX_FD_ONRESULT_".$fd['NAME']),
@@ -217,7 +245,7 @@ class CComponentParamsManager
 						'bReturnResult' => true
 					)
 				);
-				?><script>window._bxMlBrowseButton_<?= strtolower($fd['NAME'])?> = '<?= CUtil::JSEscape($MLRes)?>';</script><?
+				?><script>window._bxMlBrowseButton_<?= mb_strtolower($fd['NAME'])?> = '<?= CUtil::JSEscape($MLRes)?>';</script><?
 			}
 
 			CAdminFileDialog::ShowScript(Array

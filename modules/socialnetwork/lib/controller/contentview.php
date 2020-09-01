@@ -6,7 +6,7 @@ use Bitrix\Main\Error;
 use Bitrix\Socialnetwork\Livefeed;
 use Bitrix\Socialnetwork\Item\UserContentView;
 
-class ContentView extends \Bitrix\Main\Engine\Controller
+class ContentView extends Base
 {
 	public function configureActions()
 	{
@@ -106,7 +106,7 @@ class ContentView extends \Bitrix\Main\Engine\Controller
 				: ''
 		);
 
-		if (strlen($contentId) <= 0)
+		if ($contentId == '')
 		{
 			$this->addError(new Error('Empty Content ID', 'SONET_CONTROLLER_CONTENTVIEW_EMPTY_CONTENT_ID'));
 			return null;

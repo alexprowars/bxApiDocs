@@ -5,7 +5,7 @@ use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Socialnetwork\LogCommentTable;
 
-class Comment extends \Bitrix\Main\Engine\Controller
+class Comment extends \Bitrix\Socialnetwork\Controller\Base
 {
 	public function getSourceAction(array $params = [])
 	{

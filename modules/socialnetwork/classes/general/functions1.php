@@ -1,17 +1,6 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-
-/**
- * <b>CSocNetTextParser</b> - класс, предназначенный для форматирования сообщений социальной сети. Осуществляет замену спецсимволов и заказных тегов на реальные HTML-теги, обработку ссылок, отображение смайлов.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettextparser/index.php
- * @author Bitrix
- */
 class CSocNetTextParser
 {
 	var $smiles = array();
@@ -31,7 +20,7 @@ class CSocNetTextParser
 		6 => 140, //"x-large"
 		7 => 160); //"xx-large"
 
-	public function CSocNetTextParser($strLang = False, $pathToSmile = false)
+	function CSocNetTextParser($strLang = False, $pathToSmile = false)
 	{
 		global $DB, $CACHE_MANAGER;
 		if ($strLang===False)
@@ -64,51 +53,7 @@ class CSocNetTextParser
 		$this->smiles = $arSmiles[$strLang];
 	}
 
-	
-	/**
-	* <p>Метод форматирования сообщения. Метод нестатический.</p>
-	*
-	*
-	* @param string $text  Исходное сообщение.
-	*
-	* @param bool $bPreview = true Необязательный параметр. По умолчанию равен true.
-	*
-	* @param array $arImages = array() Массив картинок сообщения.
-	*
-	* @param array $allow = array() Массив параметров для форматирования сообщения, со значениями
-	* <i>Y</i> или <i>N</i>:          <ul> <li> <b>HTML</b> - в тексте могут содержаться любые
-	* HTML теги, </li>                  <li> <b>ANCHOR</b> - разрешен тег &lt;a&gt;, </li>                  
-	* <li> <b>BIU</b> - разрешены теги &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, </li>                   <li> <b>IMG</b> -
-	* разрешен тег &lt;img&gt;, </li>                  <li> <b>QUOTE</b> - разрешен тег
-	* цитирования &lt;quote&gt;, </li>                   <li> <b>CODE</b> - разрешен тег показа
-	* кода &lt;code&gt;, </li>                   <li> <b>FONT</b> - разрешен тег &lt;font&gt;, </li>           
-	*        <li> <b>LIST</b> - разрешены теги &lt;ul&gt;, &lt;li&gt;, </li>                   <li> <b>SMILES</b>
-	* - показ смайликов в виде картинок, </li>                  <li> <b>NL2BR</b> -
-	* заменять переводы каретки на тег &lt;br&gt; при разрешении принимать
-	* любые HTML теги, </li>           <li> <b>VIDEO</b> - разрешена вставка видео, </li>       
-	*  </ul>
-	*
-	* @param string $type = html Тип сообщения. Необязательный параметр. По умолчанию принимает
-	* значение html.
-	*
-	* @return string <p>Метод возвращает отформатированную строку сообщения.</p><a
-	* name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $parser = new CSocNetTextParser(LANGUAGE_ID, "/bitrix/images/socialnetwork/smile/");
-	* $parser-&gt;MaxStringLen = 20;
-	* $message = $parser-&gt;convert($draftMessage);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettextparser/convert.php
-	* @author Bitrix
-	*/
-	public function convert($text, $bPreview = True, $arImages = array(), $allow = array("HTML" => "N", "ANCHOR" => "Y", "BIU" => "Y", "IMG" => "Y", "QUOTE" => "Y", "CODE" => "Y", "FONT" => "Y", "LIST" => "Y", "SMILES" => "Y", "NL2BR" => "N")) //, "KEEP_AMP" => "N"
+	function convert($text, $bPreview = True, $arImages = array(), $allow = array("HTML" => "N", "ANCHOR" => "Y", "BIU" => "Y", "IMG" => "Y", "QUOTE" => "Y", "CODE" => "Y", "FONT" => "Y", "LIST" => "Y", "SMILES" => "Y", "NL2BR" => "N")) //, "KEEP_AMP" => "N"
 	{
 		global $DB;
 
@@ -165,7 +110,7 @@ class CSocNetTextParser
 				$text = preg_replace("#<li(\s+[^>]*>|>)#is", "[*]", $text);
 			}
 
-			if (strlen($text)>0)
+			if ($text <> '')
 			{
 				$text = str_replace("<", "&lt;", $text);
 				$text = str_replace(">", "&gt;", $text);
@@ -330,7 +275,7 @@ class CSocNetTextParser
 		return $text;
 	}
 
-	public static function killAllTags($text)
+	function killAllTags($text)
 	{
 		if (method_exists("CTextParser", "clearAllTags"))
 			return CTextParser::clearAllTags($text);
@@ -343,23 +288,10 @@ class CSocNetTextParser
 		return $text;
 	}
 
-	
-	/**
-	* <p>Метод форматирования сообщения для отправки по электронной почте. Метод нестатический.</p>
-	*
-	*
-	* @param string $text  Текст сообщения.
-	*
-	* @return string <p>Метод возвращает отформатированную строку сообщения.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettextparser/convert4mail.php
-	* @author Bitrix
-	*/
-	public static function convert4mail($text)
+	function convert4mail($text)
 	{
 		$text = Trim($text);
-		if (strlen($text)<=0) return "";
+		if ($text == '') return "";
 
 		$text = preg_replace("#<(/?)code(.*?)>#is", "[\\1code]", $text);
 		$text = preg_replace("#<(/?)quote(.*?)>#is", "[\\1qoute]", $text);
@@ -388,9 +320,9 @@ class CSocNetTextParser
 		return $text;
 	}
 
-	public function convert_emoticon($code = "", $image = "", $description = "", $servername = "")
+	function convert_emoticon($code = "", $image = "", $description = "", $servername = "")
 	{
-		if (strlen($code)<=0 || strlen($image)<=0) return;
+		if ($code == '' || $image == '') return;
 		$code = stripslashes($code);
 		$description = stripslashes($description);
 		$image = stripslashes($image);
@@ -400,9 +332,9 @@ class CSocNetTextParser
 
 	}
 
-	public static function convert_code_tag($text = "")
+	function convert_code_tag($text = "")
 	{
-		if (strlen($text)<=0) return;
+		if ($text == '') return;
 
 		$text = stripslashes($text);
 		$text = str_replace(array("<", ">"), array("&lt;", "&gt;"), $text);
@@ -415,9 +347,9 @@ class CSocNetTextParser
 		return "<br /><small><b>".GetMessage("SONET_CODE")."</b></small><table class='sonetcode'><tr><td>".$text."</td></tr></table>";
 	}
 
-	public static function convert_code_tag_rss($text = "")
+	function convert_code_tag_rss($text = "")
 	{
-		if (strlen($text)<=0) return;
+		if ($text == '') return;
 
 		$text = stripslashes($text);
 		$text = str_replace(array("<", ">"), array("&lt;", "&gt;"), $text);
@@ -430,9 +362,9 @@ class CSocNetTextParser
 		return "\n====code====\n".$text."\n===========\n";
 	}
 
-	public function convert_quote_tag($text = "")
+	function convert_quote_tag($text = "")
 	{
-		if (strlen($text)<=0) return;
+		if ($text == '') return;
 		$txt = $text;
 
 		$txt = preg_replace("#\[quote\]#ie", "\$this->convert_open_quote_tag()", $txt);
@@ -449,9 +381,9 @@ class CSocNetTextParser
 		}
 	}
 
-	public function convert_quote_tag_rss($text = "")
+	function convert_quote_tag_rss($text = "")
 	{
-		if (strlen($text)<=0) return;
+		if ($text == '') return;
 		$txt = $text;
 
 		$txt = preg_replace("#\[quote\]#ie", "\$this->convert_open_quote_tag_rss()", $txt);
@@ -468,19 +400,19 @@ class CSocNetTextParser
 		}
 	}
 
-	public function convert_open_quote_tag()
+	function convert_open_quote_tag()
 	{
 		$this->quote_open++;
 		return '<br /><div class="socnet-quote"><span class="socnet-quote-title">'.GetMessage("SONET_QUOTE").'<br /></span>';
 	}
 
-	public function convert_open_3_tag_rss()
+	function convert_open_3_tag_rss()
 	{
 		$this->quote_open++;
 		return "\n====quote====\n";
 	}
 
-	public function convert_close_quote_tag()
+	function convert_close_quote_tag()
 	{
 		if ($this->quote_open == 0)
 		{
@@ -491,7 +423,7 @@ class CSocNetTextParser
 		return '</div><br style="clear:both" />';
 	}
 
-	public function convert_close_quote_tag_rss()
+	function convert_close_quote_tag_rss()
 	{
 		if ($this->quote_open == 0)
 		{
@@ -502,13 +434,13 @@ class CSocNetTextParser
 		return "\n===========\n";
 	}
 
-	public function convert_image_tag($url = "")
+	function convert_image_tag($url = "")
 	{
-		if (strlen($url)<=0) return;
+		if ($url == '') return;
 		$url = trim($url);
 
 		$extension = preg_replace("/^.*\.(\S+)$/", "\\1", $url);
-		$extension = strtolower($extension);
+		$extension = mb_strtolower($extension);
 		$extension = preg_quote($extension, "/");
 
 		$bErrorIMG = False;
@@ -529,17 +461,17 @@ class CSocNetTextParser
 		return "<img src='$url' border='0'>";
 	}
 
-	public function convert_font_attr($attr, $value = "", $text = "")
+	function convert_font_attr($attr, $value = "", $text = "")
 	{
-		if (strlen($text)<=0) return "";
-		if (strlen($value)<=0) return $text;
+		if ($text == '') return "";
+		if ($value == '') return $text;
 
 		if ($attr == "size")
 		{
 			$count = count($this->arFontSize);
 			if ($count <= 0)
 				return $text;
-			$value = intVal($value >= $count ? ($count) : $value);
+			$value = intval($value >= $count ? ($count) : $value);
 			return "<span style='font-size:".$this->arFontSize[$value]."%;'>".$text."</span>";
 		}
 		else if ($attr == 'color')
@@ -554,7 +486,7 @@ class CSocNetTextParser
 		}
 	}
 
-	public function part_long_words($str1, $str2, $str3)
+	function part_long_words($str1, $str2, $str3)
 	{
 		$str2 = str_replace(chr(1), "", $str2);
 		$str2 = str_replace(chr(2), "", $str2);
@@ -585,7 +517,7 @@ class CSocNetTextParser
 		return $str1.$str2.$str3;
 	}
 
-	public static function convert_anchor_tag($url, $text, $pref="")
+	function convert_anchor_tag($url, $text, $pref="")
 	{
 		$bCutUrl = True;
 
@@ -611,7 +543,7 @@ class CSocNetTextParser
 		if (preg_match("/^<img\s+src/i", $text)) $bCutUrl = False;
 		$text = str_replace("&amp;", "&", $text);
 		$text = preg_replace("/javascript:/i", "javascript&#58; ", $text);
-		if ($bCutUrl && strlen($text) < 55) $bCutUrl = False;
+		if ($bCutUrl && mb_strlen($text) < 55) $bCutUrl = False;
 		if ($bCutUrl && !preg_match("/^(http|ftp|https|news):\/\//i", $text)) $bCutUrl = False;
 
 		if ($bCutUrl)
@@ -619,13 +551,13 @@ class CSocNetTextParser
 			$stripped = preg_replace("#^(http|ftp|https|news)://(\S+)$#i", "\\2", $text);
 			$uri_type = preg_replace("#^(http|ftp|https|news)://(\S+)$#i", "\\1", $text);
 
-			$text = $uri_type.'://'.substr($stripped, 0, 30).'...'.substr($stripped, -10);
+			$text = $uri_type.'://'.mb_substr($stripped, 0, 30).'...'.mb_substr($stripped, -10);
 		}
 
 		return $pref."<a href='".$url."' target='_blank'>".$text."</a>".$end;
 	}
 
-	public function convert_to_rss($text, $arImages = Array(), $allow = array("HTML" => "N", "ANCHOR" => "Y", "BIU" => "Y", "IMG" => "Y", "QUOTE" => "Y", "CODE" => "Y", "FONT" => "Y", "LIST" => "Y", "SMILES" => "Y", "NL2BR" => "N")) //, "KEEP_AMP" => "N"
+	function convert_to_rss($text, $arImages = Array(), $allow = array("HTML" => "N", "ANCHOR" => "Y", "BIU" => "Y", "IMG" => "Y", "QUOTE" => "Y", "CODE" => "Y", "FONT" => "Y", "LIST" => "Y", "SMILES" => "Y", "NL2BR" => "N")) //, "KEEP_AMP" => "N"
 	{
 		global $DB;
 
@@ -676,7 +608,7 @@ class CSocNetTextParser
 			$text = preg_replace("'(^|\s)((http|https|news|ftp)://[-_:A-Za-z0-9@]+(\.[-_/=:A-Za-z0-9#@&?=%+]+)+)'is", "\\1[url]\\2[/url]", $text);
 
 //			$text = htmlspecialcharsEx($text);
-			if (strlen($text)>0)
+			if ($text <> '')
 			{
 				$text = str_replace("<", "&lt;", $text);
 				$text = str_replace(">", "&gt;", $text);
@@ -793,10 +725,10 @@ class CSocNetTextParser
 
 		$dbSite = CSite::GetByID(SITE_ID);
 		$arSite = $dbSite->Fetch();
-		$serverName = $arSite["SERVER_NAME"];
-		if (strlen($serverName) <=0)
+		$serverName = htmlspecialcharsEx($arSite["SERVER_NAME"]);
+		if ($serverName == '')
 		{
-			if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME)>0)
+			if (defined("SITE_SERVER_NAME") && SITE_SERVER_NAME <> '')
 				$serverName = SITE_SERVER_NAME;
 			else
 				$serverName = COption::GetOptionString("main", "server_name", "www.bitrixsoft.com");
@@ -826,59 +758,9 @@ class CSocNetTextParser
 
 }
 
-
-/**
- * <b>CSocNetTools</b> - вспомогательный класс модуля социальной сети.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettools/index.php
- * @author Bitrix
- */
 class CSocNetTools
 {
-	
-	/**
-	* <p>Метод возвращает параметры изображения, заданного его идентификатором. При необходимости осуществляется масштабирование изображения. В случае отсутствия изображения возвращается изображение заданное как изображение по-умолчанию. Метод нестатический.</p>
-	*
-	*
-	* @param int $imageID  Идентификатор изображения.
-	*
-	* @param int $imageSize  Размер изображения. В случае, если оригинальное изображение хотя
-	* бы по одному измерению больше указанного размера, осуществляется
-	* автоматическое масштабирование.
-	*
-	* @param string $defaultImage  Ссылка на изображение "по-умолчанию". Используется, если
-	* изображение не найдено.
-	*
-	* @param int $defaultImageSize  Размер изображения "по-умолчанию".
-	*
-	* @param string $imageUrl  Ссылка, на которую браузер переходит при клике на изображении.
-	* Может быть не задана.
-	*
-	* @param string $showImageUrl  Флаг, имеющий значение true, если необходимо показывать ссылку.
-	* Иначе - false.
-	*
-	* @param string $urlParams = false Дополнительные параметры ссылки (тега <i>a</i>).
-	*
-	* @return array <p>Метод возвращает массив с ключами FILE и IMG. В ключе FILE содержится
-	* массив, описывающий изображение (аналогичен массиву,
-	* возвращаемому метолом CFile::GetFileArray). В ключе IMG содержится готовая
-	* для вывода строка HTML, показывающая изображение.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?<br>$arImage = CSocNetTools::InitImage($personalPhoto, 150, "/bitrix/images/socialnetwork/nopic_user_150.gif", 150, "", false);<br>?&gt;
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettools/csocnettools_initimage.php
-	* @author Bitrix
-	*/
-	public static function InitImage($imageID, $imageSize, $defaultImage, $defaultImageSize, $imageUrl, $showImageUrl, $urlParams=false)
+	function InitImage($imageID, $imageSize, $defaultImage, $defaultImageSize, $imageUrl, $showImageUrl, $urlParams=false)
 	{
 		$imageFile = false;
 		$imageImg = "";
@@ -917,7 +799,7 @@ class CSocNetTools
 		return array("FILE" => $imageFile, "IMG" => $imageImg);
 	}
 
-	public static function htmlspecialcharsExArray($array)
+	function htmlspecialcharsExArray($array)
 	{
 		$res = Array();
 		if(!empty($array) && is_array($array))
@@ -942,26 +824,7 @@ class CSocNetTools
 		return $res;
 	}
 
-	
-	/**
-	* <p>Метод осуществляет масштабирование изображения, заданного в виде идентификатора или в виде массива, совпадающего по структуре с массивом, возвращаемым методом CFile::GetByID. Если размеры изображения превышают заданные, то осуществляется масштабирование. Метод нестатический.</p> <p><b>Примечание</b>: возможное примечание.</p>
-	*
-	*
-	* @param mixed $aFile  Идентификатор изображения или в массив, совпадающий по структуре
-	* с массивом, возвращаемым методом CFile::GetByID.
-	*
-	* @param int $sizeX  Масштабируемый размер по горизонтали.
-	*
-	* @param int $sizeY  Масштабируемый размер по вертикали.
-	*
-	* @return string <p>Метод возвращает путь к масштабируемому изображению
-	* относительно корня сайта. В случае ошибки возвращается false.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettools/csocnettools_resizeimage.php
-	* @author Bitrix
-	*/
-	public static function ResizeImage($aFile, $sizeX, $sizeY)
+	function ResizeImage($aFile, $sizeX, $sizeY)
 	{
 		$result = CFile::ResizeImageGet($aFile, array("width" => $sizeX, "height" => $sizeY));
 		if(is_array($result))
@@ -970,7 +833,7 @@ class CSocNetTools
 			return false;
 	}
 
-	public static function GetDateTimeFormat()
+	function GetDateTimeFormat()
 	{
 		$timestamp = mktime(7,30,45,2,22,2007);
 		return array(
@@ -989,35 +852,16 @@ class CSocNetTools
 			);
 	}
 
-	
-	/**
-	* <p>Подготавливает день рождения для вывода. Метод нестатический.</p>
-	*
-	*
-	* @param date $datetime  Дата рождения
-	*
-	* @param char $gender  Пол. Допустимые значения: M - мужской, F - женский, X - средний.
-	*
-	* @param char $showYear = "N" Показывать ли год рождения. Допустимые значения: Y - показывать, M -
-	* показывать только для мужского пола, N - не показывать.
-	*
-	* @return array <p>Метод возвращает массив с ключами: DATE - отформатированный день
-	* рождения, MONTH - месяц рождения, DAY - день в месяце.</p><br><br>
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/socialnetwork/classes/csocnettools/csocnettools_birthday.php
-	* @author Bitrix
-	*/
-	public static function Birthday($datetime, $gender, $showYear = "N")
+	function Birthday($datetime, $gender, $showYear = "N")
 	{
-		if (StrLen($datetime) <= 0)
+		if ($datetime == '')
 			return false;
 
 		$arDateTmp = ParseDateTime($datetime, CSite::GetDateFormat('SHORT'));
 
-		$day = IntVal($arDateTmp["DD"]);
-		$month = IntVal($arDateTmp["MM"]);
-		$year = IntVal($arDateTmp["YYYY"]);
+		$day = intval($arDateTmp["DD"]);
+		$month = intval($arDateTmp["MM"]);
+		$year = intval($arDateTmp["YYYY"]);
 
 		$val = $day.' '.ToLower(GetMessage('MONTH_'.$month.'_S'));
 		if (($showYear == 'Y') || ($showYear == 'M' && $gender == 'M'))
@@ -1025,8 +869,8 @@ class CSocNetTools
 
 		return array(
 			"DATE" => $val,
-			"MONTH" => Str_Pad(IntVal($arDateTmp["MM"]), 2, "0", STR_PAD_LEFT),
-			"DAY" => Str_Pad(IntVal($arDateTmp["DD"]), 2, "0", STR_PAD_LEFT)
+			"MONTH" => Str_Pad(intval($arDateTmp["MM"]), 2, "0", STR_PAD_LEFT),
+			"DAY" => Str_Pad(intval($arDateTmp["DD"]), 2, "0", STR_PAD_LEFT)
 		);
 	}
 }

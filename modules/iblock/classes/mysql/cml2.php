@@ -2,23 +2,6 @@
 /*
 This class is used to parse and load an xml file into database table.
 */
-
-/**
- * <br><br>
- *
- *
- * @return mixed 
- *
- * <h4>Example</h4> 
- * <pre bgcolor="#323232" style="padding:5px;">
- * &lt;?<br><span> </span>$obXMLFile = new CIBlockXMLFile;<br><span> </span>// Удаляем результат предыдущей загрузки<br><span> </span>$obXMLFile-&gt;<a href="/api_help/iblock/classes/ciblockxmlfile/droptemporarytables.php">DropTemporaryTables</a>();<br><span> </span>// Подготавливаем БД<br><span> </span>if(!$obXMLFile-&gt;<a href="/api_help/iblock/classes/ciblockxmlfile/createtemporarytables.php">CreateTemporaryTables</a>())<br><span> </span>	return "Ошибка создания БД.";<br><span> </span><br><span> </span>if($fp = fopen($FILE_NAME, "rb"))<br><span> </span>{<br><span> </span>	// Чтение содержимого файла за один шаг<br><span> </span>	$obXMLFile-&gt;<a href="/api_help/iblock/classes/ciblockxmlfile/readxmltodatabase.php">ReadXMLToDatabase</a>($fp, $NS, 0);<br><span> </span>	fclose($fp);<br><span> </span>}<br><span> </span>else<br><span> </span>{<br><span> </span>	// Файл открыть не удалось<br><span> </span>	return "Ошибка открытия файла";<br><span> </span>}<br><span> </span><br><span> </span>// Индексируем загруженные данные для ускорения доступа<br><span> </span>if(!CIBlockXMLFile::<a href="/api_help/iblock/classes/ciblockxmlfile/indextemporarytables.php">IndexTemporaryTables</a>())<br><span> </span>	return "Ошибка созния индексов БД.";<br><span> </span><br><span> </span>?&gt;
- * </pre>
- *
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php
- * @author Bitrix
- */
 class CIBlockXMLFile
 {
 	var $_table_name = "";
@@ -35,9 +18,9 @@ class CIBlockXMLFile
 
 	private $_get_xml_chunk_function = "_get_xml_chunk";
 
-	public function __construct($table_name = "b_xml_tree")
+	function __construct($table_name = "b_xml_tree")
 	{
-		$this->_table_name = strtolower($table_name);
+		$this->_table_name = mb_strtolower($table_name);
 		if (defined("BX_UTF"))
 		{
 			if (function_exists("mb_orig_strpos") && function_exists("mb_orig_strlen") && function_exists("mb_orig_substr"))
@@ -51,7 +34,7 @@ class CIBlockXMLFile
 		}
 	}
 
-	public function StartSession($sess_id)
+	function StartSession($sess_id)
 	{
 		global $DB;
 
@@ -68,7 +51,7 @@ class CIBlockXMLFile
 
 		if($res)
 		{
-			$this->_sessid = substr($sess_id, 0, 32);
+			$this->_sessid = mb_substr($sess_id, 0, 32);
 
 			$rs = $this->GetList(array(), array("PARENT_ID" => -1), array("ID", "NAME"));
 			if(!$rs->Fetch())
@@ -85,7 +68,7 @@ class CIBlockXMLFile
 		return $res;
 	}
 
-	public function GetSessionRoot()
+	function GetSessionRoot()
 	{
 		global $DB;
 		$rs = $DB->Query("SELECT ID MID from ".$this->_table_name." WHERE SESS_ID = '".$DB->ForSQL($this->_sessid)."' AND PARENT_ID = 0");
@@ -93,7 +76,7 @@ class CIBlockXMLFile
 		return $ar["MID"];
 	}
 
-	public function EndSession()
+	function EndSession()
 	{
 		global $DB;
 
@@ -111,31 +94,23 @@ class CIBlockXMLFile
 		return true;
 	}
 
+	public function GetRoot()
+	{
+		global $DB;
+		$rs = $DB->Query("SELECT ID MID from ".$this->_table_name." WHERE PARENT_ID = 0");
+		$ar = $rs->Fetch();
+		return $ar["MID"];
+	}
+
 	/*
 	This function have to called once at the import start.
 
 	return : result of the CDatabase::Query method
 	We use drop due to mysql innodb slow truncate bug.
 	*/
-	
-	/**
-	* <p>Удаляет таблицы, содержащие ранее загруженный файл. Необходимо вызывать метод перед началом загрузки XML. Нестатический метод.   <br></p>
-	*
-	*
-	* @return bool <p>В случае возникновения ошибки метожд возвращает false.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php">CIBlockXMLFile</a> </li> 
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/droptemporarytables.php
-	* @author Bitrix
-	*/
-	public static function DropTemporaryTables()
+	function DropTemporaryTables()
 	{
-		if(!isset($this) || !is_object($this) || strlen($this->_table_name) <= 0)
+		if(!isset($this) || !is_object($this) || $this->_table_name == '')
 		{
 			$ob = new CIBlockXMLFile;
 			return $ob->DropTemporaryTables();
@@ -150,30 +125,9 @@ class CIBlockXMLFile
 		}
 	}
 
-	
-	/**
-	* <p>Создает таблицы для загрузки XML. Нестатический метод.</p>   <p></p> <div class="note"> <b>Примечание:</b> для MySQL если определена константа MYSQL_TABLE_TYPE (<a href="http://dev.1c-bitrix.ru/api_help/main/general/constants.php#mysql_table_type">Специальные константы</a>), то таблицы будут созданы заданного ей типа.</div>
-	*
-	*
-	* @param bool $with_sess_id = false Если значение <i>true</i>, то будут создаваться временные таблицы с
-	* поддержкой нескольких сессий "одновременного" импорта. Введён
-	* для совместимости. Необязательный параметр.
-	*
-	* @return bool <p>В случае, если таблицы создать не удалось, метод возвращает
-	* false.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php">CIBlockXMLFile</a> </li> 
-	* </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/createtemporarytables.php
-	* @author Bitrix
-	*/
-	public static function CreateTemporaryTables($with_sess_id = false)
+	function CreateTemporaryTables($with_sess_id = false)
 	{
-		if(!is_object($this) || strlen($this->_table_name) <= 0)
+		if(!isset($this) || !is_object($this) || $this->_table_name == '')
 		{
 			$ob = new CIBlockXMLFile;
 			return $ob->CreateTemporaryTables();
@@ -182,7 +136,10 @@ class CIBlockXMLFile
 		{
 			global $DB;
 
-			if(defined("MYSQL_TABLE_TYPE") && strlen(MYSQL_TABLE_TYPE) > 0)
+			if ($DB->TableExists($this->_table_name))
+				return false;
+
+			if(defined("MYSQL_TABLE_TYPE") && MYSQL_TABLE_TYPE <> '')
 				$DB->Query("SET storage_engine = '".MYSQL_TABLE_TYPE."'", true);
 
 			$res = $DB->DDL("create table ".$this->_table_name."
@@ -207,11 +164,11 @@ class CIBlockXMLFile
 		}
 	}
 
-	public static function IsExistTemporaryTable()
+	function IsExistTemporaryTable()
 	{
 		global $DB;
 
-		if (!isset($this) || !is_object($this) || strlen($this->_table_name) <= 0)
+		if (!isset($this) || !is_object($this) || $this->_table_name == '')
 		{
 			$ob = new CIBlockXMLFile;
 			return $ob->IsExistTemporaryTable();
@@ -222,11 +179,13 @@ class CIBlockXMLFile
 		}
 	}
 
-	public static function GetCountItemsWithParent($parentID)
+	function GetCountItemsWithParent($parentID)
 	{
 		global $DB;
 
-		if (!isset($this) || !is_object($this) || strlen($this->_table_name) <= 0)
+		$parentID = (int)$parentID;
+
+		if (!isset($this) || !is_object($this) || $this->_table_name == '')
 		{
 			$ob = new CIBlockXMLFile;
 			return $ob->GetCountItemsWithParent($parentID);
@@ -248,30 +207,9 @@ class CIBlockXMLFile
 
 	return : result of the CDatabase::Query method
 	*/
-	
-	/**
-	* <p>Индексация таблиц для ускорения доступа. Необходимо вызвать после загрузки данных из файла в таблицы БД, но до обработки этих данных. Нестатический метод.   <br></p>
-	*
-	*
-	* @param bool $with_sess_id = false Если значение <i>true</i>, то будут создаваться временные таблицы с
-	* поддержкой нескольких сессий "одновременного" импорта. Введён
-	* для совместимости. Необязательный параметр.
-	*
-	* @return bool <p>Если во время создания индексов произойдет ошибка БД, метод
-	* вернет false.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li><a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php">CIBlockXMLFile</a></li> 
-	* </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/indextemporarytables.php
-	* @author Bitrix
-	*/
-	public static function IndexTemporaryTables($with_sess_id = false)
+	function IndexTemporaryTables($with_sess_id = false)
 	{
-		if(!is_object($this) || strlen($this->_table_name) <= 0)
+		if(!isset($this) || !is_object($this) || $this->_table_name == '')
 		{
 			$ob = new CIBlockXMLFile;
 			return $ob->IndexTemporaryTables();
@@ -300,7 +238,7 @@ class CIBlockXMLFile
 		}
 	}
 
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -332,51 +270,7 @@ class CIBlockXMLFile
 		return $DB->LastID();
 	}
 
-	
-	/**
-	* <p>Метод возвращает объем прочитанных байт. Нестатический метод.</p>
-	*
-	*
-	* @return int 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* if ($obXMLFile-&gt;ReadXMLToDatabase($fp, $NS, 10, 1024) ) {
-	*     echo '<br>Файл прочитан полностью.';
-	* } else {
-	*     echo '<br>Файл прочитан не полностью: '.round($obXMLFile-&gt;GetFilePosition()/$total*100, 2).'%.';
-	* }
-	* 
-	* //пример пошагового разбора файла: 
-	*  echo '<br>Парсим файл';
-	*     $NS = &amp;$_SESSION["BX_IMPORT_NS"];
-	*     $ABS_FILE_NAME = $DOCUMENT_ROOT."/upload/TakeMe.xml";
-	*     $total = filesize($ABS_FILE_NAME);
-	*     if($fp = fopen($ABS_FILE_NAME, "rb")) {
-	*         // Чтение содержимого файла шагом в 10 секунд
-	*         if ($obXMLFile-&gt;ReadXMLToDatabase($fp, $NS, 10, 1024) ) {
-	*             echo '<br>Файл прочитан полностью.';
-	*         } else {
-	*             echo '<br>Файл прочитан не полностью: '.round($obXMLFile-&gt;GetFilePosition()/$total*100, 2).'%.';
-	*         }
-	*         fclose($fp);
-	*     } else {
-	*         // Файл открыть не удалось
-	*         echo "Ошибка открытия файла";
-	*     }
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php">CIBlockXMLFile</a> </li> 
-	* </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/getfileposition.php
-	* @author Bitrix
-	*/
-	public function GetFilePosition()
+	function GetFilePosition()
 	{
 		return $this->file_position;
 	}
@@ -394,37 +288,7 @@ class CIBlockXMLFile
 	NS have to be preserved between steps.
 	They automatically extracted from xml file and should not be modified!
 	*/
-	
-	/**
-	* <p>Метод загружает данные из файла в таблицы БД. Когда весь файл прочитан, он возвращает true. Если методу не удалось уложиться в time_limit секунд, он вернет false и в параметре NS данные, необходимые для продолжения работы на следующем шаге. Нестатический метод.   <br></p>   <p></p> <div class="note"> <b>Примечание</b>: Если кодировка файла отличается от текущей (LANG_CHARSET), то будет выполнена перекодировка.</div>
-	*
-	*
-	* @param resource $resourcefp  Дескриптор открытого файла. Файл рекомендуется открывать в
-	* режиме "rb".         <br>
-	*
-	* @param array &$NS  Массив с данными для продолжения работы метода, прерванного на
-	* предыдущем шаге.
-	*
-	* @param int $time_limit = 0 Ограничение работы метода по времени. В секундах. Если не задан
-	* или равен нулю, то метод будет работать без ограничений.         <br>
-	*
-	* @param int $read_size = 1024 Сколько байт считывать за одну операцию чтения файла. Большие
-	* значения увеличивают производительность при большем
-	* потреблении памяти.
-	*
-	* @return bool <p>Метод возвращает true, если файл был полностью загружен, и false - в
-	* противном случае.</p>
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/index.php">CIBlockXMLFile</a> </li> 
-	* </ul><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/iblock/classes/ciblockxmlfile/readxmltodatabase.php
-	* @author Bitrix
-	*/
-	public function ReadXMLToDatabase($fp, &$NS, $time_limit=0, $read_size = 1024)
+	function ReadXMLToDatabase($fp, &$NS, $time_limit=0, $read_size = 1024)
 	{
 		global $APPLICATION;
 
@@ -470,12 +334,12 @@ class CIBlockXMLFile
 			}
 			elseif($xmlChunk[0] == "!" || $xmlChunk[0] == "?")
 			{
-				if(substr($xmlChunk, 0, 4) === "?xml")
+				if(mb_substr($xmlChunk, 0, 4) === "?xml")
 				{
 					if(preg_match('#encoding[\s]*=[\s]*"(.*?)"#i', $xmlChunk, $arMatch))
 					{
 						$this->charset = $arMatch[1];
-						if(strtoupper($this->charset) === strtoupper(LANG_CHARSET))
+						if(mb_strtoupper($this->charset) === mb_strtoupper(LANG_CHARSET))
 							$this->charset = false;
 						$cs = $this->charset;
 					}
@@ -495,7 +359,7 @@ class CIBlockXMLFile
 	Internal function.
 	Used to read an xml by chunks started with "<" and endex with "<"
 	*/
-	public function _get_xml_chunk($fp)
+	function _get_xml_chunk($fp)
 	{
 		if($this->buf_position >= $this->buf_len)
 		{
@@ -503,14 +367,14 @@ class CIBlockXMLFile
 			{
 				$this->buf = fread($fp, $this->read_size);
 				$this->buf_position = 0;
-				$this->buf_len = strlen($this->buf);
+				$this->buf_len = mb_strlen($this->buf);
 			}
 			else
 				return false;
 		}
 
 		//Skip line delimiters (ltrim)
-		$xml_position = strpos($this->buf, "<", $this->buf_position);
+		$xml_position = mb_strpos($this->buf, "<", $this->buf_position);
 		while($xml_position === $this->buf_position)
 		{
 			$this->buf_position++;
@@ -522,12 +386,12 @@ class CIBlockXMLFile
 				{
 					$this->buf = fread($fp, $this->read_size);
 					$this->buf_position = 0;
-					$this->buf_len = strlen($this->buf);
+					$this->buf_len = mb_strlen($this->buf);
 				}
 				else
 					return false;
 			}
-			$xml_position = strpos($this->buf, "<", $this->buf_position);
+			$xml_position = mb_strpos($this->buf, "<", $this->buf_position);
 		}
 
 		//Let's find next line delimiter
@@ -538,20 +402,20 @@ class CIBlockXMLFile
 			if(!feof($fp))
 			{
 				$this->buf .= fread($fp, $this->read_size);
-				$this->buf_len = strlen($this->buf);
+				$this->buf_len = mb_strlen($this->buf);
 			}
 			else
 				break;
 
 			//Let's find xml tag start
-			$xml_position = strpos($this->buf, "<", $next_search);
+			$xml_position = mb_strpos($this->buf, "<", $next_search);
 		}
 		if($xml_position===false)
 			$xml_position = $this->buf_len+1;
 
 		$len = $xml_position-$this->buf_position;
 		$this->file_position += $len;
-		$result = substr($this->buf, $this->buf_position, $len);
+		$result = mb_substr($this->buf, $this->buf_position, $len);
 		$this->buf_position = $xml_position;
 
 		return $result;
@@ -561,7 +425,7 @@ class CIBlockXMLFile
 	Internal function.
 	Used to read an xml by chunks started with "<" and endex with "<"
 	*/
-	public function _get_xml_chunk_mb_orig($fp)
+	function _get_xml_chunk_mb_orig($fp)
 	{
 		if($this->buf_position >= $this->buf_len)
 		{
@@ -627,7 +491,7 @@ class CIBlockXMLFile
 	Internal function.
 	Used to read an xml by chunks started with "<" and endex with "<"
 	*/
-	public function _get_xml_chunk_mb($fp)
+	function _get_xml_chunk_mb($fp)
 	{
 		if($this->buf_position >= $this->buf_len)
 		{
@@ -693,7 +557,7 @@ class CIBlockXMLFile
 	Internal function.
 	Stores an element into xml database tree.
 	*/
-	public function _start_element($xmlChunk)
+	function _start_element($xmlChunk)
 	{
 		global $DB;
 		static $search = array(
@@ -710,36 +574,36 @@ class CIBlockXMLFile
 				"&",
 			);
 
-		$p = strpos($xmlChunk, ">");
+		$p = mb_strpos($xmlChunk, ">");
 		if($p !== false)
 		{
-			if(substr($xmlChunk, $p - 1, 1)=="/")
+			if(mb_substr($xmlChunk, $p - 1, 1) == "/")
 			{
 				$bHaveChildren = false;
-				$elementName = substr($xmlChunk, 0, $p-1);
+				$elementName = mb_substr($xmlChunk, 0, $p - 1);
 				$DBelementValue = false;
 			}
 			else
 			{
 				$bHaveChildren = true;
-				$elementName = substr($xmlChunk, 0, $p);
-				$elementValue = substr($xmlChunk, $p+1);
+				$elementName = mb_substr($xmlChunk, 0, $p);
+				$elementValue = mb_substr($xmlChunk, $p + 1);
 				if(preg_match("/^\s*$/", $elementValue))
 					$DBelementValue = false;
-				elseif(strpos($elementValue, "&")===false)
+				elseif(mb_strpos($elementValue, "&") === false)
 					$DBelementValue = $elementValue;
 				else
 					$DBelementValue = preg_replace($search, $replace, $elementValue);
 			}
 
-			if(($ps = strpos($elementName, " "))!==false)
+			if(($ps = mb_strpos($elementName, " "))!==false)
 			{
 				//Let's handle attributes
-				$elementAttrs = substr($elementName, $ps+1);
-				$elementName = substr($elementName, 0, $ps);
+				$elementAttrs = mb_substr($elementName, $ps + 1);
+				$elementName = mb_substr($elementName, 0, $ps);
 				preg_match_all("/(\\S+)\\s*=\\s*[\"](.*?)[\"]/s".BX_UTF_PCRE_MODIFIER, $elementAttrs, $attrs_tmp);
 				$attrs = array();
-				if(strpos($elementAttrs, "&")===false)
+				if(mb_strpos($elementAttrs, "&") === false)
 				{
 					foreach($attrs_tmp[1] as $i=>$attrs_tmp_1)
 						$attrs[$attrs_tmp_1] = $attrs_tmp[2][$i];
@@ -791,7 +655,7 @@ class CIBlockXMLFile
 	Internal function.
 	Winds tree stack back. Modifies (if neccessary) internal tree structure.
 	*/
-	public function _end_element($xmlChunk)
+	function _end_element($xmlChunk)
 	{
 		global $DB;
 
@@ -817,10 +681,8 @@ class CIBlockXMLFile
 			),
 		);
 	*/
-	public function GetAllChildrenArray($arParent)
+	function GetAllChildrenArray($arParent, $handleAttributes = false)
 	{
-		global $DB;
-
 		//We will return
 		$arResult = array();
 
@@ -830,7 +692,8 @@ class CIBlockXMLFile
 			$rs = $this->GetList(
 				array(),
 				array("ID" => $arParent),
-				array("ID", "LEFT_MARGIN", "RIGHT_MARGIN")
+				array("ID", "LEFT_MARGIN", "RIGHT_MARGIN"),
+				$handleAttributes
 			);
 			$arParent = $rs->Fetch();
 			if(!$arParent)
@@ -842,7 +705,9 @@ class CIBlockXMLFile
 		$arIndex = array();
 		$rs = $this->GetList(
 			array("ID" => "asc"),
-			array("><LEFT_MARGIN" => array($arParent["LEFT_MARGIN"]+1, $arParent["RIGHT_MARGIN"]-1))
+			array("><LEFT_MARGIN" => array($arParent["LEFT_MARGIN"]+1, $arParent["RIGHT_MARGIN"]-1)),
+			array(),
+			$handleAttributes
 		);
 		while($ar = $rs->Fetch())
 		{
@@ -877,7 +742,7 @@ class CIBlockXMLFile
 		return $arResult;
 	}
 
-	public function GetList($arOrder = array(), $arFilter = array(), $arSelect = array())
+	function GetList($arOrder = array(), $arFilter = array(), $arSelect = array(), $handleAttributes = false)
 	{
 		global $DB;
 
@@ -931,10 +796,18 @@ class CIBlockXMLFile
 			".(count($arOrder)? "order by  ".implode(", ", $arOrder): "")."
 		";
 
-		return $DB->Query($strSql);
+		if ($handleAttributes)
+		{
+			$result = new CCMLResult($DB->Query($strSql));
+		}
+		else
+		{
+			$result = $DB->Query($strSql);
+		}
+		return $result;
 	}
 
-	public function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 		return $DB->Query("delete from ".$this->_table_name." where ID = ".intval($ID));
@@ -943,17 +816,16 @@ class CIBlockXMLFile
 	public static function UnZip($file_name, $last_zip_entry = "", $start_time = 0, $interval = 0)
 	{
 		global $APPLICATION;
-		$io = CBXVirtualIo::GetInstance();
 
 		//Function and securioty checks
 		if(!function_exists("zip_open"))
 			return false;
-		$dir_name = substr($file_name, 0, strrpos($file_name, "/")+1);
-		if(strlen($dir_name) <= strlen($_SERVER["DOCUMENT_ROOT"]))
+		$dir_name = mb_substr($file_name, 0, mb_strrpos($file_name, "/") + 1);
+		if(mb_strlen($dir_name) <= mb_strlen($_SERVER["DOCUMENT_ROOT"]))
 			return false;
 
 		$hZip = zip_open($file_name);
-		if(!$hZip)
+		if(!is_resource($hZip))
 			return false;
 		//Skip from last step
 		if($last_zip_entry)
@@ -984,14 +856,14 @@ class CIBlockXMLFile
 
 				if(!$bBadFile)
 				{
-					$file_name =  $io->GetPhysicalName($dir_name.rel2abs("/", $file_name));
+					$file_name =  $io->GetPhysicalName($dir_name.Rel2Abs("/", $file_name));
 					CheckDirPath($file_name);
 					$fout = fopen($file_name, "wb");
 					if(!$fout)
 						return false;
 					while($data = zip_entry_read($entry, 102400))
 					{
-						$data_len = function_exists('mb_strlen') ? mb_strlen($data, 'latin1') : strlen($data);
+						$data_len = function_exists('mb_strlen')? mb_strlen($data, 'latin1') : mb_strlen($data);
 						$result = fwrite($fout, $data);
 						if($result !== $data_len)
 							return false;
@@ -1011,4 +883,3 @@ class CIBlockXMLFile
 		return true;
 	}
 }
-?>

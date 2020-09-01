@@ -137,6 +137,7 @@ class StringType extends BaseType
 		}
 		if(
 			$userField['SETTINGS']['REGEXP'] != ''
+			&& $value !== ''
 			&& !preg_match($userField['SETTINGS']['REGEXP'], $value)
 		)
 		{

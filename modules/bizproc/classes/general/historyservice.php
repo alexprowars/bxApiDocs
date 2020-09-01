@@ -10,13 +10,7 @@ class CBPAllHistoryService
 
 	public function __construct()
 	{
-		$useGZipCompressionOption = \Bitrix\Main\Config\Option::get("bizproc", "use_gzip_compression", "");
-		if ($useGZipCompressionOption === "Y")
-			$this->useGZipCompression = true;
-		elseif ($useGZipCompressionOption === "N")
-			$this->useGZipCompression = false;
-		else
-			$this->useGZipCompression = (function_exists("gzcompress") && ($GLOBALS["DB"]->type != "ORACLE" || !defined('BX_UTF')));
+		$this->useGZipCompression = \CBPWorkflowTemplateLoader::useGZipCompression();
 	}
 
 	protected function ParseFields(&$arFields, $id = 0)
@@ -34,7 +28,7 @@ class CBPAllHistoryService
 		{
 			$arDocumentId = CBPHelper::ParseDocumentId($arFields["DOCUMENT_ID"]);
 			$arFields["MODULE_ID"] = $arDocumentId[0];
-			if (strlen($arFields["MODULE_ID"]) <= 0)
+			if ($arFields["MODULE_ID"] == '')
 				$arFields["MODULE_ID"] = false;
 			$arFields["ENTITY"] = $arDocumentId[1];
 			$arFields["DOCUMENT_ID"] = $arDocumentId[2];
@@ -43,7 +37,7 @@ class CBPAllHistoryService
 		if (is_set($arFields, "NAME") || $addMode)
 		{
 			$arFields["NAME"] = (string) $arFields["NAME"];
-			if (strlen($arFields["NAME"]) <= 0)
+			if ($arFields["NAME"] == '')
 				throw new CBPArgumentNullException("NAME");
 		}
 
@@ -94,12 +88,12 @@ class CBPAllHistoryService
 		$arDocumentId = CBPHelper::ParseDocumentId($documentId);
 
 		$dest = "/bizproc/";
-		if (strlen($arDocumentId[0]) > 0)
+		if ($arDocumentId[0] <> '')
 			$dest .= preg_replace("/[^a-zA-Z0-9._]/i", "_", $arDocumentId[0]);
 		else
 			$dest .= "NA";
 		$documentIdMD5 = md5($arDocumentId[2]);
-		$dest .= "/".preg_replace("/[^a-zA-Z0-9_]/i", "_", $arDocumentId[1])."/".substr($documentIdMD5, 0, 3)."/".$documentIdMD5;
+		$dest .= "/".preg_replace("/[^a-zA-Z0-9_]/i", "_", $arDocumentId[1])."/".mb_substr($documentIdMD5, 0, 3)."/".$documentIdMD5;
 
 		return $dest;
 	}
@@ -153,7 +147,7 @@ class CBPAllHistoryService
 		$h->DeleteHistory($id, $documentId);
 	}
 
-	static public function DeleteHistoryByDocument($documentId)
+	public function DeleteHistoryByDocument($documentId)
 	{
 		global $DB;
 
@@ -168,7 +162,7 @@ class CBPAllHistoryService
 			"DELETE FROM b_bp_history ".
 			"WHERE DOCUMENT_ID = '".$DB->ForSql($arDocumentId[2])."' ".
 			"	AND ENTITY = '".$DB->ForSql($arDocumentId[1])."' ".
-			"	AND MODULE_ID ".((strlen($arDocumentId[0]) > 0) ? "= '".$DB->ForSql($arDocumentId[0])."'" : "IS NULL")." ",
+			"	AND MODULE_ID ".(($arDocumentId[0] <> '') ? "= '".$DB->ForSql($arDocumentId[0])."'" : "IS NULL")." ",
 			true
 		);
 	}
@@ -204,7 +198,7 @@ class CBPAllHistoryService
 
 		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($arHistory["DOCUMENT_ID"]);
 
-		if (strlen($moduleId) > 0)
+		if ($moduleId <> '')
 			CModule::IncludeModule($moduleId);
 
 		if (class_exists($entity))
@@ -281,6 +275,166 @@ class CBPAllHistoryService
 			"	AND DOCUMENT_ID IN (SELECT t.DOCUMENT_ID FROM b_bp_workflow_state t WHERE t.WORKFLOW_TEMPLATE_ID in (".implode(",", $workflowTemplateIds).") and t.MODULE_ID='".$DB->ForSql($arOldType[0])."' and t.ENTITY='".$DB->ForSql($arOldType[1])."') "
 		);
 	}
+
+	public function AddHistory($arFields)
+	{
+		global $DB;
+
+		self::ParseFields($arFields, 0);
+
+		$arInsert = $DB->PrepareInsert("b_bp_history", $arFields);
+
+		$strSql =
+			"INSERT INTO b_bp_history (".$arInsert[0].", MODIFIED) ".
+			"VALUES(".$arInsert[1].", ".$DB->CurrentTimeFunction().")";
+		$DB->Query($strSql, False, "File: ".__FILE__."<br>Line: ".__LINE__);
+
+		$ID = intval($DB->LastID());
+
+		$arEventParams = array(
+			"ID" => $ID,
+			"DOCUMENT_ID" => array($arFields['MODULE_ID'], $arFields['ENTITY'], $arFields['DOCUMENT_ID']),
+		);
+		foreach (GetModuleEvents('bizproc', 'OnAddToHistory', true) as $arEvent)
+			$result = ExecuteModuleEventEx($arEvent, array($arEventParams));
+
+		return $ID;
+	}
+
+	public function UpdateHistory($id, $arFields)
+	{
+		global $DB;
+
+		$id = intval($id);
+		if ($id <= 0)
+			throw new CBPArgumentNullException("id");
+
+		self::ParseFields($arFields, $id);
+
+		$strUpdate = $DB->PrepareUpdate("b_bp_history", $arFields);
+
+		$strSql =
+			"UPDATE b_bp_history SET ".
+			"	".$strUpdate.", ".
+			"	MODIFIED = ".$DB->CurrentTimeFunction()." ".
+			"WHERE ID = ".intval($id)." ";
+		$DB->Query($strSql, False, "File: ".__FILE__."<br>Line: ".__LINE__);
+
+		return $id;
+	}
+
+	public function GetHistoryList($arOrder = array("ID" => "DESC"), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	{
+		global $DB;
+
+		if (count($arSelectFields) <= 0)
+			$arSelectFields = array("ID", "MODULE_ID", "ENTITY", "DOCUMENT_ID", "NAME", "DOCUMENT", "MODIFIED", "USER_ID");
+
+		if (count(array_intersect($arSelectFields, array("MODULE_ID", "ENTITY", "DOCUMENT_ID"))) > 0)
+		{
+			if (!in_array("MODULE_ID", $arSelectFields))
+				$arSelectFields[] = "MODULE_ID";
+			if (!in_array("ENTITY", $arSelectFields))
+				$arSelectFields[] = "ENTITY";
+			if (!in_array("DOCUMENT_ID", $arSelectFields))
+				$arSelectFields[] = "DOCUMENT_ID";
+		}
+
+		if (array_key_exists("DOCUMENT_ID", $arFilter))
+		{
+			$d = CBPHelper::ParseDocumentId($arFilter["DOCUMENT_ID"]);
+			$arFilter["MODULE_ID"] = $d[0];
+			$arFilter["ENTITY"] = $d[1];
+			$arFilter["DOCUMENT_ID"] = $d[2];
+		}
+
+		static $arFields = array(
+			"ID" => Array("FIELD" => "H.ID", "TYPE" => "int"),
+			"MODULE_ID" => Array("FIELD" => "H.MODULE_ID", "TYPE" => "string"),
+			"ENTITY" => Array("FIELD" => "H.ENTITY", "TYPE" => "string"),
+			"DOCUMENT_ID" => Array("FIELD" => "H.DOCUMENT_ID", "TYPE" => "string"),
+			"NAME" => Array("FIELD" => "H.NAME", "TYPE" => "string"),
+			"DOCUMENT" => Array("FIELD" => "H.DOCUMENT", "TYPE" => "string"),
+			"MODIFIED" => Array("FIELD" => "H.MODIFIED", "TYPE" => "datetime"),
+			"USER_ID" => Array("FIELD" => "H.USER_ID", "TYPE" => "int"),
+
+			"USER_NAME" => Array("FIELD" => "U.NAME", "TYPE" => "string", "FROM" => "INNER JOIN b_user U ON (H.USER_ID = U.ID)"),
+			"USER_LAST_NAME" => Array("FIELD" => "U.LAST_NAME", "TYPE" => "string", "FROM" => "INNER JOIN b_user U ON (H.USER_ID = U.ID)"),
+			"USER_SECOND_NAME" => Array("FIELD" => "U.SECOND_NAME", "TYPE" => "string", "FROM" => "INNER JOIN b_user U ON (H.USER_ID = U.ID)"),
+			"USER_LOGIN" => Array("FIELD" => "U.LOGIN", "TYPE" => "string", "FROM" => "INNER JOIN b_user U ON (H.USER_ID = U.ID)"),
+		);
+
+		$arSqls = CBPHelper::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
+
+		$arSqls["SELECT"] = str_replace("%%_DISTINCT_%%", "", $arSqls["SELECT"]);
+
+		if (is_array($arGroupBy) && count($arGroupBy)==0)
+		{
+			$strSql =
+				"SELECT ".$arSqls["SELECT"]." ".
+				"FROM b_bp_history H ".
+				"	".$arSqls["FROM"]." ";
+			if ($arSqls["WHERE"] <> '')
+				$strSql .= "WHERE ".$arSqls["WHERE"]." ";
+			if ($arSqls["GROUPBY"] <> '')
+				$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+
+			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			if ($arRes = $dbRes->Fetch())
+				return $arRes["CNT"];
+			else
+				return False;
+		}
+
+		$strSql =
+			"SELECT ".$arSqls["SELECT"]." ".
+			"FROM b_bp_history H ".
+			"	".$arSqls["FROM"]." ";
+		if ($arSqls["WHERE"] <> '')
+			$strSql .= "WHERE ".$arSqls["WHERE"]." ";
+		if ($arSqls["GROUPBY"] <> '')
+			$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+		if ($arSqls["ORDERBY"] <> '')
+			$strSql .= "ORDER BY ".$arSqls["ORDERBY"]." ";
+
+		if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) <= 0)
+		{
+			$strSql_tmp =
+				"SELECT COUNT('x') as CNT ".
+				"FROM b_bp_history H ".
+				"	".$arSqls["FROM"]." ";
+			if ($arSqls["WHERE"] <> '')
+				$strSql_tmp .= "WHERE ".$arSqls["WHERE"]." ";
+			if ($arSqls["GROUPBY"] <> '')
+				$strSql_tmp .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+
+			$dbRes = $DB->Query($strSql_tmp, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			$cnt = 0;
+			if ($arSqls["GROUPBY"] == '')
+			{
+				if ($arRes = $dbRes->Fetch())
+					$cnt = $arRes["CNT"];
+			}
+			else
+			{
+				// only for MySQL
+				$cnt = $dbRes->SelectedRowsCount();
+			}
+
+			$dbRes = new CDBResult();
+			$dbRes->NavQuery($strSql, $cnt, $arNavStartParams);
+		}
+		else
+		{
+			if (is_array($arNavStartParams) && intval($arNavStartParams["nTopCount"]) > 0)
+				$strSql .= "LIMIT ".intval($arNavStartParams["nTopCount"]);
+
+			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		}
+
+		$dbRes = new CBPHistoryResult($dbRes, $this->useGZipCompression);
+		return $dbRes;
+	}
 }
 
 class CBPHistoryResult extends CDBResult
@@ -295,7 +449,7 @@ class CBPHistoryResult extends CDBResult
 
 	private function GetFromSerializedForm($value)
 	{
-		if (strlen($value) > 0)
+		if ($value <> '')
 		{
 			if ($this->useGZipCompression)
 				$value = gzuncompress($value);
@@ -311,7 +465,7 @@ class CBPHistoryResult extends CDBResult
 		return $value;
 	}
 
-	public function Fetch()
+	function Fetch()
 	{
 		$res = parent::Fetch();
 
@@ -326,4 +480,6 @@ class CBPHistoryResult extends CDBResult
 		return $res;
 	}
 }
-?>
+
+//Compatibility
+class CBPHistoryService extends CBPAllHistoryService {}

@@ -31,6 +31,7 @@ abstract class CBitrixCloudWebService
 		));
 
 		$this->server = new CHTTP;
+		$this->server->follow_redirect = true;
 		if ($this->timeout > 0)
 			$this->server->http_timeout = $this->timeout;
 

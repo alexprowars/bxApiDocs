@@ -18,8 +18,8 @@ interface ILearnLesson
 	 * WARNING: this method terminates (by die()/exit()) current execution flow
 	 * when SQL server error occured. It's due to bug in CDatabase::Insert() in main
 	 * module (version info:
-	 *    // define("SM_VERSION","11.0.12");
-	 *    // define("SM_VERSION_DATE","2012-02-21 17:00:00"); // YYYY-MM-DD HH:MI:SS
+	 *    define("SM_VERSION","11.0.12");
+	 *    define("SM_VERSION_DATE","2012-02-21 17:00:00"); // YYYY-MM-DD HH:MI:SS
 	 * )
 	 *
 	 * @param array of pairs field => value for new lesson. Allowed fields are ACTIVE,
@@ -540,6 +540,11 @@ class CLearnLesson implements ILearnLesson
 		foreach(GetModuleEvents('learning', 'OnAfterLessonAdd', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
+		if (!$isCourse)
+		{
+			\Bitrix\Learning\Integration\Search::indexLesson($lessonId);
+		}
+
 		return ($lessonId);
 	}
 
@@ -797,6 +802,10 @@ class CLearnLesson implements ILearnLesson
 
 		foreach(GetModuleEvents('learning', 'OnAfterLessonUpdate', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields, $id));
+
+		\Bitrix\Learning\Integration\Search::indexLesson($id);
+
+		return true;
 	}
 
 
@@ -1062,12 +1071,6 @@ class CLearnLesson implements ILearnLesson
 
 				// reload cache of LINKED_LESSON_ID -> COURSE_ID
 				self::GetCourseToLessonMap_ReloadCache();
-
-				if (CModule::IncludeModule("search"))
-				{
-					CSearch::DeleteIndex("learning", false, "C" . $linkedCourseId);
-					CSearch::DeleteIndex("learning", "C" . $linkedCourseId);
-				}
 			}
 		}
 
@@ -1130,8 +1133,7 @@ class CLearnLesson implements ILearnLesson
 
 			if (CModule::IncludeModule('search'))
 			{
-				CSearch::DeleteIndex('learning', false, 'L' . $lesson_id);
-				CSearch::DeleteIndex('learning', 'L' . $lesson_id);
+				CSearch::deleteIndex("learning", "U\\_%", "L".$lesson_id, null);
 			}
 		}
 
@@ -1475,6 +1477,9 @@ class CLearnLesson implements ILearnLesson
 		CLearnGraphRelation::Link ($parentLessonId, $childLessonId, $arProperties);
 
 		CLearnCacheOfLessonTreeComponent::MarkAsDirty();
+
+		Bitrix\Learning\Integration\Search::indexLesson($parentLessonId);
+		Bitrix\Learning\Integration\Search::indexLesson($childLessonId);
 	}
 
 
@@ -1501,8 +1506,10 @@ class CLearnLesson implements ILearnLesson
 		self::PublishProhibitionPurge_OnBeforeRelationRemove ($parentLessonId, $parentLessonId);
 		CLearnGraphRelation::Unlink ($parentLessonId, $childLessonId);
 		CLearnCacheOfLessonTreeComponent::MarkAsDirty();
-	}
 
+		Bitrix\Learning\Integration\Search::indexLesson($parentLessonId);
+		Bitrix\Learning\Integration\Search::indexLesson($childLessonId);
+	}
 
 	final public static function ListImmediateParents($lessonId)
 	{
@@ -1790,7 +1797,7 @@ class CLearnLesson implements ILearnLesson
 			if ($s = $obUserFieldsSql->getOrder(strtolower($by)))
 				$arSqlOrder[] = ' ' . $s . ' ' . $order . ' ';
 
-			if (substr($by, 0, 3) !== 'UF_')
+			if (substr($by, 0, 3) !== 'uf_')
 			{
 				if ( ! isset($arMap[$by]) )
 				{
@@ -2274,6 +2281,8 @@ class CLearnLesson implements ILearnLesson
 
 			CLearnCacheOfLessonTreeComponent::MarkAsDirty();
 
+			Bitrix\Learning\Integration\Search::indexLesson($lessonId);
+
 			return (true);	// prohibition status changed
 		}
 
@@ -2314,10 +2323,10 @@ class CLearnLesson implements ILearnLesson
 
 		$arSqlCondition = array();
 
-		if ($purgeMode & PUBLISH_PROHIBITION_PURGE_ALL_LESSONS_IN_COURSE_CONTEXT)
+		if ($purgeMode & self::PUBLISH_PROHIBITION_PURGE_ALL_LESSONS_IN_COURSE_CONTEXT)
 			$arSqlCondition[] = 'COURSE_LESSON_ID = ' . $lessonId;
 
-		if ($purgeMode & PUBLISH_PROHIBITION_PURGE_LESSON_IN_ALL_COURSE_CONTEXT)
+		if ($purgeMode & self::PUBLISH_PROHIBITION_PURGE_LESSON_IN_ALL_COURSE_CONTEXT)
 			$arSqlCondition[] = 'PROHIBITED_LESSON_ID = ' . $lessonId;
 
 		if (count($arSqlCondition) > 0)

@@ -2,9 +2,12 @@
 
 IncludeModuleLangFile(__FILE__);
 
+if(!CModule::IncludeModule('iblock'))
+	return;
+
 class CWikiDocument extends CIBlockDocument
 {
-	public static function CanUserOperateDocument($operation, $userId, $documentId, $arParameters = array())
+	function CanUserOperateDocument($operation, $userId, $documentId, $arParameters = array())
 	{    
 		if (CWikiSocnet::IsSocNet())
 		{

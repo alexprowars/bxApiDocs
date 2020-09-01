@@ -29,7 +29,15 @@ class CCatalogStoreDocsElement
 		return $lastId;
 	}
 
-	static function getList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	/**
+	 * @param array $arOrder
+	 * @param array $arFilter
+	 * @param bool|array $arGroupBy
+	 * @param bool|array $arNavStartParams
+	 * @param array $arSelectFields
+	 * @return bool|CDBResult
+	 */
+	public static function getList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 
@@ -47,6 +55,9 @@ class CCatalogStoreDocsElement
 
 			"IS_MULTIPLY_BARCODE" => array("FIELD" => "CP.BARCODE_MULTI", "TYPE" => "char", "FROM" => "INNER JOIN b_catalog_product CP ON (DE.ELEMENT_ID = CP.ID)"),
 			"RESERVED" => array("FIELD" => "CP.QUANTITY_RESERVED", "TYPE" => "double", "FROM" => "INNER JOIN b_catalog_product CP ON (DE.ELEMENT_ID = CP.ID)"),
+
+			"ELEMENT_IBLOCK_ID" => array("FIELD" => "IE.IBLOCK_ID", "TYPE" => "int", "FROM" => "INNER JOIN b_iblock_element IE ON (DE.ELEMENT_ID = IE.ID)"),
+			"ELEMENT_NAME" => array("FIELD" => "IE.NAME", "TYPE" => "string", "FROM" => "INNER JOIN b_iblock_element IE ON (DE.ELEMENT_ID = IE.ID)")
 		);
 		$arSqls = CCatalog::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
 		$arSqls["SELECT"] = str_replace("%%_DISTINCT_%%", "", $arSqls["SELECT"]);

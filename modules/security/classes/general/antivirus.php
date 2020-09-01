@@ -21,33 +21,33 @@ class CSecurityAntiVirus
 	var $stylewithiframe = false;
 
 	// this properties may be changed after object creation
-	var $maxrating = 20; //СЂРµР№С‚РёРЅРі РїСЂРёРЅСЏС‚РёСЏ СЂРµС€РµРЅРёР№
-	var $useglobalrules = 1; //РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РіР»РѕР±Р°Р»СЊРЅС‹Рµ РїСЂР°РІРёР»Р°
+	var $maxrating = 20; //рейтинг принятия решений
+	var $useglobalrules = 1; //использовать глобальные правила
 
 	var $replace = 1;//
-	var $replacement = "<!-- deleted by bitrix Antivirus -->"; //РЅР° С‡С‚Рѕ Р·Р°РјРµРЅСЏРµРј, РµСЃР»Рё Р·Р°РјРµРЅСЏРµРј..
+	var $replacement = "<!-- deleted by bitrix Antivirus -->"; //на что заменяем, если заменяем..
 
-	//СЂРµР·СѓР»СЊС‚Р°С‚С‹
-	var $resultrules; //РјР°СЃСЃРёРІ СЃСЂР°Р±РѕС‚Р°РІС€РёС… РїСЂР°РІРёР»
+	//результаты
+	var $resultrules; //массив сработавших правил
 	var $whitelist_id;
 
-	//РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ СЃРІРѕР№СЃС‚РІР°
-	var $data = ''; //РїРѕР»РЅС‹Р№ РєРѕРґ Р±Р»РѕРєР°, РІРєР»СЋС‡Р°СЏ РѕРіСЂР°РЅРёС‡РёРІР°СЋС‰РёРµ С‚РµРіРё
-	var $type = ''; //С‚РёРї Р±Р»РѕРєР°
-	var $body = ''; // С‚РµР»Рѕ Р±Р»РѕРєР°.
-	var $bodylines = false; // РјР°СЃСЃРёРІ СЃС‚СЂРѕРє РёР· body
+	//вспомогательные свойства
+	var $data = ''; //полный код блока, включая ограничивающие теги
+	var $type = ''; //тип блока
+	var $body = ''; // тело блока.
+	var $bodylines = false; // массив строк из body
 	var $bodyWOquotes = '';
 
-	var $atributes = ''; // РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ (РІРјРµСЃС‚Рµ СЃ src)
+	var $atributes = ''; // дополнительные атрибуты (вместе с src)
 
-	var $cnt = 0; //СЃС‡РµС‚С‡РёРє РѕР±СЂР°Р±РѕС‚Р°РЅРЅС‹С… Р±Р»РѕРєРѕРІ
+	var $cnt = 0; //счетчик обработанных блоков
 
 	var $prev = '';
 	var $next = '';
 
 	private $quotes = array();
 
-	public function __construct($place = "body")
+	function __construct($place = "body")
 	{
 		$this->place = $place;
 		global $BX_SECURITY_AV_ACTION;
@@ -139,7 +139,7 @@ class CSecurityAntiVirus
 		{
 			$content = ob_get_contents();
 			ob_end_clean();
-			if(strlen($content))
+			if($content <> '')
 			{
 				$Antivirus = new CSecurityAntiVirus("pre");
 				$Antivirus->Analyze($content);
@@ -162,11 +162,13 @@ class CSecurityAntiVirus
 					$SITE_ID = false;
 					do {
 						$SITE_ID = $arInfo["SITE_ID"];
-						if(strlen($arInfo["INFO"]))
+						if($arInfo["INFO"] <> '')
 						{
 							$arEvent = unserialize(base64_decode($arInfo["INFO"]));
 							if(is_array($arEvent))
+							{
 								$DB->Add("b_event_log", $arEvent, array("DESCRIPTION"));
+							}
 						}
 						CSecurityDB::Query("update b_sec_virus set SENT='Y' where ID='".$arInfo["ID"]."'", '');
 					} while ($arInfo = $rsInfo->Fetch());
@@ -192,7 +194,7 @@ class CSecurityAntiVirus
 		if (self::isSafetyRequest()) //Check only GET and POST request
 			return;
 
-		//РћР±СЂР°Р±РѕС‚РєР° РѕСЃРЅРѕРІРЅРѕРіРѕ РІС‹РІРѕРґР°
+		//Обработка основного вывода
 		$Antivirus = new CSecurityAntiVirus("body");
 		$Antivirus->Analyze($content);
 	}
@@ -204,7 +206,7 @@ class CSecurityAntiVirus
 
 		//start monitoring of output that can be after working antivirus.
 		ob_start();
-		// define("BX_SECURITY_AV_AFTER_EPILOG", true);
+		define("BX_SECURITY_AV_AFTER_EPILOG", true);
 	}
 
 	public static function PHPShutdown()
@@ -212,14 +214,18 @@ class CSecurityAntiVirus
 		if(defined("BX_SECURITY_AV_AFTER_EPILOG"))
 		{
 			$content = ob_get_contents();
-			if(strlen($content))
+			if($content <> '')
 			{
 				ob_end_clean();
 
-				if(substr($content, 0, 6) == "<html>" && preg_match("#</html>\\s*\$#is", $content))
+				if(mb_substr($content, 0, 6) == "<html>" && preg_match("#</html>\\s*\$#is", $content))
+				{
 					$Antivirus = new CSecurityAntiVirus("body");
+				}
 				else
+				{
 					$Antivirus = new CSecurityAntiVirus("post");
+				}
 
 				$Antivirus->Analyze($content);
 				echo $content;
@@ -250,15 +256,15 @@ class CSecurityAntiVirus
 	}
 
 	// function returns 1, if current block is in white list and needs not processing.
-	public function isInWhiteList()
+	function isInWhiteList()
 	{
-		if(strpos($this->atributes, 'src="/bitrix/') !== false)
+		if(mb_strpos($this->atributes, 'src="/bitrix/') !== false)
 			return 1;
 
 		if(preg_match('#src="http[s]?://(api-maps\\.yandex|maps\\.google|apis\\.google|stg\\.odnoklassniki)\\.[a-z]{2,3}/#', $this->atributes))
 			return 2;
 
-		if(strpos($this->body, 'BX_DEBUG_INFO') !== false)
+		if(mb_strpos($this->body, 'BX_DEBUG_INFO') !== false)
 			return 3;
 
 		if(preg_match('#(google-analytics\\.com/ga\\.js|openstat\\.net/cnt\\.js|autocontext\\.begun\\.ru/autocontext\\.js|counter\\.yadro\\.ru/hit)#', $this->body))
@@ -273,16 +279,16 @@ class CSecurityAntiVirus
 		if(preg_match('/(addPathRow|MoveProgress|Import|DoNext|JCMenu|AttachFile|CloseDialog|_processData|showComment|ShowWarnings|SWFObject|deliveryCalcProceed|structReload|addForumImagesShow|rsasec_form_bind|BX_YMapAddPolyline|BX_YMapAddPlacemark|CloseWaitWindow|DoChangeExternalSaleId|AjaxSend|readFileChunk|EndDump|createMenu|addProperty)\(/', $this->body))
 			return 7;
 
-		if(strpos($this->body, 'window.operation_success = true;') !== false)
+		if(mb_strpos($this->body, 'window.operation_success = true;') !== false)
 			return 8;
 
 		if(preg_match('/(jsAjaxUtil|jsUtils|jsPopup|elOnline|jsAdminChain|jsEvent|jsAjaxHistory|bxSession|BXHotKeys|oSearchDialog)\./', $this->body))
 			return 9;
 
-		if(preg_match('/new\s+(PopupMenu|JCAdminFilter|JCSmartFilter|JCAdminMenu|BXHint|ViewTabControl|BXHTMLEditor|JCTitleSearch|JCWDTitleSearch|BxInterfaceForm|Date|JCEmployeeSelectControl|JCCatalogBigdataProducts|JCCatalogSection|JCCatalogElement|JCCatalogTopSlider|JCCatalogTopSection|JCCatalogSectionRec|JCCatalogSectionViewed|JCCatalogCompareList|B24\.SearchTitle)/', $this->body))
+		if(preg_match('/new\s+(PopupMenu|JCAdminFilter|JCSmartFilter|JCAdminMenu|BXHint|ViewTabControl|BXHTMLEditor|JCTitleSearch|JCWDTitleSearch|BxInterfaceForm|Date|JCEmployeeSelectControl|JCCatalogBigdataProducts|JCCatalogSection|JCCatalogElement|JCCatalogTopSlider|JCCatalogTopSection|JCCatalogSectionRec|JCCatalogSectionViewed|JCCatalogCompareList|JCCatalogItem|JCSaleGiftProduct|B24\.SearchTitle)/', $this->body))
 			return 10;
 
-		if(strpos($this->body, 'document\.write(\'<link href="/bitrix/templates/') !== false)
+		if(mb_strpos($this->body, 'document\.write(\'<link href="/bitrix/templates/') !== false)
 			return 11;
 
 		if(preg_match('/(BX|document\.getElementById)\(\'session_time_result\'\).innerHTML/', $this->body))
@@ -360,7 +366,7 @@ class CSecurityAntiVirus
 		if(preg_match('/^\s*window\.__bxResult\[\'\d+\'\]\s*=\s*\{/', $this->body))
 			return 46;
 
-		if(strpos($this->body, 'showFLVPlayer') !== false)
+		if(mb_strpos($this->body, 'showFLVPlayer') !== false)
 			return 37;
 
 		if(preg_match('/var\s+formSettingsDialogCRM_(LEAD|DEAL|COMPANY|CONTACT)_SHOW/', $this->body))
@@ -409,29 +415,29 @@ class CSecurityAntiVirus
 		global $BX_SECURITY_AV_WHITE_LIST;
 		if(is_array($BX_SECURITY_AV_WHITE_LIST))
 			foreach($BX_SECURITY_AV_WHITE_LIST as $white_substr)
-				if(strpos($this->data, $white_substr) !== false)
+				if(mb_strpos($this->data, $white_substr) !== false)
 					return 34;
 
 		return 0;
 	}
 
-	//Р·Р°РіР»СѓС€РєР°. Р’РѕР·С‰РІСЂР°С‰Р°РµС‚ СЂРµР№С‚РёРЅРі РѕРїР°СЃРЅРѕСЃС‚Рё С‚РµРєСѓС‰РµРіРѕ Р±Р»РѕРєР° РёР· РєРµС€Р°, РёР»Рё FALSE
-	// РєРµС€РёСЂСѓСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ СЃРѕСЃС‚Р°РІР»СЏСЋС‰СЃСЏ СЂРµР№С‚РёРЅРіР°, РІР»РѕР¶РґРµРЅРЅР°СЏ РІРЅСѓС‚СЂРµРЅРЅРёРјРё РїСЂР°РІРёР»Р°РјРё.
-	public function returnfromcache()
+	//заглушка. Возщвращает рейтинг опасности текущего блока из кеша, или FALSE
+	// кешируются только составляющся рейтинга, вложденная внутренними правилами.
+	function returnfromcache()
 	{
-		// С‚СѓС‚ РјРѕР¶РЅРѕ РІСЃС‚Р°РІРёС‚СЊ РєРµС€РёСЂРѕРІР°РЅРёРµ. Р”Р»СЏ РєРµС€РёСЂРѕРІР°РЅРёРµ РІС‹С‡РёСЃР»СЏС‚СЊ Рё СЃРѕС…СЂР°РЅСЏС‚СЊ РєРµС€ РѕС‚ $this->data
+		// тут можно вставить кеширование. Для кеширование вычислять и сохранять кеш от $this->data
 		return false;
 	}
 
-	//Р·Р°РіР»СѓС€РєР°. Р”РѕР±Р°РІР»СЏРµС‚ СЂРµР№С‚РёРЅРі РѕРїР°СЃРЅРѕСЃС‚Рё РґР»СЏ С‚РµРєСѓС‰РµРіРѕ Р±Р»РѕРєР° РІ РєРµС€.
-	public function addtocache()
+	//заглушка. Добавляет рейтинг опасности для текущего блока в кеш.
+	function addtocache()
 	{
-		// С‚СѓС‚ РјРѕР¶РЅРѕ РІСЃС‚Р°РІРёС‚СЊ РєРµС€РёСЂРѕРІР°РЅРёРµ. Р”Р»СЏ РєРµС€РёСЂРѕРІР°РЅРёРµ РІС‹С‡РёСЃР»СЏС‚СЊ Рё СЃРѕС…СЂР°РЅСЏС‚СЊ РєРµС€ РѕС‚ $this->data
+		// тут можно вставить кеширование. Для кеширование вычислять и сохранять кеш от $this->data
 		return true;
 	}
 
-	//РјРµС…Р°РЅРёР·Рј РґР»СЏ РІС‹РІРѕРґР° СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕР±РЅР°СЂСѓР¶РµРЅРЅРѕРј РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅРѕРј С‚РµРєСѓС‰РµРј Р±Р»РѕРєРµ
-	public function dolog()
+	//механизм для вывода сообщения об обнаруженном подозрительном текущем блоке
+	function dolog()
 	{
 		global $BX_SECURITY_AV_TIMEOUT;
 		if(defined("ANTIVIRUS_CREATE_TRACE"))
@@ -492,21 +498,21 @@ class CSecurityAntiVirus
 	}
 
 
-	// РІС‹Р·С‹РІР°РµС‚СЃСЏ РєР°Р¶РґС‹Р№ СЂР°Р·, РєРѕРіРґР° РѕР±СЂР°Р±РѕС‚РєР° Р±Р»РѕРєР° Р·Р°РєРѕРЅС‡РµРЅР° Рё Р±Р»РѕРє РїСЂРёР·РЅР°РЅ РЅРѕСЂРјР°Р»СЊРЅС‹Рј.
-	// С„СѓРЅРєС†РёСЏ РґРѕР»Р¶РЅР° РІРѕР·РІСЂР°С‚РёС‚СЊ СЃРѕРґРµСЂР¶РёРјРѕРµ Р±Р»РѕРєР°.
-	public function end_okblock()
+	// вызывается каждый раз, когда обработка блока закончена и блок признан нормальным.
+	// функция должна возвратить содержимое блока.
+	function end_okblock()
 	{
 		return $this->data;
 	}
 
-	public function end_whiteblock()
+	function end_whiteblock()
 	{
 		return $this->data;
 	}
 
-	// РІС‹Р·С‹РІР°РµС‚СЃСЏ РєР°Р¶РґС‹Р№ СЂР°Р·, РєРѕРіРґР° РѕР±СЂР°Р±РѕС‚РєР° Р±Р»РѕРєР° Р·Р°РєРѕРЅС‡РµРЅР° Рё Р±Р»РѕРє РїСЂРёР·РЅР°РЅ РѕРїР°СЃРЅС‹Рј.
-	// С„СѓРЅРєС†РёСЏ РґРѕР»Р¶РЅР° РІРѕР·РІСЂР°С‚РёС‚СЊ СЃРѕРґРµСЂР¶РёРјРѕРµ Р±Р»РѕРєР°.
-	public function end_blkblock()
+	// вызывается каждый раз, когда обработка блока закончена и блок признан опасным.
+	// функция должна возвратить содержимое блока.
+	function end_blkblock()
 	{
 		if($this->replace)
 			return $this->replacement;
@@ -514,7 +520,7 @@ class CSecurityAntiVirus
 			return $this->data;
 	}
 
-	public function CreateTrace()
+	function CreateTrace()
 	{
 		$cache_id = md5($this->data);
 		$fn = $_SERVER["DOCUMENT_ROOT"]."/bitrix/cache/virus.db/".$cache_id.".vir";
@@ -558,7 +564,7 @@ class CSecurityAntiVirus
 		$bDataChanged = false;
 		for($iData = 1; $iData < $cData; $iData += 2)
 		{
-			$this->data = $arData[$iData]; //РїРѕР»РЅС‹Р№ РєРѕРґ Р±Р»РѕРєР°, РІРєР»СЋС‡Р°СЏ РѕРіСЂР°РЅРёС‡РёРІР°СЋС‰РёРµ С‚РµРіРё
+			$this->data = $arData[$iData]; //полный код блока, включая ограничивающие теги
 
 			//                <       1         2  >  3        4
 			if(!preg_match('/^<(script|iframe)(.*?)>(.*?)(<\\/\\1.*?>)$/is', $this->data, $ret))
@@ -577,7 +583,7 @@ class CSecurityAntiVirus
 			$this->resultrules = array();
 			$this->bodylines = false;
 			$this->atributes = $ret[2];
-			if(strtolower($ret[1]) == 'script')
+			if(mb_strtolower($ret[1]) == 'script')
 			{
 				$this->body = $this->returnscriptbody($this->data);
 				$this->type = 'script';
@@ -613,10 +619,10 @@ class CSecurityAntiVirus
 	}
 
 	/*
-	Р’РѕР·РІСЂР°С‰Р°РµС‚ СЂРµР№С‚РёРЅРі РѕРїР°СЃРЅРѕСЃС‚Рё Р±Р»РѕРєР° (РёС„СЂРµР№Рј РёР»Рё СЃРєСЂРёРїС‚)
-	РІС…РѕРґРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹ РєР»Р°СЃСЃР° РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р·Р°РїРѕР»РЅРµС‹.
+	Возвращает рейтинг опасности блока (ифрейм или скрипт)
+	входные параметры класса должны быть заполнеы.
 	*/
-	public function returnblockrating()
+	function returnblockrating()
 	{
 		if($this->type=='iframe')
 		{
@@ -628,7 +634,7 @@ class CSecurityAntiVirus
 		if($r === false)
 		{
 			$r = 0;
-			//РІРЅР°С‡Р°Р»Рµ РІСЃРµ РєРµС€РёСЂСѓРµРјС‹Рµ РІРЅСѓС‚СЂРµРЅРЅРёРµ РїСЂР°РІРёР»Р°
+			//вначале все кешируемые внутренние правила
 			if($this->type=='iframe')
 			{
 				$r += $this->ruleframevisiblity();
@@ -645,16 +651,16 @@ class CSecurityAntiVirus
 			$this->addtocache($r);
 		}
 
-		// РЅРµРєРµС€РёСЂСѓРµРјС‹Рµ РЅР°СЂСѓР¶РЅС‹Рµ РїСЂР°РІРёР»Р°..
+		// некешируемые наружные правила..
 		$r += $this->rulescriptglobals();
 		$r += $this->rulescriptblocks();
 
 		return $r;
 	}
 
-	// РџР РђР’РР›Рђ
-	// РЅР°РґР±Р°РІРєРё Рё СЃРєРёРґРєРё РґРµР№СЃС‚РІСѓСЋС‰РёРµ РґР»СЏ РєР°Р¶РґРѕРіРѕ СЃРєСЂРёРїС‚Р° (РІРѕР·РјРѕР¶РЅРѕ СЃ РЅРµРєРѕС‚РѕСЂС‹РјРё СѓСЃР»РѕРІРёСЏРјРё)
-	public function rulescriptglobals()
+	// ПРАВИЛА
+	// надбавки и скидки действующие для каждого скрипта (возможно с некоторыми условиями)
+	function rulescriptglobals()
 	{
 		return 0;
 		$r = 0;
@@ -688,15 +694,15 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, СѓС‡РёС‚С‹РІР°СЋС‰РёРµ РѕРєСЂСѓР¶РµРЅРёРµ СЃРєСЂРёРїС‚Р°
-	public function rulescriptblocks()
+	//правила, учитывающие окружение скрипта
+	function rulescriptblocks()
 	{
 		$r = 0;
 		$strp = preg_replace('/<!\-\-.*?\-\->$/', '', $this->prev);
 		$strn = preg_replace('/^<!\-\-.*?\-\->/', '', $this->next);
-		//СѓРґР°Р»РёР»Рё РѕРєСЂСѓР¶Р°СЋС‰РёРµ РєРѕРјРјРµРЅС‚Р°СЂРёРё, РµСЃР»Рё РёРјРµР»РёСЃСЊ..
+		//удалили окружающие комментарии, если имелись..
 
-		if($this->cnt == 0) //РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ РїРµСЂРІРѕРµ РїРѕРїР°РґР°РЅРёРµ...
+		if($this->cnt == 0) //обрабатывается первое попадание...
 		{
 			if(preg_match("/^\s*$/is", $strp))
 			{
@@ -754,8 +760,8 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, РѕС‚Р»Р°РІР»РёРІР°СЋС‰РёРµ "РЅРµРІРёРґРёРјРѕСЃС‚СЊ" Р±Р»РѕРєР°
-	public function ruleframevisiblity()
+	//правила, отлавливающие "невидимость" блока
+	function ruleframevisiblity()
 	{
 		$r = 0;
 		if(
@@ -787,8 +793,8 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, РѕС‚Р»Р°РІР»РёРІР°СЋС‰РёРµ РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕ РѕРїР°СЃРЅС‹РµРєР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР° РІ СЃРєСЂРёРїС‚Рµ
-	public function rulescriptbasics()
+	//правила, отлавливающие потенциально опасныеключевые слова в скрипте
+	function rulescriptbasics()
 	{
 		$r = 0;
 		if(preg_match("/\<iframe/is", $this->body))
@@ -874,8 +880,8 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, РѕС‚Р»Р°РІР»РёРІР°СЋС‰РёРµ vbscript
-	public function rulescriptvbscript()
+	//правила, отлавливающие vbscript
+	function rulescriptvbscript()
 	{
 		$r = 0;
 		if(preg_match('/vbscript/is', $this->atributes))
@@ -887,7 +893,7 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, РѕС‚Р»Р°РІР»РёРІР°СЋС‰РёРµ РѕРїР°СЃРЅС‹Рµ РјРµСЃС‚Р° Р·Р°РіСЂСѓР·РєРё Р±Р»РѕРєРѕРІ
+	//правила, отлавливающие опасные места загрузки блоков
 	function ruleallsources()
 	{
 		$r = 0;
@@ -925,7 +931,7 @@ class CSecurityAntiVirus
 				$val = 12;
 				$r += $val;
 				$this->resultrules['ruleallsources_url'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 		}
 
@@ -934,7 +940,7 @@ class CSecurityAntiVirus
 			$val = 12;
 			$r += $val;
 			$this->resultrules['ruleallsources_url'] = $val;
-			return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+			return $r;//только одно правило из блока
 		}
 
 		if(
@@ -945,7 +951,7 @@ class CSecurityAntiVirus
 			$val = 12;
 			$r += $val;
 			$this->resultrules['ruleallsources_url'] = $val;
-			return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+			return $r;//только одно правило из блока
 		}
 
 		if(preg_match('/src=.*\:\/\/\d+\.\d+\.\d+\.\d+/is', $this->atributes))
@@ -953,7 +959,7 @@ class CSecurityAntiVirus
 			$val = 10;
 			$r += $val;
 			$this->resultrules['ruleallsources_ip'] = $val;
-			return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+			return $r;//только одно правило из блока
 		}
 
 		if(preg_match('/src=.*\:\d+\//is', $this->atributes))
@@ -961,7 +967,7 @@ class CSecurityAntiVirus
 			$val = 10;
 			$r += $val;
 			$this->resultrules['ruleallsources_port'] = $val;
-			return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+			return $r;//только одно правило из блока
 		}
 
 		if(preg_match('/src=[\'\"]?http\:\/\//is', $this->atributes))
@@ -969,14 +975,14 @@ class CSecurityAntiVirus
 			$val = 9;
 			$r += $val;
 			$this->resultrules['ruleallsources_extern'] = $val;
-			return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+			return $r;//только одно правило из блока
 		}
 
 		return $r;
 	}
 
-	//РїСЂР°РІРёР»Р°, СѓС‡РёС‚С‹РІР°СЋР±С‰РёРµ РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅС‹Рµ РґР»РёРЅС‹ СЃС‚СЂРѕРє Рё РѕР±СЉРµРєС‚РѕРІ
-	public function rulescriptlenghts()
+	//правила, учитываюбщие подозрительные длины строк и объектов
+	function rulescriptlenghts()
 	{
 		if(!$this->bodylines)
 			$this->bodylines = explode("\n", $this->body);
@@ -985,27 +991,27 @@ class CSecurityAntiVirus
 
 		if(count($this->bodylines) == 1)
 		{
-			$ll = strlen(bin2hex($this->body))/2;
+			$ll = mb_strlen(bin2hex($this->body)) / 2;
 			if($ll > 500)
 			{
 				$val = 9;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_sl'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 			elseif($ll > 300)
 			{
 				$val = 7;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_sl'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 			elseif($ll > 100)
 			{
 				$val = 5;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_sl'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 		}
 		else
@@ -1014,7 +1020,7 @@ class CSecurityAntiVirus
 			$mxl = 0;
 			foreach($this->bodylines as $str)
 			{
-				$ll = strlen(bin2hex($str))/2;
+				$ll = mb_strlen(bin2hex($str)) / 2;
 				if($mxl < $ll)
 					$mxl = $ll;
 			}
@@ -1024,29 +1030,29 @@ class CSecurityAntiVirus
 				$val = 7;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_ml'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 			elseif($ll > 300)
 			{
 				$val = 5;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_ml'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 			elseif($ll > 100)
 			{
 				$val = 3;
 				$r += $val;
 				$this->resultrules['rulescriptlenghts_ml'] = $val;
-				return $r;//С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РїСЂР°РІРёР»Рѕ РёР· Р±Р»РѕРєР°
+				return $r;//только одно правило из блока
 			}
 		}
 
 		return $r;
 	}
 
-	// РђРЅР°Р»РёР· С‡Р°СЃС‚РѕС‚РЅС‹С… РІС…РѕР¶РґРµРЅРёР№ СЃРёРјРІРѕР»РѕРІ...
-	public function rulescriptfrequensy()
+	// Анализ частотных вхождений символов...
+	function rulescriptfrequensy()
 	{
 		if(!$this->bodylines)
 			$this->bodylines = explode("\n", $this->body);
@@ -1095,15 +1101,15 @@ class CSecurityAntiVirus
 			$all['B'] = $all['B']*100/$all['LEN'];
 		}
 
-		$g3=$g4=$g5=$g6=0; // РіСЂСѓРїРѕРІС‹Рµ Р±Р°Р»Р»С‹
-		$g3s=$g4s=$g5s=$g6s=0; // РіСЂСѓРїРѕРІС‹Рµ Р±Р°Р»Р»С‹
+		$g3=$g4=$g5=$g6=0; // груповые баллы
+		$g3s=$g4s=$g5s=$g6s=0; // груповые баллы
 
 
 		if($all['LEN'] > 30)
 		{
-			//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ Р±РѕР»РµРµ С‡РµРј РІ ps1%  ps1=17   [3]
-			//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ Р±РѕР»РµРµ С‡РµРј РІ ps2%  ps2=19   [5]
-			//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ Р±РѕР»РµРµ С‡РµРј РІ ps3%  ps3=20   [7]
+			//G3 какой либо символ встречается более чем в ps1%  ps1=17   [3]
+			//G3 какой либо символ встречается более чем в ps2%  ps2=19   [5]
+			//G3 какой либо символ встречается более чем в ps3%  ps3=20   [7]
 
 			if($all['MAXCHAR'] > 17)
 			{
@@ -1135,9 +1141,9 @@ class CSecurityAntiVirus
 				}
 			}
 
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј pc1%   pc1= 20   [6]
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј pc2%   pc2= 25   [8]
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј pc3%   pc3= 30   [9]
+			//G4 процентное содержание цифр более чем pc1%   pc1= 20   [6]
+			//G4 процентное содержание цифр более чем pc2%   pc2= 25   [8]
+			//G4 процентное содержание цифр более чем pc3%   pc3= 30   [9]
 			if($all['D'] > 20)
 			{
 				$val = 6;
@@ -1168,9 +1174,9 @@ class CSecurityAntiVirus
 				}
 			}
 
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј ph1%   ph1=35    [5]
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј ph2%   ph2=45    [7]
-			//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ Р±РѕР»РµРµ С‡РµРј ph3%   ph3=55    [9]
+			//G4 процентное содержание HEX цифр более чем ph1%   ph1=35    [5]
+			//G4 процентное содержание HEX цифр более чем ph2%   ph2=45    [7]
+			//G4 процентное содержание HEX цифр более чем ph3%   ph3=55    [9]
 
 			if($all['H'] > 35)
 			{
@@ -1203,9 +1209,9 @@ class CSecurityAntiVirus
 				}
 			}
 
-			//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ pnw1% = 23  [3]
-			//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ pnw2% = 26  [5]
-			//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ pnw3% = 30  [7]
+			//G5 процентное содержание невордслооварных символов pnw1% = 23  [3]
+			//G5 процентное содержание невордслооварных символов pnw2% = 26  [5]
+			//G5 процентное содержание невордслооварных символов pnw3% = 30  [7]
 
 			if($all['NW'] > 23)
 			{
@@ -1237,9 +1243,9 @@ class CSecurityAntiVirus
 				}
 			}
 
-			//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) Р±РѕР»СЊС€Рµ С‡РµРј pb1%  0.1   [7]
-			//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) Р±РѕР»СЊС€Рµ С‡РµРј pb2%  0.5   [8]
-			//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) Р±РѕР»СЊС€Рµ С‡РµРј pb3%  1.0   [9]
+			//G6 процентное содержание символов с кодом меньше чем 20 (hex) больше чем pb1%  0.1   [7]
+			//G6 процентное содержание символов с кодом меньше чем 20 (hex) больше чем pb2%  0.5   [8]
+			//G6 процентное содержание символов с кодом меньше чем 20 (hex) больше чем pb3%  1.0   [9]
 			if($all['B'] > 0.1)
 			{
 				$val = 7;
@@ -1271,9 +1277,9 @@ class CSecurityAntiVirus
 			}
 		};// if($all['LEN']>30)
 
-		//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ  РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psslss1 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј РІ pss1%  20  [3]
-		//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ  РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psslss2 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј РІ pss2%  24  [5]
-		//G3 РєР°РєРѕР№ Р»РёР±Рѕ СЃРёРјРІРѕР» РІСЃС‚СЂРµС‡Р°РµС‚СЃСЏ  РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psslss3 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј РІ pss3%  28  [6]
+		//G3 какой либо символ встречается  в одной строке (длиной более psslss1 =30символов) более чем в pss1%  20  [3]
+		//G3 какой либо символ встречается  в одной строке (длиной более psslss2 =30символов) более чем в pss2%  24  [5]
+		//G3 какой либо символ встречается  в одной строке (длиной более psslss3 =30символов) более чем в pss3%  28  [6]
 		if($maxes['MAXCHAR']>20)
 		{
 
@@ -1305,9 +1311,9 @@ class CSecurityAntiVirus
 			}
 		}
 
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psclss1=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psc1% 50 [4]
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psclss2=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psc2% 65 [5]
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psclss3=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psc3% 80 [6]
+		//G4 процентное содержание цифр в одной строке (длиной более psclss1=30 символов) более чем psc1% 50 [4]
+		//G4 процентное содержание цифр в одной строке (длиной более psclss2=30 символов) более чем psc2% 65 [5]
+		//G4 процентное содержание цифр в одной строке (длиной более psclss3=30 символов) более чем psc3% 80 [6]
 
 		if($maxes['D'] > 50)
 		{
@@ -1339,9 +1345,9 @@ class CSecurityAntiVirus
 			}
 		}
 
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss1=30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psh1% 30 [4]
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss2=30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psh2% 50 [6]
-		//G4 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ HEX С†РёС„СЂ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss3=30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psh3% 70 [8]
+		//G4 процентное содержание HEX цифр в одной строке (длиной более pshlss1=30символов) более чем psh1% 30 [4]
+		//G4 процентное содержание HEX цифр в одной строке (длиной более pshlss2=30символов) более чем psh2% 50 [6]
+		//G4 процентное содержание HEX цифр в одной строке (длиной более pshlss3=30символов) более чем psh3% 70 [8]
 
 		if($maxes['H'] > 40)
 		{
@@ -1373,9 +1379,9 @@ class CSecurityAntiVirus
 			}
 		}
 
-		//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss3 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psw1% = 23  [3]
-		//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss3 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psw2% = 26  [5]
-		//G5 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ РЅРµРІРѕСЂРґСЃР»РѕРѕРІР°СЂРЅС‹С… СЃРёРјРІРѕР»РѕРІ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ (РґР»РёРЅРѕР№ Р±РѕР»РµРµ pshlss3 =30СЃРёРјРІРѕР»РѕРІ) Р±РѕР»РµРµ С‡РµРј psw3% = 30  [7]
+		//G5 процентное содержание невордслооварных символов в одной строке (длиной более pshlss3 =30символов) более чем psw1% = 23  [3]
+		//G5 процентное содержание невордслооварных символов в одной строке (длиной более pshlss3 =30символов) более чем psw2% = 26  [5]
+		//G5 процентное содержание невордслооварных символов в одной строке (длиной более pshlss3 =30символов) более чем psw3% = 30  [7]
 
 		if($maxes['NW'] > 23)
 		{
@@ -1407,9 +1413,9 @@ class CSecurityAntiVirus
 			}
 		}
 
-		//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ  (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psblss1=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»СЊС€Рµ С‡РµРј psb1% 0.1   [7]
-		//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ  (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psblss2=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»СЊС€Рµ С‡РµРј psb2% 0.5 [8]
-		//G6 РїСЂРѕС†РµРЅС‚РЅРѕРµ СЃРѕРґРµСЂР¶Р°РЅРёРµ СЃРёРјРІРѕР»РѕРІ СЃ РєРѕРґРѕРј РјРµРЅСЊС€Рµ С‡РµРј 20 (hex) РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ  (РґР»РёРЅРѕР№ Р±РѕР»РµРµ psblss3=30 СЃРёРјРІРѕР»РѕРІ) Р±РѕР»СЊС€Рµ С‡РµРј psb3% 1.0  [9]
+		//G6 процентное содержание символов с кодом меньше чем 20 (hex) в одной строке  (длиной более psblss1=30 символов) больше чем psb1% 0.1   [7]
+		//G6 процентное содержание символов с кодом меньше чем 20 (hex) в одной строке  (длиной более psblss2=30 символов) больше чем psb2% 0.5 [8]
+		//G6 процентное содержание символов с кодом меньше чем 20 (hex) в одной строке  (длиной более psblss3=30 символов) больше чем psb3% 1.0  [9]
 
 		if($maxes['B'] > 0.1)
 		{
@@ -1453,13 +1459,13 @@ class CSecurityAntiVirus
 		return ($g3+$g4+$g5+$g6);
 	}
 
-	// РїСЂРёР·РЅР°РєРё, СѓРјРµРЅСЊС€Р°СЋС‰РёРµ СЂРµР№С‚РёРЅРі РѕРїР°СЃРЅРѕСЃС‚Рё СЃРєСЂРёРїС‚Р°
-	public function rulescriptwhiterules()
+	// признаки, уменьшающие рейтинг опасности скрипта
+	function rulescriptwhiterules()
 	{
 		if(!$this->bodylines)
 			$this->bodylines = explode("\n", $this->body);
 
-		$ll = strlen(bin2hex($this->body))/2;
+		$ll = mb_strlen(bin2hex($this->body)) / 2;
 		$r = 0;
 		$lstr = count($this->bodylines);
 
@@ -1532,8 +1538,8 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	//Р°РЅР°Р»РёР· РїСЂРёР·РЅР°РєРѕРІ РІ РёРјРµРЅР°С… С„СѓРЅРєС†РёР№ Рё РїРµСЂРµРјРµРЅРЅС‹С…
-	public function rulescriptnamerules()
+	//анализ признаков в именах функций и переменных
+	function rulescriptnamerules()
 	{
 
 		$rr = $this->getnames($this->body);
@@ -1582,7 +1588,7 @@ class CSecurityAntiVirus
 		$mxs = 0;
 		foreach($rr['s'] as $k=>$v)
 		{
-			$l = strlen(bin2hex($v))/2;
+			$l = mb_strlen(bin2hex($v)) / 2;
 			if($l > $mxs)
 				$mxs = $l;
 		}
@@ -1633,9 +1639,9 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	// РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ С„СѓРЅРєС†РёРё..
+	// вспомогательные функции..
 
-	// РІРѕР·РІСЂР°С‰Р°РµС‚ С‡Р°СЃС‚РѕС‚РЅС‹Рµ СЃРѕРґРµСЂР¶Р°РЅРёСЏ СЃРёРјРІРѕР»РѕРІ РІ СЃС‚СЂРѕРєРµ
+	// возвращает частотные содержания символов в строке
 	function getstatchars(&$str)
 	{
 		static $arCharClasses = false;
@@ -1661,9 +1667,9 @@ class CSecurityAntiVirus
 				$arCharClasses['B'][] = $i;
 
 			$strPunct = "`~!@#$%^&*[]{}();:'\",.\/?\|";
-			$len = strlen($strPunct);
+			$len = mb_strlen($strPunct);
 			for($i = 0; $i < $len; $i++)
-				$arCharClasses['NW'][] = ord(substr($strPunct, $i ,1));
+				$arCharClasses['NW'][] = ord(mb_substr($strPunct, $i, 1));
 		}
 
 		$chars = count_chars($str, 1);
@@ -1697,13 +1703,13 @@ class CSecurityAntiVirus
 		return $out;
 	}
 
-	public function getnames_cb($m)
+	function getnames_cb($m)
 	{
 		$this->quotes[] = ($m[2]);
 		return $m[1].$m[3];
 	}
 
-	public function getnames($str)
+	function getnames($str)
 	{
 		$flt = new CSecurityXSSDetect(array("action" => "none", "log" => "N"));
 		$flt->removeQuotedStrings($str);
@@ -1733,9 +1739,9 @@ class CSecurityAntiVirus
 		return $r;
 	}
 
-	public static function isnormalname($nm, &$l)
+	function isnormalname($nm, &$l)
 	{
-		$lnm = strtolower($nm);
+		$lnm = mb_strtolower($nm);
 		if($lnm == 'ac_fl_runcontent')
 			return 1;
 		if($lnm == 'innerhtml')
@@ -1789,7 +1795,7 @@ class CSecurityAntiVirus
 		return $cache[$nm];
 	}
 
-	public static function returnscriptbody($str)
+	function returnscriptbody($str)
 	{
 		if(preg_match("/<script.*?>((\s*<!\-\-)|(<!\[CDATA\[))?\s*(.*?)\s*((\/\/\s*\-\->\s*)|(\/\/\s*\]\s*\]\s*))?<\/script.*>/is", $str, $ret))
 			return $ret[4];

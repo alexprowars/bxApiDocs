@@ -7,41 +7,15 @@
  */
 
 use Bitrix\Main\Mail;
+use Bitrix\Main\Mail\Internal\EventTypeTable;
 
 IncludeModuleLangFile(__FILE__);
 
 global $BX_EVENT_SITE_PARAMS;
 $BX_EVENT_SITE_PARAMS = array();
 
-
-/**
- * <b>CEvent</b> - класс для работы с почтовыми событиями.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cevent/index.php
- * @author Bitrix
- */
 class CAllEvent
 {
-	
-	/**
-	* <p>Собирает неотправленные почтовые события и отправляет их в виде E-Mail сообщений с помощью функции <a href="http://dev.1c-bitrix.ru/api_help/main/functions/other/bxmail.php">bxmail</a>. Метод автоматически вызывается при загрузке каждой страницы и не требует ручного вызова. Нестатический метод.</p>
-	*
-	*
-	* @return mixed 
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/general/mailevents.php">Почтовая система</a>
-	* </li>   <li> <a href="http://dev.1c-bitrix.ru/api_help/main/functions/other/bxmail.php">bxmail</a> </li> </ul><br><br>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cevent/checkevents.php
-	* @author Bitrix
-	*/
 	public static function CheckEvents()
 	{
 		return Mail\EventManager::checkEvents();
@@ -57,49 +31,10 @@ class CAllEvent
 		return Mail\EventManager::cleanUpAgent();
 	}
 
-	
-	/**
-	* <p>Отправляет сообщение немедленно. В отличие от <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cevent/send.php">CEvent::Send</a> не возвращает идентификатор созданного сообщения. При отправке сообщения данным методом запись в таблицу <b>b_event</b> не производится. Нестатический метод.</p> <p>Аналог метода в новом ядре D7: <i>Bitrix\Main\Mail\Event::sendImmediate</i>.</p>
-	*
-	*
-	* @param mixed $event  Идентификатор типа почтового события.
-	*
-	* @param $even $lid  Идентификатор сайта, либо массив идентификаторов сайта.
-	*
-	* @param $li $arFields  Массив полей типа почтового события идентификатор которого
-	* задается в параметре <i>event_type</i>. Массив имеет следующий формат:
-	* array("поле"=&gt;"значение" [, ...]).
-	*
-	* @param $arField $Duplicate = "Y" Отправить ли копию письма на адрес указанный в настройках
-	* главного модуля в поле "<b>E-Mail адрес или список адресов через
-	* запятую на который будут дублироваться все исходящие
-	* сообщения</b>".          <br>       Необязательный. По умолчанию "Y".
-	*
-	* @param mixed $message_id = "" Идентификатор почтового шаблона по которому будет отправлено
-	* письмо.         <br>        Если данный параметр не задан, либо равен "", то
-	* письма будут отправлены по всем шаблонам привязанным к типу
-	* почтового события, идентификатор которого задается в параметре
-	* <i>event_type</i>, а также привязанных к сайту(ам) идентификатор которого
-	* указан в параметре <i>site</i>.         <br>       Необязательный. По умолчанию
-	* - "".
-	*
-	* @return mixed <a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* <br><br>
-	* Смотрите также<li><a href="http://dev.1c-bitrix.ru/community/webdev/user/17138/blog/1740/">Пароль в письме при регистрации</a></li>
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cevent/sendimmediate.php
-	* @author Bitrix
-	*/
-	public static function SendImmediate($event, $lid, $arFields, $Duplicate = "Y", $message_id="", $files=array())
+	public static function SendImmediate($event, $lid, $arFields, $Duplicate = "Y", $message_id="", $files=array(), $languageId = '')
 	{
 		foreach(GetModuleEvents("main", "OnBeforeEventAdd", true) as $arEvent)
-			if(ExecuteModuleEventEx($arEvent, array(&$event, &$lid, &$arFields, &$message_id, &$files)) === false)
+			if(ExecuteModuleEventEx($arEvent, array(&$event, &$lid, &$arFields, &$message_id, &$files, &$languageId)) === false)
 				return false;
 
 		if(!is_array($arFields))
@@ -110,104 +45,31 @@ class CAllEvent
 		$arLocalFields = array(
 			"EVENT_NAME" => $event,
 			"C_FIELDS" => $arFields,
-			"LID" => is_array($lid)? implode(",", $lid): $lid,
-			"DUPLICATE" => $Duplicate != "N"? "Y": "N",
-			"MESSAGE_ID" => intval($message_id) > 0? intval($message_id): "",
+			"LID" => (is_array($lid)? implode(",", $lid) : $lid),
+			"DUPLICATE" => ($Duplicate != "N"? "Y" : "N"),
+			"MESSAGE_ID" => (intval($message_id) > 0? intval($message_id): ""),
 			"DATE_INSERT" => GetTime(time(), "FULL"),
 			"FILE" => $files,
+			"LANGUAGE_ID" => ($languageId == ''? LANGUAGE_ID : $languageId),
 			"ID" => "0",
 		);
 
 		return Mail\Event::sendImmediate($arLocalFields);
 	}
 
-	
-	/**
-	* <p>Метод создает почтовое событие которое будет в дальнейшем отправлено в качестве E-Mail сообщения. Возвращает идентификатор созданного события. Нестатический метод.</p> <p>Аналог метода в новом ядре D7: <a href="http://dev.1c-bitrix.ru/api_d7/bitrix/main/mail/event/send.php" >\Bitrix\Main\Mail\Event::send</a>.</p>
-	*
-	*
-	* @param string $event  Идентификатор типа почтового события.
-	*
-	* @param mixed $lid  Идентификатор сайта, либо массив идентификаторов сайта.
-	*
-	* @param array $fields  Массив полей типа почтового события идентификатор которого
-	* задается в параметре <i>event_type</i>. Массив имеет следующий формат:
-	* array("поле"=&gt;"значение" [, ...]).
-	*
-	* @param string $duplicate = "Y" Отправить ли копию письма на адрес указанный в настройках
-	* главного модуля в поле "<b>E-Mail адрес или список адресов через
-	* запятую на который будут дублироваться все исходящие
-	* сообщения</b>". <br>Необязательный. По умолчанию "Y".
-	*
-	* @param int $message_id = "" Идентификатор почтового шаблона по которому будет отправлено
-	* письмо.<br> Если данный параметр не задан, либо равен "", то письма
-	* будут отправлены по всем шаблонам привязанным к типу почтового
-	* события, идентификатор которого задается в параметре <i>event_type</i>, а
-	* также привязанных к сайту(ам) идентификатор которого указан в
-	* параметре <i>site</i>.<br>Необязательный. По умолчанию - "".
-	*
-	* @param array $files  Массив id файлов, которые используются классом <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cfile/index.php">CFile</a>. Либо можно передать
-	* массив абсолютных путей до файлов.
-	*
-	* @return int 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arEventFields = array(
-	*     "ID"                  =&gt; $CONTRACT_ID,
-	*     "MESSAGE"             =&gt; $mess,
-	*     "EMAIL_TO"            =&gt; implode(",", $EMAIL_TO),
-	*     "ADMIN_EMAIL"         =&gt; implode(",", $ADMIN_EMAIL),
-	*     "ADD_EMAIL"           =&gt; implode(",", $ADD_EMAIL),
-	*     "STAT_EMAIL"          =&gt; implode(",", $VIEW_EMAIL),
-	*     "EDIT_EMAIL"          =&gt; implode(",", $EDIT_EMAIL),
-	*     "OWNER_EMAIL"         =&gt; implode(",", $OWNER_EMAIL),
-	*     "BCC"                 =&gt; implode(",", $BCC),
-	*     "INDICATOR"           =&gt; GetMessage("AD_".strtoupper($arContract["LAMP"]."_CONTRACT_STATUS")),
-	*     "ACTIVE"              =&gt; $arContract["ACTIVE"],
-	*     "NAME"                =&gt; $arContract["NAME"],
-	*     "DESCRIPTION"         =&gt; $description,
-	*     "MAX_SHOW_COUNT"      =&gt; $arContract["MAX_SHOW_COUNT"],
-	*     "SHOW_COUNT"          =&gt; $arContract["SHOW_COUNT"],
-	*     "MAX_CLICK_COUNT"     =&gt; $arContract["MAX_CLICK_COUNT"],
-	*     "CLICK_COUNT"         =&gt; $arContract["CLICK_COUNT"],
-	*     "BANNERS"             =&gt; $arContract["BANNER_COUNT"],
-	*     "DATE_SHOW_FROM"      =&gt; $arContract["DATE_SHOW_FROM"],
-	*     "DATE_SHOW_TO"        =&gt; $arContract["DATE_SHOW_TO"],
-	*     "DATE_CREATE"         =&gt; $arContract["DATE_CREATE"],
-	*     "CREATED_BY"          =&gt; $CREATED_BY,
-	*     "DATE_MODIFY"         =&gt; $arContract["DATE_MODIFY"],
-	*     "MODIFIED_BY"         =&gt; $MODIFIED_BY
-	*     );
-	* $arrSITE =  CAdvContract::GetSiteArray($CONTRACT_ID);
-	* <b>CEvent::Send</b>("ADV_CONTRACT_INFO", $arrSITE, $arEventFields);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/main/general/mailevents.php">Почтовая система</a>
-	* </li></ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cevent/send.php
-	* @author Bitrix
-	*/
-	public static function Send($event, $lid, $arFields, $Duplicate = "Y", $message_id="", $files=array())
+	public static function Send($event, $lid, $arFields, $Duplicate = "Y", $message_id="", $files=array(), $languageId = '')
 	{
 		foreach(GetModuleEvents("main", "OnBeforeEventAdd", true) as $arEvent)
-			if(ExecuteModuleEventEx($arEvent, array(&$event, &$lid, &$arFields, &$message_id, &$files)) === false)
+			if(ExecuteModuleEventEx($arEvent, array(&$event, &$lid, &$arFields, &$message_id, &$files, &$languageId)) === false)
 				return false;
 
 		$arLocalFields = array(
 			"EVENT_NAME" => $event,
 			"C_FIELDS" => $arFields,
-			"LID" => is_array($lid)? implode(",", $lid): $lid,
-			"DUPLICATE" => $Duplicate != "N"? "Y": "N",
+			"LID" => (is_array($lid)? implode(",", $lid) : $lid),
+			"DUPLICATE" => ($Duplicate != "N"? "Y" : "N"),
 			"FILE" => $files,
+			"LANGUAGE_ID" => ($languageId == ''? LANGUAGE_ID : $languageId),
 		);
 		if(intval($message_id) > 0)
 			$arLocalFields["MESSAGE_ID"] = intval($message_id);
@@ -364,17 +226,6 @@ class CAllEvent
 	}
 }
 
-
-/**
- * <b>CEventMessage</b> - класс предназначеный для работы с почтовыми шаблонами.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/index.php
- * @author Bitrix
- */
 class CAllEventMessage
 {
 	var $LAST_ERROR;
@@ -399,7 +250,7 @@ class CAllEventMessage
 
 		if($ID===false && !is_set($arFields, "EVENT_NAME"))
 		{
-			$this->LAST_ERROR .= GetMessage(GetMessage("MAIN_BAD_EVENT_NAME_NA"))."<br>";
+			$this->LAST_ERROR .= GetMessage("MAIN_BAD_EVENT_NAME_NA")."<br>";
 			$arMsg[] = array("id"=>"EVENT_NAME", "text"=> GetMessage("MAIN_BAD_EVENT_NAME_NA"));
 		}
 		if(is_set($arFields, "EVENT_NAME"))
@@ -457,55 +308,6 @@ class CAllEventMessage
 	///////////////////////////////////////////////////////////////////
 	// New event message template
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Метод добавляет новый почтовый шаблон. Возвращает ID вставленного шаблона. При возникновении ошибки, метод вернет false, а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Нестатический метод.</p>
-	*
-	*
-	* @param array $fields  Массив значений полей вида array("поле"=&gt;"значение" [, ...]).  В качестве
-	* "полей" допустимо использовать: 	<ul> <li> <b>ACTIVE</b> - флаг активности
-	* почтового шаблона: "Y" - активен; "N" - не активен; 		</li> <li> <b>EVENT_NAME</b> -
-	* идентификатор типа почтового события; 		</li> <li> <b>LID</b> -
-	* идентификатор сайта; 		</li> <li> <b>EMAIL_FROM</b> - поле "From" ("Откуда"); 		</li> <li>
-	* <b>EMAIL_TO</b> - поле "To" ("Куда"); 		</li> <li> <b>BCC</b> - поле "BCC" ("Скрытая копия");
-	* 		</li> <li> <b>SUBJECT</b> - заголовок сообщения; 		</li> <li> <b>BODY_TYPE</b> - тип тела
-	* почтового сообщения: "text" - текст; "html" - HTML; 		</li> <li> <b>MESSAGE</b> - тело
-	* почтового сообщения. 	</li> </ul>
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arr["ACTIVE"] = "Y";
-	* $arr["EVENT_NAME"] = "ADV_CONTRACT_INFO";
-	* $arr["LID"] = array("ru","en");
-	* $arr["EMAIL_FROM"] = "#DEFAULT_EMAIL_FROM#";
-	* $arr["EMAIL_TO"] = "#EMAIL_TO#";
-	* $arr["BCC"] = "#BCC#";
-	* $arr["SUBJECT"] = "Тема сообщения";
-	* $arr["BODY_TYPE"] = "text";
-	* $arr["MESSAGE"] = "
-	* Текст сообщения
-	* ";
-	* 
-	* $emess = new CEventMessage;
-	* <b>$emess-&gt;Add</b>($arr);
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/index.php">Поля шаблона
-	* почтового сообщения</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/update.php">CEventMessage::Update</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/add.php
-	* @author Bitrix
-	*/
 	public function Add($arFields)
 	{
 		unset($arFields["ID"]);
@@ -571,7 +373,7 @@ class CAllEventMessage
 				Mail\Internal\EventMessageSiteTable::delete($ID);
 				$resultDb = \Bitrix\Main\SiteTable::getList(array(
 					'select' => array('LID'),
-					'filter' => array('LID' => $arLID),
+					'filter' => array('=LID' => $arLID),
 				));
 				while($arResultSite = $resultDb->fetch())
 				{
@@ -597,71 +399,6 @@ class CAllEventMessage
 		return $ID;
 	}
 
-	
-	/**
-	* <p>Изменяет почтовый шаблон с кодом <i>id</i>. Возвращает <i>true</i>, если изменение прошло успешно, при возникновении ошибки метод вернет <i>false</i>, а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Нестатический метод.</p>
-	*
-	*
-	* @param mixed $intid  ID изменяемой записи.
-	*
-	* @param array $fields  Массив значений полей вида array("поле"=&gt;"значение" [, ...]).
-	*
-	* @return bool 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if($REQUEST_METHOD=="POST" &amp;&amp; (strlen($save)&gt;0 || strlen($apply)&gt;0)&amp;&amp; $MAIN_RIGHT=="W")
-	* {
-	*     $em = new CEventMessage;
-	*     $arFields = Array(
-	*         "ACTIVE"        =&gt; $ACTIVE,
-	*         "EVENT_NAME"    =&gt; $EVENT_NAME,
-	*         "LID"           =&gt; $LID,
-	*         "EMAIL_FROM"    =&gt; $EMAIL_FROM,
-	*         "EMAIL_TO"      =&gt; $EMAIL_TO,
-	*         "BCC"           =&gt; $BCC,
-	*         "SUBJECT"       =&gt; $SUBJECT,
-	*         "MESSAGE"       =&gt; $MESSAGE,
-	*         "BODY_TYPE"     =&gt; $BODY_TYPE
-	*         );
-	*     if($ID&gt;0)
-	*     {
-	*         $res = <b>$em-&gt;Update</b>($ID, $arFields);
-	*     }
-	*     else
-	*     {
-	*         $ID = $em-&gt;Add($arFields);
-	*         $res = ($ID&gt;0);
-	*     }
-	*     if(!$res)
-	*     {
-	*         $strError .= $em-&gt;LAST_ERROR."&lt;br&gt;";
-	*         $bVarsFromForm = true;
-	*     }
-	*     else
-	*     {
-	*         if (strlen($save)&gt;0) 
-	*             LocalRedirect(BX_ROOT."/admin/message_admin.php?lang=".LANGUAGE_ID);
-	*         else
-	*             LocalRedirect(BX_ROOT."/admin/message_edit.php?lang=".LANGUAGE_ID."&amp;ID=".$ID);
-	*     }
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/index.php">Поля шаблона
-	* почтового сообщения</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/add.php">CEventMessage::Add</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/update.php
-	* @author Bitrix
-	*/
 	public function Update($ID, $arFields)
 	{
 		global $DB;
@@ -716,7 +453,7 @@ class CAllEventMessage
 			Mail\Internal\EventMessageSiteTable::delete($ID);
 			$resultDb = \Bitrix\Main\SiteTable::getList(array(
 				'select' => array('LID'),
-				'filter' => array('LID' => $arLID),
+				'filter' => array('=LID' => $arLID),
 			));
 			while($arResultSite = $resultDb->fetch())
 			{
@@ -744,37 +481,6 @@ class CAllEventMessage
 	///////////////////////////////////////////////////////////////////
 	// Query
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Возвращает почтовый шаблон по его коду <i>id</i> в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param mixed $intid  ID шаблона.
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $rsEM = <b>CEventMessage::GetByID</b>($ID);
-	* $arEM = $rsEM-&gt;Fetch();
-	* echo "&lt;pre&gt;"; print_r($arEM); echo "&lt;/pre&gt;";
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/index.php">Поля шаблона
-	* почтового сообщения</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/getlist.php">CEventMessage::GetList</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($ID)
 	{
 		return CEventMessage::GetList($o = "", $b = "", array("ID"=>$ID));
@@ -786,7 +492,7 @@ class CAllEventMessage
 
 		$resultDb = Mail\Internal\EventMessageSiteTable::getList(array(
 			'select' => array('*', ''=> 'SITE.*'),
-			'filter' => array('EVENT_MESSAGE_ID' => $event_message_id),
+			'filter' => array('=EVENT_MESSAGE_ID' => $event_message_id),
 			'runtime' => array(
 				'SITE' => array(
 					'data_type' => 'Bitrix\Main\Site',
@@ -803,45 +509,6 @@ class CAllEventMessage
 		return CEventMessage::GetSite($event_message_id);
 	}
 
-	
-	/**
-	* <p>Удаляет почтовый шаблон. Если шаблон удален успешно, то возвращается объект <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>, в противном случае - <i>false</i>. Статический метод.</p>
-	*
-	*
-	* @param mixed $intid  ID шаблона.
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* if(intval($del_id)&gt;0 &amp;&amp; $MAIN_RIGHT=="W")
-	* {
-	*     $emessage = new CEventMessage;
-	*     $DB-&gt;StartTransaction();
-	*     if(!<b>$emessage-&gt;Delete</b>(intval($del_id)))
-	*     {
-	*         $DB-&gt;Rollback();
-	*         $strError.=GetMessage("DELETE_ERROR");
-	*     }
-	*     else $DB-&gt;Commit();
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a> </li>
-	* <li> <a href="http://dev.1c-bitrix.ru/api_help/main/events/oneventmessagedelete.php">Событие
-	* "OnEventMessageDelete"</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/events/onbeforeeventmessagedelete.php">Событие
-	* "OnBeforeEventMessageDelete"</a> </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/delete.php
-	* @author Bitrix
-	*/
 	public static function Delete($ID)
 	{
 		/**
@@ -899,83 +566,32 @@ class CAllEventMessage
 			unset($data['EVENT_MESSAGE_TYPE_NAME']);
 			unset($data['EVENT_MESSAGE_TYPE_EVENT_NAME']);
 		}
+
+		if (!empty($data['ADDITIONAL_FIELD']) && is_array($data['ADDITIONAL_FIELD']))
+		{
+			foreach ($data['ADDITIONAL_FIELD'] as $index => $aField)
+			{
+				$index++;
+				$oldKeyName = "FIELD{$index}_NAME";
+				$oldKeyValue = "FIELD{$index}_VALUE";
+				if (!array_key_exists($oldKeyName, $data))
+				{
+					continue;
+				}
+
+				if (!empty($data[$oldKeyName]))
+				{
+					continue;
+				}
+
+				$data[$oldKeyName] = $aField['NAME'];
+				$data[$oldKeyValue] = $aField['VALUE'];
+			}
+		}
+
+		return $data;
 	}
 
-	
-	/**
-	* <p>Возвращает список почтовых шаблонов в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param string &$by = "id" Ссылка на переменную с полем для сортировки, может принимать
-	* значения: 	<ul> <li> <b>site_id</b> - идентификатор сайта;</li> 		<li> <b>subject</b> -
-	* тема;</li> 		<li> <b>timestamp_x</b> - дата изменения;</li> 		<li> <b>event_name</b> - тип
-	* события;</li> 		<li> <b>id</b> - ID шаблона;</li> 		<li> <b>active</b> - активность;</li> 	</ul>
-	*
-	* @param string &$order = "desc" Ссылка на переменную с порядком сортировки, может принимать
-	* значения:	 <ul> <li> <b>asc</b> - по возрастанию;</li> 	<li> <b>desc</b> - по
-	* убыванию;</li> </ul>
-	*
-	* @param array $filter  Массив вида array("фильтруемое поле"=&gt;"значение" [, ...]), может
-	* принимать значения: <ul> <li> <b>ID</b> - ID шаблона;</li> 	<li> <b>TYPE</b> - код и
-	* заголовок типа события (допустима <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>);</li> 	<li> <b>TYPE_ID</b>
-	* - код типа события (допустима <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>);</li> 	<li>
-	* <b>TIMESTAMP_1</b> - левая часть интервала ("c") для поиска по дате
-	* изменения;</li> 	<li> <b>TIMESTAMP_2</b> - правая часть интервала ("по") для
-	* поиска по дате изменения;</li> 	<li> <b>SITE_ID</b> - идентификатор сайта
-	* (допустимо задание массива для поиска по логике "или", либо
-	* допустимо использование <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложной логики</a>);</li> 	<li> <b>ACTIVE</b> -
-	* флаг активности (Y|N);</li> 	<li> <b>FROM</b> - поле "От кого" (допустима <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>);</li> 	<li> <b>TO</b> -
-	* поле "Кому" (допустима <a href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная
-	* логика</a>);</li> 	<li> <b>BCC</b> - поле "Скрытая копия" (допустима <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>);</li> 	<li> <b>SUBJECT</b>
-	* - по теме сообщения (допустима <a
-	* href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная логика</a>);</li> 	<li>
-	* <b>BODY_TYPE</b> - по типу тела сообщения (text|html);</li> 	<li> <b>BODY</b> - по телу
-	* сообщения (допустима <a href="http://dev.1c-bitrix.ru/user_help/general/filter.php">сложная
-	* логика</a>);</li> </ul>
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arFilter = Array(
-	*     "ID"            =&gt; "12 | 134",
-	*     "TYPE"          =&gt; "контракт &amp; рекл",
-	*     "TYPE_ID"       =&gt; array("ADV_BANNER", "ADV_CONTRACT"),
-	*     "TIMESTAMP_1"   =&gt; "12.11.2001",
-	*     "TIMESTAMP_2"   =&gt; "12.11.2005",
-	*     "SITE_ID"       =&gt; "ru | en",
-	*     "ACTIVE"        =&gt; "Y",
-	*     "FROM"          =&gt; "bitrixsoft.ru",
-	*     "TO"            =&gt; "#TO#",
-	*     "BCC"           =&gt; "admin",
-	*     "SUBJECT"       =&gt; "конктракт",
-	*     "BODY_TYPE"     =&gt; "text",
-	*     "BODY"          =&gt; "auto"
-	*     );
-	* $rsMess = <b>CEventMessage::GetList</b>($by="site_id", $order="desc", $arFilter);
-	* $is_filtered = $rsMess-&gt;is_filtered;
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/index.php">Поля шаблона
-	* почтового сообщения</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/getbyid.php">CEventMessage::GetByID</a> </li> <li>
-	* <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventmessage/getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList(&$by, &$order, $arFilter=Array())
 	{
 		$arSearch = Array();
@@ -1030,6 +646,9 @@ class CAllEventMessage
 						$bIsLang = true;
 						$arSearch["=SITE_ID"] = $val;
 						break;
+					case "LANGUAGE_ID":
+						$arSearch["=LANGUAGE_ID"] = $val;
+						break;
 					case "ACTIVE":
 						$arSearch['='.$key] = $val;
 						break;
@@ -1073,6 +692,7 @@ class CAllEventMessage
 		elseif ($by == "bcc") $strSqlOrder = "BCC";
 		elseif ($by == "body_type") $strSqlOrder = "BODY_TYPE";
 		elseif ($by == "subject") $strSqlOrder = "SUBJECT";
+		elseif ($by == "language_id") $strSqlOrder = "LANGUAGE_ID";
 		else
 		{
 			$strSqlOrder = "ID";
@@ -1127,17 +747,6 @@ class CAllEventMessage
 	}
 }
 
-
-/**
- * <b>CEventType</b> - класс для работы с типами почтовых событий.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php
- * @author Bitrix
- */
 class CEventType
 {
 	public static function CheckFields($arFields = array(), $action = "ADD", $ID = array())
@@ -1178,6 +787,11 @@ class CEventType
 					$aMsg[] = array("id"=>"EVENT_ID_EMPTY", "text"=>GetMessage("EVENT_ID_EMPTY"));
 				else
 					$aMsg[] = array("id"=>"EVENT_NAME_LID_EMPTY", "text"=>GetMessage("EVENT_ID_EMPTY"));
+			}
+
+			if(isset($arFields["EVENT_TYPE"]) && $arFields["EVENT_TYPE"] == '')
+			{
+				$aMsg[] = array("id"=>"EVENT_TYPE_EMPTY", "text"=>GetMessage('EVENT_TYPE_EMPTY'));
 			}
 
 			if (empty($aMsg) && is_set($arFields, "EVENT_NAME") && (is_set($arFields, "LID")))
@@ -1226,95 +840,16 @@ class CEventType
 		return true;
 	}
 
-	
-	/**
-	* <p>Добавляет тип почтового события. Возвращает ID вставленного типа. При возникновении ошибки метод вернет <i>false</i>, а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Статический метод.</p>
-	*
-	*
-	* @param array $fields  Массив значений <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">полей</a> вида
-	* array("поле"=&gt;"значение" [, ...]). В качестве "полей" допустимо
-	* использовать: 	         <ul> <li> <b>LID</b> - язык интерфейса</li>                    <li>
-	* <b>EVENT_NAME</b> - идентификатор типа почтового события 		</li>                   
-	* <li> <b>NAME</b> - заголовок типа почтового события 		</li>                    <li>
-	* <b>DESCRIPTION</b> - описание задающее поля типа почтового события 	</li>       
-	*  </ul>
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* function UET($EVENT_NAME, $NAME, $LID, $DESCRIPTION)
-	* {
-	*     $et = new CEventType;
-	*     <b>$et-&gt;Add</b>(array(
-	*         "LID"           =&gt; $LID,
-	*         "EVENT_NAME"    =&gt; $EVENT_NAME,
-	*         "NAME"          =&gt; $NAME,
-	*         "DESCRIPTION"   =&gt; $DESCRIPTION
-	*         ));
-	* }
-	* 
-	* UET(
-	* "ADV_BANNER_STATUS_CHANGE","Изменился статус баннера","ru",
-	* "
-	* #EMAIL_TO# - EMail получателя сообщения (#OWNER_EMAIL#)
-	* #ADMIN_EMAIL# - EMail пользователей имеющих роль \"менеджер баннеров\" и \"администратор\"
-	* #ADD_EMAIL# - EMail пользователей имеющих право управления баннерами контракта
-	* #STAT_EMAIL# - EMail пользователей имеющих право просмотра баннеров конракта
-	* #EDIT_EMAIL# - EMail пользователей имеющих право модификации некоторых полей контракта
-	* #OWNER_EMAIL# - EMail пользователей имеющих какое либо право на контракт
-	* #BCC# - скрытая копия (#ADMIN_EMAIL#)
-	* #ID# - ID баннера
-	* #CONTRACT_ID# - ID контракта
-	* #CONTRACT_NAME# - заголовок контракта
-	* #TYPE_SID# - ID типа
-	* #TYPE_NAME# - заголовок типа
-	* #STATUS# - статус
-	* #STATUS_COMMENTS# - комментарий к статусу
-	* #NAME# - заголовок баннера
-	* #GROUP_SID# - группа баннера
-	* #INDICATOR# - показывается ли баннер на сайте ?
-	* #ACTIVE# - флаг активности баннера [Y | N]
-	* #MAX_SHOW_COUNT# - максимальное количество показов баннера
-	* #SHOW_COUNT# - сколько раз баннер был показан на сайте
-	* #MAX_CLICK_COUNT# - максимальное количество кликов на баннер
-	* #CLICK_COUNT# - сколько раз кликнули на баннер
-	* #DATE_LAST_SHOW# - дата последнего показа баннера
-	* #DATE_LAST_CLICK# - дата последнего клика на баннер
-	* #DATE_SHOW_FROM# - дата начала показа баннера
-	* #DATE_SHOW_TO# - дата окончания показа баннера
-	* #IMAGE_LINK# - ссылка на изображение баннера
-	* #IMAGE_ALT# - текст всплывающей подсказки на изображении
-	* #URL# - URL на изображении
-	* #URL_TARGET# - где развернуть URL изображения
-	* #CODE# - код баннера
-	* #CODE_TYPE# - тип кода баннера (text | html)
-	* #COMMENTS# - комментарий к баннеру
-	* #DATE_CREATE# - дата создания баннера
-	* #CREATED_BY# - кем был создан баннер
-	* #DATE_MODIFY# - дата изменения баннера
-	* #MODIFIED_BY# - кем изменен баннер
-	* "
-	* );
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">Поля типа
-	* почтового события</a> </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/add.php
-	* @author Bitrix
-	*/
 	public static function Add($arFields)
 	{
 		if(!is_set($arFields, "LID") && is_set($arFields, "SITE_ID"))
 			$arFields["LID"] = $arFields["SITE_ID"];
+
+		if(!isset($arFields["EVENT_TYPE"]))
+		{
+			//compatibility
+			$arFields["EVENT_TYPE"] = EventTypeTable::TYPE_EMAIL;
+		}
 
 		unset($arFields["ID"]);
 
@@ -1327,49 +862,6 @@ class CEventType
 		return false;
 	}
 
-	
-	/**
-	* <p>Изменяет параметры типа почтового события. Возвращается объект класса CDBResult. При возникновении ошибки метод вернет <i>false</i>, а в свойстве LAST_ERROR объекта будет содержаться текст ошибки. Статический метод.</p>
-	*
-	*
-	* @param array $arrayID  Массив значений ID почтовых событий, которые нужно изменить. В
-	* массиве допустимо использовать: <ul> <li> <b>ID</b> - идентификатор типа
-	* почтового события</li> <li> <b>LID</b> - язык интерфейса</li>  <li> <b>EVENT_NAME</b>  -
-	* идентификатор почтового события </li>   </ul>
-	*
-	* @param array $fields  Массив значений <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">полей</a> вида
-	* array("поле"=&gt;"значение" [, ...]). В качестве "полей" допустимо
-	* использовать: 	         <ul> <li> <b>LID</b> - язык интерфейса</li>                    <li>
-	* <b>EVENT_NAME</b> - идентификатор типа почтового события </li>                    <li>
-	* <b>NAME</b> - заголовок типа почтового события 		</li>                    <li>
-	* <b>DESCRIPTION</b> - описание задающее поля типа почтового события 	</li>       
-	*  </ul>
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* $arType = array( 
-	*     "SORT" =&gt; $_POST["SORT"], 
-	*     "NAME" =&gt; $_POST["NAME"], 
-	*     "DESCRIPTION" =&gt; $_POST["DESCRIPTION"], 
-	*     "LID" =&gt; $_POST["LID"], 
-	*     "EVENT_NAME" =&gt; $_POST["EVENT_NAME"], 
-	* ); 
-	* CEventType::Update(array("ID" =&gt; $_POST["ID"]), $arType);
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">Поля типа
-	* почтового события</a> </li> </ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/update.php
-	* @author Bitrix
-	*/
 	public static function Update($arID = array(), $arFields = array())
 	{
 		$ID = array();
@@ -1407,41 +899,6 @@ class CEventType
 		return false;
 	}
 
-	
-	/**
-	* <p>Удаляет тип почтового события. Возвращается объект класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param string $EVENT_NAME  Тип почтового события.
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $et = new CEventType;
-	* <b>$et-&gt;Delete</b>("ADV_BANNER_STATUS_CHANGE");
-	* ?&gt;С версии 6.0.3 возможно использование массива:CEventType::Delete(
-	*  array (
-	*   "ID" =&gt; 1,
-	*   "LID"=&gt; "ru",
-	*   "EVENT_NAME" =&gt; "EVENT_NAME",
-	*   "NAME" =&gt; "NAME",
-	*   "SORT" =&gt; 100500
-	* )
-	* );
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul><li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a>
-	* </li></ul><a name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/delete.php
-	* @author Bitrix
-	*/
 	public static function Delete($arID)
 	{
 
@@ -1488,51 +945,6 @@ class CEventType
 		return false;
 	}
 
-	
-	/**
-	* <p>Возвращает список типов почтовых событий по фильтру <i>filter</i> в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param array $arFilter = array() Массив фильтрации вида array("фильтруемое поле"=&gt;"значение" [, ...]).
-	* "Фильтруемое поле" может принимать значения: 		<ul> <li> <b>TYPE_ID</b> -
-	* идентификатор типа события;</li> 		<li> <b>LID</b> - идентификатор языка;</li>
-	* 		</ul>
-	*
-	* @param array $arOrder = array() Массив сортировки вида array("фильтруемое поле"=&gt;"значение" [, ...]).
-	* "Фильтруемое поле" может принимать значения: 		<ul> <li> <b>TYPE_ID</b> -
-	* идентификатор типа события;</li> 		<li> <b>LID</b> - идентификатор языка;</li>
-	* 		</ul>
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $arFilter = array(
-	*     "TYPE_ID" =&gt; "ADV_BANNER_STATUS_CHANGE",
-	*     "LID"     =&gt; "ru"
-	*     );
-	* $rsET = <b>CEventType::GetList</b>($arFilter);
-	* while ($arET = $rsET-&gt;Fetch())
-	* {
-	*     echo "&lt;pre&gt;"; print_r($arET); echo "&lt;/pre&gt;";
-	* }
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">Поля типа
-	* события</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/getbyid.php">CEventType::GetByID</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/getlist.php
-	* @author Bitrix
-	*/
 	public static function GetList($arFilter=array(), $arOrder=array())
 	{
 		global $DB;
@@ -1552,11 +964,14 @@ class CEventType
 				case "TYPE_ID":
 					$arSqlSearch["EVENT_NAME"] = (string) $val;
 					break;
+				case "EVENT_TYPE":
+					$arSqlSearch["=EVENT_TYPE"] = (string) $val;
+					break;
 				case "LID":
-					$arSqlSearch["LID"] = (string) $val;
+					$arSqlSearch["=LID"] = (string) $val;
 					break;
 				case "ID":
-					$arSqlSearch["ID"] = intval($val);
+					$arSqlSearch["=ID"] = intval($val);
 					break;
 			}
 		}
@@ -1576,7 +991,7 @@ class CEventType
 			$arSqlOrder['ID'] = 'ASC';
 
 		$result = Mail\Internal\EventTypeTable::getList(array(
-			'select' => array('ID', 'LID', 'EVENT_NAME', 'NAME', 'DESCRIPTION', 'SORT'),
+			'select' => array('ID', 'LID', 'EVENT_NAME', 'EVENT_TYPE', 'NAME', 'DESCRIPTION', 'SORT'),
 			'filter' => $arSqlSearch,
 			'order' => $arSqlOrder
 		));
@@ -1701,7 +1116,6 @@ class CEventType
 		$db_res = $connection->query($strSql);
 		$db_res->addFetchDataModifier(array('CEventType', 'GetListExFetchDataModifier'));
 
-
 		$db_res = new _CEventTypeResult($db_res, $arParams);
 		return $db_res;
 	}
@@ -1709,42 +1123,10 @@ class CEventType
 	///////////////////////////////////////////////////////////////////
 	// selecting type
 	///////////////////////////////////////////////////////////////////
-	
-	/**
-	* <p>Возвращает тип почтового события в виде объекта класса <a href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">CDBResult</a>. Статический метод.</p>
-	*
-	*
-	* @param mixed $stringID  Идентификатор типа почтового события.
-	*
-	* @param string $LID  Идентификатор языка.
-	*
-	* @return CDBResult 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $rsET = <b>CEventType::GetByID</b>("ADV_BANNER_STATUS_CHANGE", "ru");
-	* $arET = $rsET-&gt;Fetch();
-	* ?&gt;
-	* </pre>
-	*
-	*
-	* <h4>See Also</h4> 
-	* <ul> <li> <a href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/index.php">Поля типа
-	* события</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/getlist.php">CEventType::GetList</a> </li> <li> <a
-	* href="http://dev.1c-bitrix.ru/api_help/main/reference/cdbresult/index.php">Класс CDBResult</a> </li> </ul><a
-	* name="examples"></a>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/ceventtype/getbyid.php
-	* @author Bitrix
-	*/
 	public static function GetByID($ID, $LID)
 	{
 		$result = Mail\Internal\EventTypeTable::getList(array(
-			'filter' => array('LID' => $LID, 'EVENT_NAME' => $ID),
+			'filter' => array('=LID' => $LID, '=EVENT_NAME' => $ID),
 		));
 
 		return new CDBResult($result);
@@ -1832,7 +1214,7 @@ class _CEventTypeResult extends CDBResult
 		parent::__construct($res);
 	}
 
-	public function Fetch()
+	function Fetch()
 	{
 		$arr = array();
 		$arr_lid = array();
@@ -1842,6 +1224,7 @@ class _CEventTypeResult extends CDBResult
 		{
 			if ($this->type != "none")
 			{
+				$eventType = EventTypeTable::TYPE_EMAIL;
 				$db_res_ = CEventType::GetList(array("EVENT_NAME" => $res["EVENT_NAME"]));
 				if ($db_res_ && $res_ = $db_res_->Fetch())
 				{
@@ -1850,10 +1233,13 @@ class _CEventTypeResult extends CDBResult
 						$arr[$res_["ID"]] = $res_;
 						$arr_lid[] = $res_["LID"];
 						$arr_lids[$res_["LID"]] = $res_;
-					}while($res_ = $db_res_->Fetch());
+						$eventType = $res_["EVENT_TYPE"];
+					}
+					while($res_ = $db_res_->Fetch());
 				}
 				$res["ID"] = array_keys($arr);
 				$res["LID"] = $arr_lid;
+				$res["EVENT_TYPE"] = $eventType;
 
 				$res["NAME"] = empty($arr_lids[$this->LID]["NAME"]) ? $arr_lids["en"]["NAME"] : $arr_lids[$this->LID]["NAME"];
 				$res["SORT"] = empty($arr_lids[$this->LID]["SORT"]) ? $arr_lids["en"]["SORT"] : $arr_lids[$this->LID]["SORT"];

@@ -4,7 +4,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CUserTypeWiki extends CUserTypeString
 {
-    public static function GetUserTypeDescription()
+    function GetUserTypeDescription()
 	{
 		return array(
 			'USER_TYPE_ID' => 'wiki',
@@ -14,7 +14,7 @@ class CUserTypeWiki extends CUserTypeString
 		);
 	}
 
-	public static function CheckPermission()
+	function CheckPermission()
 	{
 		if (!CModule::IncludeModule('wiki') || !CWikiUtils::IsReadable())
 			return false;

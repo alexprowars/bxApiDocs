@@ -157,7 +157,7 @@ class UserContentView
 		{
 			$photoSrc = '';
 
-			if (intVal($fields['USER_PERSONAL_PHOTO']) <= 0)
+			if (intval($fields['USER_PERSONAL_PHOTO']) <= 0)
 			{
 				switch ($fields['USER_PERSONAL_GENDER'])
 				{

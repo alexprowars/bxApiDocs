@@ -107,6 +107,7 @@ abstract class BaseUfComponent extends CBitrixComponent
 	{
 		$this->setUserField($this->arParams['~userField']);
 		$this->setAdditionalParameters($this->arParams['additionalParameters']);
+		$this->setParentComponent($this->getAdditionalParameter('parentComponent'));
 
 		$this->arResult['additionalParameters'] = $this->getAdditionalParameters();
 		$this->arResult['userField'] = $this->getUserField();
@@ -131,6 +132,15 @@ abstract class BaseUfComponent extends CBitrixComponent
 	}
 
 	/**
+	 * @param string $key
+	 * @return mixed|null
+	 */
+	public function getAdditionalParameter(string $key)
+	{
+		return ($this->additionalParameters[$key] ?? null);
+	}
+
+	/**
 	 * @return array
 	 */
 	public function getAdditionalParameters(): array
@@ -144,6 +154,22 @@ abstract class BaseUfComponent extends CBitrixComponent
 	public function setAdditionalParameters(?array $additionalParameters): void
 	{
 		$this->additionalParameters = $additionalParameters;
+	}
+
+	/**
+	 * @return CBitrixComponent|null
+	 */
+	public function getParentComponent(): ?CBitrixComponent
+	{
+		return $this->__parent;
+	}
+
+	/**
+	 * @param CBitrixComponent|null $_parent
+	 */
+	public function setParentComponent(?CBitrixComponent $_parent): void
+	{
+		$this->__parent = $_parent;
 	}
 
 	/**
@@ -406,7 +432,7 @@ abstract class BaseUfComponent extends CBitrixComponent
 
 		$fieldName = $this->additionalParameters['NAME'] ?? $this->userField['FIELD_NAME'];
 
-		if($this->userField['MULTIPLE'] === 'Y')
+		if($this->userField['MULTIPLE'] === 'Y' && !mb_substr_count($fieldName, '[]'))
 		{
 			$fieldName .= '[]';
 		}

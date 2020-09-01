@@ -5,7 +5,7 @@ $GLOBALS["BLOG_CANDIDATE"] = Array();
 class CAllBlogCandidate
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		if ((is_set($arFields, "BLOG_ID") || $ACTION=="ADD") && IntVal($arFields["BLOG_ID"]) <= 0)
 		{
@@ -40,7 +40,7 @@ class CAllBlogCandidate
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
@@ -52,7 +52,7 @@ class CAllBlogCandidate
 	}
 
 	//*************** SELECT *********************/
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 

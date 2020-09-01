@@ -6,19 +6,10 @@
  * @copyright 2001-2013 Bitrix
  */
 
-
-/**
- * Класс <b> CComponentEngine </b>инкапсулирует вспомогательные методы, полезные при разработке компонентов.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/ccomponentengine/index.php
- * @author Bitrix
- */
 class CComponentEngine
 {
+	public $cacheSalt = '';
+
 	private $component = null;
 	private $greedyParts = array();
 	private $resolveCallback = false;
@@ -28,7 +19,7 @@ class CComponentEngine
 	 * <p>Takes component as parameter and initializing the object.</p>
 	 * @param CBitrixComponent $component
 	 */
-	public function __construct($component = null)
+	function __construct($component = null)
 	{
 		if ($component instanceof CBitrixComponent)
 			$this->component = $component;
@@ -101,7 +92,7 @@ class CComponentEngine
 	 * @return bool
 	 *
 	 */
-	static public function hasNoVariables($pageTemplate)
+	public function hasNoVariables($pageTemplate)
 	{
 		return strpos($pageTemplate, "#") === false;
 	}
@@ -235,6 +226,7 @@ class CComponentEngine
 			return false;
 
 		$currentPageUrl = substr($requestURL, strlen($folder404));
+		$this->cacheSalt = md5($currentPageUrl);
 
 		$pageCandidates = array();
 		$arUrlTemplates = $this->sortUrlTemplates($arUrlTemplates, $bHasGreedyPartsInTemplates);
@@ -310,12 +302,17 @@ class CComponentEngine
 						$arVariables[$variableName] = $_REQUEST[$aliasName];
 		}
 
-		for ($i = 0, $cnt = count($arComponentVariables); $i < $cnt; $i++)
-			if (!array_key_exists($arComponentVariables[$i], $arVariables)
-				&& array_key_exists($arComponentVariables[$i], $_REQUEST))
+		if ($arComponentVariables && is_array($arComponentVariables))
+		{
+			for ($i = 0, $cnt = count($arComponentVariables); $i < $cnt; $i++)
 			{
-				$arVariables[$arComponentVariables[$i]] = $_REQUEST[$arComponentVariables[$i]];
+				if (!array_key_exists($arComponentVariables[$i], $arVariables)
+					&& array_key_exists($arComponentVariables[$i], $_REQUEST))
+				{
+					$arVariables[$arComponentVariables[$i]] = $_REQUEST[$arComponentVariables[$i]];
+				}
 			}
+		}
 	}
 	/**
 	 * Prepares templates based on default and provided.

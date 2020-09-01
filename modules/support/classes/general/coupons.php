@@ -3,7 +3,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CSupportSuperCoupon
 {
-	public static function Generate($arParams = array())
+	function Generate($arParams = array())
 	{
 		global $DB, $USER, $APPLICATION;
 		if (!is_array($arParams))
@@ -78,7 +78,7 @@ class CSupportSuperCoupon
 		return $coupon;
 	}
 	
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB, $USER;
 		
@@ -106,7 +106,7 @@ class CSupportSuperCoupon
 		return $DB->Add('b_ticket_supercoupons', $arFields);
 	}
 	
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB, $APPLICATION, $USER;
 		
@@ -142,7 +142,7 @@ class CSupportSuperCoupon
 		return true;
 	}
 	
-	public static function UseCoupon($coupon)
+	function UseCoupon($coupon)
 	{
 		global $DB, $USER;
 		$ret = false;
@@ -248,7 +248,7 @@ class CSupportSuperCoupon
 		return $ret;
 	}
 	
-	public static function GetList($arOrder = array(), $arFilter = array())
+	function GetList($arOrder = array(), $arFilter = array())
 	{
 		global $DB;
 		$arFields = array(
@@ -385,7 +385,7 @@ class CSupportSuperCoupon
 		return $DB->Query($strQuery, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 	}
 	
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -396,7 +396,7 @@ class CSupportSuperCoupon
 		return true;
 	}
 	
-	public static function GetLogList($arOrder = array(), $arFilter = array())
+	function GetLogList($arOrder = array(), $arFilter = array())
 	{
 		global $DB;
 		$arFields = array(
@@ -484,12 +484,12 @@ class CSupportSuperCoupon
 		
 	}
 	
-	public static function _getrandsymbol($x)
+	function _getrandsymbol($x)
 	{
 		return ToUpper(randString(1));
 	}
 	
-	public static function __CheckFields($arFields)
+	function __CheckFields($arFields)
 	{
 		$aMsg = array();
 		

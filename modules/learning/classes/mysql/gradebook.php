@@ -1,24 +1,5 @@
 <?php
 
-
-/**
- * <br><br>
- *
- *
- * @return mixed 
- *
- * <h4>Example</h4> 
- * <pre bgcolor="#323232" style="padding:5px;">
- * // пример пересчета журнала
- * $gradebook = new CGradeBook; 
- * $gradebook-&gt;RecountAttempts($STUDENT_ID,$TEST_ID);
- * </pre>
- *
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/learning/classes/cgradebook/index.php
- * @author Bitrix
- */
 class CGradeBook extends CAllGradeBook
 {
 	/**

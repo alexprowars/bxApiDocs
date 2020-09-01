@@ -3,7 +3,7 @@ require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/blog/general/ratings_compone
 
 class CRatingsComponentsBlog extends CAllRatingsComponentsBlog
 {
-	public static function CalcPost($arConfigs)
+	function CalcPost($arConfigs)
 	{
 		global $DB;
 
@@ -36,7 +36,7 @@ class CRatingsComponentsBlog extends CAllRatingsComponentsBlog
 		return true;
 	}
 
-	public static function CalcComment($arConfigs)
+	function CalcComment($arConfigs)
 	{
 		global $DB;
 
@@ -69,7 +69,7 @@ class CRatingsComponentsBlog extends CAllRatingsComponentsBlog
 		return true;
 	}
 
-	public static function CalcActivity($arConfigs)
+	function CalcActivity($arConfigs)
 	{
 		global $DB;
 

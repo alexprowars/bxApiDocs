@@ -117,6 +117,7 @@ class Icon
 			return;
 		}
 
+		$assetsIcon = [];
 		$iconVendors = (array) $iconVendors;
 		$found = preg_match_all(
 			'/[\s"](' . implode('|', $iconVendors) . ')-([^\s"\/\\\]+)/s',
@@ -125,7 +126,6 @@ class Icon
 		);
 		if ($found)
 		{
-			$assetsIcon = [];
 			foreach ($matches[0] as $i => $class)
 			{
 				$vendor = trim($matches[1][$i]);
@@ -147,13 +147,11 @@ class Icon
 					unset($assetsIcon[$vendor]);
 				}
 			}
-			if ($assetsIcon)
-			{
-				$block->saveAssets([
-					'icon' => $assetsIcon
-				]);
-			}
 		}
+
+		$block->saveAssets([
+			'icon' => $assetsIcon
+		]);
 	}
 
 	/**
@@ -192,16 +190,16 @@ class Icon
 	}
 
 	/**
-	 * Shows icons on the block output.
+	 * Shows icons styles on the block output.
 	 * @param Block $block Block instance.
 	 * @return void
 	 */
 	public static function view(Block $block): void
 	{
 		$blockAssets = $block->getAssets();
-		$assetsManager = Assets\Manager::getInstance();
 		if (isset($blockAssets['icon']))
 		{
+			$assetsManager = Assets\Manager::getInstance();
 			$iconSrc = Config::get('icon_src');
 			if (!$iconSrc)
 			{

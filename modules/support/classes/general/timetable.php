@@ -30,7 +30,7 @@ class CSupportTimetable
 		return "<br>Module: " . $module_id . " <br>Class: CSupportTimetable<br>File: " . __FILE__;
 	}
 	
-	public static function Set($arFields, $arFieldsShedule) //$arFields, $arFieldsShedule = array(0 => array("ID" => 1 ...), 1 => array("ID" => 3 ...) ...)
+	function Set($arFields, $arFieldsShedule) //$arFields, $arFieldsShedule = array(0 => array("ID" => 1 ...), 1 => array("ID" => 3 ...) ...)
 	{
 		global $DB, $APPLICATION;
 		$err_mess = (self::err_mess())."<br>Function: Set<br>Line: ";
@@ -147,7 +147,7 @@ class CSupportTimetable
 	}
 
 	// get Timetable list
-	public static function GetList($arSort = null, $arFilter = null)
+	function GetList($arSort = null, $arFilter = null)
 	{
 		$err_mess = (self::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB, $USER, $APPLICATION;
@@ -224,7 +224,7 @@ class CSupportTimetable
 		return $rs;
 	}
 	
-	public static function GetSheduleByID($id, $needObj = false)
+	function GetSheduleByID($id, $needObj = false)
 	{
 		global $DB;
 		$err_mess = (self::err_mess())."<br>Function: Set<br>Line: ";
@@ -255,7 +255,7 @@ class CSupportTimetable
 	}
 	
 	// delete Timetable
-	public static function Delete($id, $checkRights=true)
+	function Delete($id, $checkRights=true)
 	{
 		$err_mess = (self::err_mess())."<br>Function: Delete<br>Line: ";
 		global $DB, $USER, $APPLICATION;

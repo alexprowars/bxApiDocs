@@ -4,6 +4,7 @@ namespace Bitrix\Im\Rest\v1;
 
 use Bitrix\Im\Call\CallUser;
 use Bitrix\Im\Call\Registry;
+use Bitrix\Im\Call\Util;
 use Bitrix\Main\Context;
 use Bitrix\Main\Engine;
 use Bitrix\Main\Error;
@@ -31,7 +32,13 @@ class Call extends Engine\Controller
 			$isNew = false;
 			if(!$call->hasUser($currentUserId))
 			{
-				$call->addUser($currentUserId);
+				$addedUser = $call->addUser($currentUserId);
+
+				if(!$addedUser)
+				{
+					$this->errorCollection[] = new Error("User limit reached",  "user_limit_reached");
+					return null;
+				}
 			}
 		}
 		else
@@ -62,8 +69,9 @@ class Call extends Engine\Controller
 			'call' => $call->toArray(),
 			'isNew' => $isNew,
 			'users' => $users,
-			'userData' => \CIMContactList::GetUserData(['ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y']),
-			'publicChannels' =>$publicChannels
+			'userData' => Util::getUsers($users),
+			'publicChannels' => $publicChannels,
+			'logToken' => $call->getLogToken($currentUserId)
 		];
 	}
 
@@ -96,8 +104,44 @@ class Call extends Engine\Controller
 		return array(
 			'call' => $childCall->toArray(),
 			'users' => $users,
-			'userData' => \CIMContactList::GetUserData(Array('ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y')),
+			'userData' => Util::getUsers($users),
+			'logToken' => $childCall->getLogToken($currentUserId)
 		);
+	}
+
+	public function tryJoinCallAction($type, $provider, $entityType, $entityId)
+	{
+		$currentUserId = $this->getCurrentUser()->getId();
+		$call = \Bitrix\Im\Call\Call::searchActive($type, $provider, $entityType, $entityId);
+		if(!$call)
+		{
+			return [
+				'success' => false
+			];
+		}
+
+		if(!$call->getAssociatedEntity()->checkAccess($currentUserId))
+		{
+			$this->errorCollection[] = new Error("You can not access this call", 'access_denied');
+			return null;
+		}
+
+		if(!$call->hasUser($currentUserId))
+		{
+			$addedUser = $call->addUser($currentUserId);
+			if(!$addedUser)
+			{
+				$this->errorCollection[] = new Error("User limit reached",  "user_limit_reached");
+				return null;
+			}
+			$call->getSignaling()->sendUsersJoined($currentUserId, [$currentUserId]);
+		}
+
+		return [
+			'success' => true,
+			'call' => $call->toArray(),
+			'logToken' => $call->getLogToken($currentUserId)
+		];
 	}
 
 	public function getAction($callId)
@@ -115,7 +159,8 @@ class Call extends Engine\Controller
 		return array(
 			'call' => $call->toArray($currentUserId),
 			'users' => $users,
-			'userData' => \CIMContactList::GetUserData(Array('ID' => $users, 'DEPARTMENT' => 'N', 'HR_PHOTO' => 'Y')),
+			'userData' => Util::getUsers($users),
+			'logToken' => $call->getLogToken($currentUserId)
 		);
 	}
 
@@ -128,8 +173,8 @@ class Call extends Engine\Controller
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
 
-		$userAgent = Context::getCurrent()->getRequest()->getUserAgent();
-		$isMobile = strpos($userAgent, "Bitrix24") !== false;
+		$mobileDevice = Context::getCurrent()->getRequest()->getCookieRaw('MOBILE_DEVICE');
+		$isMobile = $mobileDevice != '';
 		$call->getUser($currentUserId)->update([
 			'LAST_SEEN' => new DateTime(),
 			'IS_MOBILE' => $isMobile ? 'Y' : 'N'
@@ -182,8 +227,8 @@ class Call extends Engine\Controller
 	{
 		$currentUserId = $this->getCurrentUser()->getId();
 		$call = Registry::getCallWithId($callId);
-		$userAgent = Context::getCurrent()->getRequest()->getUserAgent();
-		$isMobile = strpos($userAgent, "Bitrix24") !== false;
+		$mobileDevice = Context::getCurrent()->getRequest()->getCookieRaw('MOBILE_DEVICE');
+		$isMobile = $mobileDevice != '';
 
 		if(!$this->checkCallAccess($call, $currentUserId))
 			return null;
@@ -363,6 +408,31 @@ class Call extends Engine\Controller
 		{
 			$call->finish();
 		}
+	}
+
+	public function getUsersAction($callId, array $userIds)
+	{
+		$currentUserId = $this->getCurrentUser()->getId();
+		$call = Registry::getCallWithId($callId);
+
+		if(!$this->checkCallAccess($call, $currentUserId))
+		{
+			$this->errorCollection[] = new Error("You do not have access to the call", "access_denied");
+			return null;
+		}
+
+		$allowedUserIds = array_filter($userIds, function($userId) use ($call, $currentUserId)
+		{
+			return $userId == $currentUserId || $call->hasUser($userId);
+		});
+
+		if (count($allowedUserIds) == 0)
+		{
+			$this->errorCollection[] = new Error("Users are not part of the call", "access_denied");
+			return null;
+		}
+
+		return Util::getUsers($allowedUserIds);
 	}
 
 	protected function checkCallAccess(\Bitrix\Im\Call\Call $call, $userId)

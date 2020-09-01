@@ -1,20 +1,9 @@
 <?
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/general/usertype.php");
 
-
-/**
- * ÐšÐ»Ð°ÑÑ CUserTypeEntity Ñ€Ð°ÑÑˆÐ¸Ñ€ÑÐµÑ‚ ÐºÐ»Ð°ÑÑ CAllUserTypeEntity.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cusertypeentity/index.php
- * @author Bitrix
- */
 class CUserTypeEntity extends CAllUserTypeEntity
 {
-	public static function CreatePropertyTables($entity_id)
+	function CreatePropertyTables($entity_id)
 	{
 		global $DB, $APPLICATION;
 		if(!$DB->TableExists("b_utm_".strtolower($entity_id)))
@@ -65,39 +54,16 @@ class CUserTypeEntity extends CAllUserTypeEntity
 		return true;
 	}
 
-	public static function DropColumnSQL($strTable, $arColumns)
+	function DropColumnSQL($strTable, $arColumns)
 	{
 		return array("ALTER TABLE ".$strTable." DROP ".implode(", DROP ", $arColumns));
 	}
 }
 
-class CUserTypeManager extends CAllUserTypeManager
-{
-
-	public static function DateTimeToChar($FIELD_NAME)
-	{
-		global $DB;
-		return "IF(DATE(".$FIELD_NAME.")<>".$FIELD_NAME.", ".$DB->DateToCharFunction($FIELD_NAME, "FULL").", ".$DB->DateToCharFunction($FIELD_NAME, "SHORT").")";
-	}
-}
-
-class CSQLWhere extends CAllSQLWhere
-{
-	public static function _Empty($field)
-	{
-		return "(".$field." IS NULL OR ".$field." = '')";
-	}
-	public static function _NotEmpty($field)
-	{
-		return "(".$field." IS NOT NULL AND LENGTH(".$field.") > 0)";
-	}
-}
-
 /**
- * Ð­Ñ‚Ð° Ð¿ÐµÑ€ÐµÐ¼ÐµÐ½Ð½Ð°Ñ ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ ÑÐºÐ·ÐµÐ¼Ð¿Ð»ÑÑ€ ÐºÐ»Ð°ÑÑÐ° Ñ‡ÐµÑ€ÐµÐ· API ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð³Ð¾
- * Ð¸ Ð¿Ñ€Ð¾Ð¸ÑÑ…Ð¾Ð´Ð¸Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ð° Ñ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŒÑÐºÐ¸Ð¼Ð¸ ÑÐ²Ð¾Ð¹ÑÑ‚Ð²Ð°Ð¼Ð¸.
+ * Ýòà ïåðåìåííàÿ ñîäåðæèò ýêçåìïëÿð êëàññà ÷åðåç API êîòîðîãî
+ * è ïðîèñõîäèò ðàáîòà ñ ïîëüçîâàòåëüñêèìè ñâîéñòâàìè.
  * @global CUserTypeManager $GLOBALS['USER_FIELD_MANAGER']
  * @name $USER_FIELD_MANAGER
  */
 $GLOBALS['USER_FIELD_MANAGER'] = new CUserTypeManager;
-?>

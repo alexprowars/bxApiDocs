@@ -10,64 +10,8 @@
 
 // ***** CAdminFileDialog *****
 IncludeModuleLangFile(__FILE__);
-
-/**
- * <b>CAdminFileDialog</b> - класс для работы с файловым диалогом в административной части системы
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/main/reference/cadminfiledialog/index.php
- * @author Bitrix
- */
 class CAdminFileDialog
 {
-	
-	/**
-	* <p>Метод принимает массив конфигурационных параметров и генерирует скрипты, необходимые для показа файлового диалога. Нестатический метод.</p>
-	*
-	*
-	* @param Array $arConfig  Строка, содержащая имя Javascript-функции, которая вызывает файловый   
-	*     диалог. Функция должна быть задана в глобальной области
-	* видимости.
-	*
-	* @return mixed 
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* <buttononclick>
-	* CAdminFileDialog::ShowScript(Array
-	* 	(
-	* 		"event" =&gt; "OpenImage",
-	* 		"arResultDest" =&gt; Array("FUNCTION_NAME" =&gt; "SetImageUrl"),
-	* 		"arPath" =&gt; Array(),
-	* 		"select" =&gt; 'F',
-	* 		"operation" =&gt; 'O',
-	* 		"showUploadTab" =&gt; true,
-	* 		"showAddToMenuTab" =&gt; false,
-	* 		"fileFilter" =&gt; 'image',
-	* 		"allowAllFiles" =&gt; true,
-	* 		"saveConfig" =&gt; true
-	* 	)
-	* );
-	* 
-	* &lt;script&gt;
-	* document.getElementById("open_dialog_button").onclick = OpenImage;
-	* var SetImageUrl = function(filename,path,site)
-	* {
-	* 	// Обработка результата
-	* 	alert("filename = "+filename+"; /n path = "+path+"; /n site = "+site);
-	* }
-	* &lt;/script&gt;
-	* </buttononclick>
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/main/reference/cadminfiledialog/showscript.php
-	* @author Bitrix
-	*/
 	public static function ShowScript($arConfig)
 	{
 		global $USER, $APPLICATION;
@@ -163,8 +107,8 @@ class CAdminFileDialog
 		{
 			?>
 			<script>
-			var mess_SESS_EXPIRED = '<?=GetMessage('BX_FD_ERROR').': '.GetMessage('BX_FD_SESS_EXPIRED')?>';
-			var mess_ACCESS_DENIED = '<?=GetMessage('BX_FD_ERROR').': '.GetMessage('BX_FD_NO_PERMS')?>';
+			var mess_SESS_EXPIRED = '<?=GetMessageJS('BX_FD_ERROR').': '.GetMessageJS('BX_FD_SESS_EXPIRED')?>';
+			var mess_ACCESS_DENIED = '<?=GetMessageJS('BX_FD_ERROR').': '.GetMessageJS('BX_FD_NO_PERMS')?>';
 			window.<?= CUtil::JSEscape($arConfig['event'])?> = function(bLoadJS, Params)
 			{
 				if (!Params)
@@ -318,7 +262,7 @@ if($bCloudsBrowse && CModule::IncludeModule('clouds'))
 	{
 		if(!defined("BX_B_FILE_DIALOG_SCRIPT_LOADED"))
 		{
-			// define("BX_B_FILE_DIALOG_SCRIPT_LOADED", true);
+			define("BX_B_FILE_DIALOG_SCRIPT_LOADED", true);
 ?>
 if (window.jsUtils)
 {
@@ -443,7 +387,7 @@ if (window.jsUtils)
 				<tr>
 					<?if (count($arSites) > 1):?>
 						<td style="width:22px!important; padding: 0 4px 0 5px !important;">
-						<div id="__bx_site_selector" bxvalue='<?= CUtil::JSEscape($Params['site'])?>' onclick="oBXDialogControls.SiteSelectorOnClick(this);" class="site_selector_div"><span><?= CUtil::JSEscape($Params['site'])?></span><span class="fd_iconkit site_selector_div_arrow">&nbsp;&nbsp;</span></div>
+						<div id="__bx_site_selector" bxvalue="<?=htmlspecialcharsbx($Params['site'])?>" onclick="oBXDialogControls.SiteSelectorOnClick(this);" class="site_selector_div"><span><?=htmlspecialcharsbx($Params['site'])?></span><span class="fd_iconkit site_selector_div_arrow">&nbsp;&nbsp;</span></div>
 						</td>
 					<?endif;?>
 					<td style="padding: 0 2px 0 2px !important;">
@@ -572,7 +516,7 @@ if (window.jsUtils)
 							<td>
 								<select id="__bx_fd_menutype" name="menutype">
 								<?for($i = 0, $n = count($Params['arMenuTypes']); $i < $n; $i++): ?>
-								<option value='<?= CUtil::JSEscape($Params['arMenuTypes'][$i]['key'])?>'><?= CUtil::JSEscape($Params['arMenuTypes'][$i]['title'])?></option>
+								<option value="<?=htmlspecialcharsbx($Params['arMenuTypes'][$i]['key'])?>"><?=htmlspecialcharsbx($Params['arMenuTypes'][$i]['title'])?></option>
 								<? endfor;?>
 								</select>
 							</td>
@@ -593,7 +537,7 @@ if (window.jsUtils)
 							<td>
 								<select name="newppos" id="__bx_fd_newppos">
 									<?for($i = 0, $n = count($Params['menuItems']); $i < $n; $i++):?>
-									<option value="<?= $i + 1 ?>"><?= CUtil::JSEscape($Params['menuItems'][$i])?></option>
+									<option value="<?= $i + 1 ?>"><?=htmlspecialcharsbx($Params['menuItems'][$i])?></option>
 									<?endfor;?>
 									<option value="0" selected="selected"><?=GetMessage("FD_LAST_POINT")?></option>
 								</select>
@@ -604,7 +548,7 @@ if (window.jsUtils)
 							<td>
 								<select name="menuitem" id="__bx_fd_menuitem">
 									<?for($i = 0; $i < $n; $i++):?>
-									<option value="<?= $i + 1 ?>"><?= CUtil::JSEscape($Params['menuItems'][$i])?></option>
+									<option value="<?= $i + 1 ?>"><?=htmlspecialcharsbx($Params['menuItems'][$i])?></option>
 									<?endfor;?>
 								</select>
 							</td>
@@ -700,13 +644,13 @@ function OnLoad()
 
 	if (oBXFileDialog.oConfig.operation == 'O' && oBXFileDialog.oConfig.showUploadTab)
 	{
-		oBXDialogTabs.AddTab('tab1', '<?= GetMessage("FD_OPEN_TAB_TITLE")?>', _Show_tab_OPEN, true);
-		oBXDialogTabs.AddTab('tab2', '<?= GetMessage("FD_LOAD_TAB_TITLE")?>',_Show_tab_LOAD, false);
+		oBXDialogTabs.AddTab('tab1', '<?= GetMessageJS("FD_OPEN_TAB_TITLE")?>', _Show_tab_OPEN, true);
+		oBXDialogTabs.AddTab('tab2', '<?= GetMessageJS("FD_LOAD_TAB_TITLE")?>',_Show_tab_LOAD, false);
 	}
 	else if(oBXFileDialog.oConfig.operation == 'S' && oBXFileDialog.oConfig.showAddToMenuTab)
 	{
-		oBXDialogTabs.AddTab('tab1', '<?= GetMessage("FD_SAVE_TAB_TITLE")?>', _Show_tab_SAVE, true);
-		oBXDialogTabs.AddTab('tab2', '<?= GetMessage("FD_MENU_TAB_TITLE")?>', _Show_tab_MENU, false);
+		oBXDialogTabs.AddTab('tab1', '<?= GetMessageJS("FD_SAVE_TAB_TITLE")?>', _Show_tab_SAVE, true);
+		oBXDialogTabs.AddTab('tab2', '<?= GetMessageJS("FD_MENU_TAB_TITLE")?>', _Show_tab_MENU, false);
 		BX('add2menu_cont').style.display = 'block';
 	}
 	oBXDialogTabs.DisplayTabs();
@@ -1016,8 +960,8 @@ arFDFiles['<?=$path_js?>'] = [];
 ?>
 arFDDirs['<?=$path_js?>'][<?=$ind?>] =
 {
-	name : '<?= $name?>',
-	path : '<?=$path_i?>',
+	name : '<?=CUtil::JSEscape($name)?>',
+	path : '<?=CUtil::JSEscape($path_i)?>',
 	empty: <?= $empty ? 'true' : 'false';?>,
 	permission : {del : <?=$perm_del?>, ren : <?=$perm_ren?>},
 	date : '<?=$Dir["DATE"];?>',
@@ -1066,8 +1010,8 @@ arFDDirs['<?=$path_js?>'][<?=$ind?>] =
 ?>
 arFDFiles['<?=$path_js?>'][<?=$ind?>] =
 {
-	name : '<?=$name?>',
-	path : '<?=$path_i?>',
+	name : '<?=CUtil::JSEscape($name)?>',
+	path : '<?=CUtil::JSEscape($path_i)?>',
 	permission : {del : <?=$perm_del?>, ren : <?=$perm_ren?>},
 	date : '<?=$File["DATE"];?>',
 	timestamp : '<?=$File["TIMESTAMP"];?>',
@@ -1353,9 +1297,6 @@ arFDPermission['<?=$path_js?>'] = {
 		if(CModule::IncludeModule("fileman"))
 		{
 			global $APPLICATION, $USER;
-
-			if(CModule::IncludeModule("compression"))
-				CCompress::Disable2048Spaces();
 
 			$path = $Params['path'];
 			$path = CFileMan::SecurePathVar($path);

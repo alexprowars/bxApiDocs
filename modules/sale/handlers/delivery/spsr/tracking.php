@@ -2,13 +2,14 @@
 
 namespace Sale\Handlers\Delivery;
 
+use Bitrix\Sale;
 use Bitrix\Main\Error;
-use Bitrix\Main\Loader;
-use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Text\Encoding;
-use Bitrix\Sale\Delivery\Tracking\Statuses;
 use Bitrix\Sale\Result;
+use Bitrix\Main\Loader;
+use Bitrix\Main\Text\Encoding;
+use Bitrix\Main\Localization\Loc;
 use Sale\Handlers\Delivery\Spsr\Request;
+use Bitrix\Sale\Delivery\Tracking\Statuses;
 use Bitrix\Sale\Delivery\Tracking\StatusResult;
 
 Loc::loadMessages(__FILE__);
@@ -21,7 +22,7 @@ Loader::registerAutoLoadClasses(
 	)
 );
 /**
- * Class RusPost
+ * Class SpsrTracking
  * @package \Sale\Handlers\Delivery;
  */
 class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
@@ -32,7 +33,7 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	/**
 	 * @return string
 	 */
-	static public function getClassTitle()
+	public function getClassTitle()
 	{
 		return Loc::getMessage("SALE_DLV_SRV_SPSR_T_TITLE");
 	}
@@ -40,7 +41,7 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	/**
 	 * @return string
 	 */
-	static public function getClassDescription()
+	public function getClassDescription()
 	{
 		return Loc::getMessage(
 			"SALE_DLV_SRV_SPSR_T_DESCR",
@@ -52,19 +53,20 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	}
 
 	/**
-	 * @param $trackingNumber
+	 * @param array $shipmentData
 	 * @return StatusResult.
 	 */
-	public function getStatus($trackingNumber)
+	public function getStatusShipment($shipmentData)
 	{
-		$results = $this->getStatuses(array($trackingNumber));
+		$results = $this->getStatusesShipment(array($shipmentData));
 		$result = new StatusResult();
 
 		if($results->isSuccess())
 		{
+			/** @var  StatusResult $statusResult */
 			foreach($results->getData() as $statusResult)
-				if($statusResult->trackingNumber == $trackingNumber)
-					return $statusResult;
+					if($statusResult->trackingNumber == $shipmentData['TRACKING_NUMBER'])
+						return $statusResult;
 		}
 		else
 		{
@@ -75,36 +77,98 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	}
 
 	/**
-	 * @param array $trackingNumbers
+	 * @param int $orderId
+	 * @param int $shipmentId
+	 * @return \Bitrix\Sale\Internals\CollectableEntity|bool|null
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 */
+	private function getShipment($orderId, $shipmentId)
+	{
+		if($orderId <= 0)
+			return null;
+
+		$registry = Sale\Registry::getInstance(Sale\Registry::REGISTRY_TYPE_ORDER);
+		/** @var Sale\Order $orderClass */
+		$orderClass = $registry->getOrderClassName();
+
+		$order = $orderClass::load($orderId);
+
+		if(!$order)
+			return null;
+
+		$sCollect = $order->getShipmentCollection();
+
+		if(!$sCollect)
+			return null;
+
+		return $sCollect->getItemById($shipmentId);
+	}
+
+	/**
+	 * @param array $shipmentsData
 	 * @return Result
 	 */
-	public function getStatuses(array $trackingNumbers)
+	public function getStatusesShipment(array $shipmentsData)
 	{
 		$result = new Result();
-		$resultData = array();
-		$request = new Request();
+
+		if(empty($shipmentsData))
+			return $result;
+
 		/** @var SpsrHandler $parentService */
 		$parentService = $this->deliveryService->getParentService();
 
 		if(!$parentService)
 			return $result;
 
-		/** @var \Bitrix\Sale\Result $res */
-		$res = $parentService->getSidResult();
+		$reqParams = array();
 
-		if($res->isSuccess())
+		foreach($shipmentsData as $shipmentFields)
 		{
-			$data = $res->getData();
-			$sid = $data[0];
-		}
-		else
-		{
-			$sid = "";
+			$shipment = $this->getShipment($shipmentFields['ORDER_ID'], $shipmentFields['SHIPMENT_ID']);
+
+			/** @var \Bitrix\Sale\Result $res */
+			$res = $parentService->getSidResult($shipment);
+
+			if($res->isSuccess())
+			{
+				$data = $res->getData();
+				$sid = $data[0];
+			}
+			else
+			{
+				$sid = "";
+			}
+
+			$icn = $parentService->getICN($shipment);
+
+			if(!is_array($reqParams[$sid.'_'.$icn]))
+				$reqParams[$sid.'_'.$icn] = array( 'SID' => $sid, 'ICN' => $icn, 'TRACK_NUMBERS' => array());
+
+			$reqParams[$sid.'_'.$icn]['TRACK_NUMBERS'][] = $shipmentFields['TRACKING_NUMBER'];
 		}
 
+		foreach($reqParams as $params)
+		{
+			$res = $this->requestStatuses($params['SID'], $params['ICN'], $params['TRACK_NUMBERS']);
+
+			if(!$res->isSuccess())
+				$result->addErrors($res->getErrors());
+			
+			$result->setData($res->getData());
+		}
+
+		return $result;
+	}
+
+	public function requestStatuses($sid, $icn, $trackingNumbers)
+	{
+		$result = new Result();
+		$request = new Request();
+		$resultData = array();
 		$reqRes = $request->getInvoicesInfo(
 			$sid,
-			$parentService->getICN(),
+			$icn,
 			LANGUAGE_ID,
 			$trackingNumbers
 		);
@@ -174,7 +238,7 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 
 	protected static function translateStatus($externalStatus)
 	{
-		if(strlen($externalStatus) <= 0)
+		if($externalStatus == '')
 			return Statuses::UNKNOWN;
 
 		$statusMaps = array(
@@ -206,14 +270,14 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	/**
 	 * @return array
 	 */
-	static public function getParamsStructure()
+	public function getParamsStructure()
 	{
 		return array();
 	}
 
 	protected static function utfDecode($str)
 	{
-		if(strtolower(SITE_CHARSET) != 'utf-8')
+		if(mb_strtolower(SITE_CHARSET) != 'utf-8')
 			$str = Encoding::convertEncoding($str, 'UTF-8', SITE_CHARSET);
 
 		return $str;
@@ -223,7 +287,7 @@ class SpsrTracking extends \Bitrix\Sale\Delivery\Tracking\Base
 	 * @param string $trackingNumber
 	 * @return string Url were we can see tracking information
 	 */
-	static public function getTrackingUrl($trackingNumber = '')
+	public function getTrackingUrl($trackingNumber = '')
 	{
 		return 'http://www.spsr.ru/ru/service/monitoring';
 	}

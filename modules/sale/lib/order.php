@@ -1282,13 +1282,9 @@ class Order extends OrderBase implements \IShipmentOrder, \IPaymentOrder, IBusin
 				return $result;
 			}
 
-			if ($this->getId() == 0 && !$this->isMathActionOnly())
+			if ($this->getId() === 0 && !$this->isMathActionOnly())
 			{
-				$shipmentCollection = $this->getShipmentCollection();
-
-				$r = $shipmentCollection->refreshData();
-				if (!$r->isSuccess())
-					$result->addErrors($r->getErrors());
+				return $this->getShipmentCollection()->onBasketModify($action, $basketItem, $name, $oldValue, $value);
 			}
 		}
 		elseif ($name === 'WEIGHT')

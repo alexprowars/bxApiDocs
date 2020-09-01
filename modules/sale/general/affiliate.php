@@ -9,14 +9,14 @@ $GLOBALS["SALE_CONVERT_CURRENCY_CACHE"] = array();
 
 class CAllSaleAffiliate
 {
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
-		if ((is_set($arFields, "SITE_ID") || $ACTION=="ADD") && StrLen($arFields["SITE_ID"]) <= 0)
+		if ((is_set($arFields, "SITE_ID") || $ACTION=="ADD") && $arFields["SITE_ID"] == '')
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("ACGA1_NO_SITE"), "EMPTY_SITE_ID");
 			return false;
 		}
-		if ((is_set($arFields, "USER_ID") || $ACTION=="ADD") && IntVal($arFields["USER_ID"]) <= 0)
+		if ((is_set($arFields, "USER_ID") || $ACTION=="ADD") && intval($arFields["USER_ID"]) <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("ACGA1_NO_USER"), "EMPTY_USER_ID");
 			return false;
@@ -30,13 +30,13 @@ class CAllSaleAffiliate
 				return false;
 			}
 		}
-		if ((is_set($arFields, "PLAN_ID") || $ACTION=="ADD") && IntVal($arFields["PLAN_ID"]) <= 0)
+		if ((is_set($arFields, "PLAN_ID") || $ACTION=="ADD") && intval($arFields["PLAN_ID"]) <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("ACGA1_NO_PLAN"), "EMPTY_PLAN_ID");
 			return false;
 		}
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		$arAffiliate = false;
 		if ($ACTION != "ADD")
 		{
@@ -56,7 +56,7 @@ class CAllSaleAffiliate
 			}
 		}
 
-		if (is_set($arFields, "AFFILIATE_ID") && IntVal($arFields["AFFILIATE_ID"]) <= 0)
+		if (is_set($arFields, "AFFILIATE_ID") && intval($arFields["AFFILIATE_ID"]) <= 0)
 			$arFields["AFFILIATE_ID"] = false;
 
 		if ((is_set($arFields, "ACTIVE") || $ACTION=="ADD") && $arFields["ACTIVE"] != "Y")
@@ -90,7 +90,7 @@ class CAllSaleAffiliate
 		}
 
 		if (is_set($arFields, "ITEMS_NUMBER"))
-			$arFields["ITEMS_NUMBER"] = IntVal($arFields["ITEMS_NUMBER"]);
+			$arFields["ITEMS_NUMBER"] = intval($arFields["ITEMS_NUMBER"]);
 
 		if (is_set($arFields, "ITEMS_SUM"))
 		{
@@ -101,11 +101,11 @@ class CAllSaleAffiliate
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 
 		$db_events = GetModuleEvents("sale", "OnBeforeAffiliateDelete");
 		while ($arEvent = $db_events->Fetch())
@@ -129,11 +129,11 @@ class CAllSaleAffiliate
 		return $bResult;
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return false;
 
@@ -143,7 +143,7 @@ class CAllSaleAffiliate
 		}
 		else
 		{
-			$strSql = 
+			$strSql =
 				"SELECT A.ID, A.SITE_ID, A.USER_ID, A.AFFILIATE_ID, A.PLAN_ID, A.ACTIVE, A.PAID_SUM, ".
 				"	A.APPROVED_SUM, A.PENDING_SUM, A.ITEMS_NUMBER, A.ITEMS_SUM, A.AFF_SITE, A.AFF_DESCRIPTION, A.FIX_PLAN, ".
 				"	".$DB->DateToCharFunction("A.TIMESTAMP_X", "FULL")." as TIMESTAMP_X, ".
@@ -163,31 +163,31 @@ class CAllSaleAffiliate
 		return false;
 	}
 
-	public static function GetAffiliate($affiliateID = 0)
+	function GetAffiliate($affiliateID = 0)
 	{
-		$affiliateID = IntVal($affiliateID);
+		$affiliateID = intval($affiliateID);
 
 		if ($affiliateID <= 0)
 		{
 			$affiliateParam = COption::GetOptionString("sale", "affiliate_param_name", "partner");
-			if (StrLen($affiliateParam) > 0 && array_key_exists($affiliateParam, $_GET))
-				$affiliateID = IntVal($_GET[$affiliateParam]);
+			if ($affiliateParam <> '' && array_key_exists($affiliateParam, $_GET))
+				$affiliateID = intval($_GET[$affiliateParam]);
 		}
 
 		if ($affiliateID <= 0)
 			if (array_key_exists("SALE_AFFILIATE", $_SESSION))
-				$affiliateID = IntVal($_SESSION["SALE_AFFILIATE"]);
+				$affiliateID = intval($_SESSION["SALE_AFFILIATE"]);
 
 		if ($affiliateID <= 0)
 		{
 			$cookieName = COption::GetOptionString("main", "cookie_name", "BITRIX_SM");
-			$affiliateID = IntVal($_COOKIE[$cookieName."_SALE_AFFILIATE"]);
+			$affiliateID = intval($_COOKIE[$cookieName."_SALE_AFFILIATE"]);
 		}
 
 		if ($affiliateID > 0)
 		{
 			$_SESSION["SALE_AFFILIATE"] = $affiliateID;
-			$cookieTime = IntVal(COption::GetOptionString("sale", "affiliate_life_time", "0"));
+			$cookieTime = intval(COption::GetOptionString("sale", "affiliate_life_time", "0"));
 			$secure = false;
 			if(COption::GetOptionString("sale", "use_secure_cookies", "N") == "Y" && CMain::IsHTTPS())
 				$secure=1;
@@ -198,17 +198,17 @@ class CAllSaleAffiliate
 		return $affiliateID;
 	}
 
-	public static function Calculate($dateFrom = false, $dateTo = false, $datePlanFrom = false, $datePlanTo = false)
+	function Calculate($dateFrom = false, $dateTo = false, $datePlanFrom = false, $datePlanTo = false)
 	{
 		global $DB;
-		
+
 		$arFilter = array(
 			"ACTIVE" => "Y",
 			"ORDER_ALLOW_DELIVERY" => "Y"
 		);
-		if (!$dateFrom || StrLen($dateFrom) <= 0)
+		if (!$dateFrom || $dateFrom == '')
 		{
-			if (!$dateTo || StrLen($dateTo) <= 0)
+			if (!$dateTo || $dateTo == '')
 				$dateTo = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), time()+CTimeZone::GetOffset());
 
 			$arFilter[">=ORDER_DATE_ALLOW_DELIVERY"] = $dateFrom;
@@ -219,10 +219,10 @@ class CAllSaleAffiliate
 			$dateTo = false;
 		}
 
-		if (!$datePlanFrom || StrLen($datePlanFrom) <= 0)
+		if (!$datePlanFrom || $datePlanFrom == '')
 			$datePlanFrom = $dateFrom;
 
-		if (!$datePlanTo || StrLen($datePlanTo) <= 0)
+		if (!$datePlanTo || $datePlanTo == '')
 			$datePlanTo = $dateTo;
 
 		$dbAffiliates = CSaleAffiliate::GetList(
@@ -251,12 +251,12 @@ class CAllSaleAffiliate
 
 	}
 
-	public static function CheckAffiliateFunc($affiliate)
+	function CheckAffiliateFunc($affiliate)
 	{
 		if (is_array($affiliate))
 		{
 			$arAffiliate = $affiliate;
-			$affiliateID = IntVal($arAffiliate["ID"]);
+			$affiliateID = intval($arAffiliate["ID"]);
 
 			if ($affiliateID <= 0)
 			{
@@ -266,7 +266,7 @@ class CAllSaleAffiliate
 		}
 		else
 		{
-			$affiliateID = IntVal($affiliate);
+			$affiliateID = intval($affiliate);
 			if ($affiliateID <= 0)
 				return False;
 
@@ -288,7 +288,7 @@ class CAllSaleAffiliate
 		return $arAffiliate;
 	}
 
-	public static function SetAffiliatePlan($affiliate, $dateFrom = false, $dateTo = false)
+	function SetAffiliatePlan($affiliate, $dateFrom = false, $dateTo = false)
 	{
 		global $DB;
 
@@ -297,7 +297,7 @@ class CAllSaleAffiliate
 			return False;
 
 		// If not fixed plan
-		$affiliateID = IntVal($arAffiliate["ID"]);
+		$affiliateID = intval($arAffiliate["ID"]);
 
 		// If fixed plan
 		if ($arAffiliate["FIX_PLAN"] == "Y")
@@ -329,14 +329,14 @@ class CAllSaleAffiliate
 			return $arAffiliatePlan;
 		}
 
-		if (!$dateFrom || StrLen($dateFrom) <= 0)
+		if (!$dateFrom || $dateFrom == '')
 		{
-			if (StrLen($arAffiliate["LAST_CALCULATE"]) > 0)
+			if ($arAffiliate["LAST_CALCULATE"] <> '')
 				$dateFrom = $arAffiliate["LAST_CALCULATE"];
 			else
 				$dateFrom = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), mktime(0, 0, 0, 1, 1, 1990));
 		}
-		if (!$dateTo || StrLen($dateTo) <= 0)
+		if (!$dateTo || $dateTo == '')
 			$dateTo = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), time()+CTimeZone::GetOffset());
 
 		$affiliatePlanType = COption::GetOptionString("sale", "affiliate_plan_type", "N");
@@ -465,9 +465,11 @@ class CAllSaleAffiliate
 			return true;
 	}
 
-	public static function CalculateAffiliate($affiliate, $dateFrom = false, $dateTo = false, $datePlanFrom = false, $datePlanTo = false)
+	function CalculateAffiliate($affiliate, $dateFrom = false, $dateTo = false, $datePlanFrom = false, $datePlanTo = false)
 	{
 		global $DB;
+
+		$disableCalculate = false;
 
 		// Prepare function params - affiliate
 		$arAffiliate = CSaleAffiliate::CheckAffiliateFunc($affiliate);
@@ -476,25 +478,32 @@ class CAllSaleAffiliate
 
 		$db_events = GetModuleEvents("sale", "OnBeforeAffiliateCalculate");
 		while ($arEvent = $db_events->Fetch())
-			if (ExecuteModuleEventEx($arEvent, Array(&$arAffiliate, &$dateFrom, &$dateTo, &$datePlanFrom, &$datePlanTo))===false)
-				return false;
-
-
-		$affiliateID = IntVal($arAffiliate["ID"]);
-
-		if (!$dateFrom || StrLen($dateFrom) <= 0)
 		{
-			if (StrLen($arAffiliate["LAST_CALCULATE"]) > 0)
+			if (ExecuteModuleEventEx($arEvent, Array(&$arAffiliate, &$dateFrom, &$dateTo, &$datePlanFrom, &$datePlanTo, &$disableCalculate)) === false)
+			{
+				return false;
+			}
+		}
+
+		$affiliateID = intval($arAffiliate["ID"]);
+		if ($disableCalculate === true)
+		{
+			return True;
+		}
+
+		if (!$dateFrom || $dateFrom == '')
+		{
+			if ($arAffiliate["LAST_CALCULATE"] <> '')
 				$dateFrom = $arAffiliate["LAST_CALCULATE"];
 			else
 				$dateFrom = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), mktime(0, 0, 0, 1, 1, 1990));
 		}
-		if (!$dateTo || StrLen($dateTo) <= 0)
+		if (!$dateTo || $dateTo == '')
 			$dateTo = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), time()+CTimeZone::GetOffset());
 
 		// Get affiliate plan
 		$arAffiliatePlan = CSaleAffiliate::SetAffiliatePlan($arAffiliate, $datePlanFrom, $datePlanTo);
-		
+
 		if (!$arAffiliatePlan)
 			return False;
 		if ($arAffiliatePlan && !is_array($arAffiliatePlan))
@@ -517,7 +526,7 @@ class CAllSaleAffiliate
 		// Get affiliate parents
 		$arAffiliateParents = array();
 
-		$affiliateParent = IntVal($arAffiliate["AFFILIATE_ID"]);
+		$affiliateParent = intval($arAffiliate["AFFILIATE_ID"]);
 		$count = 0;
 		while (($affiliateParent > 0) && ($count < 5))
 		{
@@ -532,7 +541,7 @@ class CAllSaleAffiliate
 			{
 				$count++;
 				$arAffiliateParents[] = $affiliateParent;
-				$affiliateParent = IntVal($arAffiliateParent["AFFILIATE_ID"]);
+				$affiliateParent = intval($arAffiliateParent["AFFILIATE_ID"]);
 			}
 			else
 			{
@@ -585,7 +594,6 @@ class CAllSaleAffiliate
 				'order' => array('ID' => 'ASC')
 			)
 		);
-		$fOrderId = "";
 		while ($arOrder = $dbOrders->fetch())
 		{
 			$arProductSections = array();
@@ -603,6 +611,7 @@ class CAllSaleAffiliate
 			{
 				if ($arOrder["BASKET_MODULE"] == "catalog")
 				{
+					CModule::IncludeModule("iblock");
 					CModule::IncludeModule("catalog");
 
 					$arSku = CCatalogSku::GetProductInfo($arOrder["BASKET_PRODUCT_ID"]);
@@ -610,8 +619,37 @@ class CAllSaleAffiliate
 						$elementId = $arSku["ID"];
 					else
 						$elementId = $arOrder["BASKET_PRODUCT_ID"];
-					
-					$arProductSections = CCatalogProduct::GetProductSections($elementId);
+
+					$elementSectionIterator = Bitrix\Iblock\SectionElementTable::getList(array(
+						'select' => array('IBLOCK_SECTION_ID'),
+						'filter' => array('=IBLOCK_ELEMENT_ID' => $elementId, '=ADDITIONAL_PROPERTY_ID' => null),
+					));
+					$elementSectionList = [];
+					while ($elementSection = $elementSectionIterator->fetch())
+					{
+						$arSectionsChains = \CIBlockSection::GetNavChain(0, $elementSection['IBLOCK_SECTION_ID'], array('ID'), true);
+						foreach ($arSectionsChains as $arSectionsChain)
+						{
+							$elementSectionList[$arSectionsChain['ID']] = $arSectionsChain['ID'];
+						}
+					}
+					unset($elementSectionIterator);
+
+					if ($elementSectionList)
+					{
+						sort($elementSectionList);
+						$sectionIterator = Bitrix\Iblock\SectionTable::getList(array(
+							'select' => array('ID', 'LEFT_MARGIN'),
+							'filter' => array('@ID' => $elementSectionList),
+							'order' => array('LEFT_MARGIN' => 'DESC')
+						));
+						while($section = $sectionIterator->fetch())
+						{
+							$arProductSections[] = $section['ID'];
+						}
+						unset($sectionIterator);
+					}
+					unset($elementSectionList);
 				}
 				else
 				{
@@ -628,11 +666,11 @@ class CAllSaleAffiliate
 			$realRate = $arAffiliatePlan["BASE_RATE"];
 			$realRateType = $arAffiliatePlan["BASE_RATE_TYPE"];
 			$realRateCurrency = $arAffiliatePlan["BASE_RATE_CURRENCY"];
-			
+
 			$coountArProd = count($arProductSections);
 			for ($i = 0; $i < $coountArProd; $i++)
 			{
-				if (array_key_exists($arOrder["BASKET_MODULE"].$arProductSections[$i], $arPlanSections))
+				if (!empty($arPlanSections[$arOrder["BASKET_MODULE"].$arProductSections[$i]]))
 				{
 					$realRate = $arPlanSections[$arOrder["BASKET_MODULE"].$arProductSections[$i]]["RATE"];
 					$realRateType = $arPlanSections[$arOrder["BASKET_MODULE"].$arProductSections[$i]]["RATE_TYPE"];
@@ -651,19 +689,11 @@ class CAllSaleAffiliate
 					if (!array_key_exists($arOrder["CURRENCY"]."-".$affiliateCurrency, $GLOBALS["SALE_CONVERT_CURRENCY_CACHE"]))
 						$GLOBALS["SALE_CONVERT_CURRENCY_CACHE"][$arOrder["CURRENCY"]."-".$affiliateCurrency] = CCurrencyRates::GetConvertFactor($arOrder["CURRENCY"], $affiliateCurrency);
 
-					if ($fOrderId != $arOrder["ID"])
-					{
-						$affiliateSum += \Bitrix\Sale\PriceMaths::roundPrecision((($arOrder["PRICE"] - $arOrder["PRICE_DELIVERY"]) * $GLOBALS["SALE_CONVERT_CURRENCY_CACHE"][$arOrder["CURRENCY"]."-".$affiliateCurrency] * $realRate) / 100);
-						$fOrderId = $arOrder["ID"];
-					}
+					$affiliateSum += \Bitrix\Sale\PriceMaths::roundPrecision((($arOrder["BASKET_PRICE"] * $arOrder["BASKET_QUANTITY"]) * $GLOBALS["SALE_CONVERT_CURRENCY_CACHE"][$arOrder["CURRENCY"]."-".$affiliateCurrency] * $realRate) / 100);
 				}
 				else
 				{
-					if ($fOrderId != $arOrder["ID"])
-					{
-						$affiliateSum += \Bitrix\Sale\PriceMaths::roundPrecision((($arOrder["PRICE"] - $arOrder["PRICE_DELIVERY"]) * $realRate) / 100);
-						$fOrderId = $arOrder["ID"];
-					}
+					$affiliateSum += \Bitrix\Sale\PriceMaths::roundPrecision((($arOrder["BASKET_PRICE"] * $arOrder["BASKET_QUANTITY"]) * $realRate) / 100);
 				}
 			}
 			else
@@ -714,7 +744,7 @@ class CAllSaleAffiliate
 		return True;
 	}
 
-	public static function PayAffiliate($affiliate, $payType, &$paySum)
+	function PayAffiliate($affiliate, $payType, &$paySum)
 	{
 		global $DB;
 
@@ -728,7 +758,7 @@ class CAllSaleAffiliate
 				return false;
 
 		$arPayTypes = array("U", "P");
-		if (StrLen($payType) <= 0 || !in_array($payType, $arPayTypes))
+		if ($payType == '' || !in_array($payType, $arPayTypes))
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("ACGA1_BAD_FUNC1"), "ERROR_FUNCTION_CALL");
 			return False;
@@ -809,7 +839,7 @@ class CAllSaleAffiliate
 		return True;
 	}
 
-	public static function ClearAffiliateSum($affiliate)
+	function ClearAffiliateSum($affiliate)
 	{
 		global $DB;
 
@@ -852,11 +882,11 @@ class CAllSaleAffiliate
 
 		return True;
 	}
-	
-	public static function OnBeforeUserDelete($UserID)
+
+	function OnBeforeUserDelete($UserID)
 	{
 		global $DB;
-		if (IntVal($UserID) <= 0)
+		if (intval($UserID) <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException("Empty user ID", "EMPTY_USER_ID");
 			return false;

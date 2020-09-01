@@ -1,6 +1,7 @@
 <?php
-if (!defined("T_KEYWORD"))
-	// define("T_KEYWORD", 400);
+if (!defined("T_KEYWORD")) define("T_KEYWORD", 400);
+if (!defined("T_BAD_CHARACTER")) define("T_BAD_CHARACTER", 401);
+if (!defined("T_CHARACTER")) define("T_CHARACTER", 402);
 
 class CSqlFormatFormatter
 {
@@ -81,7 +82,7 @@ class CSqlFormatFormatter
 		return $result;
 	}
 
-	static public function removeSpaces($match)
+	public function removeSpaces($match)
 	{
 		$result = preg_replace("/^\\([\\x1\\x2\\x3]+/", "(", $match[0]);
 		$result = preg_replace("/[\\x1\\x2\\x3]+\\)\$/", ")", $result);
@@ -89,22 +90,22 @@ class CSqlFormatFormatter
 		return $result;
 	}
 
-	static public function removeTrailingSpaces(&$str)
+	public function removeTrailingSpaces(&$str)
 	{
 		$str = rtrim($str, "\x1\x2\x3");
 	}
 
-	static public function getEol()
+	public function getEol()
 	{
 		return " ";
 	}
 
-	static public function getSpace()
+	public function getSpace()
 	{
 		return " ";
 	}
 
-	static public function getTab()
+	public function getTab()
 	{
 		return " ";
 	}
@@ -112,17 +113,17 @@ class CSqlFormatFormatter
 
 class CSqlFormatText extends CSqlFormatFormatter
 {
-	static public function getEol()
+	public function getEol()
 	{
 		return "\n";
 	}
 
-	static public function getSpace()
+	public function getSpace()
 	{
 		return " ";
 	}
 
-	static public function getTab()
+	public function getTab()
 	{
 		return "\t";
 	}
@@ -133,7 +134,7 @@ class CSqlTokenizer
 	private $tokens = null;
 	private $current = 0;
 
-	public function parse($sql)
+	function parse($sql)
 	{
 		$this->tokens = token_get_all("<?".$sql);
 		array_shift($this->tokens);
@@ -197,13 +198,13 @@ class CSqlTokenizer
 		{
 		case T_STRING:
 			if (preg_match("/^($keywords)\$/i", $token[1]))
-				$token = array(T_KEYWORD, strtoupper($token[1]));
+				$token = array(T_KEYWORD, mb_strtoupper($token[1]));
 			elseif (preg_match("/^($functions)\$/i", $token[1]))
 				$token = array(T_FUNCTION, $token[1]);
 			break;
 		case T_LOGICAL_AND:
 		case T_LOGICAL_OR:
-			$token = array(T_KEYWORD, strtoupper($token[1]));
+			$token = array(T_KEYWORD, mb_strtoupper($token[1]));
 			break;
 		case T_AS:
 			$token = array(T_KEYWORD, $token[1]);
@@ -282,7 +283,7 @@ class CSqlLevel
 	private $level = 0;
 	private $current = 0;
 
-	public function addLevel(array $tokens)
+	function addLevel(array $tokens)
 	{
 		$this->level = array();
 		$this->balance = 0;

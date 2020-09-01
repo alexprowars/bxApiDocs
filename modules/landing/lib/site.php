@@ -197,7 +197,6 @@ class Site extends \Bitrix\Landing\Internals\BaseTable
 			'PAGE' => Loc::getMessage('LANDING_TYPE_PAGE'),
 			'STORE' => Loc::getMessage('LANDING_TYPE_STORE'),
 			'SMN' => Loc::getMessage('LANDING_TYPE_SMN'),
-			'PREVIEW' => Loc::getMessage('LANDING_TYPE_PREVIEW'),
 			'KNOWLEDGE' => Loc::getMessage('LANDING_TYPE_KNOWLEDGE'),
 			'GROUP' => Loc::getMessage('LANDING_TYPE_GROUP')
 		);
@@ -528,7 +527,7 @@ class Site extends \Bitrix\Landing\Internals\BaseTable
 								? $params['preview_url']
 								: '',
 					'show_in_list' => 'Y',
-					'type' => strtolower($row['SITE_TYPE']),
+					'type' => mb_strtolower($row['SITE_TYPE']),
 					'version' => $version,
 					'fields' => array(
 						'ADDITIONAL_FIELDS' => array(),
@@ -620,7 +619,7 @@ class Site extends \Bitrix\Landing\Internals\BaseTable
 							? $params['preview_url']
 							: '',
 				'show_in_list' => ($pagesCount == 1) ? 'Y' : 'N',
-				'type' => strtolower($row['SITE_TYPE']),
+				'type' => mb_strtolower($row['SITE_TYPE']),
 				'version' => $version,
 				'fields' => array(
 					'TITLE' => (isset($params['name']) && $pagesCount == 1)

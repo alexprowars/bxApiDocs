@@ -2,7 +2,7 @@
 IncludeModuleLangFile(__FILE__);
 class CFinder
 {
-	static public function __construct()
+	public function __construct()
 	{
 	}
 

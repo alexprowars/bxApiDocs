@@ -4,7 +4,7 @@
 /**    MODIFICATION OF THIS FILE WILL ENTAIL SITE FAILURE            **/
 /**********************************************************************/
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
-// define("HELP_FILE", "marketplace/sysupdate.php");
+define("HELP_FILE", "marketplace/sysupdate.php");
 
 if (!function_exists('htmlspecialcharsbx'))
 {

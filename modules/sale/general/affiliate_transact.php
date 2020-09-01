@@ -3,19 +3,19 @@ IncludeModuleLangFile(__FILE__);
 
 class CAllSaleAffiliateTransact
 {
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
-		if ((is_set($arFields, "AFFILIATE_ID") || $ACTION=="ADD") && IntVal($arFields["AFFILIATE_ID"]) <= 0)
+		if ((is_set($arFields, "AFFILIATE_ID") || $ACTION=="ADD") && intval($arFields["AFFILIATE_ID"]) <= 0)
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SCGAT2_NO_AFF"), "EMPTY_AFFILIATE_ID");
 			return false;
 		}
-		if ((is_set($arFields, "CURRENCY") || $ACTION=="ADD") && strlen($arFields["CURRENCY"]) <= 0)
+		if ((is_set($arFields, "CURRENCY") || $ACTION=="ADD") && $arFields["CURRENCY"] == '')
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SCGAT2_NO_CURRENCY"), "EMPTY_CURRENCY");
 			return false;
 		}
-		if ((is_set($arFields, "TRANSACT_DATE") || $ACTION=="ADD") && strlen($arFields["TRANSACT_DATE"]) <= 0)
+		if ((is_set($arFields, "TRANSACT_DATE") || $ACTION=="ADD") && $arFields["TRANSACT_DATE"] == '')
 		{
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SCGAT2_NO_DATE"), "EMPTY_TRANSACT_DATE");
 			return false;
@@ -43,30 +43,30 @@ class CAllSaleAffiliateTransact
 		return True;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return False;
 
 		return $DB->Query("DELETE FROM b_sale_affiliate_transact WHERE ID = ".$ID." ", true);
 	}
 
-	public static function OnAffiliateDelete($affiliateID)
+	function OnAffiliateDelete($affiliateID)
 	{
 		global $DB;
-		$affiliateID = IntVal($affiliateID);
+		$affiliateID = intval($affiliateID);
 
 		return $DB->Query("DELETE FROM b_sale_affiliate_transact WHERE AFFILIATE_ID = ".$affiliateID." ", true);
 	}
 
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return false;
 
@@ -85,20 +85,20 @@ class CAllSaleAffiliateTransact
 		return false;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 		if ($ID <= 0)
 			return False;
 
 		$arFields1 = array();
 		foreach ($arFields as $key => $value)
 		{
-			if (substr($key, 0, 1)=="=")
+			if (mb_substr($key, 0, 1) == "=")
 			{
-				$arFields1[substr($key, 1)] = $value;
+				$arFields1[mb_substr($key, 1)] = $value;
 				unset($arFields[$key]);
 			}
 		}
@@ -110,7 +110,7 @@ class CAllSaleAffiliateTransact
 
 		foreach ($arFields1 as $key => $value)
 		{
-			if (strlen($strUpdate)>0) $strUpdate .= ", ";
+			if ($strUpdate <> '') $strUpdate .= ", ";
 			$strUpdate .= $key."=".$value." ";
 		}
 

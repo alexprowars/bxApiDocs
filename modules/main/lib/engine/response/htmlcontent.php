@@ -1,6 +1,7 @@
 <?php
 namespace Bitrix\Main\Engine\Response;
 
+use Bitrix\Main\Engine\Response\ContentArea\DataSectionInterface;
 use Bitrix\Main\ErrorCollection;
 use Bitrix\Main\Page\Asset;
 use Bitrix\Main\Page\AssetMode;
@@ -23,9 +24,10 @@ class HtmlContent extends AjaxJson
 	public function __construct(ContentAreaInterface $content, $status = self::STATUS_SUCCESS, ErrorCollection $errorCollection = null, array $additionalResponseParams = [])
 	{
 		$html = $content->getHtml();
+
 		$this->collectAssetsPathList();
 
-		parent::__construct([
+		$result = [
 			'html' => $html,
 			'assets' => [
 				'css' => $this->getCssList(),
@@ -33,15 +35,21 @@ class HtmlContent extends AjaxJson
 				'string' => $this->getStringList()
 			],
 			'additionalParams' => $additionalResponseParams,
-		], $status, $errorCollection);
+		];
+		if($content instanceof DataSectionInterface)
+		{
+			$result[$content->getSectionName()] = $content->getSectionData();
+		}
+
+		parent::__construct($result, $status, $errorCollection);
 
 		$this->addHeader('X-Process-Assets', 'assets');
 	}
 
 	final protected function collectAssetsPathList()
 	{
-		Asset::getInstance()->getJs();
 		Asset::getInstance()->getCss();
+		Asset::getInstance()->getJs();
 		Asset::getInstance()->getStrings();
 
 		$this->jsPathList = Asset::getInstance()->getTargetList('JS');
@@ -107,6 +115,8 @@ class HtmlContent extends AjaxJson
 				$stringList = array_merge($stringList, $assetInfo['STRINGS']);
 			}
 		}
+
+		$stringList[] = Asset::getInstance()->showFilesList();
 
 		return $stringList;
 	}

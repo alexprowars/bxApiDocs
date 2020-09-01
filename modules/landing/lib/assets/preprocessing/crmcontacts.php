@@ -62,7 +62,7 @@ class CrmContacts
 			-1,
 			$replaced
 		);
-		if (strpos($content, '#COMPANY#') !== false)
+		if (mb_strpos($content, '#COMPANY#') !== false)
 		{
 			$content = str_replace('#COMPANY#', $company, $content);
 			$replaced++;

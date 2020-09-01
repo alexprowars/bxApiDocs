@@ -32,14 +32,11 @@ class CBackup
 		{
 			$arBucket = array();
 			$rsData = CCloudStorageBucket::GetList(
-				array("SORT"=>"DESC", "ID"=>"ASC")
-	//			array('ACTIVE'=>'Y','READ_ONLY'=>'N')
+				array("SORT"=>"DESC", "ID"=>"ASC"),
+				array_merge(array('ACTIVE'=>'Y','READ_ONLY'=>'N'), $arFilter)
 			);
 			while($f = $rsData->Fetch())
 			{
-				if ($f['ACTIVE'] != 'Y' || ($f['READ_ONLY'] == 'Y' && $arFilter['READ_ONLY'] == 'N'))
-					continue; // sql filter currently is not supported TODO: remove in future
-
 				$arBucket[] = $f;
 			}
 			return count($arBucket) ? $arBucket : false;
@@ -91,13 +88,10 @@ class CBackup
 
 		## Symlinks
 		if (is_dir($path))
-		{ 
+		{
 			if (is_link($path))
 			{
-				if (IntOption("skip_symlinks"))
-					return true;
-
-				if (strpos(realpath($path), self::$REAL_DOCUMENT_ROOT_SITE) !== false) // РµСЃР»Рё СЃРёРјР»РёРЅРє РІРµРґРµС‚ РЅР° РїР°РїРєСѓ РІРЅСѓС‚СЂРё СЃС‚СЂСѓРєС‚СѓСЂС‹ СЃР°Р№С‚Р°
+				if (strpos(realpath($path), self::$REAL_DOCUMENT_ROOT_SITE) !== false) // если симлинк ведет на папку внутри структуры сайта
 					return true;
 			}
 		} ## File size
@@ -112,13 +106,13 @@ class CBackup
 		$dump_file_public = IntOption('dump_file_public');
 		$dump_file_kernel = IntOption('dump_file_kernel');
 
-		if ($dump_file_public == $dump_file_kernel) // РµСЃР»Рё РѕР±Рµ РѕРїС†РёРё Р»РёР±Рѕ РІРєР»СЋС‡РµРЅС‹ Р»РёР±Рѕ РІС‹РєР»СЋС‡РµРЅС‹
+		if ($dump_file_public == $dump_file_kernel) // если обе опции либо включены либо выключены
 			return !$dump_file_public;
 
-		if (strpos(self::$DOCUMENT_ROOT_SITE.BX_ROOT, $path) !== false) // РЅР° РїСѓС‚Рё Рє /bitrix
+		if (strpos(self::$DOCUMENT_ROOT_SITE.BX_ROOT, $path) !== false) // на пути к /bitrix
 			return false;
 
-		if (strpos($path, self::$DOCUMENT_ROOT_SITE.BX_ROOT) === false) // Р·Р° РїСЂРµРґРµР»Р°РјРё /bitrix 
+		if (strpos($path, self::$DOCUMENT_ROOT_SITE.BX_ROOT) === false) // за пределами /bitrix
 			return !$dump_file_public;
 
 		$path_root = substr($path, strlen(self::$DOCUMENT_ROOT_SITE));
@@ -134,7 +128,7 @@ class CBackup
 			return !$dump_file_public;
 		}
 
-		// РІСЃС‘ РѕСЃС‚Р°Р»СЊРЅРѕРµ РІ РїР°РїРєРµ bitrix - СЏРґСЂРѕ
+		// всё остальное в папке bitrix - ядро
 		return !$dump_file_kernel;
 	}
 
@@ -174,7 +168,7 @@ class CBackup
 		{
 			$preg_mask_array = array();
 			foreach($skip_mask_array as $a)
-				$preg_mask_array[] = CBackup::_preg_escape($a); 
+				$preg_mask_array[] = CBackup::_preg_escape($a);
 		}
 
 		reset($skip_mask_array);
@@ -182,7 +176,7 @@ class CBackup
 		{
 			if (strpos($mask,'/')===0) // absolute path
 			{
-				if (strpos($mask,'*') === false) // РЅРµС‚ Р·РІРµР·РґРѕС‡РєРё 
+				if (strpos($mask,'*') === false) // нет звездочки
 				{
 					if (strpos($path.'/',$mask.'/') === 0)
 						return true;
@@ -313,7 +307,7 @@ class CBackup
 				if (!$string) // VIEW
 				{
 					$string = $row['Create View'];
-					if (!$B->file_put_contents_ex($strDumpFile,  
+					if (!$B->file_put_contents_ex($strDumpFile,
 						"-- -----------------------------------\n".
 						"-- Creating view ".$DB->ForSQL($table)."\n".
 						"-- -----------------------------------\n".
@@ -326,7 +320,7 @@ class CBackup
 				elseif (CBackup::SkipTableData($table))
 				{
 					$string = str_replace('CREATE TABLE', 'CREATE TABLE IF NOT EXISTS', $string);
-					if (!$B->file_put_contents_ex($strDumpFile,  
+					if (!$B->file_put_contents_ex($strDumpFile,
 						"-- -----------------------------------\n".
 						"-- Creating empty table ".$DB->ForSQL($table)."\n".
 						"-- -----------------------------------\n".
@@ -337,7 +331,7 @@ class CBackup
 				}
 
 
-				if (!$B->file_put_contents_ex($strDumpFile,  
+				if (!$B->file_put_contents_ex($strDumpFile,
 					"-- -----------------------------------\n".
 					"-- Dumping table ".$DB->ForSQL($table)."\n".
 					"-- -----------------------------------\n".
@@ -375,8 +369,8 @@ class CBackup
 						LIMIT ".($arTable["LAST_ID"] ? $arTable["LAST_ID"].", ": "").$LIMIT;
 				}
 
-				$rsSource = $DB->Query($strSelect, false, '', array("fixed_connection"=>true));
-				$cnt = $rsSource->SelectedRowsCount();
+				if (!$rsSource = self::QueryUnbuffered($strSelect))
+					RaiseErrorAndDie('SQL Query Error');
 				while($arSource = $rsSource->Fetch())
 				{
 					if(!$strInsert)
@@ -415,8 +409,13 @@ class CBackup
 					}
 
 					if (!haveTime())
+					{
+						self::FreeResult();
 						return $strInsert ? $B->file_put_contents_ex($strDumpFile, $strInsert.";\n") : true;
+					}
 				}
+				$cnt = $rsSource->SelectedRowsCount();
+				self::FreeResult();
 			}
 
 			if($strInsert && !$B->file_put_contents_ex($strDumpFile, $strInsert.";\n"))
@@ -431,6 +430,27 @@ class CBackup
 
 		$arState['end'] = true;
 		return true;
+	}
+
+	public function QueryUnbuffered($q)
+	{
+		global $DB;
+		if (defined('BX_USE_MYSQLI') && BX_USE_MYSQLI === true)
+			$DB->result = mysqli_query($DB->db_Conn, $q, MYSQLI_USE_RESULT);
+		else
+			$DB->result = mysql_unbuffered_query($q, $DB->db_Conn);
+		$rsSource = new CDBResult($DB->result);
+		$rsSource->DB = $DB;
+		return $rsSource;
+	}
+
+	public function FreeResult()
+	{
+		global $DB;
+		if (defined('BX_USE_MYSQLI') && BX_USE_MYSQLI === true)
+			mysqli_free_result($DB->result);
+		else
+			mysql_free_result($DB->result);
 	}
 
 	public function file_put_contents_ex($strDumpFile, $str)
@@ -523,22 +543,22 @@ class CDirScan
 	{
 	}
 
-	public static function ProcessDirBefore($f)
+	function ProcessDirBefore($f)
 	{
 		return true;
 	}
 
-	public static function ProcessDirAfter($f)
+	function ProcessDirAfter($f)
 	{
 		return true;
 	}
 
-	public static function ProcessFile($f)
+	function ProcessFile($f)
 	{
 		return true;
 	}
 
-	public function Skip($f)
+	function Skip($f)
 	{
 		if ($this->startPath)
 		{
@@ -554,7 +574,7 @@ class CDirScan
 		return false;
 	}
 
-	public function Scan($dir)
+	function Scan($dir)
 	{
 		$dir = str_replace('\\','/',$dir);
 
@@ -571,7 +591,7 @@ class CDirScan
 		#############################
 		# DIR
 		#############################
-			if (!$this->startPath) // РµСЃР»Рё РЅР°С‡Р°Р»СЊРЅС‹Р№ РїСѓС‚СЊ РЅР°Р№РґРµРЅ РёР»Рё РЅРµ Р·Р°РґР°РЅ
+			if (!$this->startPath) // если начальный путь найден или не задан
 			{
 				$r = $this->ProcessDirBefore($dir);
 				if ($r === false)
@@ -599,14 +619,14 @@ class CDirScan
 			}
 			closedir($handle);
 
-			if (!$this->startPath) // РµСЃР»Рё РЅР°С‡Р°Р»СЊРЅС‹Р№ РїСѓС‚СЊ РЅР°Р№РґРµРЅ РёР»Рё РЅРµ Р·Р°РґР°РЅ
+			if (!$this->startPath) // если начальный путь найден или не задан
 			{
 				if ($this->ProcessDirAfter($dir) === false)
 					return false;
 				$this->DirCount++;
 			}
 		}
-		else 
+		else
 		{
 		#############################
 		# FILE
@@ -614,7 +634,7 @@ class CDirScan
 			$r = $this->ProcessFile($dir);
 			if ($r === false)
 				return false;
-			elseif ($r === 'BREAK') // РµСЃР»Рё С„Р°Р№Р» РѕР±СЂР°Р±РѕС‚Р°РЅ С‡Р°СЃС‚РёС‡РЅРѕ
+			elseif ($r === 'BREAK') // если файл обработан частично
 				return $r;
 			$this->FileCount++;
 		}
@@ -625,7 +645,7 @@ class CDirScan
 class CDirRealScan extends CDirScan
 {
 	var $arSkip = array();
-	public function ProcessFile($f)
+	function ProcessFile($f)
 	{
 		global $tar;
 		while(haveTime())
@@ -697,7 +717,7 @@ class CDirRealScan extends CDirScan
 		return 'BREAK';
 	}
 
-	public static function ProcessDirBefore($f)
+	function ProcessDirBefore($f)
 	{
 		global $tar;
 		return $tar->addFile($f);
@@ -734,43 +754,55 @@ class CPasswordStorage
 
 	public static function Init()
 	{
-		if (!function_exists('mcrypt_encrypt'))
+		if (!function_exists('mcrypt_encrypt') && !function_exists('openssl_encrypt'))
 			return false;
 		return true;
 	}
 
-	function getEncryptKey()
+	public static function getEncryptKey()
 	{
-		static $LICENSE_KEY;
+		static $key;
 
-		if (!$LICENSE_KEY)
+		if ($key === null)
 		{
+			/** @var string $LICENSE_KEY defined in the license_key.php */
 			if (file_exists($file = $_SERVER['DOCUMENT_ROOT'].BX_ROOT.'/license_key.php'))
 				include($file);
-			if (!$LICENSE_KEY)
+			if ($LICENSE_KEY == '')
 				$LICENSE_KEY = 'DEMO';
+
+			$key = $LICENSE_KEY;
+
+			$l = CTar::strlen($key);
+			if ($l > 56)
+				$key = CTar::substr($key, 0, 56);
+			elseif ($l < 16)
+				$key = str_repeat($key, ceil(16/$l));
 		}
-		return $LICENSE_KEY;
+
+		return $key;
 	}
 
-	static function Set($strName, $strVal)
+	public static function Set($strName, $strVal)
 	{
 		if (!self::Init())
 			return false;
 
-		$temporary_cache = $strVal ? mcrypt_encrypt(MCRYPT_BLOWFISH, self::getEncryptKey(), self::SIGN.$strVal, MCRYPT_MODE_ECB, pack("a8",self::getEncryptKey())) : '';
+		$temporary_cache = '';
+		if ($strVal)
+			$temporary_cache = CTar::encrypt(self::SIGN.$strVal, self::getEncryptKey());
 		return COption::SetOptionString('main', $strName, base64_encode($temporary_cache));
 	}
 
-	static function Get($strName)
+	public static function Get($strName)
 	{
 		if (!self::Init())
 			return false;
 
 		$temporary_cache = base64_decode(COption::GetOptionString('main', $strName, ''));
-		$pass = mcrypt_decrypt(MCRYPT_BLOWFISH, self::getEncryptKey(), $temporary_cache, MCRYPT_MODE_ECB, pack("a8",self::getEncryptKey()));
+		$pass = CTar::decrypt($temporary_cache, self::getEncryptKey());
 		if (CTar::substr($pass, 0, 6) == self::SIGN)
-			return str_replace("\x0","",CTar::substr($pass, 6));
+			return CTar::substr(preg_replace('#\x00+$#', '', $pass), 6);
 		return false;
 	}
 }
@@ -803,7 +835,7 @@ class CTar
 	##############
 	# READ
 	# {
-	public function openRead($file)
+	function openRead($file)
 	{
 		if (!isset($this->gzip) && (self::substr($file,-3)=='.gz' || self::substr($file,-4)=='.tgz'))
 			$this->gzip = true;
@@ -827,20 +859,21 @@ class CTar
 					return $this->res;
 				}
 
-				if (($version = trim($data['version'])) != '1.0')
+				$version = trim($data['version']);
+				if (version_compare($version, '1.2', '>'))
 					return $this->Error('Unsupported archive version: '.$version, 'ENC_VER');
 
 				$key = $this->getEncryptKey();
 				$this->BlockHeader = $this->Block = 1;
 
-				if (!$key || self::substr($str, 0, 256) != mcrypt_decrypt(MCRYPT_BLOWFISH, $key, $data['enc'], MCRYPT_MODE_ECB, pack("a8",$key)))
+				if (!$key || self::substr($str, 0, 256) != self::decrypt($data['enc'], $key))
 					return $this->Error('Invalid encryption key', 'ENC_KEY');
 			}
 		}
 		return $this->res;
 	}
 
-	public function readBlock($bIgnoreOpenNextError = false)
+	function readBlock($bIgnoreOpenNextError = false)
 	{
 		if (!$this->Buffer)
 		{
@@ -848,7 +881,7 @@ class CTar
 			if ($str === '' && $this->openNext($bIgnoreOpenNextError))
 				$str = $this->gzip ? gzread($this->res, $this->BufferSize) : fread($this->res, $this->BufferSize);
 			if ($str !== '' && $key = $this->getEncryptKey())
-				$str = mcrypt_decrypt(MCRYPT_BLOWFISH, $key, $str, MCRYPT_MODE_ECB, pack("a8",$key));
+				$str = self::decrypt($str, $key);
 			$this->Buffer = $str;
 		}
 
@@ -863,9 +896,9 @@ class CTar
 		return $str;
 	}
 
-	public function SkipFile()
+	function SkipFile()
 	{
-		if ($this->Skip(ceil($this->header['size']/512)))
+		if ($this->Skip(ceil(intval($this->header['size'])/512)))
 		{
 			$this->header = null;
 			return true;
@@ -873,7 +906,7 @@ class CTar
 		return false;
 	}
 
-	public function Skip($Block)
+	function Skip($Block)
 	{
 		if ($Block == 0)
 			return true;
@@ -910,12 +943,12 @@ class CTar
 		return $this->Error('File seek error (file: '.$this->file.', position: '.$NewPos.')');
 	}
 
-	public function SkipTo($Block)
+	function SkipTo($Block)
 	{
 		return $this->Skip($Block - $this->Block);
 	}
 
-	public function readHeader($Long = false)
+	function readHeader($Long = false)
 	{
 		$str = '';
 		while(trim($str) == '')
@@ -935,15 +968,15 @@ class CTar
 		$chk = $data['devmajor'].$data['devminor'];
 
 		if (!is_numeric(trim($data['checksum'])) || $chk!='' && $chk!=0)
-			return $this->Error('Archive is corrupted, wrong block: '.($this->Block-1));
+			return $this->Error('Archive is corrupted, wrong block: '.($this->Block-1).', file: '.$this->file.', md5sum: '.md5_file($this->file));
 
-		$header['filename'] = trim($data['prefix'].'/'.$data['filename'],'/');
+		$header['filename'] = trim(trim($data['prefix'], "\x00").'/'.trim($data['filename'], "\x00"),'/');
 		$header['mode'] = OctDec($data['mode']);
 		$header['uid'] = OctDec($data['uid']);
 		$header['gid'] = OctDec($data['gid']);
 		$header['size'] = OctDec($data['size']);
 		$header['mtime'] = OctDec($data['mtime']);
-		$header['type'] = $data['type'];
+		$header['type'] = trim($data['type'], "\x00");
 //		$header['link'] = $data['link'];
 
 		if (self::strpos($header['filename'],'./') === 0)
@@ -978,14 +1011,14 @@ class CTar
 		return $header;
 	}
 
-	public function checkCRC($str, $data)
+	function checkCRC($str, $data)
 	{
 		$checksum = $this->checksum($str);
 		$res = octdec($data['checksum']) == $checksum || $data['checksum']===0 && $checksum==256;
 		return $res;
 	}
 
-	public function extractFile()
+	function extractFile()
 	{
 		if ($this->header === null)
 		{
@@ -1017,13 +1050,13 @@ class CTar
 			else
 				return $this->Skip($this->ReadBlockCurrent);
 		}
-		else // С„Р°Р№Р» СѓР¶Рµ С‡Р°СЃС‚РёС‡РЅРѕ СЂР°СЃРїР°РєРѕРІР°РЅ, РїСЂРѕРґРѕР»Р¶Р°РµРј РЅР° С‚РѕРј Р¶Рµ С…РёС‚Рµ
+		else // файл уже частично распакован, продолжаем на том же хите
 		{
 			$header = $this->header;
 			$this->lastPath = $f = $this->path.'/'.$header['filename'];
 		}
 
-		if ($header['type'] != 5) // РїРёС€РµРј РєРѕРЅС‚РµРЅС‚ РІ С„Р°Р№Р» 
+		if ($header['type'] != 5) // пишем контент в файл
 		{
 			if (!$rs)
 			{
@@ -1048,9 +1081,10 @@ class CTar
 			}
 			fclose($rs);
 
+			if (($s = filesize($f)) != $header['size'])
+				return $this->Error('File size is wrong: '.$header['filename'].' (real: '.$s.'  expected: '.$header['size'].')');
+
 			//chmod($f, $header['mode']);
-			if (($s=filesize($f)) != $header['size'])
-				return $this->Error('File size is wrong: '.$header['filename']).' (actual: '.$s.'  expected: '.$header['size'].')';
 		}
 
 		if ($this->header['type']==5)
@@ -1066,7 +1100,7 @@ class CTar
 		return true;
 	}
 
-	public function openNext($bIgnoreOpenNextError)
+	function openNext($bIgnoreOpenNextError)
 	{
 		if (file_exists($file = $this->getNextName()))
 		{
@@ -1082,6 +1116,8 @@ class CTar
 	{
 		$file = self::getFirstName($file);
 
+		if (!file_exists($file))
+			return false;
 		$f = fopen($file, 'rb');
 		fseek($f, 12);
 		if (fread($f, 2) == 'LN')
@@ -1096,9 +1132,9 @@ class CTar
 	##############
 
 	##############
-	# WRITE 
+	# WRITE
 	# {
-	public function openWrite($file)
+	function openWrite($file)
 	{
 		if (!isset($this->gzip) && (self::substr($file,-3)=='.gz' || self::substr($file,-4)=='.tgz'))
 			$this->gzip = true;
@@ -1110,7 +1146,7 @@ class CTar
 
 
 		$this->Block = 0;
-		while(file_exists($file1 = $this->getNextName($file))) // РЅР°С…РѕРґРёРј РїРѕСЃР»РµРґРЅРёР№ Р°СЂС…РёРІ
+		while(file_exists($file1 = $this->getNextName($file))) // находим последний архив
 		{
 			$this->Block += ceil($this->ArchiveSizeLimit / 512);
 			$file = $file1;
@@ -1121,7 +1157,7 @@ class CTar
 			return $this->Error('Can\'t get data size: '.$file);
 
 		$this->Block += $size / 512;
-		if ($size >= $this->ArchiveSizeLimit) // РµСЃР»Рё РїРѕСЃР»РµРґРЅРёР№ Р°СЂС…РёРІ РїРѕР»РѕРЅ
+		if ($size >= $this->ArchiveSizeLimit) // если последний архив полон
 		{
 			$file = $file1;
 			$size = 0;
@@ -1129,10 +1165,11 @@ class CTar
 		$this->ArchiveSizeCurrent = $size;
 
 		$res = $this->open($file, 'a');
-		if ($res && $this->Block == 0 && ($key = $this->getEncryptKey())) // Р·Р°РїРёС€РµРј СЃР»СѓР¶РµР±РЅС‹Р№ Р·Р°РіРѕР»РѕРІРѕРє РґР»СЏ Р·Р°С€РёС„СЂРѕРІР°РЅРЅРѕРіРѕ Р°СЂС…РёРІР°
+		if ($res && $this->Block == 0 && ($key = $this->getEncryptKey())) // запишем служебный заголовок для зашифрованного архива
 		{
-			$enc = pack("a100a90a10a56",md5(uniqid(rand(), true)), self::BX_SIGNATURE, "1.0", "");
-			$enc .= mcrypt_encrypt(MCRYPT_BLOWFISH, $key, $enc, MCRYPT_MODE_ECB, pack("a8",$key));
+			$ver = function_exists('openssl_encrypt') ? '1.2' : '1.1';
+			$enc = pack("a100a90a10a56",md5(uniqid(rand(), true)), self::BX_SIGNATURE, $ver, "");
+			$enc .= $this->encrypt($enc, $key);
 			if (!($this->gzip ? gzwrite($this->res, $enc) : fwrite($this->res, $enc)))
 				return $this->Error('Error writing to file');
 			$this->Block = 1;
@@ -1141,8 +1178,8 @@ class CTar
 		return $res;
 	}
 
-	// СЃРѕР·РґР°РґРёРј РїСѓСЃС‚РѕР№ gzip СЃ СЌРєСЃС‚СЂР° РїРѕР»РµРј
-	public function createEmptyGzipExtra($file)
+	// создадим пустой gzip с экстра полем
+	function createEmptyGzipExtra($file)
 	{
 		if (file_exists($file))
 			return $this->Error('File already exists: '.$file);
@@ -1152,7 +1189,9 @@ class CTar
 		gzwrite($f,'');
 		gzclose($f);
 
-		$data = file_get_contents($file);
+		// $data = file_get_contents($file);
+		$data = "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\xff\xff\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"; // buggy zlib 1.2.7
+
 
 		if (!($f = fopen($file, 'w')))
 			return $this->Error('Can\'t open file for writing: '.$file);
@@ -1161,13 +1200,13 @@ class CTar
 		if ($ar['FLG'] != 0)
 			return $this->Error('Error writing extra field: already exists');
 
-		$EXTRA = "\x00\x00\x00\x00".self::BX_EXTRA; // 10 Р±Р°Р№С‚
+		$EXTRA = "\x00\x00\x00\x00".self::BX_EXTRA; // 10 байт
 		fwrite($f,$ar['bin0']."\x04".$ar['bin1'].chr(self::strlen($EXTRA))."\x00".$EXTRA.self::substr($data,10));
 		fclose($f);
 		return true;
 	}
 
-	public function writeBlock($str)
+	function writeBlock($str)
 	{
 		$l = self::strlen($str);
 		if ($l!=512)
@@ -1195,19 +1234,19 @@ class CTar
 		return true;
 	}
 
-	public function flushBuffer()
+	function flushBuffer()
 	{
 		if (!$str = $this->Buffer)
 			return true;
 		$this->Buffer = '';
 
 		if ($key = $this->getEncryptKey())
-			$str = mcrypt_encrypt(MCRYPT_BLOWFISH, $key, $str, MCRYPT_MODE_ECB, pack("a8",$key));
+			$str = $this->encrypt($str, $key);
 
 		return $this->gzip ? gzwrite($this->res, $str) : fwrite($this->res, $str);
 	}
 
-	public function writeHeader($ar)
+	function writeHeader($ar)
 	{
 		$header0 = pack("a100a8a8a8a12a12", $ar['filename'], decoct($ar['mode']), decoct($ar['uid']), decoct($ar['gid']), decoct($ar['size']), decoct($ar['mtime']));
 		$header1 = pack("a1a100a6a2a32a32a8a8a155", $ar['type'],'','','','','','', '', $ar['prefix']);
@@ -1217,7 +1256,7 @@ class CTar
 		return $this->writeBlock($header) || $this->Error('Error writing header');
 	}
 
-	public function addFile($f)
+	function addFile($f)
 	{
 		$f = str_replace('\\', '/', $f);
 		$path = $this->prefix.self::substr($f,self::strlen($this->path) + 1);
@@ -1294,9 +1333,9 @@ class CTar
 	##############
 
 	##############
-	# BASE 
+	# BASE
 	# {
-	public function open($file, $mode='r')
+	function open($file, $mode='r')
 	{
 		$this->file = $file;
 		$this->mode = $mode;
@@ -1304,13 +1343,13 @@ class CTar
 		if (is_dir($file))
 			return $this->Error('File is directory: '.$file);
 
-		if ($this->EncryptKey && !function_exists('mcrypt_encrypt'))
-			return $this->Error('Function &quot;mcrypt_encrypt&quot; is not available');
+		if ($this->EncryptKey && !function_exists('mcrypt_encrypt') && !function_exists('openssl_encrypt'))
+			return $this->Error('Function mcrypt_encrypt/openssl_encrypt is not available');
 		
 		if ($mode == 'r' && !file_exists($file))
 			return $this->Error('File does not exist: '.$file);
 
-		if ($this->gzip) 
+		if ($this->gzip)
 		{
 			if(!function_exists('gzopen'))
 				return $this->Error('Function &quot;gzopen&quot; is not available');
@@ -1327,7 +1366,7 @@ class CTar
 		return $this->res;
 	}
 
-	public function close()
+	function close()
 	{
 		if ($this->mode == 'a')
 			$this->flushBuffer();
@@ -1338,7 +1377,7 @@ class CTar
 
 			if ($this->mode == 'a')
 			{
-				// РґРѕР±Р°РІРёРј С„Р°РєС‚РёС‡РµСЃРєРёР№ СЂР°Р·РјРµСЂ РІСЃРµС… РЅРµСЃР¶Р°С‚С‹С… РґР°РЅРЅС‹С… РІ extra РїРѕР»Рµ
+				// добавим фактический размер всех несжатых данных в extra поле
 				$f = fopen($this->file, 'rb+');
 				fseek($f, 18);
 				fwrite($f, pack("V", $this->ArchiveSizeCurrent));
@@ -1346,7 +1385,7 @@ class CTar
 
 				$this->dataSizeCache[$this->file] = $this->ArchiveSizeCurrent;
 
-				// СЃРѕС…СЂР°РЅРёРј РЅРѕРјРµСЂ РїРѕСЃР»РµРґРЅРµР№ С‡Р°СЃС‚Рё РІ РїРµСЂРІС‹Р№ Р°СЂС…РёРІ РґР»СЏ РјРЅРѕРіРѕС‚РѕРјРЅС‹С… Р°СЂС…РёРІРѕРІ
+				// сохраним номер последней части в первый архив для многотомных архивов
 				if (preg_match('#^(.+)\.([0-9]+)$#', $this->file, $regs))
 				{
 					$f = fopen($regs[1], 'rb+');
@@ -1382,7 +1421,7 @@ class CTar
 		return $c;
 	}
 
-	public static function checksum($s)
+	function checksum($s)
 	{
 		$chars = count_chars(self::substr($s,0,148).'        '.self::substr($s,156,356));
 		$sum = 0;
@@ -1412,7 +1451,7 @@ class CTar
 		return strpos($s, $a);
 	}
 
-	public function getDataSize($file)
+	function getDataSize($file)
 	{
 		$size = &$this->dataSizeCache[$file];
 		if (!$size)
@@ -1442,7 +1481,7 @@ class CTar
 		return $size;
 	}
 
-	public function Error($str = '', $code = '')
+	function Error($str = '', $code = '')
 	{
 		if ($code)
 			$this->LastErrCode = $code;
@@ -1450,7 +1489,7 @@ class CTar
 		return false;
 	}
 
-	public function ErrorAndSkip($str = '', $code = '')
+	function ErrorAndSkip($str = '', $code = '')
 	{
 		$this->Error($str, $code);
 		$this->SkipFile();
@@ -1459,13 +1498,13 @@ class CTar
 		return false;
 	}
 
-	public function xmkdir($dir)
+	public static function xmkdir($dir)
 	{
 		if (!file_exists($dir))
 		{
 			$upper_dir = dirname($dir);
 			if (!file_exists($upper_dir) && !self::xmkdir($upper_dir))
-				return $this->Error('Can\'t create folder: '.$upper_dir);
+				return false;
 
 			return mkdir($dir);
 		}
@@ -1473,7 +1512,7 @@ class CTar
 		return is_dir($dir);
 	}
 
-	public function getEncryptKey()
+	function getEncryptKey()
 	{
 		if (!$this->EncryptKey)
 			return false;
@@ -1483,7 +1522,7 @@ class CTar
 		return $key;
 	}
 
-	public function getFileInfo($f)
+	function getFileInfo($f)
 	{
 		$f = str_replace('\\', '/', $f);
 		$path = self::substr($f,self::strlen($this->path) + 1);
@@ -1524,13 +1563,32 @@ class CTar
 		return preg_replace('#\.[0-9]+$#','',$file);
 	}
 
+	public static function encrypt($data, $md5_key)
+	{
+		if ($m = self::strlen($data)%8)
+			$data .= str_repeat("\x00",  8 - $m);
+		if (function_exists('openssl_encrypt'))
+			return openssl_encrypt($data, 'BF-ECB', $md5_key, OPENSSL_RAW_DATA | OPENSSL_NO_PADDING);
+		else
+			return mcrypt_encrypt(MCRYPT_BLOWFISH, $md5_key, $data, MCRYPT_MODE_ECB);
+	}
+
+	public static function decrypt($data, $md5_key)
+	{
+		if (function_exists('openssl_decrypt'))
+			$val = openssl_decrypt($data, 'BF-ECB', $md5_key, OPENSSL_RAW_DATA | OPENSSL_NO_PADDING);
+		else
+			$val = mcrypt_decrypt(MCRYPT_BLOWFISH, $md5_key, $data, MCRYPT_MODE_ECB);
+		return $val;
+	}
+
 	# }
 	##############
 }
 
 class CTarCheck extends CTar
 {
-	public function extractFile()
+	function extractFile()
 	{
 		$header = $this->readHeader();
 		if($header === false || $header === 0)
@@ -1542,7 +1600,7 @@ class CTarCheck extends CTar
 
 class CloudDownload
 {
-	public function __construct($id)
+	function __construct($id)
 	{
 		$this->id = $id;
 		$this->last_bucket_path = '';
@@ -1556,7 +1614,7 @@ class CloudDownload
 			return;
 	}
 
-	public function Scan($path)
+	function Scan($path)
 	{
 		$this->path = $path;
 
@@ -1573,7 +1631,7 @@ class CloudDownload
 				}
 
 				$name = $this->path = $path.'/'.$file;
-				if (!haveTime()) // РЎРѕС…СЂР°РЅСЏРµС‚СЃСЏ РїСѓС‚СЊ С„Р°Р№Р»Р°, РєРѕС‚РѕСЂС‹Р№ РµС‰Рµ РїСЂРµРґСЃС‚РѕРёС‚ СЃРѕС…СЂР°РЅРёС‚СЊ, TODO: РїРѕС€Р°РіРѕРІРѕРµ СЃРєР°С‡РёРІР°РЅРёРµ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ
+				if (!haveTime()) // Сохраняется путь файла, который еще предстоит сохранить, TODO: пошаговое скачивание больших файлов
 					return false;
 
 				$HTTP = new CHTTP;

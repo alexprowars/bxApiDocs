@@ -1,6 +1,6 @@
 <?
 /*********************************************
-	Ð£ÑÑ‚Ð°Ñ€ÐµÐ²ÑˆÐ¸Ðµ Ñ„ÑƒÐ½ÐºÑ†Ð¸Ð¸ (Ð´Ð»Ñ ÑÐ¾Ð²Ð¼ÐµÑÑ‚Ð¸Ð¼Ð¾ÑÑ‚Ð¸)
+	Óñòàðåâøèå ôóíêöèè (äëÿ ñîâìåñòèìîñòè)
 *********************************************/
 
 class CFormOutput_old
@@ -12,7 +12,7 @@ class CFormOutput_old
 	 * @param array $arParams
 	 * @return bool
 	 */
-	public function Init($arParams, $admin = false)
+	function Init($arParams, $admin = false)
 	{
 		global $APPLICATION, $USER;
 
@@ -160,9 +160,9 @@ class CFormOutput_old
 /*****************************************/
 	/*              Filter methods. Move to component     */
 	/*****************************************/
-	public static function __checkFilter(&$str_error) // check of filter values
+	function __checkFilter(&$str_error) // check of filter values
 	{
-		global $strError, $MESS, $HTTP_GET_VARS, $arrFORM_FILTER;
+		global $strError, $MESS, $arrFORM_FILTER;
 		global $find_date_create_1, $find_date_create_2;
 		$str = "";
 
@@ -183,8 +183,8 @@ class CFormOutput_old
 						$title = ($arr["TITLE_TYPE"]=="html") ? strip_tags(htmlspecialcharsback($arr["TITLE"])) : $arr["TITLE"];
 						if ($arr["FILTER_TYPE"]=="date")
 						{
-							$date1 = $HTTP_GET_VARS["find_".$arr["FID"]."_1"];
-							$date2 = $HTTP_GET_VARS["find_".$arr["FID"]."_2"];
+							$date1 = $_GET["find_".$arr["FID"]."_1"];
+							$date2 = $_GET["find_".$arr["FID"]."_2"];
 							CheckFilterDates($date1, $date2, $date1_wrong, $date2_wrong, $date2_less);
 							if ($date1_wrong=="Y")
 								$str .= str_replace("#TITLE#", $title, GetMessage("FORM_WRONG_DATE1"))."<br>";
@@ -195,8 +195,8 @@ class CFormOutput_old
 						}
 						if ($arr["FILTER_TYPE"]=="integer")
 						{
-							$int1 = intval($HTTP_GET_VARS["find_".$arr["FID"]."_1"]);
-							$int2 = intval($HTTP_GET_VARS["find_".$arr["FID"]."_2"]);
+							$int1 = intval($_GET["find_".$arr["FID"]."_1"]);
+							$int2 = intval($_GET["find_".$arr["FID"]."_2"]);
 							if ($int1>0 && $int2>0 && $int2<$int1)
 							{
 								$str .= str_replace("#TITLE#", $title, GetMessage("FORM_INT2_LESS"))."<br>";
@@ -211,7 +211,7 @@ class CFormOutput_old
 		if (strlen($str)>0) return false; else return true;
 	}
 
-	public function __prepareFilter()
+	function __prepareFilter()
 	{
 		$FilterArr = Array(
 			"find_id",
@@ -325,7 +325,7 @@ class CFormOutput_old
 	 * Use: $FORM->Out();
 	 *
 	 */
-	public function Out()
+	function Out()
 	{
 		global $APPLICATION, $USER;
 
@@ -489,7 +489,7 @@ class CFormOutput_old
 		echo $strReturn;
 	}
 
-	public function getData(&$arResult)
+	function getData(&$arResult)
 	{
 		global $APPLICATION, $USER;
 
@@ -603,7 +603,7 @@ class CFormOutput_old
 		return $arResult;
 	}
 
-	public function getListData()
+	function getListData()
 	{
 		$arFilter = $this->__prepareFilter();
 		$arResult = $this->__prepareDataForTpl();
@@ -611,7 +611,7 @@ class CFormOutput_old
 		return $arResult;
 	}
 
-	public function __prepareDataForTpl()
+	function __prepareDataForTpl()
 	{
 		global $APPLICATION;
 
@@ -638,13 +638,13 @@ class CFormOutput_old
 	 * Initialize Captcha
 	 *
 	 */
-	public function CaptchaInitialize()
+	function CaptchaInitialize()
 	{
 		$this->CAPTCHACode = $GLOBALS["APPLICATION"]->CaptchaGetCode();
 		//echo $this->CAPTCHACode;
 	}
 
-	public function ShowAnswer($FIELD_SID)
+	function ShowAnswer($FIELD_SID)
 	{
 		global $USER;
 

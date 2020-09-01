@@ -182,7 +182,7 @@ class CKeepStatistics
 				}
 
 				// We did not check for searcher
-				if(strlen($_SESSION["SESS_SEARCHER_ID"])<=0)
+				if($_SESSION["SESS_SEARCHER_ID"] == '')
 				{
 					// is it searcher hit?
 					$strSql = "
@@ -257,7 +257,7 @@ class CKeepStatistics
 					// save indexed page if neccessary
 					if ($_SESSION["SESS_SEARCHER_SAVE_STATISTIC"]=="Y")
 					{
-						$sql_HIT_KEEP_DAYS = (strlen($_SESSION["SESS_SEARCHER_HIT_KEEP_DAYS"])>0) ? intval($_SESSION["SESS_SEARCHER_HIT_KEEP_DAYS"]) : "null";
+						$sql_HIT_KEEP_DAYS = ($_SESSION["SESS_SEARCHER_HIT_KEEP_DAYS"] <> '') ? intval($_SESSION["SESS_SEARCHER_HIT_KEEP_DAYS"]) : "null";
 						$arFields = Array(
 							"DATE_HIT" => $DB_now,
 							"SEARCHER_ID" => intval($_SESSION["SESS_SEARCHER_ID"]),
@@ -300,7 +300,7 @@ class CKeepStatistics
 							Country detection
 					************************************************/
 
-					if(strlen($_SESSION["SESS_COUNTRY_ID"])<=0)
+					if($_SESSION["SESS_COUNTRY_ID"] == '')
 					{
 						$obCity = new CCity;
 						$_SESSION["SESS_COUNTRY_ID"] = $obCity->GetCountryCode();
@@ -423,7 +423,7 @@ class CKeepStatistics
 
 						// look for the same IP?
 						$day_host_counter = 1;
-						$day_host_counter_site = strlen($SITE_ID)>0? 1: 0;
+						$day_host_counter_site = $SITE_ID <> ''? 1: 0;
 						$strSql = "
 							SELECT S.FIRST_SITE_ID
 							FROM b_stat_session S
@@ -507,21 +507,21 @@ class CKeepStatistics
 						}
 
 						// site is not defined
-						if (strlen($SITE_ID)>0)
+						if ($SITE_ID <> '')
 						{
-							// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє "РїРѕ РґРЅСЏРј" РґР»СЏ С‚РµРєСѓС‰РµРіРѕ СЃР°Р№С‚Р°
+							// обновляем счетчик "по дням" для текущего сайта
 							$arFields = Array(
 								"SESSIONS"	=> 1,
 								"C_HOSTS"	=> intval($day_host_counter_site),
 								"SESSION"	=> 1,
 								"HOST"		=> intval($day_host_counter_site),
 							);
-							// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+							// обновим счетчики траффика для текущего дня
 							$rows = CTraffic::IncParam(array(), $arFields, $SITE_ID);
-							// РµСЃР»Рё С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ РґР»СЏ СЃР°Р№С‚Р° РІ Р±Р°Р·Рµ РµС‰Рµ РЅРµС‚ С‚Рѕ
+							// если текущего дня для сайта в базе еще нет то
 							if ($rows!==false && intval($rows)<=0)
 							{
-								// РґРѕР±Р°РІР»СЏРµРј РµРіРѕ
+								// добавляем его
 								CStatistics::SetNewDayForSite(
 									$SITE_ID,
 									1,	// HOSTS
@@ -529,7 +529,7 @@ class CKeepStatistics
 									1	// SESSIONS
 									);
 
-								// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+								// обновим счетчики траффика для текущего дня
 								CTraffic::IncParam(
 									array(),
 									array(
@@ -541,8 +541,8 @@ class CKeepStatistics
 							}
 						}
 
-						// РµСЃР»Рё СЃС‚СЂР°РЅР° РѕРїСЂРµРґРµР»РµРЅР° С‚Рѕ
-						if (strlen($_SESSION["SESS_COUNTRY_ID"])>0)
+						// если страна определена то
+						if ($_SESSION["SESS_COUNTRY_ID"] <> '')
 						{
 							$arFields = Array(
 								"SESSIONS"	=> 1,
@@ -560,7 +560,7 @@ class CKeepStatistics
 							CStatistics::UpdateCity($_SESSION["SESS_CITY_ID"], $arFields);
 						}
 
-						// РѕР±РЅРѕРІР»СЏРµРј РіРѕСЃС‚СЏ
+						// обновляем гостя
 						$arFields = Array(
 							"SESSIONS" => "SESSIONS + 1",
 							"LAST_SESSION_ID" => $_SESSION["SESS_SESSION_ID"],
@@ -573,19 +573,19 @@ class CKeepStatistics
 						{
 							$arFields["LAST_CITY_INFO"] = "'".$obCity->ForSQL()."'";
 						}
-						// РµСЃР»Рё СЌС‚Рѕ РїСЂСЏРјРѕР№ Р·Р°С…РѕРґ РїРѕ СЂРµРєР»Р°РјРЅРѕР№ РєР°РјРїР°РЅРёРё С‚Рѕ
+						// если это прямой заход по рекламной кампании то
 						if (intval($_SESSION["SESS_ADV_ID"])>0)
 						{
-							// РѕР±РЅРѕРІР»СЏРµРј СЂРµРєР»Р°РјРЅСѓСЋ РєР°РјРїР°РЅРёСЋ РїРѕСЃР»РµРґРЅРµРіРѕ Р·Р°С…РѕРґР° РіРѕСЃС‚СЏ
+							// обновляем рекламную кампанию последнего захода гостя
 							$arFields["LAST_ADV_ID"] = intval($_SESSION["SESS_ADV_ID"]);
 							$arFields["LAST_ADV_BACK"] = "'N'";
 							$arFields["LAST_REFERER1"] = "'".$DB->ForSql($_SESSION["referer1"],255)."'";
 							$arFields["LAST_REFERER2"] = "'".$DB->ForSql($_SESSION["referer2"],255)."'";
 							$arFields["LAST_REFERER3"] = "'".$DB->ForSql($_SESSION["referer3"],255)."'";
 						}
-						elseif (intval($_SESSION["SESS_LAST_ADV_ID"])>0) // РёРЅР°С‡Рµ РµСЃР»Рё СЌС‚Рѕ РІРѕР·РІСЂР°С‚ С‚Рѕ
+						elseif (intval($_SESSION["SESS_LAST_ADV_ID"])>0) // иначе если это возврат то
 						{
-							// РІР·РІРѕРґРёРј С„Р»Р°Рі РІРѕР·РІСЂР°С‚Р° РЅР° РїРѕСЃР»РµРґРЅРµРј Р·Р°С…РѕРґРµ РіРѕСЃС‚СЏ
+							// взводим флаг возврата на последнем заходе гостя
 							$arFields["LAST_ADV_BACK"] = "'Y'";
 							$arFields["LAST_REFERER1"] = "'".$DB->ForSql($arGuest["last_referer1"],255)."'";
 							$arFields["LAST_REFERER2"] = "'".$DB->ForSql($arGuest["last_referer2"],255)."'";
@@ -595,7 +595,7 @@ class CKeepStatistics
 							$arFields["FIRST_SESSION_ID"] = $_SESSION["SESS_SESSION_ID"];
 						$rows = $DB->Update("b_stat_guest",$arFields,"WHERE ID=".intval($_SESSION["SESS_GUEST_ID"]),"File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 
-						// РѕР±РЅРѕРІР»СЏРµРј СЂРµРєР»Р°РјРЅС‹Рµ РєР°РјРїР°РЅРёРё
+						// обновляем рекламные кампании
 						if (intval($_SESSION["SESS_ADV_ID"])>0 || intval($_SESSION["SESS_LAST_ADV_ID"])>0)
 						{
 							CStatistics::Update_Adv();
@@ -607,7 +607,7 @@ class CKeepStatistics
 						if(
 							$SAVE_REFERERS != "N"
 							&& __GetReferringSite($PROT, $SN, $SN_WithoutPort, $PAGE_FROM)
-							&& strlen($SN) > 0
+							&& $SN <> ''
 							&& $SN != $_SERVER["HTTP_HOST"]
 						)
 						{
@@ -617,8 +617,8 @@ class CKeepStatistics
 									Search phrases
 							************************************************/
 
-							if (substr($SN,0,4)=="www.")
-								$sql = "('".$DB->ForSql(substr($SN,4),255)."' like P.DOMAIN or '".$DB->ForSql($SN,255)."' like P.DOMAIN)";
+							if (mb_substr($SN, 0, 4) == "www.")
+								$sql = "('".$DB->ForSql(mb_substr($SN, 4), 255)."' like P.DOMAIN or '".$DB->ForSql($SN,255)."' like P.DOMAIN)";
 							else
 								$sql = "'".$DB->ForSql($SN,255)."' like P.DOMAIN";
 							$strSql = "
@@ -642,9 +642,9 @@ class CKeepStatistics
 								$_SESSION["FROM_SEARCHER_ID"] = $qr["ID"];
 								$FROM_SEARCHER_NAME = $qr["NAME"];
 								$FROM_SEARCHER_PHRASE = "";
-								if (strlen($qr["VARIABLE"])>0)
+								if ($qr["VARIABLE"] <> '')
 								{
-									$page=substr($PAGE_FROM, strpos($PAGE_FROM, "?")+1);
+									$page = mb_substr($PAGE_FROM, mb_strpos($PAGE_FROM, "?") + 1);
 									$bIsUTF8 = is_utf8_url($page);
 									parse_str($page, $arr);
 									$arrVar = explode(",",$qr["VARIABLE"]);
@@ -659,26 +659,30 @@ class CKeepStatistics
 										if($bIsUTF8)
 										{
 											$phrase_temp = trim($APPLICATION->ConvertCharset($phrase, "utf-8", LANG_CHARSET));
-											if(strlen($phrase_temp))
+											if($phrase_temp <> '')
+											{
 												$phrase = $phrase_temp;
+											}
 										}
-										elseif(strlen($qr["CHAR_SET"]) > 0)
+										elseif($qr["CHAR_SET"] <> '')
 										{
 											$phrase_temp = trim($APPLICATION->ConvertCharset($phrase, $qr["CHAR_SET"], LANG_CHARSET));
-											if(strlen($phrase_temp))
+											if($phrase_temp <> '')
+											{
 												$phrase = $phrase_temp;
+											}
 										}
 
 										$phrase = trim($phrase);
-										if(strlen($phrase))
+										if($phrase <> '')
 										{
-											$FROM_SEARCHER_PHRASE .= (strlen($FROM_SEARCHER_PHRASE)>0) ? " / ".$phrase : $phrase;
+											$FROM_SEARCHER_PHRASE .= ($FROM_SEARCHER_PHRASE <> '')? " / ".$phrase : $phrase;
 										}
 									}
 								}
 								//echo "FROM_SEARCHER_PHRASE = ".$FROM_SEARCHER_PHRASE."<br>\n";
-								// РµСЃР»Рё РёР·РІР»РµРєР»Рё РїРѕРёСЃРєРѕРІСѓСЋ С„СЂР°Р·Сѓ, С‚Рѕ Р·Р°РЅРµСЃРµРј РµРµ РІ Р±Р°Р·Сѓ
-								if (strlen($FROM_SEARCHER_PHRASE)>0)
+								// если извлекли поисковую фразу, то занесем ее в базу
+								if ($FROM_SEARCHER_PHRASE <> '')
 								{
 									$arFields = Array(
 										"DATE_HIT" => $DB_now,
@@ -697,10 +701,10 @@ class CKeepStatistics
 										CStatistics::Set404("b_stat_phrase_list", "ID = ".intval($id), array("URL_TO_404" => "Y"));
 									}
 
-									// Р·Р°РїРѕРјРЅРёРј РїРѕРёСЃРєРѕРІСѓСЋ С„СЂР°Р·Сѓ РІ СЃРµСЃСЃРёРё
+									// запомним поисковую фразу в сессии
 									$_SESSION["SESS_SEARCH_PHRASE"] = $FROM_SEARCHER_PHRASE;
 
-									// СѓРІРµР»РёС‡РёРј СЃС‡РµС‚С‡РёРє С„СЂР°Р· Сѓ РїРѕРёСЃРєРѕРІРѕР№ СЃРёСЃС‚РµРјС‹
+									// увеличим счетчик фраз у поисковой системы
 									$_SESSION["SESS_FROM_SEARCHERS"][] = $_SESSION["FROM_SEARCHER_ID"];
 									$arFields = Array("PHRASES" => "PHRASES + 1");
 									$rows = $DB->Update("b_stat_searcher",$arFields,"WHERE ID=".intval($_SESSION["FROM_SEARCHER_ID"]), "File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
@@ -718,7 +722,7 @@ class CKeepStatistics
 					{
 						if ($SAVE_HITS!="N")
 						{
-							// РґРѕР±Р°РІР»СЏРµРј С…РёС‚
+							// добавляем хит
 							$arFields = Array(
 								"SESSION_ID" => $_SESSION["SESS_SESSION_ID"],
 								"DATE_HIT" => $DB_now,
@@ -745,7 +749,7 @@ class CKeepStatistics
 							}
 						}
 
-						// РµСЃР»Рё РіРѕСЃС‚СЊ РЅР° РґР°РЅРЅРѕРј С…РёС‚Рµ РґРѕР±Р°РІРёР» РІ С„Р°РІРѕСЂРёС‚С‹ Рё РґРѕ СЌС‚РѕРіРѕ РµС‰Рµ РЅРµ РґРѕР±Р°РІР»СЏР» С‚Рѕ
+						// если гость на данном хите добавил в фавориты и до этого еще не добавлял то
 						$favorites_counter = 0;
 						if ($FAVORITES=="Y" && $_SESSION["SESS_GUEST_FAVORITES"]=="N")
 						{
@@ -753,20 +757,20 @@ class CKeepStatistics
 							$_SESSION["SESS_GUEST_FAVORITES"] = "Y";
 							$favorites_counter = 1;
 						}
-						// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє "РїРѕ РґРЅСЏРј"
+						// обновляем счетчик "по дням"
 						$arFields = Array(
 							"HITS"		=> 1,
 							"FAVORITES"	=> $favorites_counter,
 							"HIT"		=> 1,
 							"FAVORITE"	=> $favorites_counter,
 						);
-						// РµСЃР»Рё С‚РµРєСѓС‰РёР№ РґРµРЅСЊ РµСЃС‚СЊ РІ Р±Р°Р·Рµ С‚Рѕ
-						// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+						// если текущий день есть в базе то
+						// обновим счетчики траффика для текущего дня
 						$rows = CTraffic::IncParam($arFields);
 						if($rows!==false && intval($rows)<=0)
 						{
-							// РµСЃР»Рё С‚РµРєСѓС‰РёР№ РґРµРЅСЊ РЅРµ РѕРїСЂРµРґРµР»РµРЅ РІ Р±Р°Р·Рµ С‚Рѕ
-							// РґРѕР±Р°РІР»СЏРµРј РµРіРѕ
+							// если текущий день не определен в базе то
+							// добавляем его
 							$new_guest_counter = ($_SESSION["SESS_GUEST_NEW"]=="Y") ? 1 : 0;
 							CStatistics::SetNewDay(
 								1,				// HOSTS
@@ -778,7 +782,7 @@ class CKeepStatistics
 								$favorites_counter		// FAVORITES
 								);
 
-							// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+							// обновим счетчики траффика для текущего дня
 							CTraffic::IncParam(
 								array(
 									"SESSION"	=> 1,
@@ -791,21 +795,21 @@ class CKeepStatistics
 								);
 						}
 
-						// РµСЃР»Рё СЃР°Р№С‚ РѕРїСЂРµРґРµР»РµРЅ С‚Рѕ
-						if (strlen($SITE_ID)>0)
+						// если сайт определен то
+						if ($SITE_ID <> '')
 						{
-							// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє "РїРѕ РґРЅСЏРј"
+							// обновляем счетчик "по дням"
 							$arFields = Array(
 								"HITS" => 1,
 								"HIT" => 1,
 							);
-							// РµСЃР»Рё С‚РµРєСѓС‰РёР№ РґРµРЅСЊ СЃР°Р№С‚Р° РѕРїСЂРµРґРµР»РµРЅ РІ Р±Р°Р·Рµ С‚Рѕ
-							// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+							// если текущий день сайта определен в базе то
+							// обновим счетчики траффика для текущего дня
 							$rows = CTraffic::IncParam(array(), $arFields, $SITE_ID);
 							if($rows!==false && intval($rows)<=0)
 							{
-								// РµСЃР»Рё С‚РµРєСѓС‰РёР№ РґРµРЅСЊ СЃР°Р№С‚Р° РЅРµ РѕРїСЂРµРґРµР»РµРЅ РІ Р±Р°Р·Рµ С‚Рѕ
-								// РґРѕР±Р°РІР»СЏРµРј РµРіРѕ
+								// если текущий день сайта не определен в базе то
+								// добавляем его
 								CStatistics::SetNewDayForSite(
 									$SITE_ID,
 									1,			// HOSTS
@@ -814,7 +818,7 @@ class CKeepStatistics
 									1			// HITS
 									);
 
-								// РѕР±РЅРѕРІРёРј СЃС‡РµС‚С‡РёРєРё С‚СЂР°С„С„РёРєР° РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РґРЅСЏ
+								// обновим счетчики траффика для текущего дня
 								CTraffic::IncParam(
 									array(),
 									array(
@@ -828,20 +832,20 @@ class CKeepStatistics
 						}
 
 						/************************************************
-										РџСѓС‚Рё РїРѕ СЃР°Р№С‚Сѓ
+										Пути по сайту
 						************************************************/
 
 						if ($SAVE_PATH_DATA!="N")
 							CStatistics::SavePathData($SITE_ID, $CURRENT_PAGE, $ERROR_404);
 
 						/************************************************
-									РџРѕСЃРµС‰РµРЅРёРµ СЂР°Р·РґРµР»РѕРІ Рё СЃС‚СЂР°РЅРёС†
+									Посещение разделов и страниц
 						************************************************/
 
 						if ($SAVE_VISITS!="N")
 							CStatistics::SaveVisits($sql_site, $SESSION_NEW, $CURRENT_DIR, $CURRENT_PAGE, $ERROR_404);
 
-						// РѕР±РЅРѕРІР»СЏРµРј СЃРµСЃСЃРёСЋ
+						// обновляем сессию
 						$arFields = Array(
 							//"HITS"			=> "HITS + 1",
 							"LAST_HIT_ID"	=> self::$HIT_ID,
@@ -858,7 +862,7 @@ class CKeepStatistics
 							CStatistics::Set404("b_stat_session", "ID = ".$_SESSION["SESS_SESSION_ID"], array("URL_LAST_404" => "Y"));
 						}
 
-						// РѕР±РЅРѕРІР»СЏРµРј РіРѕСЃС‚СЏ
+						// обновляем гостя
 						$arFields = Array(
 							"HITS"			=> "HITS + 1",
 							"LAST_SESSION_ID"	=> $_SESSION["SESS_SESSION_ID"],
@@ -880,29 +884,29 @@ class CKeepStatistics
 							CStatistics::Set404("b_stat_guest", "ID = ".intval($_SESSION["SESS_GUEST_ID"]), array("LAST_URL_LAST_404" => "Y"));
 						}
 
-						// РѕР±РЅРѕРІР»СЏРµРј РїСЂСЏРјС‹Рµ СЂРµРєР»Р°РјРЅС‹Рµ РєР°РјРїР°РЅРёРё
+						// обновляем прямые рекламные кампании
 						if (intval($_SESSION["SESS_ADV_ID"])>0)
 						{
-							// СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ РЅР° РїСЂСЏРјРѕРј Р·Р°С…РѕРґРµ
+							// увеличиваем счетчик хитов на прямом заходе
 							$arFields = Array(
 								"DATE_LAST"	=> $DB_now,
 								"HITS"		=> "HITS+1"
 								);
 							if ($FAVORITES=="Y" && $ALLOW_ADV_FAVORITES=="Y")
 							{
-								// СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє РїРѕСЃРµС‚РёС‚РµР»РµР№ РґРѕР±Р°РІРёРІС€РёС… РІ РёР·Р±СЂР°РЅРЅРѕРµ РЅР° РїСЂСЏРјРѕРј Р·Р°С…РѕРґРµ
+								// увеличиваем счетчик посетителей добавивших в избранное на прямом заходе
 								$arFields["FAVORITES"] = "FAVORITES + 1";
 								$favorite = 1;
 							}
 							$DB->Update("b_stat_adv",$arFields,"WHERE ID=".intval($_SESSION["SESS_ADV_ID"]), "File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 
-							// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ РїРѕ РґРЅСЏРј
+							// обновляем счетчик хитов по дням
 							$arFields = Array("HITS" => "HITS+1", "FAVORITES" => "FAVORITES + ".intval($favorite));
 							$rows = $DB->Update("b_stat_adv_day",$arFields,"WHERE ADV_ID=".intval($_SESSION["SESS_ADV_ID"])." and DATE_STAT=".$DB_now_date,"File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
-							// РµСЃР»Рё РµРіРѕ РЅРµС‚ С‚Рѕ
+							// если его нет то
 							if (intval($rows)<=0)
 							{
-								// РґРѕР±Р°РІР»СЏРµРј РµРіРѕ
+								// добавляем его
 								$arFields = Array(
 									"ADV_ID"		=> intval($_SESSION["SESS_ADV_ID"]),
 									"DATE_STAT"		=> $DB_now_date,
@@ -912,29 +916,29 @@ class CKeepStatistics
 								$DB->Insert("b_stat_adv_day",$arFields, "File: ".__FILE__."<br>Line: ".__LINE__);
 							}
 						}
-						// РѕР±РЅРѕРІР»СЏРµРј СЂРµРєР»Р°РјРЅС‹Рµ РєР°РјРїР°РЅРёРё РїРѕ РІРѕР·РІСЂР°С‚Сѓ
+						// обновляем рекламные кампании по возврату
 						elseif (intval($_SESSION["SESS_LAST_ADV_ID"])>0)
 						{
-							// СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ РЅР° РІРѕР·РІСЂР°С‚Рµ
+							// увеличиваем счетчик хитов на возврате
 							$arFields = Array(
 								"DATE_LAST"		=> $DB_now,
 								"HITS_BACK"		=> "HITS_BACK+1"
 								);
 							if ($FAVORITES=="Y" && $ALLOW_ADV_FAVORITES=="Y")
 							{
-								// СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє РїРѕСЃРµС‚РёС‚РµР»РµР№ РґРѕР±Р°РІРёРІС€РёС… РІ РёР·Р±СЂР°РЅРЅРѕРµ РЅР° РІРѕР·РІСЂР°С‚Рµ
+								// увеличиваем счетчик посетителей добавивших в избранное на возврате
 								$arFields["FAVORITES_BACK"] = "FAVORITES_BACK + 1";
 								$favorite = 1;
 							}
 							$DB->Update("b_stat_adv",$arFields,"WHERE ID=".intval($_SESSION["SESS_LAST_ADV_ID"]), "File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 
 							$arFields = Array("HITS_BACK" => "HITS_BACK+1", "FAVORITES_BACK" => "FAVORITES_BACK + ".intval($favorite));
-							// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ РїРѕ РґРЅСЏРј
+							// обновляем счетчик хитов по дням
 							$rows = $DB->Update("b_stat_adv_day",$arFields,"WHERE ADV_ID=".intval($_SESSION["SESS_LAST_ADV_ID"])." and DATE_STAT=".$DB_now_date,"File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
-							// РµСЃР»Рё РµРіРѕ РЅРµС‚ С‚Рѕ
+							// если его нет то
 							if (intval($rows)<=0)
 							{
-								// РґРѕР±Р°РІР»СЏРµРј РµРіРѕ
+								// добавляем его
 								$arFields = Array(
 									"ADV_ID" => intval($_SESSION["SESS_LAST_ADV_ID"]),
 									"DATE_STAT" => $DB_now_date,
@@ -945,17 +949,17 @@ class CKeepStatistics
 							}
 						}
 
-						// РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј СЃРѕР±С‹С‚РёРµ
+						// обрабатываем событие
 						if (defined("GENERATE_EVENT") && GENERATE_EVENT=="Y")
 						{
 							global $event1, $event2, $event3, $goto, $money, $currency, $site_id;
-							if(strlen($site_id) <= 0)
+							if($site_id == '')
 								$site_id = false;
 							CStatistics::Set_Event($event1, $event2, $event3, $goto, $money, $currency, $site_id);
 						}
 
-						// СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ Сѓ СЃС‚СЂР°РЅС‹
-						if (strlen($_SESSION["SESS_COUNTRY_ID"])>0)
+						// увеличиваем счетчик хитов у страны
+						if ($_SESSION["SESS_COUNTRY_ID"] <> '')
 						{
 							CStatistics::UpdateCountry($_SESSION["SESS_COUNTRY_ID"], Array("HITS" => 1));
 						}
@@ -971,7 +975,7 @@ class CKeepStatistics
 							&& !empty($_SESSION["SESS_FROM_SEARCHERS"])
 						)
 						{
-							// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРє С…РёС‚РѕРІ Сѓ РїРѕРёСЃРєРѕРІС‹С… С„СЂР°Р· РґР»СЏ РїРѕРёСЃРєРѕРІРёРєРѕРІ
+							// обновляем счетчик хитов у поисковых фраз для поисковиков
 							$arFields = Array("PHRASES_HITS" => "PHRASES_HITS+1");
 							$_SESSION["SESS_FROM_SEARCHERS"] = array_unique($_SESSION["SESS_FROM_SEARCHERS"]);
 							if(count($_SESSION["SESS_FROM_SEARCHERS"]) > 0)
@@ -985,14 +989,14 @@ class CKeepStatistics
 
 						if (isset($_SESSION["SESS_REFERER_ID"]) && intval($_SESSION["SESS_REFERER_ID"])>0)
 						{
-							// РѕР±РЅРѕРІР»СЏРµРј СЃСЃС‹Р»Р°СЋС‰РёРµСЃСЏ
+							// обновляем ссылающиеся
 							$arFields = Array("HITS"=>"HITS+1");
 							$DB->Update("b_stat_referer", $arFields, "WHERE ID=".intval($_SESSION["SESS_REFERER_ID"]), "File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 						}
 					}
 
 					/*******************************************************
-						РџРµСЂРµРјРµРЅРЅС‹Рµ С…СЂР°РЅСЏС‰РёРµ РїР°СЂР°РјРµС‚СЂС‹ РїСЂРµРґС‹РґСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹
+						Переменные хранящие параметры предыдущей страницы
 					*******************************************************/
 
 					$_SESSION["SESS_HTTP_REFERER"] = $_SESSION["SESS_LAST_URI"];
@@ -1007,7 +1011,7 @@ class CKeepStatistics
 			else // if (!$BLOCK_ACTIVITY)
 			{
 				/************************************************
-					РћР±СЂР°Р±РѕС‚РєР° РїСЂРµРІС‹С€РµРЅРёСЏ Р»РёРјРёС‚Р° Р°РєС‚РёРІРЅРѕСЃС‚Рё
+					Обработка превышения лимита активности
 				*************************************************/
 
 				$fname = $_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/activity_limit.php";
@@ -1023,19 +1027,19 @@ class CKeepStatistics
 			}
 
 			/************************************************************
-				РћР±СЂР°Р±Р°С‚С‹РІР°РµРј СЃРёС‚СѓР°С†РёСЋ РєРѕРіРґР° РЅРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ
-				СЃРµСЃСЃРёРё Рё/РёР»Рё РЅРµ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РєСѓРєРё
+				Обрабатываем ситуацию когда не поддерживаются
+				сессии и/или не сохраняются куки
 			*************************************************************/
 
-			// РµСЃР»Рё РјС‹ РґРµР»Р°Р»Рё select РёР· С‚Р°Р±Р»РёС†С‹ b_stat_session_data С‚Рѕ
+			// если мы делали select из таблицы b_stat_session_data то
 			if($SESSION_DATA_ID)
 			{
 				$arrSTAT_SESSION = stat_session_register(true);
-				$sess_data_for_db = (strtolower($DB->type)=="oracle") ? "'".$DB->ForSql(serialize($arrSTAT_SESSION), 2000)."'" :  "'".$DB->ForSql(serialize($arrSTAT_SESSION))."'";
-				// РµСЃР»Рё РІ СЂРµР·СѓР»СЊС‚Р°С‚Рµ СЌС‚РѕРіРѕ select'Р° Р±С‹Р»Рё РІС‹Р±СЂР°РЅС‹ РґР°РЅРЅС‹Рµ С‚Рѕ
+				$sess_data_for_db = ($DB->type == "ORACLE") ? "'".$DB->ForSql(serialize($arrSTAT_SESSION), 2000)."'" :  "'".$DB->ForSql(serialize($arrSTAT_SESSION))."'";
+				// если в результате этого select'а были выбраны данные то
 				if((intval($SESSION_DATA_ID) > 0) && ($SESSION_DATA_ID !== true))
 				{
-					// РѕР±РЅРѕРІР»СЏРµРј РёС…
+					// обновляем их
 					$arFields = array(
 						"DATE_LAST" => $DB_now,
 						"GUEST_MD5" => "'".get_guest_md5()."'",
@@ -1046,7 +1050,7 @@ class CKeepStatistics
 				}
 				else
 				{
-					// РёРЅР°С‡Рµ РІСЃС‚Р°РІР»СЏРµРј СЌС‚Рё РґР°РЅРЅС‹Рµ
+					// иначе вставляем эти данные
 					$arFields = array(
 						"DATE_FIRST" => $DB_now,
 						"DATE_LAST" => $DB_now,
@@ -1063,21 +1067,21 @@ class CKeepStatistics
 		{
 			$z = CLanguage::GetByID($STOP_MESSAGE_LID);
 			$zr = $z->Fetch();
-			$charset = (strlen($zr["CHARSET"])>0) ? $zr["CHARSET"] : "windows-1251";
+			$charset = ($zr["CHARSET"] <> '') ? $zr["CHARSET"] : "windows-1251";
 
 			//We have URL with no MESSAGE
-			if((strlen($STOP_REDIRECT_URL) > 0) && (strlen($STOP_MESSAGE) <= 0))
+			if(($STOP_REDIRECT_URL <> '') && ($STOP_MESSAGE == ''))
 			{//So just do redirect
 				LocalRedirect($STOP_REDIRECT_URL, true);
 			}
 			//We have some to say
-			elseif(strlen($STOP_MESSAGE)>0)
+			elseif($STOP_MESSAGE <> '')
 			{
 				$STOP_MESSAGE .= " [".$STOP_LIST_ID."]";
 echo '<html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset='.$charset.'">
-		'.(strlen($STOP_REDIRECT_URL) > 0? '<meta http-equiv="Refresh" content="3;URL='.htmlspecialcharsbx($STOP_REDIRECT_URL).'">': '').'
+		'.($STOP_REDIRECT_URL <> ''? '<meta http-equiv="Refresh" content="3;URL='.htmlspecialcharsbx($STOP_REDIRECT_URL).'">': '').'
 	</head>
 	<body>
 		<div align="center"><h3>'.$STOP_MESSAGE.'</h3></div>
@@ -1119,7 +1123,7 @@ echo '<html>
 		return false; //We have no choice to restore guest session
 	}
 
-	// РѕР±РЅРѕРІР»СЏРµРј СЃС‡РµС‚С‡РёРєРё СЃРµСЃСЃРёР№ Рё РЅРѕРІС‹С… РїРѕСЃРµС‚РёС‚РµР»РµР№ Сѓ СЃС‚СЂР°РЅС‹
+	// обновляем счетчики сессий и новых посетителей у страны
 	public static function UpdateCountry($COUNTRY_ID, $arFields, $DATE=false, $DATE_FORMAT="SHORT", $SIGN="+")
 	{
 		$DB = CDatabase::GetModuleConnection('statistic');
@@ -1144,9 +1148,9 @@ echo '<html>
 			$ar["DATE_STAT"]= $DB->GetNowDate();
 			$DB->Insert("b_stat_country_day",$ar);
 		}
-		elseif(intval($rows)>1) // РµСЃР»Рё РѕР±РЅРѕРІРёР»Рё Р±РѕР»РµРµ РѕРґРЅРѕРіРѕ РґРЅСЏ С‚Рѕ
+		elseif(intval($rows)>1) // если обновили более одного дня то
 		{
-			// СѓРґР°Р»РёРј Р»РёС€РЅРёРµ
+			// удалим лишние
 			$rs = $DB->Query("SELECT ID FROM b_stat_country_day WHERE COUNTRY_ID='".$COUNTRY_ID."' and  ".CStatistics::DBDateCompare("DATE_STAT", $DATE, $DATE_FORMAT)." ORDER BY ID", false);
 			$ar = $rs->Fetch();
 			while($ar = $rs->Fetch())
@@ -1180,9 +1184,9 @@ echo '<html>
 			$ar["DATE_STAT"] = $DB->GetNowDate();
 			$DB->Insert("b_stat_city_day", $ar);
 		}
-		elseif(intval($rows)>1) // РµСЃР»Рё РѕР±РЅРѕРІРёР»Рё Р±РѕР»РµРµ РѕРґРЅРѕРіРѕ РґРЅСЏ С‚Рѕ
+		elseif(intval($rows)>1) // если обновили более одного дня то
 		{
-			// СѓРґР°Р»РёРј Р»РёС€РЅРёРµ
+			// удалим лишние
 			$rs = $DB->Query("SELECT ID FROM b_stat_city_day WHERE CITY_ID = ".$CITY_ID." and ".CStatistics::DBDateCompare("DATE_STAT", $DATE, $DATE_FORMAT)." ORDER BY ID", false);
 			$ar = $rs->Fetch();
 			while($ar = $rs->Fetch())
@@ -1202,12 +1206,12 @@ echo '<html>
 		if($_SESSION["SESS_LAST_PAGE"]==$CURRENT_PAGE)
 			return;
 
-		$COUNTER_ABNORMAL = 0; // СЃС‡РµС‚С‡РёРє РїРѕРєР°Р·С‹РІР°СЋС‰РёР№ СЃРєРѕР»СЊРєРѕ СЂР°Р· РїСЂРѕС€Р»Рё РїРѕ РґР°РЅРЅРѕРјСѓ РїСѓС‚Рё Р±РµР· РїРѕРґРґРµСЂР¶РєРё HTTP_REFERER
+		$COUNTER_ABNORMAL = 0; // счетчик показывающий сколько раз прошли по данному пути без поддержки HTTP_REFERER
 
-		// РїРѕР»СѓС‡РёРј СЃСЃС‹Р»Р°СЋС‰СѓСЋСЃСЏ СЃС‚СЂР°РЅРёС†Сѓ
-		if (strlen($_SERVER["HTTP_REFERER"])<=0)
+		// получим ссылающуюся страницу
+		if ($_SERVER["HTTP_REFERER"] == '')
 		{
-			if (strlen($_SESSION["SESS_LAST_PAGE"])>0) $COUNTER_ABNORMAL = 1;
+			if ($_SESSION["SESS_LAST_PAGE"] <> '') $COUNTER_ABNORMAL = 1;
 			$PATH_REFERER = __GetFullReferer($_SESSION["SESS_LAST_PAGE"]);
 		}
 		else $PATH_REFERER = __GetFullReferer();
@@ -1215,8 +1219,8 @@ echo '<html>
 		if($PATH_REFERER==$CURRENT_PAGE)
 			return;
 
-		// РїРѕР»СѓС‡РёРј РёР· РєСЌС€Р° РґР°РЅРЅС‹Рµ РїРѕ РїСЂРµРґС‹РґСѓС‰РµРјСѓ РїСѓС‚Рё: ID РїСѓС‚Рё, РЅР°Р±РѕСЂ СЃС‚СЂР°РЅРёС† Рё С‚.Рґ.
-		if(strlen($PATH_REFERER)>0)
+		// получим из кэша данные по предыдущему пути: ID пути, набор страниц и т.д.
+		if($PATH_REFERER <> '')
 		{
 			$where1 = " and C.PATH_LAST_PAGE = '".$DB->ForSql($PATH_REFERER,255)."'";
 		}
@@ -1250,9 +1254,9 @@ echo '<html>
 		$arrUpdate404_1 = array();
 		$arrUpdate404_2 = array();
 
-		// СЃС„РѕСЂРјРёСЂСѓРµРј РїРµСЂРµРјРµРЅРЅС‹Рµ РѕРїРёСЃС‹РІР°СЋС‰РёРµ С‚РµРєСѓС‰РёР№ РїСѓС‚СЊ
+		// сформируем переменные описывающие текущий путь
 		$CURRENT_PATH_ID = GetStatPathID($CURRENT_PAGE, $arPREV_PATH["PATH_ID"]);
-		$tmp_SITE_ID = (strlen($SITE_ID)>0) ? "[".$SITE_ID."] " : "";
+		$tmp_SITE_ID = ($SITE_ID <> '') ? "[".$SITE_ID."] " : "";
 		$CURRENT_PATH_PAGES_404 = $arPREV_PATH["PATH_PAGES"].$tmp_SITE_ID."ERROR_404: ".$CURRENT_PAGE."\n";
 
 		if ($ERROR_404=="Y")
@@ -1263,10 +1267,10 @@ echo '<html>
 		{
 			$CURRENT_PATH_PAGES = $arPREV_PATH["PATH_PAGES"].$tmp_SITE_ID.$CURRENT_PAGE."\n";
 
-			if(strtolower($DB->type)=="oracle")
-				$arrUpdate404_1["PATH_PAGES"] = substr($CURRENT_PATH_PAGES_404, 0, 2000);
-			elseif(strtolower($DB->type)=="mssql")
-				$arrUpdate404_1["PATH_PAGES"] = substr($CURRENT_PATH_PAGES_404, 0, 7000);
+			if($DB->type == "ORACLE")
+				$arrUpdate404_1["PATH_PAGES"] = mb_substr($CURRENT_PATH_PAGES_404, 0, 2000);
+			elseif($DB->type == "MSSQL")
+				$arrUpdate404_1["PATH_PAGES"] = mb_substr($CURRENT_PATH_PAGES_404, 0, 7000);
 			else
 				$arrUpdate404_1["PATH_PAGES"] = $CURRENT_PATH_PAGES_404;
 
@@ -1274,7 +1278,7 @@ echo '<html>
 		}
 
 		$CURRENT_PATH_STEPS = intval($arPREV_PATH["PATH_STEPS"])+1;
-		if (strlen($arPREV_PATH["PATH_FIRST_PAGE"])>0)
+		if ($arPREV_PATH["PATH_FIRST_PAGE"] <> '')
 		{
 			$FIRST_PAGE = $arPREV_PATH["PATH_FIRST_PAGE"];
 			$FIRST_PAGE_SITE_ID = $arPREV_PATH["PATH_FIRST_PAGE_SITE_ID"];
@@ -1293,18 +1297,18 @@ echo '<html>
 			}
 		}
 
-		if(strtolower($DB->type)=="oracle")
+		if($DB->type == "ORACLE")
 			$sql_CURRENT_PATH_PAGES = $DB->ForSql($CURRENT_PATH_PAGES, 2000);
-		elseif(strtolower($DB->type)=="mssql")
+		elseif($DB->type == "MSSQL")
 			$sql_CURRENT_PATH_PAGES = $DB->ForSql($CURRENT_PATH_PAGES, 7000);
 		else
 			$sql_CURRENT_PATH_PAGES = $DB->ForSql($CURRENT_PATH_PAGES);
 
-		$sql_FIRST_PAGE_SITE_ID = strlen($FIRST_PAGE_SITE_ID)>0 ? "'".$DB->ForSql($FIRST_PAGE_SITE_ID,2)."'" : "null";
+		$sql_FIRST_PAGE_SITE_ID = $FIRST_PAGE_SITE_ID <> '' ? "'".$DB->ForSql($FIRST_PAGE_SITE_ID,2)."'" : "null";
 
-		$sql_LAST_PAGE_SITE_ID = strlen($SITE_ID)>0 ? "'".$DB->ForSql($SITE_ID,2)."'" : "null";
+		$sql_LAST_PAGE_SITE_ID = $SITE_ID <> '' ? "'".$DB->ForSql($SITE_ID,2)."'" : "null";
 
-		// РІСЃС‚Р°РІРёРј РґР°РЅРЅС‹Р№ РїСѓС‚СЊ РІ РєСЌС€
+		// вставим данный путь в кэш
 		$arFields = array(
 			"SESSION_ID"			=> intval($_SESSION['SESS_SESSION_ID']),
 			"PATH_ID"			=> intval($CURRENT_PATH_ID),
@@ -1327,7 +1331,7 @@ echo '<html>
 		}
 		CStatistics::Set404("b_stat_path_cache", "ID = ".intval($id), $arrUpdate404_1);
 
-		// СѓРІРµР»РёС‡РёРј СЃС‡РµС‚С‡РёРє РґРёРЅР°РјРёРєРё РїРѕ С‚РµРєСѓС‰РµРјСѓ РїСѓС‚Рё
+		// увеличим счетчик динамики по текущему пути
 		$arFields = array(
 			"COUNTER"		=> "COUNTER + 1",
 			"COUNTER_FULL_PATH"	=> "COUNTER_FULL_PATH + 1",
@@ -1337,7 +1341,7 @@ echo '<html>
 
 		if (intval($rows)<=0)
 		{
-			$sql_PARENT_PATH_ID = (strlen($arPREV_PATH["PATH_ID"])>0) ? $arPREV_PATH["PATH_ID"] : "null";
+			$sql_PARENT_PATH_ID = ($arPREV_PATH["PATH_ID"] <> '') ? $arPREV_PATH["PATH_ID"] : "null";
 			$arFields = array(
 				"PATH_ID"		=> intval($CURRENT_PATH_ID),
 				"PARENT_PATH_ID"	=> $sql_PARENT_PATH_ID,
@@ -1364,19 +1368,19 @@ echo '<html>
 			}
 		}
 
-		// РµСЃР»Рё РїСЂРµРґС‹РґСѓС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р° СЃС‡РёС‚Р°Р»Р°СЃСЊ РїРѕСЃР»РµРґРЅРµР№ СЃС‚СЂР°РЅРёС†РµР№ РІ РїСѓС‚Рё С‚Рѕ
+		// если предыдущая страница считалась последней страницей в пути то
 		if ($arPREV_PATH["IS_LAST_PAGE"]=="Y")
 		{
-			// СЃР±СЂРѕСЃРёРј СЃС‡РµС‚С‡РёРє РєРѕРЅРµС‡РЅС‹С… РїСѓС‚РµР№ РґР»СЏ РїСЂРµРґС‹РґСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹
+			// сбросим счетчик конечных путей для предыдущей страницы
 			$arFields = array("COUNTER_FULL_PATH" => "COUNTER_FULL_PATH - 1");
 			$DB->Update("b_stat_path",$arFields,"WHERE PATH_ID='".$arPREV_PATH["PATH_ID"]."' and DATE_STAT=".$DB_now_date, "File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 
-			// СЃР±СЂРѕСЃРёРј С„Р»Р°Рі С‚РѕРіРѕ С‡С‚Рѕ РїСЂРµРґСѓРґСѓС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р° - РїРѕСЃР»РµРґРЅСЏСЏ СЃС‚СЂР°РЅРёС†Р° РІ РїСѓС‚Рё
+			// сбросим флаг того что предудущая страница - последняя страница в пути
 			$arFields = array("IS_LAST_PAGE" => "'N'");
 			$DB->Update("b_stat_path_cache",$arFields,"WHERE ID='".$arPREV_PATH["CACHE_ID"]."'","File: ".__FILE__."<br>Line: ".__LINE__,false,false,false);
 		}
 
-		// Р·Р°С„РёРєСЃРёСЂСѓРµРј СЃС‡РµС‚С‡РёРє РїСѓС‚Рё РІ СЃРІСЏР·РєРµ СЃ СЂРµРєР»Р°РјРЅРѕР№ РєР°РјРїР°РЅРёРµР№
+		// зафиксируем счетчик пути в связке с рекламной кампанией
 		if (intval($_SESSION["SESS_ADV_ID"])>0)
 		{
 			$ADV_ID = intval($_SESSION["SESS_ADV_ID"]);
@@ -1444,14 +1448,14 @@ echo '<html>
 		$DB = CDatabase::GetModuleConnection('statistic');
 		$DB_now_date = $DB->GetNowDate();
 		$enter_counter = ($SESSION_NEW=="Y") ? 1 : 0;
-		if (strlen($CURRENT_DIR)>0 && strlen($CURRENT_PAGE)>0)
+		if ($CURRENT_DIR <> '' && $CURRENT_PAGE <> '')
 		{
 			$LAST_DIR_ID = intval($_SESSION["SESS_LAST_DIR_ID"]);
 			$LAST_PAGE_ID = intval($_SESSION["SESS_LAST_PAGE_ID"]);
 			$CURRENT_DIR_ID = 0;
 			$CURRENT_PAGE_ID = 0;
-			$exit_dir_counter = 0; // СЃС‡РµС‚С‡РёРє С‚РѕС‡РєРё РІС‹С…РѕРґР° РґР»СЏ СЂР°Р·РґРµР»Р°
-			$exit_page_counter = 0; // СЃС‡РµС‚С‡РёРє С‚РѕС‡РєРё РІС‹С…РѕРґР° РґР»СЏ СЃС‚СЂР°РЅРёС†С‹
+			$exit_dir_counter = 0; // счетчик точки выхода для раздела
+			$exit_page_counter = 0; // счетчик точки выхода для страницы
 			if ($_SESSION["SESS_LAST_DIR"]!=$CURRENT_DIR || $_SESSION["SESS_LAST_PAGE"]!=$CURRENT_PAGE)
 			{
 				$strSql = "
@@ -1483,7 +1487,7 @@ echo '<html>
 				$CURRENT_PAGE_ID = $LAST_PAGE_ID;
 			}
 
-			// РѕРїСЂРµРґРµР»РёРј ID СЂРµРєР»Р°РјРЅРѕР№ РєР°РјРїР°РЅРёРё
+			// определим ID рекламной кампании
 			if (intval($_SESSION["SESS_ADV_ID"])>0)
 			{
 				$ADV_ID = intval($_SESSION["SESS_ADV_ID"]);
@@ -1497,7 +1501,7 @@ echo '<html>
 			else
 				$ADV_ID = 0;
 
-			// РѕР±РЅРѕРІР»СЏРµРј СЂР°Р·РґРµР»
+			// обновляем раздел
 			if ($LAST_DIR_ID>0 && $exit_dir_counter>0)
 			{
 				$arFields = array("EXIT_COUNTER" => "EXIT_COUNTER - 1");
@@ -1580,7 +1584,7 @@ echo '<html>
 				}
 			}
 
-			// РѕР±РЅРѕРІРёРј СЃС‚СЂР°РЅРёС†Сѓ
+			// обновим страницу
 			if ($LAST_PAGE_ID>0 && $exit_page_counter>0)
 			{
 				$arFields = array("EXIT_COUNTER" => "EXIT_COUNTER - 1");
@@ -1665,9 +1669,6 @@ echo '<html>
 		}
 	}
 
-	/************************************************
-			Referring sites
-	************************************************/
 	public static function GetRefererListID($PROT, $SN, $PAGE_FROM, $CURRENT_URI, $ERROR_404, $sql_site)
 	{
 		$DB = CDatabase::GetModuleConnection('statistic');

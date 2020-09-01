@@ -4,7 +4,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/blog/general/blog_user_g
 class CBlogUserGroupPerms extends CAllBlogUserGroupPerms
 {
 	/*************** ADD, UPDATE, DELETE *****************/
-	public static function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -50,7 +50,7 @@ class CBlogUserGroupPerms extends CAllBlogUserGroupPerms
 		return False;
 	}
 
-	public static function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 
@@ -100,7 +100,7 @@ class CBlogUserGroupPerms extends CAllBlogUserGroupPerms
 	}
 
 	//*************** SELECT *********************/
-	public static function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
+	function GetList($arOrder = Array("ID" => "DESC"), $arFilter = Array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
 
@@ -176,7 +176,7 @@ class CBlogUserGroupPerms extends CAllBlogUserGroupPerms
 			}
 			else
 			{
-				// Ð¢ÐžÐ›Ð¬ÐšÐž Ð”Ð›Ð¯ MYSQL!!! Ð”Ð›Ð¯ ORACLE Ð”Ð Ð£Ð“ÐžÐ™ ÐšÐžÐ”
+				// ÒÎËÜÊÎ ÄËß MYSQL!!! ÄËß ORACLE ÄÐÓÃÎÉ ÊÎÄ
 				$cnt = $dbRes->SelectedRowsCount();
 			}
 

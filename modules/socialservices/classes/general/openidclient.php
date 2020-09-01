@@ -5,13 +5,13 @@ class COpenIDClient
 {
 	var $_trust_providers = array();
 
-	public function SetTrustProviders($t)
+	function SetTrustProviders($t)
 	{
 		if (is_array($t))
 			$this->_trust_providers = array_filter($t);
 	}
 
-	public function CheckTrustProviders($url)
+	function CheckTrustProviders($url)
 	{
 		if (count($this->_trust_providers) <= 0)
 			return true;
@@ -24,7 +24,7 @@ class COpenIDClient
 		return false;
 	}
 
-	public static function GetOpenIDServerTags($url)
+	function GetOpenIDServerTags($url)
 	{
 		if ($str = @CHTTP::sGet($url, true))
 		{
@@ -50,7 +50,7 @@ class COpenIDClient
 		return false;
 	}
 
-	public function GetRedirectUrl($identity, $return_to=false)
+	function GetRedirectUrl($identity, $return_to=false)
 	{
 		if (strlen($identity) <= 0)
 		{
@@ -101,7 +101,7 @@ class COpenIDClient
 		return false;
 	}
 
-	public function Validate()
+	function Validate()
 	{
 		if(CSocServAuthManager::CheckUniqueKey())
 		{
@@ -143,7 +143,7 @@ class COpenIDClient
 		return false;
 	}
 
-	public static function CleanParam($state=false)
+	function CleanParam($state=false)
 	{
 		$arKillParams = array("check_key");
 		foreach (array_keys($_GET) as $k)
@@ -155,7 +155,7 @@ class COpenIDClient
 		LocalRedirect($redirect_url, true);
 	}
 
-	public function Authorize()
+	function Authorize()
 	{
 		global $APPLICATION, $USER;
 		$errorCode = 1;
@@ -216,7 +216,7 @@ class COpenIDClient
 				if(!CSocServAuth::isSplitDenied())
 				{
 					$arFields['USER_ID'] = $GLOBALS["USER"]->GetID();
-					CSocServAuthDB::Add($arFields);
+					\Bitrix\Socialservices\UserTable::add($arFields);
 					self::CleanParam();
 				}
 				else
@@ -228,8 +228,14 @@ class COpenIDClient
 			{
 				$dbUsersOld = $GLOBALS["USER"]->GetList($by, $ord, array('XML_ID'=>$arFields['XML_ID'], 'EXTERNAL_AUTH_ID'=>$arFields['EXTERNAL_AUTH_ID'], 'ACTIVE'=>'Y'), array('NAV_PARAMS'=>array("nTopCount"=>"1")));
 				$dbUsersNew = $GLOBALS["USER"]->GetList($by, $ord, array('XML_ID'=>$arFields['XML_ID'], 'EXTERNAL_AUTH_ID'=>'socservices', 'ACTIVE'=>'Y'),  array('NAV_PARAMS'=>array("nTopCount"=>"1")));
-				$dbSocUser = CSocServAuthDB::GetList(array(),array('XML_ID'=>$arFields['XML_ID'], 'EXTERNAL_AUTH_ID'=>$arFields['EXTERNAL_AUTH_ID']),false,false,array("USER_ID", "ACTIVE", "XML_ID"));
-				if($arUser = $dbSocUser->Fetch())
+				$dbSocUser = \Bitrix\Socialservices\UserTable::getList([
+					'filter' => [
+						'=XML_ID'=>$arFields['XML_ID'],
+						'=EXTERNAL_AUTH_ID'=>$arFields['EXTERNAL_AUTH_ID']
+					],
+					'select' => ["USER_ID", "ACTIVE" => "USER.ACTIVE", "XML_ID"]
+				]);
+				if($arUser = $dbSocUser->fetch())
 				{
 					if($arUser["ACTIVE"] === 'Y')
 						$USER_ID = $arUser["USER_ID"];
@@ -263,7 +269,7 @@ class COpenIDClient
 							return false;
 						$arFields['CAN_DELETE'] = 'N';
 						$arFields['USER_ID'] = $USER_ID;
-						CSocServAuthDB::Add($arFields);
+						\Bitrix\Socialservices\UserTable::add($arFields);
 						unset($arFields['CAN_DELETE']);
 					}
 				}
@@ -317,7 +323,7 @@ class COpenIDClient
 	}
 
 	/*public static*/
-	public static function GetOpenIDAuthStep($request_var='OPENID_IDENTITY')
+	function GetOpenIDAuthStep($request_var='OPENID_IDENTITY')
 	{
 		if (array_key_exists('openid_mode', $_GET) && $_GET['openid_mode'] == 'id_res')
 			return 2;

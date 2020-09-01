@@ -12,7 +12,7 @@ class CPerfomanceTableList extends CDBResult
 		return new CPerfomanceTableList($rsTables);
 	}
 
-	public static function Fetch()
+	function Fetch()
 	{
 		global $DB;
 		$ar = parent::Fetch();
@@ -39,19 +39,19 @@ class CPerfomanceTableList extends CDBResult
 
 class CPerfomanceTable extends CAllPerfomanceTable
 {
-	public function Init($TABLE_NAME)
+	function Init($TABLE_NAME)
 	{
 		$TABLE_NAME = trim($TABLE_NAME, "`");
 		$this->TABLE_NAME = $TABLE_NAME;
 	}
 
-	public function IsExists($TABLE_NAME = false)
+	function IsExists($TABLE_NAME = false)
 	{
 		global $DB;
 
 		if ($TABLE_NAME === false)
 			$TABLE_NAME = $this->TABLE_NAME;
-		if (strlen($TABLE_NAME) <= 0)
+		if ($TABLE_NAME == '')
 			return false;
 
 		$TABLE_NAME = trim($TABLE_NAME, "`");
@@ -66,14 +66,14 @@ class CPerfomanceTable extends CAllPerfomanceTable
 			return false;
 	}
 
-	public function GetIndexes($TABLE_NAME = false)
+	function GetIndexes($TABLE_NAME = false)
 	{
 		global $DB;
 		static $cache = array();
 
 		if ($TABLE_NAME === false)
 			$TABLE_NAME = $this->TABLE_NAME;
-		if (strlen($TABLE_NAME) <= 0)
+		if ($TABLE_NAME == '')
 			return array();
 
 		$TABLE_NAME = trim($TABLE_NAME, "`");
@@ -96,14 +96,14 @@ class CPerfomanceTable extends CAllPerfomanceTable
 		return $cache[$TABLE_NAME];
 	}
 
-	public function GetUniqueIndexes($TABLE_NAME = false)
+	function GetUniqueIndexes($TABLE_NAME = false)
 	{
 		global $DB;
 		static $cache = array();
 
 		if ($TABLE_NAME === false)
 			$TABLE_NAME = $this->TABLE_NAME;
-		if (strlen($TABLE_NAME) <= 0)
+		if ($TABLE_NAME == '')
 			return array();
 
 		$TABLE_NAME = trim($TABLE_NAME, "`");
@@ -127,13 +127,13 @@ class CPerfomanceTable extends CAllPerfomanceTable
 		return $cache[$TABLE_NAME];
 	}
 
-	public function GetTableFields($TABLE_NAME = false, $bExtended = false)
+	function GetTableFields($TABLE_NAME = false, $bExtended = false)
 	{
 		static $cache = array();
 
 		if ($TABLE_NAME === false)
 			$TABLE_NAME = $this->TABLE_NAME;
-		if (strlen($TABLE_NAME) <= 0)
+		if ($TABLE_NAME == '')
 			return false;
 
 		$TABLE_NAME = trim($TABLE_NAME, "`");
@@ -227,7 +227,7 @@ class CPerfomanceTable extends CAllPerfomanceTable
 		return "`".str_replace("`", "``", $tableName)."`";
 	}
 
-	public function getCreateIndexDDL($TABLE_NAME, $INDEX_NAME, $INDEX_COLUMNS)
+	function getCreateIndexDDL($TABLE_NAME, $INDEX_NAME, $INDEX_COLUMNS)
 	{
 		$tableFields = $this->GetTableFields($TABLE_NAME, true);
 		foreach ($INDEX_COLUMNS as $i => $field)

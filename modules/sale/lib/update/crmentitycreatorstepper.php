@@ -763,7 +763,7 @@ final class CrmEntityCreatorStepper extends Stepper
 		global $APPLICATION;
 
 		$currentPage = $APPLICATION->getCurPage();
-		if ((strpos($currentPage, "/crm/") !== false) || (strpos($currentPage, "/shop/") !== false))
+		if ((mb_strpos($currentPage, "/crm/") !== false) || (mb_strpos($currentPage, "/shop/") !== false))
 		{
 			$ids = ["sale" => __CLASS__];
 			$content = self::getHtml($ids, Loc::getMessage("CRM_ENTITY_CREATOR_STEPPER_TITLE"));

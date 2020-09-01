@@ -7,7 +7,7 @@ class CAllSitePath
 {
 	/*************** ADD, UPDATE, DELETE *****************/
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function CheckFields($ACTION, &$arFields, $ID = 0)
+	function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		/*
 		if ((is_set($arFields, "TYPE") || $ACTION=="ADD") && strlen($arFields["TYPE"]) <= 0)
@@ -47,7 +47,7 @@ class CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB;
 
@@ -64,7 +64,7 @@ class CAllSitePath
 
 	//*************** SELECT *********************/
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function GetByID($ID)
+	function GetByID($ID)
 	{
 		global $DB;
 
@@ -94,7 +94,7 @@ class CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function GetBySiteID($siteID)
+	function GetBySiteID($siteID)
 	{
 		global $DB;
 
@@ -128,7 +128,7 @@ class CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function DeleteBySiteID($siteID)
+	function DeleteBySiteID($siteID)
 	{
 		global $DB;
 
@@ -151,7 +151,7 @@ class CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function GetFilterOperation($key)
+	function GetFilterOperation($key)
 	{
 		$strNegative = "N";
 		if (substr($key, 0, 1)=="!")
@@ -212,7 +212,7 @@ class CAllSitePath
 
 
 	// 2012-04-16 Checked/modified for compatibility with new data model
-	public static function PrepareSql(&$arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields, $obUserFieldsSql = false)
+	function PrepareSql(&$arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields, $obUserFieldsSql = false)
 	{
 		global $DB;
 

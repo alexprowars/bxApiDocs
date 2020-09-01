@@ -320,7 +320,7 @@ class IblockTable extends DataManager
 		$iblockNamespace = static::DATA_CLASS_NAMESPACE;
 		$iblockDataClassName = $iblock->getEntityDataClassName();
 
-		if (!strlen($iblockDataClassName))
+		if ($iblockDataClassName == '')
 		{
 			return false;
 		}

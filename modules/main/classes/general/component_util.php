@@ -17,12 +17,21 @@ class CComponentUtil
 
 		if ($lang != "en" && $lang != "ru")
 		{
-			if (file_exists(($fname = $_SERVER["DOCUMENT_ROOT"].$filePath."/lang/".LangSubst($lang)."/".$fileName)))
-				__IncludeLang($fname);
+			$subst_lang = LangSubst($lang);
+			$fname = $_SERVER["DOCUMENT_ROOT"].$filePath."/lang/".$subst_lang."/".$fileName;
+			$fname = \Bitrix\Main\Localization\Translation::convertLangPath($fname, $subst_lang);
+			if (file_exists($fname))
+			{
+				__IncludeLang($fname, false, true);
+			}
 		}
 
-		if (file_exists(($fname = $_SERVER["DOCUMENT_ROOT"].$filePath."/lang/".$lang."/".$fileName)))
-			__IncludeLang($fname);
+		$fname = $_SERVER["DOCUMENT_ROOT"].$filePath."/lang/".$lang."/".$fileName;
+		$fname = \Bitrix\Main\Localization\Translation::convertLangPath($fname, $lang);
+		if (file_exists($fname))
+		{
+			__IncludeLang($fname, false, true);
+		}
 	}
 
 	public static function PrepareVariables(&$arData)
@@ -511,7 +520,8 @@ class CComponentUtil
 					"NAME" => GetMessage("COMP_PROP_SET_TITLE"),
 					"TYPE" => "CHECKBOX",
 					"DEFAULT" => "Y",
-					"ADDITIONAL_VALUES" => "N"
+					"ADDITIONAL_VALUES" => "N",
+					"REFRESH" => "Y"
 				);
 			}
 			elseif ($arParamKeys[$i] == "CACHE_TIME")
@@ -779,6 +789,46 @@ class CComponentUtil
 					"ADDITIONAL_VALUES" => "N"
 				);
 			}
+			elseif ($arParamKeys[$i] == "USER_CONSENT")
+			{
+				$arComponentParameters["GROUPS"]["USER_CONSENT"] = array(
+					"NAME" => GetMessage("COMP_GROUP_USER_CONSENT"),
+					"SORT" => 350
+				);
+
+				$arComponentParameters["PARAMETERS"]["USER_CONSENT"] = array(
+					"PARENT" => "USER_CONSENT",
+					"NAME" => GetMessage("COMP_PROP_USER_CONSENT_USE"),
+					"TYPE" => "CHECKBOX",
+					"DEFAULT" => "N",
+					"ADDITIONAL_VALUES" => "N"
+				);
+
+				$arComponentParameters["PARAMETERS"]["USER_CONSENT_ID"] = array(
+					"PARENT" => "USER_CONSENT",
+					"NAME" => GetMessage("COMP_PROP_USER_CONSENT_ID"),
+					"TYPE" => "LIST",
+					"VALUES" => array(GetMessage("COMP_PROP_USER_CONSENT_ID_DEF")) + \Bitrix\Main\UserConsent\Agreement::getActiveList(),
+					"MULTIPLE" => "N",
+					"DEFAULT" => "",
+				);
+
+				$arComponentParameters["PARAMETERS"]["USER_CONSENT_IS_CHECKED"] = array(
+					"PARENT" => "USER_CONSENT",
+					"NAME" => GetMessage("COMP_PROP_USER_CONSENT_IS_CHECKED"),
+					"TYPE" => "CHECKBOX",
+					"DEFAULT" => "Y",
+					"ADDITIONAL_VALUES" => "N"
+				);
+
+				$arComponentParameters["PARAMETERS"]["USER_CONSENT_IS_LOADED"] = array(
+					"PARENT" => "USER_CONSENT",
+					"NAME" => GetMessage("COMP_PROP_USER_CONSENT_IS_LOADED"),
+					"TYPE" => "CHECKBOX",
+					"DEFAULT" => "N",
+					"ADDITIONAL_VALUES" => "N"
+				);
+			}
 			else
 			{
 				$parent = $arComponentParameters["PARAMETERS"][$arParamKeys[$i]]["PARENT"];
@@ -796,7 +846,7 @@ class CComponentUtil
 			}
 		}
 
-		if (CHTMLPagesCache::isOn())
+		if (\Bitrix\Main\Composite\Helper::isOn())
 		{
 			$arComponentParameters["GROUPS"]["COMPOSITE_SETTINGS"] = array(
 				"NAME" => GetMessage("COMP_GROUP_COMPOSITE_SETTINGS"),
@@ -911,13 +961,13 @@ class CComponentUtil
 		$arTemplateParameters = array();
 
 		$componentName = trim($componentName);
-		if (strlen($componentName) <= 0)
+		if ($componentName == '')
 			return $arTemplateParameters;
 
-		if (strlen($templateName) <= 0)
+		if ($templateName == '')
 			$templateName = ".default";
 
-		if(!preg_match("#[A-Za-z0-9_.-]#i", $templateName))
+		if(preg_match("#[^a-z0-9_.-]#i", $templateName))
 			return $arTemplateParameters;
 
 		$path2Comp = CComponentEngine::MakeComponentPath($componentName);
@@ -1078,14 +1128,14 @@ class CComponentUtil
 		global $APPLICATION;
 
 		$componentName = trim($componentName);
-		if (strlen($componentName) <= 0)
+		if ($componentName == '')
 		{
 			$APPLICATION->ThrowException(GetMessage("comp_util_err1"), "EMPTY_COMPONENT_NAME");
 			return false;
 		}
 
 		$path2Comp = CComponentEngine::MakeComponentPath($componentName);
-		if (strlen($path2Comp) <= 0)
+		if ($path2Comp == '')
 		{
 			$APPLICATION->ThrowException(str_replace("#NAME#", $componentName, GetMessage("comp_util_err2")), "ERROR_NOT_COMPONENT");
 			return false;
@@ -1100,22 +1150,21 @@ class CComponentUtil
 		}
 
 		$newNamespace = trim($newNamespace);
-		if (strlen($newNamespace) > 0)
+		if ($newNamespace <> '')
 		{
-			$newNamespaceTmp = preg_replace("#[^A-Za-z0-9_.-]#i", "", $newNamespace);
-			if ($newNamespace != $newNamespaceTmp)
+			if (preg_match("#[^a-z0-9_.-]#i", $newNamespace))
 			{
 				$APPLICATION->ThrowException(str_replace("#NAME#", $newNamespace, GetMessage("comp_util_err3")), "ERROR_NEW_NAMESPACE");
 				return false;
 			}
 		}
 
-		if (strlen($newName) <= 0)
+		if ($newName == '')
 			$newName = false;
 
 		if ($newName !== false)
 		{
-			if (!preg_match("#^([A-Za-z0-9_-]+\\.)*([A-Za-z0-9_-]+)$#i", $newName))
+			if (!preg_match("#^([a-z0-9_-]+\\.)*([a-z0-9_-]+)$#i", $newName))
 			{
 				$APPLICATION->ThrowException(str_replace("#NAME#", $newName, GetMessage("comp_util_err4")), "ERROR_NEW_NAME");
 				return false;
@@ -1176,14 +1225,14 @@ class CComponentUtil
 		global $APPLICATION;
 
 		$componentName = trim($componentName);
-		if (strlen($componentName) <= 0)
+		if ($componentName == '')
 		{
 			$APPLICATION->ThrowException(GetMessage("comp_util_err1"), "EMPTY_COMPONENT_NAME");
 			return false;
 		}
 
 		$path2Comp = CComponentEngine::MakeComponentPath($componentName);
-		if (strlen($path2Comp) <= 0)
+		if ($path2Comp == '')
 		{
 			$APPLICATION->ThrowException(str_replace("#NAME#", $componentName, GetMessage("comp_util_err2")), "ERROR_NOT_COMPONENT");
 			return false;
@@ -1197,17 +1246,16 @@ class CComponentUtil
 			return false;
 		}
 
-		if (strlen($templateName) <= 0)
+		if ($templateName == '')
 			$templateName = ".default";
 
-		$templateNameTmp = preg_replace("#[^A-Za-z0-9_.-]#i", "", $templateName);
-		if ($templateNameTmp != $templateName)
+		if (preg_match("#[^a-z0-9_.-]#i", $templateName))
 		{
 			$APPLICATION->ThrowException(str_replace("#NAME#", $templateName, GetMessage("comp_util_err7")), "ERROR_BAD_TEMPLATE_NAME");
 			return false;
 		}
 
-		if (strlen($siteTemplate) <= 0)
+		if ($siteTemplate == '')
 			$siteTemplate = false;
 
 		if ($siteTemplate != false)
@@ -1257,8 +1305,7 @@ class CComponentUtil
 		else
 			$templateNameNew = $templateName;
 
-		$templateNameNewTmp = preg_replace("#[^A-Za-z0-9_.-]#i", "", $templateNameNew);
-		if ($templateNameNewTmp != $templateNameNew)
+		if (preg_match("#[^a-z0-9_.-]#i", $templateNameNew))
 		{
 			$APPLICATION->ThrowException(str_replace("#NAME#", $templateNameNew, GetMessage("comp_util_err7")), "ERROR_BAD_TEMPLATE_NAME");
 			return false;
@@ -1393,40 +1440,29 @@ class CComponentUtil
 		return $DB->DateFormatToPHP(CSite::GetDateFormat("FULL"));
 	}
 
-	public static function GetDateTimeFormatted($timestamp, $dateTimeFormat = false, $offset = 0)
+	public static function GetDateTimeFormatted($timestamp, $dateTimeFormat = false, $offset = 0, $hideToday = false)
 	{
-		static $arFormatWOYear = array();
-		static $arFormatTime = array();
-		static $defaultDateTimeFormat = false;
-
-		if (
-			empty($dateTimeFormat)
-			|| $dateTimeFormat == "FULL"
-		)
+		if (is_array($timestamp))
 		{
-			if (!$defaultDateTimeFormat)
-			{
-				$defaultDateTimeFormat = $GLOBALS["DB"]->DateFormatToPHP(FORMAT_DATETIME);
-			}
-			$dateTimeFormat = $defaultDateTimeFormat;
+			$params = $timestamp;
+			$timestamp = (isset($params['TIMESTAMP']) ? $params['TIMESTAMP'] : false);
+			$offset = (isset($params['TZ_OFFSET']) ? intval($params['TZ_OFFSET']) : 0);
+			$hideToday = (isset($params['HIDE_TODAY']) ? $params['HIDE_TODAY'] : false);
 		}
-		$dateTimeFormat = preg_replace('/[\/.,\s:][s]/', '', $dateTimeFormat);
 
-		if (empty($arFormatWOYear[$dateTimeFormat]))
+		if (empty($timestamp))
 		{
-			$arFormatWOYear[$dateTimeFormat] = preg_replace('/[\/.,\s-][Yyo]/', '', $dateTimeFormat);
+			return '';
 		}
-		$dateTimeFormatWOYear = $arFormatWOYear[$dateTimeFormat];
 
-		if (empty($arFormatTime[$dateTimeFormat]))
-		{
-			$arFormatTime[$dateTimeFormat] = preg_replace('/[\/.,\s]+$/', '', preg_replace('/^[\/.,\s]+/', '', preg_replace('/[dDjlFmMnYyo]/', '', $dateTimeFormat)));
-		}
-		$timeFormat = $arFormatTime[$dateTimeFormat];
+		$culture = \Bitrix\Main\Context::getCurrent()->getCulture();
+		$timeFormat = $culture->getShortTimeFormat();
+		$dateTimeFormat = $culture->getLongDateFormat().' '.$timeFormat;
+		$dateTimeFormatWOYear = $culture->getDayMonthFormat().' '.$timeFormat;
 
-		$arFormat = Array(
+		$arFormat = array(
 			"tomorrow" => "tomorrow, ".$timeFormat,
-			"today" => "today, ".$timeFormat,
+			"today" => ($hideToday ? $timeFormat : "today, ".$timeFormat),
 			"yesterday" => "yesterday, ".$timeFormat,
 			"" => (
 				date("Y", $timestamp) == date("Y")
@@ -1435,11 +1471,6 @@ class CComponentUtil
 			)
 		);
 
-		return (
-			strcasecmp(LANGUAGE_ID, 'EN') !== 0
-			&& strcasecmp(LANGUAGE_ID, 'DE') !== 0
-				? ToLower(FormatDate($arFormat, $timestamp, (time() + $offset)))
-				: FormatDate($arFormat, $timestamp, (time() + $offset))
-		);
+		return FormatDate($arFormat, $timestamp, (time() + $offset));
 	}
 }

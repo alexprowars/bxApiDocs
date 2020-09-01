@@ -1,108 +1,16 @@
 <?
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/support/classes/general/dictionary.php");
 
-
-/**
- * <b>CTicketDictionary</b> - класс для работы со справочником обращений.
- *
- *
- * @return mixed 
- *
- * @static
- * @link http://dev.1c-bitrix.ru/api_help/support/classes/cticketdictionary/index.php
- * @author Bitrix
- */
 class CTicketDictionary extends CAllTicketDictionary
 {
-	public static function err_mess()
+	function err_mess()
 	{
 		$module_id = "support";
 		@include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/".$module_id."/install/version.php");
 		return "<br>Module: ".$module_id." <br>Class: CTicketDictionary<br>File: ".__FILE__;
 	}
 
-	
-	/**
-	* <p>Метод предназначен для получения списка записей справочника. Метод нестатический.</p>
-	*
-	*
-	* @param varchar &$by  Идентификатор позволяющий задать имя поля для сортировки.
-	* Допустимы следующие значения: 	<ul> <li>s_id - по ID 		</li> <li>s_c_sort - по
-	* указанному порядку сортировки 		</li> <li>s_sid - по символьному коду
-	* 		</li> <li>s_lis - по языку 		</li> <li>s_name - по имени 		</li> <li>s_responsible - по ID
-	* ответственного 		</li> <li>s_dropdown - по указанному порядку сортировки и
-	* по имени 	</li> </ul>
-	*
-	* @param varchar &$order  Порядок сортировки. Допустимы следующие значения: 	<ul> <li>desc - по
-	* убыванию (значение по умолчанию) 		</li> <li>asc - по возрастанию 	</li> </ul>
-	*
-	* @param array $arFilter = array() Массив для фильтрации значений. В массиве допустимы следующие
-	* индексы: 	<ul> <li>ID - ID записи (допускается сложная логика) 		</li> <li>SID -
-	* символьный код (допускается сложная логика) 		</li> <li>LID - ID сайта 		</li>
-	* <li>TYPE - тип записи: "C" - категория, "K" - критичность, "S" - статус, "M" -
-	* оценка ответов, "F" - часто используемые ответы, "SR" - источник 		</li>
-	* <li>NAME - имя (допускается сложная логика) 		</li> <li>RESPONSIBLE_ID - ID
-	* ответственного 		</li> <li>RESPONSIBLE - ответственный, поиск
-	* осуществляется по ID пользователя, логину, имени, фамилии
-	* (допускается сложная логика) 		</li> <li>DEFAULT - флаг "Выбирать по
-	* умолчанию"; "Y" - да, "N" - нет 	</li> </ul> Необязательный параметр.
-	*
-	* @param boolean &$is_filtered  Переменная возвращающая true в том случае если список результатов
-	* отфильтрован по какому либо критерию; либо false в противном случае.
-	* С версии 12.0.0 изменен на <b>isFiltered</b>.
-	*
-	* @return record <p>Возвращается объект CDBResult.</p><a name="examples"></a>
-	*
-	* <h4>Example</h4> 
-	* <pre bgcolor="#323232" style="padding:5px;">
-	* &lt;?
-	* $FilterArr = Array(
-	* 	"find_id",
-	* 	"find_lid",
-	* 	"find_type",
-	* 	"find_name",
-	* 	"find_sid",
-	* 	"find_responsible",
-	* 	"find_responsible_id",
-	* 	"find_default"
-	* 	);
-	* if (strlen($set_filter)&gt;0) InitFilterEx($FilterArr,"TICKET_DICTIONARY_LIST","set"); else InitFilterEx($FilterArr,"TICKET_DICTIONARY_LIST","get");
-	* if (strlen($del_filter)&gt;0) DelFilterEx($FilterArr,"TICKET_DICTIONARY_LIST");
-	* $arFilter = Array(
-	* 	"ID"				=&gt; $find_id,
-	* 	"LID"				=&gt; $find_lid,
-	* 	"TYPE"				=&gt; $find_type,
-	* 	"NAME"				=&gt; $find_name,
-	* 	"SID"				=&gt; $find_sid,
-	* 	"RESPONSIBLE_ID"	=&gt; $find_responsible_id,
-	* 	"RESPONSIBLE"		=&gt; $find_responsible,
-	* 	"DEFAULT"			=&gt; $find_default
-	* 	);
-	* $tdic = <b>CTicketDictionary::GetList</b>($by, $order, $arFilter, $is_filtered);
-	* ?&gt;
-	* 
-	* 
-	* //получим список статусов для текущего сайта $arFilter = Array(
-	* 	"LID" =&gt; SITE_ID,
-	* 	"TYPE" =&gt; "S",
-	* );
-	* 
-	* //сортировка задется через переменные
-	* $by = "s_c_sort";
-	* $sort = "asc";
-	* 
-	* //отбор и вывод
-	* $rsStatus = CTicketDictionary::GetList($by, $sort, $arFilter, $is_filtered); while($arRes = $rsStatus-&gt;GetNext()) {
-	* 	echo $arRes["NAME"], "";
-	* }
-	* </pre>
-	*
-	*
-	* @static
-	* @link http://dev.1c-bitrix.ru/api_help/support/classes/cticketdictionary/getlist.php
-	* @author Bitrix
-	*/
-	public static function GetList(&$by, &$order, $arFilter=Array(), &$isFiltered)
+	function GetList(&$by, &$order, $arFilter=Array(), &$isFiltered)
 	{
 		$err_mess = (CTicketDictionary::err_mess())."<br>Function: GetList<br>Line: ";
 		global $DB;

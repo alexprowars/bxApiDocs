@@ -52,7 +52,7 @@ class Config
 		);
 		foreach ($serverConfig as $key => $value)
 		{
-			if(is_string($value) && strpos($value, '#DOMAIN#') !== false)
+			if(is_string($value) && mb_strpos($value, '#DOMAIN#') !== false)
 			{
 				$serverConfig[$key] = str_replace('#DOMAIN#', $domain, $value);
 			}
@@ -109,7 +109,7 @@ class Config
 
 			foreach ($config['CHANNELS'] as $type => $channel)
 			{
-				$type = strtolower($type);
+				$type = mb_strtolower($type);
 				$result['channels'][$type] = array_change_key_case($channel, CASE_LOWER);
 				$result['channels'][$type]['type'] = $type;
 				$result['channels'][$type]['start'] = date('c', $channel['START']);

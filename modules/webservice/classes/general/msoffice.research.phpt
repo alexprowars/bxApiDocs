@@ -8,12 +8,12 @@ class CMSSOAPResearch extends CSOAPServerResponser
 	var $query_path;
 	var $registration_path;
 
-	public static function OnBeforeRequest(&$cserver) 
+	function OnBeforeRequest(&$cserver) 
 	{
 		//AddMessage2Log(mydump($cserver->GetRequestData()));	
 	}
 
-	public function ProcessRequestBody(&$cserver, $body) 
+	function ProcessRequestBody(&$cserver, $body) 
 	{
 		$functionName = $body->name();
 		$namespaceURI = $body->namespaceURI();
@@ -40,9 +40,9 @@ class CMSSOAPResearch extends CSOAPServerResponser
 			$providers = array(
 				
 					"Provider" => array (
-						"Message" => "Ð¢ÐµÑÑ‚Ð¾Ð²Ð°Ñ ÑÐ»ÑƒÐ¶Ð±Ð°.",
+						"Message" => "Òåñòîâàÿ ñëóæáà.",
 						"Id" => "{$this->provider_id}",
-						"Name" => "Ð¢ÐµÑÑ‚Ð¾Ð²Ð°Ñ ÑÐ»ÑƒÐ¶Ð±Ð°. {$this->add_tittle}",
+						"Name" => "Òåñòîâàÿ ñëóæáà. {$this->add_tittle}",
 						"QueryPath" => $this->query_path,
 						"RegistrationPath" => $this->registration_path,
 						"AboutPath" => "http://www.bitrix.ru/",
@@ -51,8 +51,8 @@ class CMSSOAPResearch extends CSOAPServerResponser
 						"Services" => array(
 							"Service" => array(
 								"Id" => "{$this->service_id}",
-								"Name" => "Ð¢ÐµÑÑ‚Ð¾Ð²Ð°Ñ ÑÐ»ÑƒÐ¶Ð±Ð°. {$this->add_tittle}",
-								"Description" => "Ð¢ÐµÑÑ‚Ð¾Ð²Ð°Ñ ÑÐ»ÑƒÐ¶Ð±Ð° Ð´Ð»Ñ Ñ‚ÐµÑÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ñ soap ÑÐµÑ€Ð²ÐµÑ€Ð°.",
+								"Name" => "Òåñòîâàÿ ñëóæáà. {$this->add_tittle}",
+								"Description" => "Òåñòîâàÿ ñëóæáà äëÿ òåñòèðîâàíèÿ soap ñåðâåðà.",
 								"Copyright" => "(c) Bitrix.",
 								"Display" => "On",
 								"Category" => "ECOMMERCE_GENERAL",

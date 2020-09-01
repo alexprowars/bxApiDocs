@@ -242,7 +242,7 @@ class SocialNetwork
 		if ($groupPath === null)
 		{
 			$groupPath = Option::get('socialnetwork', 'group_path_template', '', SITE_ID);
-			if (substr($groupPath, -1) == '/')
+			if (mb_substr($groupPath, -1) == '/')
 			{
 				$groupPath .= 'general/';
 			}

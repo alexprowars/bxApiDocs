@@ -37,7 +37,7 @@ class Block
 			if (isset($blocks[$block]))
 			{
 				// action with card  of block
-				if (strpos($selector, '@') !== false)
+				if (mb_strpos($selector, '@') !== false)
 				{
 					[$selector, $position] = explode('@', $selector);
 				}
@@ -46,7 +46,7 @@ class Block
 					$position = -1;
 				}
 				if (
-					strtolower($action) == 'clonecard' &&
+					mb_strtolower($action) == 'clonecard' &&
 					isset($params['content'])
 				)
 				{
@@ -197,7 +197,7 @@ class Block
 		// collect selectors in right array
 		foreach ($data as $selector => $value)
 		{
-			if (strpos($selector, '@') !== false)
+			if (mb_strpos($selector, '@') !== false)
 			{
 				[$selector, $position] = explode('@', $selector);
 			}
@@ -385,7 +385,7 @@ class Block
 		// collect selectors in right array
 		foreach ($data as $selector => $value)
 		{
-			if (strpos($selector, '@') !== false)
+			if (mb_strpos($selector, '@') !== false)
 			{
 				[$selector, $position] = explode('@', $selector);
 			}
@@ -399,7 +399,7 @@ class Block
 			}
 			if (isset($value['attrs']) && count($value) == 1)
 			{
-				if (strpos($selector, ':') !== false)
+				if (mb_strpos($selector, ':') !== false)
 				{
 					$components[$selector] = $value['attrs'];
 				}
@@ -583,7 +583,7 @@ class Block
 	{
 		foreach ($data as $selector => $value)
 		{
-			if (strpos($selector, '@') !== false)
+			if (mb_strpos($selector, '@') !== false)
 			{
 				unset($data[$selector]);
 				[$selector, $pos] = explode('@', $selector);
@@ -872,7 +872,7 @@ class Block
 	{
 		$result = new PublicActionResult();
 
-		if (strpos($code, ':') === false)
+		if (mb_strpos($code, ':') === false)
 		{
 			$code = 'bitrix:' . $code;
 		}
