@@ -218,7 +218,7 @@ abstract class BaseType
 	 */
 	private static function getComponentName(): string
 	{
-		if(strpos(static::RENDER_COMPONENT, ':'))
+		if(mb_strpos(static::RENDER_COMPONENT, ':'))
 		{
 			return static::RENDER_COMPONENT;
 		}
@@ -303,6 +303,17 @@ abstract class BaseType
 	public static function getPublicText(array $userField): string
 	{
 		return static::renderText($userField);
+	}
+
+	/**
+	 * @param array $userField
+	 * @param array $additionalParameters
+	 * @return mixed
+	 */
+	public static function getDefaultValue(array $userField, array $additionalParameters = [])
+	{
+		$value = ($userField['SETTINGS']['DEFAULT_VALUE'] ?? '');
+		return ($userField['MULTIPLE'] === 'Y' ? [$value] : $value);
 	}
 
 	abstract public static function getDbColumnType(): string;

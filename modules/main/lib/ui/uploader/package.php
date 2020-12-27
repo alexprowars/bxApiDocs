@@ -72,12 +72,16 @@ class Package
 
 		$post = Context::getCurrent()->getRequest()->getPostList()->toArray();
 		$post = $post[Uploader::INFO_NAME];
+		if (!preg_match("/^([0-9]+)$/", $post["filesCount"]))
+		{
+			throw new ArgumentException("The value filesCount must be an integer", "packageIndex");
+		}
 		$this->log = new Log($this->path.$this->getIndex().".package");
 		if (!isset($this->log["CID"]))
 		{
 			$this->log["CID"] = $this->getCid();
 			$this->log["pIndex"] = $this->getIndex();
-			$this->log["filesCount"] = $post["filesCount"];
+			$this->log["filesCount"] = intval($post["filesCount"]);
 			$this->log["files"] = array();
 		}
 
@@ -142,7 +146,7 @@ class Package
 	{
 		if (!is_string($CID))
 			throw new ArgumentNullException("CID");
-		else if (strpos($CID, "/") !== false)
+		else if (mb_strpos($CID, "/") !== false)
 			throw new ArgumentException("CID contains a forbidden symbol /");
 		$this->CID = preg_replace("/[^a-z0-9_\\-.]/i", "_", $CID);
 	}
@@ -219,20 +223,18 @@ class Package
 	 */
 	protected static function unescape($data)
 	{
-		global $APPLICATION;
-
 		if(is_array($data))
 		{
 			$res = array();
 			foreach($data as $k => $v)
 			{
-				$k = $APPLICATION->ConvertCharset(\CHTTP::urnDecode($k), "UTF-8", LANG_CHARSET);
+				$k = \Bitrix\Main\Text\Encoding::convertEncoding(\CHTTP::urnDecode($k), "UTF-8", LANG_CHARSET);
 				$res[$k] = self::unescape($v);
 			}
 		}
 		else
 		{
-			$res = $APPLICATION->ConvertCharset(\CHTTP::urnDecode($data), "UTF-8", LANG_CHARSET);
+			$res = \Bitrix\Main\Text\Encoding::convertEncoding(\CHTTP::urnDecode($data), "UTF-8", LANG_CHARSET);
 		}
 
 		return $res;

@@ -12,7 +12,7 @@ abstract class Builder
 	protected const TYPE_STANDART = 'STANDART';
 	protected const TYPE_WEBPACK = 'WEBPACK';
 
-	public const PACKAGE_NAME = 'landing_assets';
+	protected const PACKAGE_NAME = 'landing_assets';
 
 	/**
 	 * @var ResourceCollection
@@ -58,8 +58,10 @@ abstract class Builder
 		{
 			case self::TYPE_STANDART:
 				return new StandartBuilder($resources);
+
 			case self::TYPE_WEBPACK:
 				return new WebpackBuilder($resources);
+
 			default:
 				throw new ArgumentException("Unknown landing asset builder type `$type`.");
 		}

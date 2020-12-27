@@ -32,7 +32,8 @@ class CListsLiveFeed
 
 		$params = serialize(array("ELEMENT_NAME" => $element['NAME']));
 
-		if(in_array($element['IBLOCK_CODE'], $listSystemIblockCode))
+		$element['NAME'] = htmlspecialcharsbx($element['NAME']);
+		if (in_array($element['IBLOCK_CODE'], $listSystemIblockCode))
 		{
 			$element['NAME'] = preg_replace_callback(
 				'#^[^\[\]]+?\[(\d+)\]#i',
@@ -48,7 +49,7 @@ class CListsLiveFeed
 					}
 					return $matches[0];
 				},
-				htmlspecialcharsbx($element['NAME'])
+				$element['NAME']
 			);
 		}
 
@@ -115,7 +116,7 @@ class CListsLiveFeed
 					<span class="bp-title-desc-icon">
 						<img src="'.$imageFile['src'].'" width="36" height="30" border="0" />
 					</span>
-					'.in_array($element['IBLOCK_CODE'], $listSystemIblockCode) ? $element['NAME'] : htmlspecialcharsbx($element['NAME']).'
+					'.$element['NAME'].'
 				</span>
 			';
 
@@ -267,6 +268,7 @@ class CListsLiveFeed
 					'',
 					Array(
 						'WORKFLOW_ID' => $fields['MESSAGE'],
+						'SITE_TEMPLATE_ID' => (isset($params['SITE_TEMPLATE_ID']) ? $params['SITE_TEMPLATE_ID'] : '')
 					),
 					null,
 					array('HIDE_ICONS' => 'Y')

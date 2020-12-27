@@ -311,7 +311,10 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 				);
 			}
 			// fill meta data
-			$keys = ['CREATED_BY_ID', 'MODIFIED_BY_ID', 'DATE_CREATE', 'DATE_MODIFY'];
+			$keys = [
+				'CREATED_BY_ID', 'MODIFIED_BY_ID', 'DATE_CREATE',
+				'DATE_MODIFY', 'INITIATOR_APP_CODE'
+			];
 			foreach ($keys as $key)
 			{
 				if (isset($landing[$key]))
@@ -1347,19 +1350,21 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 					false,
 					$landingFull
 				);
-				if ($isIframe)
+				foreach ($urls['LANDING'] as &$url)
 				{
-					foreach ($urls['LANDING'] as &$url)
+					$url = \htmlspecialcharsbx($url);
+					if ($isIframe)
 					{
 						$url .= '?IFRAME=Y';
 					}
-					unset($url);
 				}
+				unset($url);
 			}
 			if (!empty($urls['BLOCK']))
 			{
 				foreach ($urls['BLOCK'] as $bid => $lid)
 				{
+					$urls['LANDING'][$lid] = \htmlspecialcharsbx($urls['LANDING'][$lid]);
 					$urls['LANDING'][$lid] .= ($isIframe ? '?IFRAME=Y' : '');
 					if (isset($urls['LANDING'][$lid]))
 					{
@@ -1678,7 +1683,10 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 	 */
 	public function touch()
 	{
-		self::update($this->id);
+		if (self::update($this->id)->isSuccess())
+		{
+			Site::touch($this->siteId);
+		}
 	}
 
 	/**
@@ -1732,6 +1740,27 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 			$this->version = 6;
 			Assets\PreProcessing\Icon::processingLanding($this->id);
 			Assets\Manager::rebuildWebpackForLanding($this->id);
+		}
+		if ($this->version <= 6)
+		{
+			$needUpdate = true;
+			Update\Block\Buttons::updateLanding($this->id);
+			Update\Block\FontWeight::updateLanding($this->id);
+			$this->version = 7;
+		}
+		if ($this->version <= 7)
+		{
+			$needUpdate = true;
+			Assets\PreProcessing\Icon::processingLanding($this->id);
+			Assets\Manager::rebuildWebpackForLanding($this->id);
+			$this->version = 8;
+		}
+		if ($this->version <= 8)
+		{
+			$needUpdate = true;
+			Subtype\Form::updateLandingToEmbedForms($this->id);
+			Assets\Manager::rebuildWebpackForLanding($this->id);
+			$this->version = 9;
 		}
 		if ($needUpdate)
 		{
@@ -2155,6 +2184,11 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 						'SOURCE_PARAMS' => $srcBlock->getDynamicParams(),
 						'PUBLIC' => 'N'
 				));
+				// we should save original content after all callbacks
+				$newBlock->saveContent(
+					$srcBlock->getContent()
+				);
+				$newBlock->save();
 				// copy files
 				if ($newBlock)
 				{
@@ -2468,7 +2502,7 @@ class Landing extends \Bitrix\Landing\Internals\BaseTable
 		$demoCmp = new $className;
 		$demoCmp->initComponent($componentName);
 		$demoCmp->arParams = [
-			'TYPE' => ($site['TYPE'] == 'STORE') ? 'PAGE' : $site['TYPE'],
+			'TYPE' => ($site['TYPE'] == 'STORE' || $site['TYPE'] == 'SMN') ? 'PAGE' : $site['TYPE'],
 			'SITE_ID' => $siteId,
 			'SITE_WORK_MODE' => 'N',
 			'DISABLE_REDIRECT' => 'Y',

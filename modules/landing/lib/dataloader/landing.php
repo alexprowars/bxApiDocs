@@ -146,6 +146,7 @@ class Landing extends \Bitrix\Landing\Source\DataLoader
 		{
 			$filter['=ACTIVE'] = $contextFilter['LANDING_ACTIVE'];
 		}
+		$filter['==AREAS.ID'] = null;
 
 		// select, order
 		$order = [];
@@ -184,17 +185,6 @@ class Landing extends \Bitrix\Landing\Source\DataLoader
 		{
 			$limit = 10;
 		}
-
-		// runtime (to exclude areas)
-		$runtime = [];
-		$runtime[] = new \Bitrix\Main\Entity\ReferenceField(
-			'AREAS',
-			'Bitrix\Landing\Internals\TemplateRefTable',
-			[
-				'=this.ID' => 'ref.LANDING_ID'
-			]
-		);
-		$filter['==AREAS.ID'] = null;
 
 		$searchContent = [];
 		$query = $this->getSearchQuery();
@@ -247,14 +237,13 @@ class Landing extends \Bitrix\Landing\Source\DataLoader
 			'select' => $select,
 			'filter' => $filter,
 			'order' => $order,
-			'limit' => $limit,
-			'runtime' => $runtime
+			'limit' => $limit
 		]);
 		while ($row = $res->fetch())
 		{
 			Cache::register($row['ID']);
 			$result[$row['ID']] = [
-				'TITLE' => $row['TITLE']
+				'TITLE' => \htmlspecialcharsbx($row['TITLE'])
 			];
 		}
 

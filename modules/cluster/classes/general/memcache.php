@@ -1,4 +1,4 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterMemcache
@@ -29,7 +29,7 @@ class CClusterMemcache
 		$isOnline = false;
 
 		$content = '<'.'?
-// define("BX_MEMCACHE_CLUSTER", "'.EscapePHPString(CMain::GetServerUniqID()).'");
+define("BX_MEMCACHE_CLUSTER", "'.EscapePHPString(CMain::GetServerUniqID()).'");
 $arList = array(
 ';
 		$defGroup = 1;
@@ -78,7 +78,7 @@ $arList = array(
 				|| !isset($cache['type'])
 				|| !is_array($cache['type'])
 				|| !isset($cache['type']['class_name'])
-				|| !$cache['type']['class_name'] === 'CPHPCacheMemcacheCluster'
+				|| !($cache['type']['class_name'] === 'CPHPCacheMemcacheCluster')
 			)
 			{
 				\Bitrix\Main\Config\Configuration::setValue('cache', array(
@@ -98,7 +98,7 @@ $arList = array(
 				&& isset($cache['type'])
 				&& is_array($cache['type'])
 				&& isset($cache['type']['class_name'])
-				&& $cache['type']['class_name'] === 'CPHPCacheMemcacheCluster'
+				&& ($cache['type']['class_name'] === 'CPHPCacheMemcacheCluster')
 			)
 			{
 				\Bitrix\Main\Config\Configuration::setValue('cache', null);
@@ -114,9 +114,8 @@ $arList = array(
 		return $res;
 	}
 
-	static public function getServerList()
+	public static function getServerList()
 	{
-		global $DB;
 		$result = array();
 		foreach (CClusterMemcache::LoadConfig() as $arData)
 		{
@@ -139,10 +138,8 @@ $arList = array(
 		return $ar[$id];
 	}
 
-	public function Add($arFields)
+	function Add($arFields)
 	{
-		global $DB, $CACHE_MANAGER;
-
 		if(!$this->CheckFields($arFields, false))
 			return false;
 
@@ -177,7 +174,7 @@ $arList = array(
 		return true;
 	}
 
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		$ID = intval($ID);
 		$arServerList = CClusterMemcache::LoadConfig();
@@ -201,7 +198,7 @@ $arList = array(
 		return $ID;
 	}
 
-	public static function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -272,12 +269,13 @@ $arList = array(
 					'cmd_set' => null,
 					'get_misses' => null,
 					'get_hits' => null,
+					'evictions' => null,
 					'limit_maxbytes' => null,
 					'bytes' => null,
 					'curr_items' => null,
 					'listen_disabled_num' => null,
 				);
-				$ar = $ob->getStats();
+				$ar = $ob->getstats();
 				foreach($arStats as $key => $value)
 					$arStats[$key] = $ar[$key];
 			}
@@ -285,6 +283,4 @@ $arList = array(
 
 		return $arStats;
 	}
-
 }
-?>

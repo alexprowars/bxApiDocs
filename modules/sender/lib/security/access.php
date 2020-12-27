@@ -8,6 +8,7 @@ use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Event;
 use Bitrix\Main\EventManager;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\ModuleManager;
 use Bitrix\Sender\Access\AccessController;
 use Bitrix\Sender\Access\ActionDictionary;
 use Bitrix\Sender\Access\SectionDictionary;
@@ -33,6 +34,8 @@ class Access
 	protected $permissions;
 
 	private static $instance;
+
+	protected const ACTION_VIEW = 'VIEW';
 
 	/**
 	 * Get Access instance for current user.
@@ -236,6 +239,11 @@ class Access
 	 */
 	public function canViewRc()
 	{
+		if(!ModuleManager::isModuleInstalled('crm'))
+		{
+			return false;
+		}
+
 		return AccessController::can($this->user->getId(), ActionDictionary::ACTION_RC_VIEW);
 	}
 
@@ -259,6 +267,11 @@ class Access
 	 */
 	public function canModifyRc()
 	{
+		if(!ModuleManager::isModuleInstalled('crm'))
+		{
+			return false;
+		}
+
 		return AccessController::can($this->user->getId(), ActionDictionary::ACTION_RC_EDIT);
 	}
 
@@ -379,12 +392,10 @@ class Access
 			return true;
 		}
 
-		return Role\Permission::check(
-			$this->permissions,
-			$entityCode,
-			$actionCode,
-			$minPerm
-		);
+		if($actionCode === self::ACTION_VIEW)
+			return $this->user->canView();
+
+		return false;
 	}
 
 	private static function getSectionAndAction($action)

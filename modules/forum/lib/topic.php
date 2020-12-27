@@ -38,6 +38,7 @@ use Bitrix\Main\Type\DateTime;
  * <li> USER_START_NAME string(255),
  * <li> START_DATE datetime mandatory
  * <li> POSTS int mandatory default '0'
+ * <li> POSTS_SERVICE int mandatory default '0'
  * <li> LAST_POSTER_ID int(10)
  * <li> LAST_POSTER_NAME string(255) mandatory
  * <li> LAST_POST_DATE datetime mandatory
@@ -91,6 +92,7 @@ class TopicTable extends Main\Entity\DataManager
 			(new StringField("USER_START_NAME", ["required" => true, "size" => 255])),
 			(new DatetimeField("START_DATE", ["required" => true, "default_value" => function(){return new DateTime();}])),
 			(new IntegerField("POSTS")),
+			(new IntegerField("POSTS_SERVICE")),
 			(new IntegerField("LAST_POSTER_ID")),
 			(new StringField("LAST_POSTER_NAME", ["required" => true, "size" => 255])),
 			(new DatetimeField("LAST_POST_DATE", ["required" => true, "default_value" => function(){return new DateTime();}])),
@@ -195,7 +197,7 @@ class TopicTable extends Main\Entity\DataManager
 		if (array_key_exists("TITLE_SEO", $data) || array_key_exists("TITLE", $data))
 		{
 			$data["TITLE_SEO"] = trim($data["TITLE_SEO"], " -");
-			if (strlen($data["TITLE_SEO"]) <= 0)
+			if ($data["TITLE_SEO"] == '')
 			{
 				$title = array_key_exists("TITLE", $data) ? $data["TITLE"] : $topic["TITLE"];
 				$data["TITLE_SEO"] = \CUtil::translit($title, LANGUAGE_ID, array("max_len"=>255, "safe_chars"=>".", "replace_space" => '-'));
@@ -262,13 +264,24 @@ class Topic extends \Bitrix\Forum\Internals\Entity
 	public const APPROVED_APPROVED = "Y";
 	public const APPROVED_DISAPPROVED = "N";
 
+	public function __construct($id)
+	{
+		if ($id <= 0)
+		{
+			throw new \Bitrix\Main\ArgumentNullException("Topic id");
+		}
+		parent::__construct($id);
+	}
+
 	protected function init()
 	{
 		if (!($this->data = TopicTable::getById($this->id)->fetch()))
 		{
-			throw new \Bitrix\Main\ObjectNotFoundException("Topic with id {$this->id} is not found.");
+			throw new \Bitrix\Main\ObjectNotFoundException(Loc::getMessage("F_ERROR_TID_IS_LOST", ["#id#" => $this->id]));
 		}
 		$this->authorId = intval($this->data["USER_START_ID"]);
+		$this->data["~TITLE_SEO"] = $this->data["TITLE_SEO"];
+		$this->data["TITLE_SEO"] = implode("-", [$this->data["ID"], $this->data["TITLE_SEO"]]);
 	}
 
 	public function moveToForum(int $forumId)
@@ -429,6 +442,7 @@ class Topic extends \Bitrix\Forum\Internals\Entity
 			"APPROVED" => $fields["APPROVED"],
 
 			"POSTS" => 0,
+			"POSTS_SERVICE" => 0,
 			"POSTS_UNAPPROVED" => 0,
 
 			"USER_START_ID" => $author["ID"],
@@ -703,6 +717,11 @@ class Topic extends \Bitrix\Forum\Internals\Entity
 				$fields["POSTS"] = new \Bitrix\Main\DB\SqlExpression('?# + 1', "POSTS");
 				$this->data["POSTS"]++;
 			}
+			if (!empty($message["SERVICE_TYPE"]))
+			{
+				$fields["POSTS_SERVICE"] = new \Bitrix\Main\DB\SqlExpression('?# + 1', "POSTS_SERVICE");
+				$this->data["POSTS_SERVICE"]++;
+			}
 		}
 		else
 		{
@@ -710,5 +729,10 @@ class Topic extends \Bitrix\Forum\Internals\Entity
 			$this->data["POSTS_UNAPPROVED"]++;
 		}
 		return TopicTable::update($this->getId(), $fields);
+	}
+
+	public function incrementViews()
+	{
+		TopicTable::update($this->getId(), ['VIEWS' => new \Bitrix\Main\DB\SqlExpression('?# + 1', 'VIEWS')]);
 	}
 }

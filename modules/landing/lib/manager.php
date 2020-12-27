@@ -33,58 +33,18 @@ class Manager
 	const BUY_LICENSE_PATH = '/settings/license_all.php';
 
 	/**
-	 * Feature name for create new site.
+	 * Features codes for backward compatibility.
 	 */
 	const FEATURE_CREATE_SITE = 'create_site';
-
-	/**
-	 * Feature name for create new page.
-	 */
 	const FEATURE_CREATE_PAGE = 'create_page';
-
-	/**
-	 * Feature name for allow custom domain name.
-	 */
 	const FEATURE_CUSTOM_DOMAIN = 'custom_domain';
-
-	/**
-	 * Feature name for enable all hooks.
-	 */
 	const FEATURE_ENABLE_ALL_HOOKS = 'enable_all_hooks';
-
-	/**
-	 * Feature name for publication site.
-	 */
 	const FEATURE_PUBLICATION_SITE = 'publication_site';
-
-	/**
-	 * Feature name for publication page.
-	 */
 	const FEATURE_PUBLICATION_PAGE = 'publication_page';
-
-	/**
-	 * Feature name for permissions available.
-	 */
 	const FEATURE_PERMISSIONS_AVAILABLE = 'permissions_available';
-
-	/**
-	 * Feature name for dynamic block available.
-	 */
 	const FEATURE_DYNAMIC_BLOCK = 'dynamic_block';
-
-	/**
-	 * Feature name for free custom domain.
-	 */
 	const FEATURE_FREE_DOMAIN = 'free_domain';
-
-	/**
-	 * Feature name for allowing site export.
-	 */
 	const FEATURE_ALLOW_EXPORT = 'allow_export';
-
-	/**
-	 * Feature name for allowing viewing page.
-	 */
 	const FEATURE_ALLOW_VIEW_PAGE = 'allow_view_page';
 
 	/**
@@ -98,12 +58,6 @@ class Manager
 	 * @var array
 	 */
 	protected static $tmpFeatures = [];
-
-	/**
-	 * Selected template theme id.
-	 * @var string
-	 */
-	private static $themeId = '';
 
 	/**
 	 * And ID for typography settings.
@@ -497,6 +451,16 @@ class Manager
 	}
 
 	/**
+	 * Clears view by marker code.
+	 * @param string $marker Marker code.
+	 * @return void
+	 */
+	public static function clearPageView($marker): void
+	{
+		self::getApplication()->setPageProperty($marker, '');
+	}
+
+	/**
 	 * Get some content from some marker.
 	 * @param string $marker Marker.
 	 * @return string
@@ -504,56 +468,6 @@ class Manager
 	public static function getPageView($marker)
 	{
 		return self::getApplication()->getPageProperty($marker);
-	}
-
-	/**
-	 * Get themes entity from template dir.
-	 * @param string $tplId Site template id.
-	 * @param string $entityType - entity folder name.
-	 * @return array
-	 */
-	protected static function getThemesEntity($tplId, $entityType)
-	{
-		$themes = array();
-
-		$path = self::getDocRoot() . getLocalPath('templates/' . $tplId) . '/'.$entityType.'/';
-		if (
-			file_exists($path) &&
-			($handle = opendir($path))
-		)
-		{
-			while ((($entry = readdir($handle)) !== false))
-			{
-				if ($entry != '.' && $entry != '..')
-				{
-					$themes[] = pathinfo($entry, PATHINFO_FILENAME);
-				}
-			}
-		}
-
-		return $themes;
-	}
-
-	/**
-	 * Get themes from template dir.
-	 * @param string $tplId Site template id.
-	 * @return array
-	 */
-	public static function getThemes($tplId)
-	{
-		return self::getThemesEntity($tplId, 'themes');
-	}
-
-	/**
-	 * Get themes typo from template dir.
-	 * @param string $tplId Site template id.
-	 * @return array
-	 *
-	 * @deprecated since 20.3.0, use THEMEFONTS hook settings
-	 */
-	public static function getThemesTypo($tplId)
-	{
-		return self::getThemesEntity($tplId, 'themes-typo');
 	}
 
 	/**
@@ -599,17 +513,6 @@ class Manager
 		return defined('SMN_SITE_ID') ? SMN_SITE_ID : SITE_ID;
 	}
 
-
-	/**
-	 * Set new colored theme id.
-	 * @param string $themeId Theme id.
-	 * @return void
-	 */
-	public static function setThemeId($themeId)
-	{
-		self::$themeId = $themeId;
-	}
-
 	/**
 	 * Set new colored theme id.
 	 * @param string $themeTypoId Theme id.
@@ -622,99 +525,14 @@ class Manager
 	}
 
 	/**
-	 * Get current theme id.
-	 * @return string
-	 */
-	public static function getThemeId()
-	{
-		return self::$themeId;
-	}
-
-	/**
 	 * Add assets to page from hooks and themes
 	 * @param int $lid Landing id.
 	 * @return void
 	 */
 	public static function initAssets($lid = 0)
 	{
-		self::setThemeAssets();
-
 		$assets = Assets\Manager::getInstance();
 		$assets->setOutput($lid);
-	}
-
-	/**
-	 * Set assets for theme.
-	 * @return void
-	 */
-	protected static function setThemeAssets()
-	{
-		$assets = Assets\Manager::getInstance();
-		$tplId = self::getTemplateId(SITE_ID);
-
-		if (self::$themeId)
-		{
-			foreach(self::findThemeFiles(self::$themeId, 'themes', $tplId) as $path)
-			{
-				$assets->addAsset($path);
-			}
-		}
-	}
-
-
-	/**
-	 * Set current selected or default color theme.
-	 * @return void
-	 */
-	public static function setTheme()
-	{
-		$tplId = self::getTemplateId(SITE_ID);
-		$themes = Manager::getThemes($tplId);
-		$request = Application::getInstance()->getContext()->getRequest();
-
-		// set default theme ID
-		if ($request->get('theme'))
-		{
-			self::setThemeId($request->get('theme'));
-		}
-		if (!self::$themeId || !in_array(self::$themeId, $themes))
-		{
-			self::setThemeId(array_pop($themes));
-		}
-	}
-
-	/**
-	 * Find all theme files.
-	 * @param string $themeId Theme id.
-	 * @param string $themeEntityId Entity code.
-	 * @param $tplId Site template id.
-	 * @return array
-	 */
-	protected static function findThemeFiles($themeId, $themeEntityId, $tplId)
-	{
-		$files = [];
-		$themePath = \getLocalPath('templates/' . $tplId, BX_PERSONAL_ROOT) . '/'.$themeEntityId.'/' . $themeId;
-		$themePathAbsolute = self::getDocRoot() . $themePath;
-		if (is_dir($themePathAbsolute))
-		{
-			if ($handle = opendir($themePathAbsolute))
-			{
-				while (($file = readdir($handle)) !== false)
-				{
-					if ($file != '.' && $file != '..')
-					{
-						$files[] = $themePath . '/' . $file;
-					}
-				}
-				closedir($handle);
-			}
-		}
-		elseif (is_file($themePathAbsolute . '.css'))
-		{
-			$files[] = $themePath . '.css';
-		}
-
-		return $files;
 	}
 
 	/**
@@ -894,14 +712,14 @@ class Manager
 	}
 
 	/**
-	 * Check is feature is enabled.
-	 * @param string $feature Feature name.
-	 * @param array $params Params array.
+	 * Checks that the feature is enabled.
+	 * @param string $feature Feature code.
+	 * @param array $params Additional params array.
 	 * @return boolean
 	 */
-	public static function checkFeature($feature, array $params = array())
+	public static function checkFeature(string $feature, array $params = array()): bool
 	{
-		// tmp features
+		// temporary set features
 		if (
 			isset(self::$tmpFeatures[$feature]) &&
 			self::$tmpFeatures[$feature]
@@ -909,300 +727,76 @@ class Manager
 		{
 			return true;
 		}
-
-		$bitrix24 = Loader::includeModule('bitrix24');
-
 		if (!isset($params['type']) || !$params['type'])
 		{
 			$params['type'] = 'PAGE';
 		}
 
 		if (
-			$feature == self::FEATURE_CREATE_PAGE ||
-			$feature == self::FEATURE_PUBLICATION_PAGE ||
 			$feature == self::FEATURE_CREATE_SITE ||
 			$feature == self::FEATURE_PUBLICATION_SITE
 		)
 		{
-			if (!$bitrix24)
-			{
-				return true;
-			}
-			$optPrefix = ($feature == self::FEATURE_CREATE_PAGE || $feature == self::FEATURE_PUBLICATION_PAGE)
-							? 'landing_page_' : 'landing_site_';
-			$optSuffix = ($feature == self::FEATURE_PUBLICATION_SITE || $feature == self::FEATURE_PUBLICATION_PAGE)
-							? '_publication' : '';
-			$variableCode = $optPrefix . strtolower($params['type']) . $optSuffix;
-			$limit = (int) Feature::getVariable($variableCode);
-			if ($limit)
-			{
-				$filter = array(
-					'CHECK_PERMISSIONS' => 'N'
-				);
-				if (
-					$feature == self::FEATURE_PUBLICATION_SITE ||
-					$feature == self::FEATURE_PUBLICATION_PAGE
-				)
-				{
-					$filter['=ACTIVE'] = 'Y';
-				}
-				if (
-					$feature == self::FEATURE_CREATE_PAGE ||
-					$feature == self::FEATURE_PUBLICATION_PAGE
-				)
-				{
-					$filter['=SITE.TYPE'] = $params['type'];
-				}
-				else
-				{
-					$filter['=TYPE'] = $params['type'];
-					$filter['=SPECIAL'] = 'N';
-				}
-				if (
-					isset($params['filter']) &&
-					is_array($params['filter'])
-				)
-				{
-					$filter = array_merge(
-						$filter,
-						$params['filter']
-					);
-				}
-				//@fixme: tmp
-				if ($feature == self::FEATURE_PUBLICATION_SITE)
-				{
-					$filter['!XML_ID'] = '%|store-chats-%';
-				}
-				if (
-					$feature == self::FEATURE_CREATE_PAGE ||
-					$feature == self::FEATURE_PUBLICATION_PAGE
-				)
-				{
-					$class = __NAMESPACE__ . '\\Landing';
-				}
-				else
-				{
-					$class = __NAMESPACE__ . '\\Site';
-				}
-				$check = $class::getList(array(
-					'select' => array(
-						'CNT' => new Entity\ExpressionField('CNT', 'COUNT(*)')
-					),
-					'filter' => $filter,
-					'group' => array()
-				))->fetch();
-				if ($check && $check['CNT'] >= $limit)
-				{
-					return false;
-				}
-			}
-			return true;
+			$params['action_type'] = ($feature == self::FEATURE_CREATE_SITE)
+				? 'create' : 'publication';
+			return Restriction\Manager::isAllowed(
+				'limit_sites_number',
+				$params
+			);
+		}
+		else if (
+			$feature == self::FEATURE_CREATE_PAGE ||
+			$feature == self::FEATURE_PUBLICATION_PAGE
+		)
+		{
+			$params['action_type'] = ($feature == self::FEATURE_CREATE_PAGE)
+				? 'create' : 'publication';
+			return Restriction\Manager::isAllowed(
+				'limit_sites_number_page',
+				$params
+			);
 		}
 		elseif ($feature == self::FEATURE_ENABLE_ALL_HOOKS)
 		{
-			if (!$bitrix24)
-			{
-				return true;
-			}
-
 			if (isset($params['hook']))
 			{
-				$featureCode = 'landing_hook_' . $params['hook'];
-				return Feature::isFeatureEnabled($featureCode);
+				return Restriction\Hook::isHookAllowed($params['hook']);
 			}
-
 			return true;
 		}
 		elseif ($feature == self::FEATURE_PERMISSIONS_AVAILABLE)
 		{
-			if ($bitrix24)
-			{
-				return (self::getOption('permissions_available', 'N') == 'Y') ||
-					   Feature::isFeatureEnabled('landing_permissions_available');
-			}
-			return true;
+			return Restriction\Manager::isAllowed(
+				'limit_sites_access_permissions'
+			);
 		}
 		elseif ($feature == self::FEATURE_DYNAMIC_BLOCK)
 		{
-			if (!$bitrix24)
-			{
-				return true;
-			}
-			// @todo: make more useful in future
-			$scope = Site\Type::getCurrentScopeId();
-			if ($scope == 'KNOWLEDGE' || $scope == 'GROUP')
-			{
-				return true;
-			}
-			$availableCount = Feature::getVariable(
-				'landing_dynamic_blocks'
+			return Restriction\Manager::isAllowed(
+				'limit_sites_dynamic_blocks',
+				$params
 			);
-			if ($availableCount <= 0)
-			{
-				return true;
-			}
-
-			static $dynamicBlocks = null;
-			$targetBlockId = isset($params['targetBlockId'])
-							? intval($params['targetBlockId'])
-							: 0;
-
-			// gets actual dynamic blocks
-			if ($dynamicBlocks === null)
-			{
-				$dynamicBlocks = [];
-				// plain sql, reason for this described in task 186683
-				$sql = '
-					SELECT
-						B.ID as ID,
-						B.PARENT_ID as PARENT_ID,
-						B.DATE_MODIFY as DATE_MODIFY,
-						S.ID as SID,
-						L.DELETED
-					FROM
-						' . Internals\FilterBlockTable::getTableName() .  ' FB
-					LEFT JOIN
-						' . Internals\BlockTable::getTableName() .  ' B
-					ON 
-						FB.BLOCK_ID = B.ID
-					LEFT JOIN
-						' . Internals\LandingTable::getTableName() .  ' L
-					ON
-						B.LID = L.ID
-					LEFT JOIN
-						' . Internals\SiteTable::getTableName() .  ' S
-					ON
-						L.SITE_ID = S.ID
-					WHERE
-						B.DELETED = "N" AND 
-						L.DELETED = "N" AND
-						S.DELETED = "N" AND
-						S.TYPE NOT IN ("KNOWLEDGE", "GROUP")
-					GROUP BY FB.BLOCK_ID
-					ORDER BY B.DATE_MODIFY ASC;';
-				$res = Application::getConnection()->query($sql);
-				while ($row = $res->fetch())
-				{
-					$dynamicBlocks[$row['ID']] = $row;
-				}
-				// remove public blocks
-				foreach ($dynamicBlocks as $dynamicBlock)
-				{
-					if (
-						$dynamicBlock['PARENT_ID'] &&
-						isset($dynamicBlocks[$dynamicBlock['PARENT_ID']])
-					)
-					{
-						unset($dynamicBlocks[$dynamicBlock['PARENT_ID']]);
-					}
-				}
-			}
-
-			// allow only first $availableCount dynamic blocks
-			$dynamicBlocks = array_slice($dynamicBlocks, 0, $availableCount, true);
-			foreach ($dynamicBlocks as $dynamicBlock)
-			{
-				if (
-					$dynamicBlock['ID'] == $targetBlockId ||
-					$dynamicBlock['PARENT_ID'] == $targetBlockId
-				)
-				{
-					return true;
-				}
-			}
-
-			return false;
 		}
 		elseif ($feature == self::FEATURE_FREE_DOMAIN)
 		{
-			if (!$bitrix24)
-			{
-				return false;
-			}
-			$availableCount = Feature::getVariable(
-				'landing_free_domain'
+			return Restriction\Manager::isAllowed(
+				'limit_free_domen'
 			);
-			if ($availableCount === null)
-			{
-				return false;
-			}
-			if ($availableCount > 0)
-			{
-				$filter = [
-					'!PROVIDER' => null
-				];
-				if (
-					isset($params['filter']) &&
-					is_array($params['filter'])
-				)
-				{
-					$filter = array_merge(
-						$filter,
-						$params['filter']
-					);
-				}
-				$check = Domain::getList([
-					'select' => [
-						'CNT' => new Entity\ExpressionField('CNT', 'COUNT(*)')
-					],
-					'filter' => $filter,
-					'group' => []
-				])->fetch();
-				if ($check && $check['CNT'] >= $availableCount)
-				{
-					return false;
-				}
-			}
-			return true;
 		}
 		elseif ($feature == self::FEATURE_ALLOW_EXPORT)
 		{
-			if ($bitrix24)
-			{
-				return Feature::isFeatureEnabled('landing_allow_export');
-			}
-			return true;
+			return Restriction\Manager::isAllowed(
+				'limit_sites_transfer'
+			);
 		}
-		// this feature only for knowledge sites now
 		elseif ($feature == self::FEATURE_ALLOW_VIEW_PAGE)
 		{
-			if (!$bitrix24)
-			{
-				return true;
-			}
-			// @todo: make more useful in future
-			if (Site\Type::getCurrentScopeId() != 'KNOWLEDGE')
-			{
-				return true;
-			}
-			$availableCount = Feature::getVariable(
-				'landing_site_knowledge'
+			return Restriction\Manager::isAllowed(
+				'limit_knowledge_base_number_page_view',
+				$params
 			);
-			if ($availableCount)
-			{
-				if (!isset($params['ID']) || $params['ID'] <= 0)
-				{
-					return false;
-				}
-				$allowedSiteIds = [];
-				$res = Site::getList([
-					'select' => [
-						'ID'
-					],
-					'order' => [
-						'ID' => 'asc'
-					],
-					'limit' => $availableCount
-				]);
-				while ($row = $res->fetch())
-				{
-					$allowedSiteIds[] = $row['ID'];
-				}
-				return in_array((int)$params['ID'], $allowedSiteIds);
-			}
-			return true;
 		}
-		// old features for backward compatibility
+		// for backward compatibility
 		elseif ($feature == self::FEATURE_CUSTOM_DOMAIN)
 		{
 			return true;
@@ -1588,6 +1182,16 @@ class Manager
 	 */
 	public static function resetToFree()
 	{
+		self::clearCache();
+		self::setOption('html_disabled', 'Y');
+	}
+
+	/**
+	 * In cloud version clear cache when tariff change
+	 * @return void
+	 */
+	public static function clearCache()
+	{
 		// for clear cache in cloud
 		$res = Site::getList([
 			'select' => [
@@ -1610,6 +1214,46 @@ class Manager
 	 * @return void
 	 */
 	public static function checkRepositoryVersion()
+	{
+	}
+
+	/**
+	 * Get themes from template dir.
+	 * @deprecated since 20.5.0
+	 */
+	public static function getThemes()
+	{
+	}
+
+	/**
+	 * Get themes typo from template dir.
+	 * @deprecated since 20.3.0, use THEMEFONTS hook settings
+	 */
+	public static function getThemesTypo()
+	{
+	}
+
+	/**
+	 * Set new colored theme id.
+	 * @deprecated since 20.5.0
+	 */
+	public static function setThemeId()
+	{
+	}
+
+	/**
+	 * Get current theme id.
+	 * @deprecated since 20.5.0
+	 */
+	public static function getThemeId()
+	{
+	}
+
+	/**
+	 * Set current selected or default color theme.
+	 * @deprecated since 20.5.0
+	 */
+	public static function setTheme()
 	{
 	}
 }

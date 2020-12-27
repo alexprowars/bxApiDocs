@@ -45,7 +45,9 @@ class Queue
 			return "";
 		}
 
-		return static::sendMessages();
+		Application::getInstance()->addBackgroundJob([get_called_class(), "sendMessages"]);
+
+		return "";
 	}
 
 	/**
@@ -56,12 +58,6 @@ class Queue
 	 */
 	public static function sendMessages()
 	{
-		if(defined("BX_FORK_AGENTS_AND_EVENTS_FUNCTION"))
-		{
-			if(\CMain::forkActions(array(get_called_class(), "sendMessages")))
-				return "";
-		}
-
 		$connection = Application::getConnection();
 		$lockTag = \CMain::getServerUniqID().'_b_messageservice_message';
 

@@ -420,7 +420,7 @@ class CVulnScanner
 									//if(!empty(substr($this->tokens[$i+2][1], 1, -1)))
 									$component_name = substr($this->tokens[$i + 2][1], 1, -1);
 								}
-								$component_name = self::strtolower($component_name);
+								$component_name = strtolower($component_name);
 								if(empty($component_name)) // || strpos($component_name, 'bitrix:') === 0)
 									continue;
 
@@ -884,7 +884,7 @@ class CVulnScanner
 
 					if(is_array($tokens[$i + 1]) && $tokens[$i + 1][0] === T_STRING)
 					{
-						$this->sec_func['STRING'][] = self::strtolower($tokens[$i + 1][1]);
+						$this->sec_func['STRING'][] = strtolower($tokens[$i + 1][1]);
 					}
 					else
 					{
@@ -895,7 +895,7 @@ class CVulnScanner
 						}
 						if(is_array($tokens[$i + $f - 1]) && $tokens[$i + $f - 1][0] === T_STRING)
 						{
-							$this->sec_func['STRING'][] = self::strtolower($tokens[$i + $f - 1][1]);
+							$this->sec_func['STRING'][] = strtolower($tokens[$i + $f - 1][1]);
 						}
 					}
 
@@ -974,18 +974,18 @@ class CVulnScanner
 			}
 			elseif(is_array($tokens[$i]))
 			{
-				if(is_array($tokens[$i]) && (self::strtolower($tokens[$i][1]) === 'includecomponenttemplate' || self::strtolower($tokens[$i][1]) === 'initcomponenttemplate'))
+				if(is_array($tokens[$i]) && (strtolower($tokens[$i][1]) === 'includecomponenttemplate' || strtolower($tokens[$i][1]) === 'initcomponenttemplate'))
 				{
 					$tokens[$i][3] = $component_template;
-					$tokens[$i][1] = self::strtolower($tokens[$i][1]);
+					$tokens[$i][1] = strtolower($tokens[$i][1]);
 					$tokens[$i][0] = T_INCLUDE_COMPONENTTEMPLATE;
 					$tmp = array(array(T_INCLUDE_RESULT_MODIFIER, 'include_result_modifier', $tokens[$i][2], $component_template));
 					array_splice($tokens, $i - 1, 0, $tmp);
 					$i++;
 				}
-				elseif(is_array($tokens[$i]) && (self::strtolower($tokens[$i][1]) == 'includecomponent'))
+				elseif(is_array($tokens[$i]) && (strtolower($tokens[$i][1]) == 'includecomponent'))
 				{
-					$tokens[$i][1] = self::strtolower($tokens[$i][1]);
+					$tokens[$i][1] = strtolower($tokens[$i][1]);
 					$tokens[$i][0] = T_INCLUDE_COMPONENT;
 				}
 				elseif(($tokens[$i][0] === T_IF || $tokens[$i][0] === T_ELSEIF || $tokens[$i][0] === T_FOR
@@ -1163,11 +1163,11 @@ class CVulnScanner
 				}
 				elseif($tokens[$i][0] === T_FUNCTION)
 				{
-					$tokens[$i + 1][1] = self::strtolower($tokens[$i + 1][1]);
+					$tokens[$i + 1][1] = strtolower($tokens[$i + 1][1]);
 				}
 				elseif($tokens[$i][0] === T_STRING && $tokens[$i + 1] === '(')
 				{
-					$tokens[$i][1] = self::strtolower($tokens[$i][1]);
+					$tokens[$i][1] = strtolower($tokens[$i][1]);
 				}
 				elseif($tokens[$i][0] === T_DO)
 				{
@@ -1327,7 +1327,7 @@ class CVulnScanner
 					{
 						if($tokens[$i][1] === 'DIRECTORY_SEPARATOR' || $tokens[$i][1] === 'PATH_SEPARATOR')
 							$value .= '/';
-						elseif(self::strtolower($tokens[$i][1]) === '$componentpath')
+						elseif(strtolower($tokens[$i][1]) === '$componentpath')
 							$value = dirname($file_name);
 						elseif($tokens[$i][1] === '$_SERVER' && $tokens[$i][3][0] === 'DOCUMENT_ROOT')
 							$value .= $this->arParams['doc_root_path'];
@@ -1706,19 +1706,6 @@ class CVulnScanner
 		}
 		return $result;
 	}
-
-	protected static function strtolower($pString)
-	{
-		if(function_exists("mb_orig_strtolower"))
-		{
-			return mb_orig_strtolower($pString);
-		}
-		else
-		{
-			return strtolower($pString);
-		}
-	}
-
 }
 
 class CQAACheckListTests
@@ -2237,9 +2224,9 @@ class CQAACheckListTests
 	{
 		if(extension_loaded('tokenizer') === true)
 		{
-		if(!$_SESSION['BX_CHECKLIST'][$arParams['TEST_ID']])
-			$_SESSION['BX_CHECKLIST'][$arParams['TEST_ID']] = Array();
-		$NS = &$_SESSION['BX_CHECKLIST'][$arParams['TEST_ID']];
+		if(!\Bitrix\Main\Application::getInstance()->getSession()['BX_CHECKLIST'][$arParams['TEST_ID']])
+			\Bitrix\Main\Application::getInstance()->getSession()['BX_CHECKLIST'][$arParams['TEST_ID']] = Array();
+		$NS = &\Bitrix\Main\Application::getInstance()->getSession()['BX_CHECKLIST'][$arParams['TEST_ID']];
 
 		$arScanParams = self::defineScanParams();
 		$phpMaxExecutionTime = ini_get("max_execution_time");
@@ -2340,7 +2327,7 @@ class CQAACheckListTests
 						$vulnCount += $file_output['VULN_COUNT'];
 					}
 
-			unset($_SESSION['BX_CHECKLIST'][$arParams['TEST_ID']]);
+			unset(\Bitrix\Main\Application::getInstance()->getSession()['BX_CHECKLIST'][$arParams['TEST_ID']]);
 
 			$arResult = Array(
 				'MESSAGE' => Array(

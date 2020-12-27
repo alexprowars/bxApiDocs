@@ -62,6 +62,11 @@ final class BlogComment extends Provider
 					)))
 				)
 				{
+					if (!empty($post['DETAIL_TEXT']))
+					{
+						$post['DETAIL_TEXT'] = \Bitrix\Main\Text\Emoji::decode($post['DETAIL_TEXT']);
+					}
+
 					$this->setSourceFields(array_merge($comment, array("POST" => $post)));
 					$this->setSourceDescription(htmlspecialcharsback($comment['POST_TEXT']));
 
@@ -73,7 +78,11 @@ final class BlogComment extends Provider
 					);
 					$p = new \blogTextParser();
 					$title = $p->convert($title, false);
-					$title = preg_replace(array("/\n+/is".BX_UTF_PCRE_MODIFIER, "/\s+/is".BX_UTF_PCRE_MODIFIER), " ", \blogTextParser::killAllTags($title));
+					$title = preg_replace([
+						"/\n+/is".BX_UTF_PCRE_MODIFIER,
+						"/\s+/is".BX_UTF_PCRE_MODIFIER,
+						"/&nbsp;+/is".BX_UTF_PCRE_MODIFIER
+					], " ", \blogTextParser::killAllTags($title));
 
 					$this->setSourceTitle(truncateText($title, 100));
 					$this->setSourceAttachedDiskObjects($this->getAttachedDiskObjects());
@@ -140,4 +149,8 @@ final class BlogComment extends Provider
 		return $pathToPost;
 	}
 
+	public function getSuffix()
+	{
+		return '2';
+	}
 }

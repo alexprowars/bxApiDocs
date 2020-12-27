@@ -68,8 +68,19 @@ class Help
 		'DOMAIN_BITRIX24' => array(
 			'ru' => '11341354'
 		),
+		'COOKIES_EDIT' => array(
+			'ru' => '12297162',
+			'ua' => '12300133',
+			'en' => '12299818',
+			'de' => '12300978',
+			'es' => '12304458',
+			'br' => '12309218',
+			'pl' => '12309012',
+			'fr' => '12304424'
+		),
 		'DOMAIN_FREE' => array(
-			'ru' => '11341378'
+			'ru' => '11341378',
+			'ua' => '12208347'
 		),
 		'GMAP_EDIT' => array(
 			'ru' => '8203739',
@@ -133,17 +144,18 @@ class Help
 		),
 		'SPEED' => array(
 			'ru' => '11565144',
-			'ua' => '11567047'
+			'ua' => '11567047',
+			'en' => '11566690',
+			'de' => '11566686',
+			'es' => '11566722',
+			'br' => '11566728',
+			'pl' => '11583638',
+			'fr' => '11566680'
+		),
+		'FORM_EDIT' => array(
+			'ru' => '12619286'
 		)
 	);
-
-	/**
-	 * Landing's codes.
-	 * @var array
-	 */
-	protected static $helpLanding = [
-		'FREE_DOMAIN_FOR_MONEY' => 'limit_free_domen'
-	];
 
 	/**
 	 * Gets domain's array.
@@ -152,20 +164,6 @@ class Help
 	public static function getDomains()
 	{
 		return self::$domains;
-	}
-
-	/**
-	 * Returns help landing code by inner code.
-	 * @param string $code Inner landing code.
-	 * @return string|null
-	 */
-	public static function getHelpLandingCode(string $code): ?string
-	{
-		if (isset(self::$helpLanding[$code]))
-		{
-			return self::$helpLanding[$code];
-		}
-		return null;
 	}
 
 	/**
@@ -219,7 +217,7 @@ class Help
 	}
 
 	/**
-	 * Relace in content all help links by format #HELP_LINK_*CODE*#.
+	 * Replaces in content all help links by format #HELP_LINK_*CODE*#.
 	 * @param string $content Some content.
 	 * @return string
 	 */

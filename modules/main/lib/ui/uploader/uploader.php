@@ -9,6 +9,7 @@ use \Bitrix\Main\Web\Json;
 use \Bitrix\Main\Context;
 use \Bitrix\Main\Loader;
 use \Bitrix\Main\Localization\Loc;
+use \Bitrix\Main;
 Loc::loadMessages(__FILE__);
 Loader::registerAutoLoadClasses(
 	"main",
@@ -32,18 +33,25 @@ class Log implements \ArrayAccess
 	 */
 	function __construct($path)
 	{
-		$this->file = \CBXVirtualIo::GetInstance()->GetFile($path);
-
-		if ($this->file->IsExists())
+		try
 		{
-			$data = unserialize($this->file->GetContents());
-			foreach($data as $key => $val)
+			$this->file = \CBXVirtualIo::GetInstance()->GetFile($path);
+
+			if ($this->file->IsExists())
 			{
-				if (array_key_exists($key , $this->data) && is_array($this->data[$key]) && is_array($val))
-					$this->data[$key] = array_merge($this->data[$key], $val);
-				else
-					$this->data[$key] = $val;
+				$data = unserialize($this->file->GetContents(), ["allowed_classes" => false]);
+				foreach($data as $key => $val)
+				{
+					if (array_key_exists($key , $this->data) && is_array($this->data[$key]) && is_array($val))
+						$this->data[$key] = array_merge($this->data[$key], $val);
+					else
+						$this->data[$key] = $val;
+				}
 			}
+		}
+		catch (\Throwable $e)
+		{
+			throw new Main\SystemException("Temporary file has wrong structure.", "BXU351.01");
 		}
 	}
 
@@ -78,7 +86,14 @@ class Log implements \ArrayAccess
 	 */
 	public function save()
 	{
-		$this->file->PutContents(serialize($this->data));
+		try
+		{
+			$this->file->PutContents(serialize($this->data));
+		}
+		catch (\Throwable $e)
+		{
+			throw new Main\SystemException("Temporary file was not saved.", "BXU351.02");
+		}
 	}
 
 	/**
@@ -94,8 +109,15 @@ class Log implements \ArrayAccess
 	 */
 	public function unlink()
 	{
-		if ($this->file instanceof \CBXVirtualFileFileSystem && $this->file->IsExists())
-			$this->file->unlink();
+		try
+		{
+			if ($this->file instanceof \CBXVirtualFileFileSystem && $this->file->IsExists())
+				$this->file->unlink();
+		}
+		catch (\Throwable $e)
+		{
+			throw new Main\SystemException("Temporary file was not deleted.", "BXU351.03");
+		}
 	}
 
 	/**
@@ -302,7 +324,7 @@ class Uploader
 			$access = \CBXVirtualIo::GetInstance()->GetFile($directory->GetPath()."/.access.php");
 			$content = '<?$PERM["'.$directory->GetName().'"]["*"]="X";?>';
 
-			if (!$access->IsExists() || strpos($access->GetContents(), $content) === false)
+			if (!$access->IsExists() || mb_strpos($access->GetContents(), $content) === false)
 			{
 				if (($fd = $access->Open('ab')) && $fd)
 					fwrite($fd, $content);
@@ -460,6 +482,13 @@ class Uploader
 			}
 			return true;
 		}
+		catch (Main\IO\IoException $e)
+		{
+			$this->showJsonAnswer(array(
+				"status" => "error",
+				"error" => "Something went wrong with the temporary file."
+			));
+		}
 		catch (\Exception $e)
 		{
 			$this->showJsonAnswer(array(
@@ -498,8 +527,8 @@ class Uploader
 					$file["files"][$canvas] = File::createCanvas($source,
 						array(
 							"code" => $canvas,
-							"tmp_name" => substr($source["tmp_name"], 0, -7).$canvas,
-							"url" => substr($source["url"], 0, -7).$canvas
+							"tmp_name" => mb_substr($source["tmp_name"], 0, -7).$canvas,
+							"url" => mb_substr($source["url"], 0, -7).$canvas
 						), $canvasParams, $watermark);
 				}
 			}
@@ -535,10 +564,10 @@ class Uploader
 			);
 		}
 		else if ($io->FileExists($tmpName) && ($docRoot = \Bitrix\Main\Application::getInstance()->getContext()->getServer()->getDocumentRoot()) &&
-			strpos($tmpName, $docRoot) === 0)
+			mb_strpos($tmpName, $docRoot) === 0)
 		{
 			return array(
-				"tmp_url" => str_replace("//", "/", "/".substr($tmpName, strlen($docRoot))),
+				"tmp_url" => str_replace("//", "/", "/".mb_substr($tmpName, mb_strlen($docRoot))),
 				"tmp_name" => $tmpName
 			);
 		}

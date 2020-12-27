@@ -16,10 +16,6 @@ class CCalendarReminder
 		{
 			$event = false;
 			$nowTime = time();
-			$tmpUser = CCalendar::TempUser(false, true);
-
-			// We have to use this to set timezone offset to local user's timezone
-			CCalendar::SetOffset(false, CCalendar::GetOffset($userId));
 
 			$events = CCalendarEvent::GetList([
 				'arFilter' => [
@@ -29,6 +25,7 @@ class CCalendarReminder
 					"TO_LIMIT" => CCalendar::Date(CCalendar::GetMaxTimestamp(), false),
 					"ACTIVE_SECTION" => "Y"
 				],
+				'userId' => $userId,
 				'parseRecursion' => true,
 				'maxInstanceCount' => 3,
 				'preciseLimits' => true,
@@ -99,11 +96,6 @@ class CCalendarReminder
 			}
 
 			CCalendar::SetOffset(false, null);
-
-			if ($tmpUser)
-			{
-				CCalendar::TempUser($tmpUser, false);
-			}
 		}
 	}
 
@@ -145,7 +137,7 @@ class CCalendarReminder
 			'#DATE_FROM#' => $params['dateFromFormatted']
 		]);
 		$notifyFields["PUSH_MESSAGE"] = str_replace('&ndash;', '-', $notifyFields["PUSH_MESSAGE"]);
-		$notifyFields["PUSH_MESSAGE"] = substr($notifyFields["PUSH_MESSAGE"], 0, \CCalendarNotify::PUSH_MESSAGE_MAX_LENGTH);
+		$notifyFields["PUSH_MESSAGE"] = mb_substr($notifyFields["PUSH_MESSAGE"], 0, \CCalendarNotify::PUSH_MESSAGE_MAX_LENGTH);
 
 		return $notifyFields;
 	}
@@ -153,7 +145,7 @@ class CCalendarReminder
 	public static function AddAgent($remindTime, $params)
 	{
 		global $DB;
-		if (strlen($remindTime) > 0 && $DB->IsDate($remindTime, false, LANG, "FULL"))
+		if ($remindTime <> '' && $DB->IsDate($remindTime, false, LANG, "FULL"))
 		{
 			$tzEnabled = CTimeZone::Enabled();
 			if ($tzEnabled)
@@ -163,7 +155,7 @@ class CCalendarReminder
 			$indexParam = isset($params['index']) ? ', '.$params['index'] : '';
 
 			CAgent::AddAgent(
-				"CCalendar::ReminderAgent(".intVal($params['eventId']).", ".intVal($params['userId']).", '".addslashes($params['viewPath'])."', '".addslashes($params['calendarType'])."', ".intVal($params['ownerId']).$indexParam.");",
+				"CCalendar::ReminderAgent(".intval($params['eventId']).", ".intval($params['userId']).", '".addslashes($params['viewPath'])."', '".addslashes($params['calendarType'])."', ".intval($params['ownerId']).$indexParam.");",
 				"calendar",
 				"Y",
 				0,
@@ -184,7 +176,7 @@ class CCalendarReminder
 
 	public static function UpdateReminders($params = [])
 	{
-		$eventId = intVal($params['id']);
+		$eventId = intval($params['id']);
 		$entryFields = $params['arFields'];
 		$reminders = $params['reminders'];
 		$userId = $params['userId'];
@@ -298,7 +290,7 @@ class CCalendarReminder
 		$delta = 0;
 		if (is_array($reminder) && in_array($reminder['type'], self::SIMPLE_TYPE_LIST))
 		{
-			$delta = intVal($reminder['count']) * 60;
+			$delta = intval($reminder['count']) * 60;
 			if ($reminder['type'] == 'hour')
 			{
 				$delta = $delta * 60; //Hour
@@ -321,7 +313,7 @@ class CCalendarReminder
 
 			if (in_array($type, self::SIMPLE_TYPE_LIST))
 			{
-				$delta = intVal($reminder['count']) * 60;
+				$delta = intval($reminder['count']) * 60;
 				if ($reminder['type'] == 'hour')
 				{
 					$delta = $delta * 60; //Hour

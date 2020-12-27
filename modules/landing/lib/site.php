@@ -911,6 +911,65 @@ class Site extends \Bitrix\Landing\Internals\BaseTable
 	}
 
 	/**
+	 * Tries to add page to the all menu on the site.
+	 * Detects blocks with menu-manifests only.
+	 * @param int $siteId Site id.
+	 * @param array $data Landing data ([ID, TITLE]).
+	 * @return void
+	 */
+	public static function addLandingToMenu(int $siteId, array $data): void
+	{
+		Landing::setEditMode();
+		$res = Landing::getList([
+			'select' => [
+				'ID'
+			],
+			'filter' => [
+				'SITE_ID' => $siteId,
+				'!==AREAS.ID' => null
+			],
+		]);
+		while ($row = $res->fetch())
+		{
+			$landing = Landing::createInstance($row['ID']);
+			if ($landing->exist())
+			{
+				foreach ($landing->getBlocks() as $block)
+				{
+					$manifest = $block->getManifest();
+					if (isset($manifest['menu']))
+					{
+						foreach ($manifest['menu'] as $menuSelector => $foo)
+						{
+							$block->updateNodes([
+								$menuSelector => [
+									[
+										'text' => $data['TITLE'],
+										'href' => '#landing' . $data['ID']
+									]
+								]
+							], ['appendMenu' => true]);
+							$block->save();
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Change modified user and date for the site.
+	 * @param int $id Site id.
+	 * @return void
+	 */
+	public static function touch(int $id): void
+	{
+		self::update($id, [
+			'TOUCH' => 'Y'
+		]);
+	}
+
+	/**
 	 * Event handler for check existing pages of main module's site.
 	 * @param string $siteId Main site id.
 	 * @return bool

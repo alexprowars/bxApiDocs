@@ -2499,18 +2499,18 @@ class CIMMessenger
 
 		if ($deviceType === IM_DESKTOP_MAC)
 		{
-			$lastTimestamp = (int)CUserOptions::GetOption('im', 'WindowsLastActivityDate', -1, $userId);
-			if ($lastTimestamp+86400*30 < time())
-			{
-				CUserOptions::SetOption('im', 'WindowsLastActivityDate', $timestamp, false, $userId);
-			}
-		}
-		else
-		{
 			$lastTimestamp = (int)CUserOptions::GetOption('im', 'MacLastActivityDate', -1, $userId);
 			if ($lastTimestamp+86400*30 < time())
 			{
 				CUserOptions::SetOption('im', 'MacLastActivityDate', $timestamp, false, $userId);
+			}
+		}
+		else
+		{
+			$lastTimestamp = (int)CUserOptions::GetOption('im', 'WindowsLastActivityDate', -1, $userId);
+			if ($lastTimestamp+86400*30 < time())
+			{
+				CUserOptions::SetOption('im', 'WindowsLastActivityDate', $timestamp, false, $userId);
 			}
 		}
 	}
@@ -2604,14 +2604,6 @@ class CIMMessenger
 		return $result;
 	}
 
-	public static function GetTelephonyLines()
-	{
-		if(!\Bitrix\Main\Loader::includeModule('voximplant'))
-			return array();
-
-		return CVoxImplantConfig::GetLines(true, true);
-	}
-
 	public static function GetTelephonyAvailableLines($userId = null)
 	{
 		if(!\Bitrix\Main\Loader::includeModule('voximplant'))
@@ -2703,14 +2695,14 @@ class CIMMessenger
 		if ($cache && $userId == $USER->GetId())
 		{
 			if (
-				isset($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY'])
-				&& intval($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY'])+300 > time()
+				isset(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY'])
+				&& intval(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY'])+300 > time()
 			)
 			{
 				return false;
 			}
 
-			$_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY'] = time();
+			\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY'] = time();
 		}
 
 		$userAgent = \Bitrix\Main\Context::getCurrent()->getRequest()->getUserAgent();
@@ -2729,14 +2721,14 @@ class CIMMessenger
 		if ($cache && $userId == $USER->GetId())
 		{
 			if (
-				isset($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY_PULL'])
-				&& intval($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY_PULL'])+self::GetSessionLifeTime() > time()
+				isset(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY_PULL'])
+				&& intval(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY_PULL'])+self::GetSessionLifeTime() > time()
 			)
 			{
 				return false;
 			}
 
-			$_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY_PULL'] = time();
+			\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY_PULL'] = time();
 
 			if (CModule::IncludeModule("pull"))
 			{
@@ -2765,8 +2757,8 @@ class CIMMessenger
 		if ($userId <= 0)
 			return false;
 
-		unset($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY']);
-		unset($_SESSION['SESS_AUTH']['SET_DESKTOP_ACTIVITY_PULL']);
+		unset(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY']);
+		unset(\Bitrix\Main\Application::getInstance()->getKernelSession()['IM']['SET_DESKTOP_ACTIVITY_PULL']);
 
 		CIMStatus::Set($userId, Array('DESKTOP_LAST_DATE' => null));
 
@@ -2815,12 +2807,15 @@ class CIMMessenger
 		global $USER;
 
 		$sessTimeout = CUser::GetSecondsForLimitOnline();
-		if (is_object($USER))
+		if ($USER instanceof CUser)
 		{
 			$arPolicy = $USER->GetSecurityPolicy();
 			if($arPolicy["SESSION_TIMEOUT"] > 0)
+			{
 				$sessTimeout = min($arPolicy["SESSION_TIMEOUT"]*60, $sessTimeout);
+			}
 		}
+
 		$sessTimeout = intval($sessTimeout);
 		if ($sessTimeout <= 120)
 		{
@@ -3038,7 +3033,6 @@ class CIMMessenger
 				$olConfig['queue'][] = array_change_key_case($config, CASE_LOWER);
 			}
 
-			$businessUsers = \Bitrix\Im\Integration\Imopenlines\Limit::getLicenseUsersLimit();
 			$olConfig['canUseVoteHead'] = \Bitrix\Im\Integration\Imopenlines\Limit::canUseVoteHead();
 			$olConfig['canJoinChatUser'] = \Bitrix\Im\Integration\Imopenlines\Limit::canJoinChatUser();
 			$olConfig['canTransferToLine'] = \Bitrix\Im\Integration\Imopenlines\Limit::canTransferToLine();
@@ -3055,7 +3049,6 @@ class CIMMessenger
 		$pathToFile = isset($arTemplate['PATH_TO_FILE']) ? $arTemplate['PATH_TO_FILE'] : '';
 		$pathToLf = isset($arTemplate['PATH_TO_LF']) ? $arTemplate['PATH_TO_LF'] : '/';
 		$pathToDisk = Array(
-			//'localFolder' => \CIMDisk::GetLocalDiskFolderPath(),
 			'localFile' => \CIMDisk::GetLocalDiskFilePath(),
 		);
 
@@ -3096,7 +3089,7 @@ class CIMMessenger
 					'desktopLinkOpen': ".$arTemplate["DESKTOP_LINK_OPEN"].",
 					'language': '".LANGUAGE_ID."',
 					'tooltipShowed': ".\Bitrix\Im\Common::objectEncode(CUserOptions::GetOption('im', 'tooltipShowed', array())).",
-
+					'limit': ".(empty($arTemplate['LIMIT'])? 'false': \Bitrix\Im\Common::objectEncode($arTemplate["LIMIT"])).",
 					'promo': ".(empty($arTemplate['PROMO'])? '[]': \Bitrix\Im\Common::objectEncode($arTemplate["PROMO"])).",
 					'bot': ".(empty($arTemplate['BOT'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate["BOT"])).",
 					'textareaIcon': ".(empty($arTemplate['TEXTAREA_ICON'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate["TEXTAREA_ICON"])).",
@@ -3154,9 +3147,9 @@ class CIMMessenger
 						'phoneCanCallUserNumber': '".($phoneCanCallUserNumber? 'Y': 'N')."', 
 						'phoneCanInterceptCall': ".($phoneCanInterceptCall? 'true': 'false').", 
 						'phoneCallCardRestApps': ".\Bitrix\Im\Common::objectEncode(self::GetCallCardRestApps()).",
-						'phoneLines': ".\Bitrix\Im\Common::objectEncode(self::GetTelephonyLines()).",
 						'phoneDefaultLineId': '".self::GetDefaultTelephonyLine()."',
-						'availableLines': ".\Bitrix\Im\Common::objectEncode(self::GetTelephonyAvailableLines())."
+						'availableLines': ".\Bitrix\Im\Common::objectEncode(self::GetTelephonyAvailableLines()).",
+						'formatRecordDate': '".\Bitrix\Main\Context::getCurrent()->getCulture()->getShortDateFormat()."'						
 					},
 					'openlines': ".\Bitrix\Im\Common::objectEncode($olConfig).",
 					'options': {'contactListLoad' : ".($contactListLoad? 'true': 'false').", 'chatExtendShowHistory' : ".($chatExtendShowHistory? 'true': 'false').", 'frameMode': ".($_REQUEST['IFRAME'] == 'Y'? 'true': 'false').", 'frameType': '".($_REQUEST['IFRAME_TYPE'] == 'SIDE_SLIDER'? 'SIDE_SLIDER': 'NONE')."', 'showRecent': ".($_REQUEST['IM_RECENT'] == 'N'? 'false': 'true').", 'showMenu': ".($_REQUEST['IM_MENU'] == 'N'? 'false': 'true')."},
@@ -3206,7 +3199,6 @@ class CIMMessenger
 
 		$olConfig = Array();
 		$crmPath = Array();
-		$businessUsers = false;
 
 		if (\Bitrix\Main\Loader::includeModule('crm'))
 		{
@@ -3218,8 +3210,6 @@ class CIMMessenger
 
 		if (CModule::IncludeModule('imopenlines'))
 		{
-			$businessUsers = \Bitrix\Imopenlines\Limit::getLicenseUsersLimit();
-
 			$olConfig['canDeleteMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanDeleteMessage());
 			$olConfig['canDeleteOwnMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanDeleteOwnMessage());
 			$olConfig['canUpdateOwnMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanUpdateOwnMessage());
@@ -3281,7 +3271,6 @@ class CIMMessenger
 
 					'recent': ".(empty($arTemplate['RECENT']) && $arTemplate['RECENT'] !== false? '[]': \Bitrix\Im\Common::objectEncode($arTemplate['RECENT'])).",
 					'users': ".(empty($arTemplate['CONTACT_LIST']['users'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate['CONTACT_LIST']['users'])).",
-					'businessUsers': ".($businessUsers === false? false: empty($businessUsers)? '{}': \Bitrix\Im\Common::objectEncode($businessUsers)).",
 					'groups': ".(empty($arTemplate['CONTACT_LIST']['groups'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate['CONTACT_LIST']['groups'])).",
 					'userInGroup': ".(empty($arTemplate['CONTACT_LIST']['userInGroup'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate['CONTACT_LIST']['userInGroup'])).",
 					'chat': ".(empty($arTemplate['CHAT']['chat'])? '{}': \Bitrix\Im\Common::objectEncode($arTemplate['CHAT']['chat'])).",
@@ -3361,8 +3350,6 @@ class CIMMessenger
 
 		if (CModule::IncludeModule('imopenlines'))
 		{
-			$businessUsers = \Bitrix\Imopenlines\Limit::getLicenseUsersLimit();
-
 			$olConfig['canDeleteMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanDeleteMessage());
 			$olConfig['canDeleteOwnMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanDeleteOwnMessage());
 			$olConfig['canUpdateOwnMessage'] = str_replace('.', '_', \Bitrix\Imopenlines\Connector::getListCanUpdateOwnMessage());

@@ -187,6 +187,11 @@ abstract class AbstractThreadStrategy implements IThreadStrategy
 	 */
 	public function updateStatus(string $status): bool
 	{
+		if($status === PostingThreadTable::STATUS_DONE && !$this->checkToFinalizeStatus())
+		{
+			$status = PostingThreadTable::STATUS_NEW;
+		}
+
 		try
 		{
 			$tableName   = PostingThreadTable::getTableName();
@@ -310,8 +315,16 @@ abstract class AbstractThreadStrategy implements IThreadStrategy
 		return false;
 	}
 
+	/**
+	 * Finalize thread activity
+	 */
 	public function finalize()
 	{
+		if(!$this->checkToFinalizeStatus())
+		{
+			return false;
+		}
+
 		$tableName = PostingThreadTable::getTableName();
 		$query = 'DELETE FROM `'.$tableName.'` WHERE POSTING_ID='.intval($this->postingId);
 		try
@@ -320,7 +333,19 @@ abstract class AbstractThreadStrategy implements IThreadStrategy
 		}
 		catch (SqlQueryException $e)
 		{
-
+			return false;
 		}
+
+		return true;
+	}
+
+	private function checkToFinalizeStatus()
+	{
+		if($this->threadId < static::lastThreadId())
+		{
+			return true;
+		}
+
+		return !static::hasUnprocessedThreads();
 	}
 }

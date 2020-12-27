@@ -38,7 +38,7 @@ class Loader
 			$class = '\\'.$class;
 		}
 
-		$namespace = substr($class, 0, strrpos($class, '\\')+1);
+		$namespace = substr($class, 0, strrpos($class, '\\') + 1);
 		$className = substr($class, strrpos($class, '\\') + 1);
 
 		if (substr($className, 0, 3) == 'EO_')

@@ -32,7 +32,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CSeoEventHandlers
 {
-	public static function SeoOnPanelCreate()
+	function SeoOnPanelCreate()
 	{
 		global $APPLICATION, $USER;
 
@@ -145,7 +145,7 @@ class CSeoEventHandlers
 							originalTextBtn.enable();
 							if(!!res.error)
 							{
-								alert(BX.util.strip_tags(res.error));
+								alert(BX.util.strip_tags(res.error.message));
 							}
 							else
 							{
@@ -292,7 +292,7 @@ class CSeoEventHandlers
 							originalTextBtn.enable();
 							if(!!res.error)
 							{
-								alert(BX.util.strip_tags(res.error));
+								alert(BX.util.strip_tags(res.error.message));
 							}
 							else
 							{

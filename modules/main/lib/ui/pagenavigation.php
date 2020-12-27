@@ -3,7 +3,7 @@
  * Bitrix Framework
  * @package bitrix
  * @subpackage main
- * @copyright 2001-2015 Bitrix
+ * @copyright 2001-2020 Bitrix
  */
 namespace Bitrix\Main\UI;
 
@@ -119,7 +119,7 @@ class PageNavigation
 		{
 			return 1;
 		}
-		$maxPages = floor($this->recordCount/$this->pageSize);
+		$maxPages = (int)floor($this->recordCount/$this->pageSize);
 		if(($this->recordCount % $this->pageSize) > 0)
 		{
 			$maxPages++;
@@ -286,8 +286,8 @@ class PageNavigation
 			$this->clearParams($uri, $sef);
 
 			$path = $uri->getPath();
-			$pos = strrpos($path, "/");
-			$path = substr($path, 0, $pos+1).$this->id."/page-".$page."/".($size !== null? "size-".$size."/" : '').substr($path, $pos+1);
+			$pos = mb_strrpos($path, "/");
+			$path = mb_substr($path, 0, $pos + 1).$this->id."/page-".$page."/".($size !== null? "size-".$size."/" : '').mb_substr($path, $pos + 1);
 			$uri->setPath($path);
 		}
 		else

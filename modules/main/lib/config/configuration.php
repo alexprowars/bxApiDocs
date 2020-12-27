@@ -395,15 +395,9 @@ final class Configuration
 			"readonly" => false
 		);
 
-		global $DBType, $DBHost, $DBName, $DBLogin, $DBPassword;
+		global $DBHost, $DBName, $DBLogin, $DBPassword;
 
-		$DBType = strtolower($DBType);
-		if ($DBType == 'mysql')
-			$dbClassName = defined('BX_USE_MYSQLI') && BX_USE_MYSQLI === true ? "\\Bitrix\\Main\\DB\\MysqliConnection" : "\\Bitrix\\Main\\DB\\MysqlConnection";
-		elseif ($DBType == 'mssql')
-			$dbClassName = "\\Bitrix\\Main\\DB\\MssqlConnection";
-		else
-			$dbClassName = "\\Bitrix\\Main\\DB\\OracleConnection";
+		$dbClassName = defined('BX_USE_MYSQLI') && BX_USE_MYSQLI === true ? "\\Bitrix\\Main\\DB\\MysqliConnection" : "\\Bitrix\\Main\\DB\\MysqlConnection";
 
 		$ar['connections']['value']['default'] = array(
 			'className' => $dbClassName,
@@ -435,9 +429,9 @@ final class Configuration
 			$source = file_get_contents($filename1);
 			$source = trim($source);
 			$pos = 2;
-			if (strtolower(substr($source, 0, 5)) == '<?php')
+			if (mb_strtolower(mb_substr($source, 0, 5)) == '<?php')
 				$pos = 5;
-			$source = substr($source, 0, $pos)."\n".'$connection = \Bitrix\Main\Application::getConnection();'.substr($source, $pos);
+			$source = mb_substr($source, 0, $pos)."\n".'$connection = \Bitrix\Main\Application::getConnection();'.mb_substr($source, $pos);
 			$source = preg_replace("#\\\$DB->Query\(#i", "\$connection->queryExecute(", $source);
 			file_put_contents($filename2, $source);
 		}

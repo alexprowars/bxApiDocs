@@ -1,7 +1,7 @@
 <?
 
-use Bitrix\Main\Application;
 use Bitrix\Mail\Helper\MailContact;
+use Bitrix\Main\Application;
 use Bitrix\Main\Text\BinaryString;
 
 IncludeModuleLangFile(__FILE__);
@@ -665,6 +665,13 @@ class CAllMailBox
 		return true;
 	}
 
+	/**
+	 * Clears all database entries associated with the mailbox.
+	 *
+	 * @param string $ID mailbox id.
+	 *
+	 * @return CDBResult|false
+	 */
 	public static function Delete($ID)
 	{
 		global $DB;
@@ -710,6 +717,9 @@ class CAllMailBox
 		$strSql = "DELETE FROM b_mail_message_uid WHERE MAILBOX_ID=".$ID;
 		if(!$DB->Query($strSql, true))
 			return false;
+		
+		// @TODO: delete after debag mail
+		AddMessage2Log("The mailbox $ID was deleted");
 
 		$strSql = "DELETE FROM b_mail_blacklist WHERE MAILBOX_ID=".$ID;
 		if(!$DB->Query($strSql, true))
@@ -813,7 +823,7 @@ class CAllMailBox
 		if (($use_tls == 'Y' || $use_tls == 'S') && !preg_match('#^(tls|ssl)://#', $server))
 			$server = 'ssl://' . $server;
 
-		$skip_cert = $use_tls != 'Y' || PHP_VERSION_ID < 50600;
+		$skip_cert = $use_tls != 'Y';
 
 		$pop3_conn = &$this->pop3_conn;
 		$pop3_conn = stream_socket_client(
@@ -886,7 +896,7 @@ class CAllMailBox
 		if (($arMAILBOX_PARAMS['USE_TLS'] == 'Y' || $arMAILBOX_PARAMS['USE_TLS'] == 'S') && !preg_match('#^(tls|ssl)://#', $server))
 			$server = 'ssl://' . $server;
 
-		$skip_cert = $arMAILBOX_PARAMS['USE_TLS'] != 'Y' || PHP_VERSION_ID < 50600;
+		$skip_cert = $arMAILBOX_PARAMS['USE_TLS'] != 'Y';
 
 		$pop3_conn = &$this->pop3_conn;
 		$pop3_conn = stream_socket_client(
@@ -1006,6 +1016,14 @@ class CAllMailBox
 			while (count($arOldUIDL) > 0)
 			{
 				$ids = "'" . join("','", array_splice($arOldUIDL, 0, 1000)) . "'";
+
+				// @TODO: delete after debag mail
+				$toLog = [
+					'filter'=>'\CAllMailBox::_connect',
+					'removedMessages'=>$ids,
+				];
+				AddMessage2Log($toLog);
+
 				$strSql = 'DELETE FROM b_mail_message_uid WHERE MAILBOX_ID = ' . $mailbox_id . ' AND ID IN (' . $ids . ')';
 				$DB->query($strSql, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
 			}
@@ -1610,7 +1628,7 @@ class CAllMailMessage
 		{
 			$bodyPart = CMailMessage::decodeMessageBody($header, $body, $charset);
 
-			if (!$bodyPart['FILENAME'] && mb_strpos(mb_strtolower($bodyPart['CONTENT-TYPE']), 'text/') === 0)
+			if (!$bodyPart['FILENAME'] && mb_strpos(mb_strtolower($bodyPart['CONTENT-TYPE']), 'text/') === 0 && mb_strtolower($bodyPart['CONTENT-TYPE']) !== 'text/calendar')
 			{
 				if (mb_strtolower($bodyPart['CONTENT-TYPE']) == 'text/html')
 				{
@@ -1730,7 +1748,7 @@ class CAllMailMessage
 			if (!(isset($params['replaces']) && $params['replaces'] > 0))
 			{
 				$DB->query(sprintf(
-					'INSERT INTO b_mail_message_closure (MESSAGE_ID, PARENT_ID) VALUES (%1$u, %1$u)',
+					'INSERT IGNORE INTO b_mail_message_closure (MESSAGE_ID, PARENT_ID) VALUES (%1$u, %1$u)',
 					$message_id
 				));
 
@@ -1890,6 +1908,13 @@ class CAllMailMessage
 				\CMailFilter::filter($arFields, 'R');
 
 				\Bitrix\Main\EventManager::getInstance()->removeEventHandler('mail', 'onBeforeUserFieldSave', $eventKey);
+
+				$event = new \Bitrix\Main\Event('mail', 'onMailMessageNew', [
+					'message'     => $arFields,
+					'attachments' => $arMessageParts,
+					'userId'      => isset($mailbox['USER_ID']) ? $mailbox['USER_ID'] : null,
+				]);
+				$event->send();
 
 				addEventToStatFile(
 					'mail',

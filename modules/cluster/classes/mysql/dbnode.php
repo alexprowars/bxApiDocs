@@ -1,9 +1,9 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterDBNode extends CAllClusterDBNode
 {
-	public static function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $DB, $APPLICATION;
 		$aMsg = array();
@@ -82,4 +82,3 @@ class CClusterDBNode extends CAllClusterDBNode
 		return false;
 	}
 }
-?>

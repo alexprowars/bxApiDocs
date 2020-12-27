@@ -1,9 +1,9 @@
-<?
+<?php
+
 class CAllClusterDBNodeCheck
 {
-	public static function MainNode()
+	function MainNode()
 	{
 		return array();
 	}
 }
-?>

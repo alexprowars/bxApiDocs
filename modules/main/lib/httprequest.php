@@ -362,7 +362,7 @@ class HttpRequest extends Request
 		}
 
 		$https = $this->server->get("HTTPS");
-		if($https <> '' && strtolower($https) <> "off")
+		if($https <> '' && mb_strtolower($https) <> "off")
 		{
 			//From the PHP manual: Set to a non-empty value if the script was queried through the HTTPS protocol.
 			//Note that when using ISAPI with IIS, the value will be off if the request was not made through the HTTPS protocol.
@@ -393,16 +393,31 @@ class HttpRequest extends Request
 		if ($cookiePrefix === null)
 			$cookiePrefix = Config\Option::get("main", "cookie_name", "BITRIX_SM")."_";
 
-		$cookiePrefixLength = strlen($cookiePrefix);
+		$cookiePrefixLength = mb_strlen($cookiePrefix);
 
-		$cookiesNew = array();
+		$cookiesCrypter = new Web\CookiesCrypter();
+		$cookiesNew = $cookiesToDecrypt = [];
 		foreach ($cookies as $name => $value)
 		{
-			if (strpos($name, $cookiePrefix) !== 0)
+			if (mb_strpos($name, $cookiePrefix) !== 0)
 				continue;
 
-			$cookiesNew[substr($name, $cookiePrefixLength)] = $value;
+			$name = mb_substr($name, $cookiePrefixLength);
+			if (is_string($value) && $cookiesCrypter->shouldDecrypt($name, $value))
+			{
+				$cookiesToDecrypt[$name] = $value;
+			}
+			else
+			{
+				$cookiesNew[$name] = $value;
+			}
 		}
+
+		foreach ($cookiesToDecrypt as $name => $value)
+		{
+			$cookiesNew[$name] = $cookiesCrypter->decrypt($name, $value, $cookiesNew);
+		}
+
 		return $cookiesNew;
 	}
 
@@ -411,9 +426,9 @@ class HttpRequest extends Request
 		$headers = [];
 		foreach ($server as $name => $value)
 		{
-			if (strpos($name, 'HTTP_') === 0)
+			if (mb_strpos($name, 'HTTP_') === 0)
 			{
-				$headerName = substr($name, 5);
+				$headerName = mb_substr($name, 5);
 				$headers[$headerName] = $value;
 			}
 			elseif (in_array($name, ['CONTENT_TYPE', 'CONTENT_LENGTH'], true))
@@ -430,7 +445,7 @@ class HttpRequest extends Request
 		$normalizedHeaders = [];
 		foreach ($headers as $name => $value)
 		{
-			$headerName = strtolower(str_replace('_', '-', $name));
+			$headerName = mb_strtolower(str_replace('_', '-', $name));
 			$normalizedHeaders[$headerName] = $value;
 		}
 
@@ -439,7 +454,7 @@ class HttpRequest extends Request
 
 	protected static function normalize($path)
 	{
-		if (substr($path, -1, 1) === "/")
+		if (mb_substr($path, -1, 1) === "/")
 		{
 			$path .= "index.php";
 		}
@@ -457,7 +472,7 @@ class HttpRequest extends Request
 	public function getScriptFile()
 	{
 		$scriptName = $this->getScriptName();
-		if($scriptName == "/bitrix/urlrewrite.php" || $scriptName == "/404.php" || $scriptName == "/bitrix/virtual_file_system.php")
+		if($scriptName == "/bitrix/routing_index.php" || $scriptName == "/bitrix/urlrewrite.php" || $scriptName == "/404.php" || $scriptName == "/bitrix/virtual_file_system.php")
 		{
 			if(($v = $this->server->get("REAL_FILE_PATH")) != null)
 			{

@@ -145,7 +145,7 @@ abstract class DataManager
 	final public static function getObjectClassName()
 	{
 		$class = static::getObjectClass();
-		return substr($class, strrpos($class, '\\')+1);
+		return substr($class, strrpos($class, '\\') + 1);
 	}
 
 	protected static function getObjectClassByDataClass($dataClass)
@@ -153,7 +153,7 @@ abstract class DataManager
 		$objectClass = static::getEntityClass()::normalizeName($dataClass);
 
 		// make class name more unique
-		$namespace = substr($objectClass, 0, strrpos($objectClass, '\\')+1);
+		$namespace = substr($objectClass, 0, strrpos($objectClass, '\\') + 1);
 		$className = substr($objectClass, strrpos($objectClass, '\\') + 1);
 
 		$className = static::getEntityClass()::getDefaultObjectClassName($className);
@@ -184,7 +184,7 @@ abstract class DataManager
 	final public static function getCollectionClassName()
 	{
 		$class = static::getCollectionClass();
-		return substr($class, strrpos($class, '\\')+1);
+		return substr($class, strrpos($class, '\\') + 1);
 	}
 
 	protected static function getCollectionClassByDataClass($dataClass)
@@ -192,7 +192,7 @@ abstract class DataManager
 		$objectClass = static::getEntityClass()::normalizeName($dataClass);
 
 		// make class name more unique
-		$namespace = substr($objectClass, 0, strrpos($objectClass, '\\')+1);
+		$namespace = substr($objectClass, 0, strrpos($objectClass, '\\') + 1);
 		$className = substr($objectClass, strrpos($objectClass, '\\') + 1);
 
 		$className = static::getEntityClass()::getDefaultCollectionClassName($className);
@@ -928,7 +928,7 @@ abstract class DataManager
 
 			if (!empty($id))
 			{
-				if (strlen($entity->getAutoIncrement()))
+				if($entity->getAutoIncrement() <> '')
 				{
 					$primary = array($entity->getAutoIncrement() => $id);
 					static::normalizePrimary($primary);
@@ -1132,7 +1132,7 @@ abstract class DataManager
 
 				if (!empty($id))
 				{
-					if (strlen($entity->getAutoIncrement()))
+					if($entity->getAutoIncrement() <> '')
 					{
 						$primary = array($entity->getAutoIncrement() => $id);
 						static::normalizePrimary($primary);

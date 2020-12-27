@@ -18,8 +18,11 @@ abstract class CBPActivity
 	const ClosedEvent = 3;
 	const FaultingEvent = 4;
 
-	const ValuePattern = '#^\s*\{=\s*(?<object>[a-z0-9_]+)\s*\:\s*(?<field>[a-z0-9_\.]+)(\s*>\s*(?<mod1>[a-z0-9_\:]+)(\s*,\s*(?<mod2>[a-z0-9_]+))?)?\s*\}\s*$#i';
-	const ValueInlinePattern = '#\{=\s*(?<object>[a-z0-9_]+)\s*\:\s*(?<field>[a-z0-9_\.]+)(\s*>\s*(?<mod1>[a-z0-9_\:]+)(\s*,\s*(?<mod2>[a-z0-9_]+))?)?\s*\}#i';
+	private const ValueSinglePattern = '\{=\s*(?<object>[a-z0-9_]+)\s*\:\s*(?<field>[a-z0-9_\.]+)(\s*>\s*(?<mod1>[a-z0-9_\:]+)(\s*,\s*(?<mod2>[a-z0-9_]+))?)?\s*\}';
+
+	const ValuePattern = '#^\s*'.self::ValueSinglePattern.'\s*$#i';
+	private const ValueSimplePattern = '#^\s*\{\{(.*?)\}\}\s*$#i';
+	const ValueInlinePattern = '#'.self::ValueSinglePattern.'#i';
 	/** Internal pattern used in calc.php */
 	const ValueInternalPattern = '\{=\s*([a-z0-9_]+)\s*\:\s*([a-z0-9_\.]+)(\s*>\s*([a-z0-9_\:]+)(\s*,\s*([a-z0-9_]+))?)?\s*\}';
 
@@ -174,6 +177,11 @@ abstract class CBPActivity
 	public function getTemplatePropertyType($propertyName)
 	{
 		$rootActivity = $this->GetRootActivity();
+		if ($propertyName === 'TargetUser' && !isset($rootActivity->arPropertiesTypes[$propertyName]))
+		{
+			return ['Type' => 'user'];
+		}
+
 		return $rootActivity->arPropertiesTypes[$propertyName];
 	}
 
@@ -193,6 +201,11 @@ abstract class CBPActivity
 			foreach ($arPropertiesTypes as $key => $value)
 				$this->arPropertiesTypes[$key] = $value;
 		}
+	}
+
+	public function getPropertyType($propertyName): ?array
+	{
+		return $this->arPropertiesTypes[$propertyName] ?? null;
 	}
 
 	/**********************************************************/
@@ -573,9 +586,9 @@ abstract class CBPActivity
 			$documentFields = $documentService->GetDocumentFields($documentType);
 			//check aliases
 			$documentFieldsAliasesMap = CBPDocument::getDocumentFieldsAliasesMap($documentFields);
-			if (!isset($document[$fieldName]) && mb_strtoupper(mb_substr($fieldName, -mb_strlen('_PRINTABLE'))) == '_PRINTABLE')
+			if (!isset($document[$fieldName]) && mb_strtoupper(mb_substr($fieldName, -10)) === '_PRINTABLE')
 			{
-				$fieldName = mb_substr($fieldName, 0, -mb_strlen('_PRINTABLE'));
+				$fieldName = mb_substr($fieldName, 0, -10);
 				if (!in_array('printable', $modifiers))
 					$modifiers[] = 'printable';
 			}
@@ -589,7 +602,7 @@ abstract class CBPActivity
 			if (isset($document[$fieldName]))
 			{
 				$result = $document[$fieldName];
-				if (is_array($result) && mb_strtoupper(mb_substr($fieldName, -mb_strlen('_PRINTABLE'))) == '_PRINTABLE')
+				if (is_array($result) && mb_strtoupper(mb_substr($fieldName, -10)) === '_PRINTABLE')
 					$result = implode(", ", CBPHelper::MakeArrayFlat($result));
 
 				$property = isset($documentFields[$fieldName]) ? $documentFields[$fieldName] : null;
@@ -599,10 +612,10 @@ abstract class CBPActivity
 		{
 			$rootActivity = $this->GetRootActivity();
 
-			if (mb_substr($fieldName, -mb_strlen("_printable")) == "_printable")
+			if (mb_substr($fieldName, -10) == "_printable")
 			{
-				$fieldName = mb_substr($fieldName, 0, mb_strlen($fieldName) - mb_strlen("_printable"));
-				$modifiers = array('printable');
+				$fieldName = mb_substr($fieldName, 0, -10);
+				$modifiers = ['printable'];
 			}
 
 			switch ($objectName)
@@ -622,8 +635,15 @@ abstract class CBPActivity
 		}
 		elseif ($objectName === 'GlobalConst')
 		{
-			$result = Bizproc\Workflow\Type\GlobalConst::getValue($fieldName);
 			$property = Bizproc\Workflow\Type\GlobalConst::getById($fieldName);
+			if (!$property && mb_substr($fieldName, -10) == "_printable")
+			{
+				$fieldName = mb_substr($fieldName, 0, -10);
+				$modifiers = ['printable'];
+				$property = Bizproc\Workflow\Type\GlobalConst::getById($fieldName);
+			}
+
+			$result = Bizproc\Workflow\Type\GlobalConst::getValue($fieldName);
 		}
 		elseif ($objectName == "Workflow")
 		{
@@ -632,14 +652,25 @@ abstract class CBPActivity
 		}
 		elseif ($objectName == "User")
 		{
+			if (mb_substr($fieldName, -10) == "_printable")
+			{
+				$modifiers = ['printable'];
+			}
+
 			$result = 0;
 			if (isset($GLOBALS["USER"]) && is_object($GLOBALS["USER"]) && $GLOBALS["USER"]->isAuthorized())
+			{
 				$result = "user_".$GLOBALS["USER"]->GetID();
+			}
 			$property = array('Type' => 'user');
 		}
 		elseif ($objectName == "System")
 		{
-			global $DB;
+			if (mb_substr($fieldName, -10) == "_printable")
+			{
+				$fieldName = mb_substr($fieldName, 0, -10);
+				$modifiers = ['printable'];
+			}
 
 			$result = null;
 			$property = array('Type' => 'datetime');
@@ -647,20 +678,14 @@ abstract class CBPActivity
 			if ($systemField === 'now')
 			{
 				$result = new Bizproc\BaseType\Value\DateTime();
-				//$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")));
 			}
 			elseif ($systemField === 'nowlocal')
 			{
 				$result = new Bizproc\BaseType\Value\DateTime(time(), CTimeZone::GetOffset());
-				//$result = time();
-				//if (CTimeZone::Enabled())
-				//	$result += CTimeZone::GetOffset();
-				//$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), $result);
 			}
 			elseif ($systemField == 'date')
 			{
 				$result = new Bizproc\BaseType\Value\Date();
-				//$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("SHORT")));
 				$property = array('Type' => 'date');
 			}
 			if ($result === null)
@@ -674,11 +699,7 @@ abstract class CBPActivity
 			if ($activity)
 			{
 				$result = $activity->__get($fieldName);
-				//if mapping is set, we can apply modifiers (type converting & formatting like `printable`, `bool` etc.)
-				if (isset($activity->arPropertiesTypes[$fieldName]))
-				{
-					$property = $activity->arPropertiesTypes[$fieldName];
-				}
+				$property = $activity->getPropertyType($fieldName);
 			}
 			else
 				$return = false;
@@ -1255,7 +1276,11 @@ abstract class CBPActivity
 		if (is_string($text))
 		{
 			$text = trim($text);
-			if (preg_match(static::CalcPattern, $text) || preg_match(static::ValuePattern, $text))
+			if (
+				preg_match(static::CalcPattern, $text)
+				|| preg_match(static::ValuePattern, $text)
+				|| preg_match(self::ValueSimplePattern, $text)
+			)
 				return true;
 		}
 		return false;

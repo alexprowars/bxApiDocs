@@ -1,4 +1,4 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterSlave
@@ -317,7 +317,7 @@ class CClusterSlave
 		}
 
 
-		if(strlen($arNode["MASTER_ID"]))
+		if($arNode["MASTER_ID"] <> '')
 		{
 			$arStatus = array_merge($arStatus, array(
 				'Slave_IO_State' => null,
@@ -328,7 +328,7 @@ class CClusterSlave
 				'Seconds_Behind_Master' => null,
 				'Last_IO_Error' => null,
 				'Last_SQL_Error' => null,
-	//			'Replicate_Ignore_Table' => null,
+				//			'Replicate_Ignore_Table' => null,
 				'Com_select' => null,
 			));
 
@@ -336,16 +336,22 @@ class CClusterSlave
 			{
 				$rs = $nodeDB->Query("SHOW SLAVE STATUS", true, "", array("fixed_connection" => true));
 				if(!$rs)
+				{
 					return GetMessage("CLU_NO_PRIVILEGES", array("#sql#" => "GRANT REPLICATION CLIENT on *.* to '".$nodeDB->DBLogin."'@'%';"));
+				}
 				$ar = $rs->Fetch();
 				if(is_array($ar))
 				{
-					foreach($ar as $key=>$value)
+					foreach($ar as $key => $value)
 					{
 						if($key == 'Last_Error')
+						{
 							$key = 'Last_SQL_Error';
+						}
 						if(array_key_exists($key, $arStatus))
+						{
 							$arStatus[$key] = $value;
+						}
 					}
 				}
 			}
@@ -451,7 +457,17 @@ class CClusterSlave
 		$total_weight = 0;
 		foreach($arSlaves as $i=>$slave)
 		{
-			if(defined("BX_CLUSTER_GROUP") && BX_CLUSTER_GROUP != $slave["GROUP_ID"])
+			$bOtherGroup = defined("BX_CLUSTER_GROUP") && ($slave["GROUP_ID"] != BX_CLUSTER_GROUP);
+			if (
+				defined("BX_CLUSTER_SLAVE_USE_ANY_GROUP")
+				&& BX_CLUSTER_SLAVE_USE_ANY_GROUP === true
+				&& $slave["ROLE_ID"] == "SLAVE"
+			)
+			{
+				$bOtherGroup = false;
+			}
+
+			if($bOtherGroup)
 			{
 				unset($arSlaves[$i]);
 			}
@@ -481,7 +497,7 @@ class CClusterSlave
 		}
 
 		$found = false;
-		$rand = mt_rand(0, $total_weight);
+		$rand = ($total_weight > 0? mt_rand(0, $total_weight - 1): 0);
 		foreach($arSlaves as $slave)
 		{
 			if($rand < $slave["PIE_WEIGHT"])

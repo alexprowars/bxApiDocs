@@ -105,13 +105,15 @@ class BlogPost extends \Bitrix\Socialnetwork\Controller\Base
 			$filter,
 			false,
 			false,
-			[ 'ID', 'FAVORITES_USER_ID' ]
+			[ 'ID', 'FAVORITES_USER_ID', 'PINNED_USER_ID' ],
+			[ 'USE_PINNED' => 'Y' ]
 		);
 
 		if ($logEntry = $res->fetch())
 		{
 			$logId = intval($logEntry['ID']);
 			$logFavoritesUserId = intval($logEntry['FAVORITES_USER_ID']);
+			$logPinnedUserId = intval($logEntry['PINNED_USER_ID']);
 		}
 
 		if($postFields["AUTHOR_ID"] == $currentUserId)
@@ -181,6 +183,7 @@ class BlogPost extends \Bitrix\Socialnetwork\Controller\Base
 			'isShareForbidden' => ($shareForbidden ? 'Y' : 'N'),
 			'logId' => $logId,
 			'logFavoritesUserId' => $logFavoritesUserId,
+			'logPinnedUserId' => $logPinnedUserId,
 			'authorId' => intval($postFields['AUTHOR_ID']),
 			'urlToPost' => $postUrl,
 			'urlToVoteExport' => $voteExportUrl,
@@ -222,6 +225,17 @@ class BlogPost extends \Bitrix\Socialnetwork\Controller\Base
 			!Loader::includeModule('blog')
 			|| !($postItem = \Bitrix\Blog\Item\Post::getById($postId))
 		)
+		{
+			$this->addError(new Error(Loc::getMessage('SONET_CONTROLLER_LIVEFEED_BLOGPOST_NOT_FOUND'), 'SONET_CONTROLLER_LIVEFEED_BLOGPOST_NOT_FOUND'));
+			return null;
+		}
+
+		$currentUserPerm = \Bitrix\Socialnetwork\Item\Helper::getBlogPostPerm([
+			'USER_ID' => $currentUserId,
+			'POST_ID' => $postId
+		]);
+
+		if ($currentUserPerm <= Permissions::DENY)
 		{
 			$this->addError(new Error(Loc::getMessage('SONET_CONTROLLER_LIVEFEED_BLOGPOST_NOT_FOUND'), 'SONET_CONTROLLER_LIVEFEED_BLOGPOST_NOT_FOUND'));
 			return null;

@@ -124,7 +124,7 @@ class Base32
 		if (!is_string($base32String))
 			throw new ArgumentTypeException('base32String', 'string');
 
-		$base32String = strtoupper($base32String);
+		$base32String = mb_strtoupper($base32String);
 		$base32Array = str_split($base32String);
 
 		$string = '';
@@ -143,9 +143,9 @@ class Base32
 			$string .= str_pad($char, 5, 0, STR_PAD_LEFT);
 		}
 
-		while (\CUtil::binStrlen($string) % 8 !== 0)
+		while (strlen($string) % 8 !== 0)
 		{
-			$string = \CUtil::binSubstr($string, 0, -1);
+			$string = substr($string, 0, -1);
 		}
 
 		$binaryArray = self::chunk($string, 8);
@@ -174,9 +174,9 @@ class Base32
 	{
 		$binaryString = chunk_split($binaryString, $bits, ' ');
 
-		if (\CUtil::binSubstr($binaryString, -1)  == ' ')
+		if (substr($binaryString, -1)  == ' ')
 		{
-			$binaryString = \CUtil::binSubstr($binaryString, 0, -1);
+			$binaryString = substr($binaryString, 0, -1);
 		}
 
 		return explode(' ', $binaryString);

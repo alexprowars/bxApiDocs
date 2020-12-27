@@ -1,9 +1,9 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterGroup
 {
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -15,7 +15,7 @@ class CClusterGroup
 		return $ID;
 	}
 
-	public static function Delete($ID)
+	function Delete($ID)
 	{
 		global $DB, $APPLICATION;
 		$aMsg = array();
@@ -25,7 +25,7 @@ class CClusterGroup
 		if($rsWebNodes->Fetch())
 			$aMsg[] = array("text" => GetMessage("CLU_GROUP_HAS_WEBNODE"));
 
-		$rsDBNodes = CClusterDBNode::GetList(array() ,array("=GROUP_ID"=>$group_id));
+		$rsDBNodes = CClusterDBNode::GetList(array() ,array("=GROUP_ID"=>$ID));
 		if($rsWebNodes->Fetch())
 			$aMsg[] = array("text" => GetMessage("CLU_GROUP_HAS_DBNODE"));
 
@@ -44,7 +44,7 @@ class CClusterGroup
 		return $res;
 	}
 
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -56,7 +56,7 @@ class CClusterGroup
 			return false;
 
 		$strUpdate = $DB->PrepareUpdate("b_cluster_group", $arFields);
-		if(strlen($strUpdate) > 0)
+		if($strUpdate <> '')
 		{
 			$strSql = "
 				UPDATE b_cluster_group SET
@@ -70,7 +70,7 @@ class CClusterGroup
 		return true;
 	}
 
-	public static function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -78,7 +78,7 @@ class CClusterGroup
 		unset($arFields["ID"]);
 
 		$arFields["NAME"] = trim($arFields["NAME"]);
-		if(strlen($arFields["NAME"]) <= 0)
+		if($arFields["NAME"] == '')
 		{
 			$aMsg[] = array("id" => "NAME", "text" => GetMessage("CLU_GROUP_EMPTY_NAME"));
 		}
@@ -110,8 +110,8 @@ class CClusterGroup
 		$arQueryOrder = array();
 		foreach($arOrder as $strColumn => $strDirection)
 		{
-			$strColumn = strtoupper($strColumn);
-			$strDirection = strtoupper($strDirection)=="ASC"? "ASC": "DESC";
+			$strColumn = mb_strtoupper($strColumn);
+			$strDirection = mb_strtoupper($strDirection) == "ASC"? "ASC": "DESC";
 			switch($strColumn)
 			{
 				case "ID":
@@ -125,7 +125,7 @@ class CClusterGroup
 		$arQuerySelect = array();
 		foreach($arSelect as $strColumn)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			switch($strColumn)
 			{
 				case "ID":
@@ -187,4 +187,3 @@ class CClusterGroup
 		return $rs->Fetch();
 	}
 }
-?>

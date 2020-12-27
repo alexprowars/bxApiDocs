@@ -111,8 +111,9 @@ class Icon
 	{
 		$iconSrc = Config::get('icon_src');
 		$iconVendors = Config::get('icon_vendors');
+		$blockContent = $block->getContent();
 
-		if (!$iconSrc || !$iconVendors)
+		if (!$iconSrc || !$iconVendors || !$blockContent)
 		{
 			return;
 		}
@@ -120,8 +121,8 @@ class Icon
 		$assetsIcon = [];
 		$iconVendors = (array) $iconVendors;
 		$found = preg_match_all(
-			'/[\s"](' . implode('|', $iconVendors) . ')-([^\s"\/\\\]+)/s',
-			$block->getContent(),
+			'/(?<=[\s"])(' . implode('|', $iconVendors) . ')-([^\s"\/\\\]+)/s',
+			$blockContent,
 			$matches
 		);
 		if ($found)

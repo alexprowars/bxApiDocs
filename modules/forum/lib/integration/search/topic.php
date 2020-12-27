@@ -34,8 +34,11 @@ class Topic extends \Bitrix\Main\Update\Stepper
 		if ($state["reindexFirst"] === true)
 		{
 			if (
-				($dbRes = \CForumMessage::GetList(array("ID" => "ASC"), array("TOPIC_ID" => $topicId, "NEW_TOPIC" => "Y", "GET_TOPIC_INFO" => "Y", "GET_FORUM_INFO" => "Y", "FILTER" => "Y"))) &&
-				($message = $dbRes->fetch())
+				($dbRes = \CForumMessage::GetList(
+					["ID" => "ASC"],
+					["TOPIC_ID" => $topicId, "NEW_TOPIC" => "Y", "GET_TOPIC_INFO" => "Y", "GET_FORUM_INFO" => "Y", "FILTER" => "Y"]
+				))
+				&& ($message = $dbRes->fetch())
 			)
 			{
 				\CForumMessage::Reindex($message["ID"], $message);
@@ -55,11 +58,9 @@ class Topic extends \Bitrix\Main\Update\Stepper
 			if ($message = $dbRes->fetch())
 			{
 				$forum = \Bitrix\Forum\Forum::getById($message["FORUM_ID"]);
-				if ($forum["INDEXATION"] != "Y")
-				{
-					\CSearch::DeleteIndex("forum", false, false, $message["TOPIC_ID"]);
-				}
-				else
+				\CSearch::DeleteIndex("forum", false, false, $message["TOPIC_ID"]);
+
+				if ($forum["INDEXATION"] === "Y")
 				{
 					$count = 0;
 					$topic = \Bitrix\Forum\Topic::getById($message["TOPIC_ID"]);
@@ -108,7 +109,7 @@ class Topic extends \Bitrix\Main\Update\Stepper
 			"reindexFirst" => true
 		];
 		Option::set("forum", "search.reindex.topic", serialize($res));
-		self::bind(0);
+		static::bind(0);
 	}
 
 	public static function reindex(int $topicId)
@@ -119,6 +120,6 @@ class Topic extends \Bitrix\Main\Update\Stepper
 		$res = is_array($res) ? $res : [];
 		$res[$topicId] = [];
 		Option::set("forum", "search.reindex.topic", serialize($res));
-		self::bind(0);
+		static::bind(0);
 	}
 }

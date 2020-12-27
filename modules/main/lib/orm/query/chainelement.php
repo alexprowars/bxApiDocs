@@ -211,7 +211,10 @@ class ChainElement
 	{
 		if (is_array($this->value) || $this->value instanceof Reference || $this->value instanceof Entity)
 		{
-			throw new SystemException('Unknown value');
+			throw new SystemException(sprintf(
+				'There is no SQL definition for Entity `%s`, please use a scalar field',
+				$this->getAliasFragment()
+			));
 		}
 
 		$helper = $this->value->getEntity()->getConnection()->getSqlHelper();

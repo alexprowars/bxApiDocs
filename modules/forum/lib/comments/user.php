@@ -2,10 +2,13 @@
 
 namespace Bitrix\Forum\Comments;
 
+use \Bitrix\Forum;
+
 class User
 {
 	protected $id = 0;
 	protected $groups = array(2);
+	protected $forumUser;
 
 	public function __construct($id)
 	{
@@ -20,6 +23,7 @@ class User
 			$this->id = $id;
 			$this->groups = \Bitrix\Main\UserTable::getUserGroupIds($id);
 		}
+		$this->forumUser = Forum\User::getById($this->id);
 	}
 
 	public function getId()
@@ -42,9 +46,13 @@ class User
 		return true;
 	}
 
-	public function getParam()
+	public function getParam(string $key)
 	{
-		return '';
+		if (array_key_exists($key, $this->forumUser))
+		{
+			return $this->forumUser[$key];
+		}
+		return null;
 	}
 	public function isAdmin()
 	{
@@ -73,5 +81,21 @@ class User
 	public function getFullName()
 	{
 		return '';
+	}
+
+	public function getUnreadMessageId($topicId = 0)
+	{
+		return $this->forumUser->getUnreadMessageId($topicId);
+	}
+
+	public function readTopic($topicId = 0)
+	{
+		$this->forumUser->readTopic($topicId);
+		$this->forumUser->setLastVisit();
+	}
+
+	public function setLocation(int $forumId = 0, int $topicId = 0)
+	{
+		$this->forumUser->setLocation($forumId, $topicId);
 	}
 }

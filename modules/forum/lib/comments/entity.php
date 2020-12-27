@@ -56,7 +56,7 @@ class Entity
 	{
 		if (!empty($this->entity["xml_id"]))
 			return $this->entity["xml_id"];
-		return strtoupper($this->entity["type"]."_".$this->entity["id"]);
+		return mb_strtoupper($this->entity["type"]."_".$this->entity["id"]);
 	}
 
 	/**
@@ -176,7 +176,7 @@ class Entity
 					$result = \CForumNew::GetPermissionUserDefault($this->forum["ID"]);
 				else
 				{
-					if (in_array($this->getType(), array('PH', 'TR', 'TE', 'IBLOCK')))
+					if (in_array($this->getType(), array('PH', 'TR', 'TM', 'IBLOCK')))
 					{
 						$result = 'Y';
 					}
@@ -213,7 +213,7 @@ class Entity
 	 */
 	public static function getEntityByType($type = "")
 	{
-		$type = strtolower($type);
+		$type = mb_strtolower($type);
 		$entities = self::getEntities();
 		return (array_key_exists($type, $entities) ? $entities[$type] : null);
 	}
@@ -224,7 +224,7 @@ class Entity
 	 */
 	public static function getEntityByXmlId($xmlId = "")
 	{
-		$xmlId = strtoupper($xmlId);
+		$xmlId = mb_strtoupper($xmlId);
 		$entities = self::getEntities();
 		$result = null;
 		foreach ($entities as $entity)
@@ -258,8 +258,8 @@ class Entity
 					"className" => CalendarEntity::className(),
 					"moduleId" => "calendar",
 					"xmlIdPrefix" => CalendarEntity::getXmlIdPrefix()),
-				"te" => array(
-					"entityType" => "te",
+				"tm" => array(
+					"entityType" => "tm",
 					"className" => Entity::className(),
 					"moduleId" => "timeman",
 					"xmlIdPrefix" => 'TIMEMAN_ENTRY_'
@@ -308,11 +308,11 @@ class Entity
 
 					if (is_string($connector['CLASS']) && class_exists($connector['CLASS']))
 					{
-						self::$entities[strtolower($connector['ENTITY_TYPE'])] = array(
-							"id" => strtolower($connector['ENTITY_TYPE']),
+						self::$entities[mb_strtolower($connector['ENTITY_TYPE'])] = array(
+							"id" => mb_strtolower($connector['ENTITY_TYPE']),
 							"className" => str_replace('\\\\', '\\', $connector['CLASS']),
 							"moduleId" => $connector['MODULE_ID'],
-							"xmlIdPrefix" => strtoupper($connector['ENTITY_TYPE'])."_"
+							"xmlIdPrefix" => mb_strtoupper($connector['ENTITY_TYPE'])."_"
 						);
 					}
 				}

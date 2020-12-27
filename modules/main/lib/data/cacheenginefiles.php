@@ -408,7 +408,7 @@ class CacheEngineFiles
 
 			$this->written = fwrite($handle, $contents);
 			$this->path = $fn;
-			$len = Main\Text\BinaryString::getLength($contents);
+			$len = strlen($contents);
 
 			fclose($handle);
 
@@ -457,7 +457,7 @@ class CacheEngineFiles
 			|| preg_match("/^(\\d{12})/", $header, $match)
 		)
 		{
-			if (strlen($match[1]) <= 0 || doubleval($match[1]) < time())
+			if ($match[1] == '' || doubleval($match[1]) < time())
 				return true;
 		}
 

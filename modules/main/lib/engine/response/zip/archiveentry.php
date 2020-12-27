@@ -100,10 +100,7 @@ class ArchiveEntry
 				'ID' => 0,
 				'ORIGINAL_NAME' => $fileArray['name'],
 				'FILE_SIZE' => $fileArray['size'],
-				'SRC' => substr(
-					$fileArray['tmp_name'],
-					strlen(self::getDocRoot())
-				),
+				'SRC' => mb_substr($fileArray['tmp_name'], mb_strlen(self::getDocRoot())),
 			], $name);
 		}
 
@@ -226,7 +223,7 @@ class ArchiveEntry
 
 		foreach ($parts as $i => $part)
 		{
-			$part = self::getApplication()->convertCharset(
+			$part = Encoding::convertEncoding(
 				$part,
 				LANG_CHARSET,
 				'UTF-8'

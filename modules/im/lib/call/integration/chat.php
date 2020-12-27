@@ -48,12 +48,12 @@ class Chat extends AbstractEntity
 				'filter' => [
 					'ID' => $users,
 					'=ACTIVE' => 'Y',
-					'=IS_REAL_USER' => 'Y',
 					[
 						'LOGIC' => 'OR',
-						'!=EXTERNAL_AUTH_ID' => \Bitrix\Im\Call\Auth::AUTH_TYPE,
-						'=IS_ONLINE' => 'Y'
+						'=IS_REAL_USER' => 'Y',
+						'=EXTERNAL_AUTH_ID' => \Bitrix\Im\Call\Auth::AUTH_TYPE,
 					]
+
 				]
 			])->fetchAll();
 			$this->chatUsers = array_column($activeRealUsers, 'ID');
@@ -106,7 +106,34 @@ class Chat extends AbstractEntity
 	 */
 	public function checkAccess($userId)
 	{
-		return Dialog::hasAccess($this->entityId, $userId);
+		if (
+			Common::isChatId($this->entityId)
+			|| IsModuleInstalled('intranet')
+		)
+		{
+			return Dialog::hasAccess($this->entityId, $userId);
+		}
+
+		if (
+			\CIMSettings::GetPrivacy(\CIMSettings::PRIVACY_CALL) == \CIMSettings::PRIVACY_RESULT_CONTACT
+			&& \CModule::IncludeModule('socialnetwork')
+			&& \CSocNetUser::IsFriendsAllowed()
+			&& !\CSocNetUserRelations::IsFriends($this->entityId, $userId)
+		)
+		{
+			return false;
+		}
+		else if (
+			\CIMSettings::GetPrivacy(\CIMSettings::PRIVACY_CALL, $this->entityId) == \CIMSettings::PRIVACY_RESULT_CONTACT
+			&& \CModule::IncludeModule('socialnetwork')
+			&& \CSocNetUser::IsFriendsAllowed()
+			&& !\CSocNetUserRelations::IsFriends($this->entityId, $this->userId)
+		)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

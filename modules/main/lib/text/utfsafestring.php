@@ -16,10 +16,10 @@ class UtfSafeString
 		if (Application::isUtfMode())
 		{
 			//mb_strrpos does not work on invalid UTF-8 strings
-			$ln = strlen($needle);
-			for ($i = strlen($haystack) - $ln; $i >= 0; $i--)
+			$ln = mb_strlen($needle);
+			for ($i = mb_strlen($haystack) - $ln; $i >= 0; $i--)
 			{
-				if (substr($haystack, $i, $ln) == $needle)
+				if (mb_substr($haystack, $i, $ln) == $needle)
 				{
 					return $i;
 				}
@@ -27,7 +27,7 @@ class UtfSafeString
 			return false;
 		}
 
-		return strrpos($haystack, $needle);
+		return mb_strrpos($haystack, $needle);
 	}
 
 	public static function rtrimInvalidUtf($string)
@@ -38,16 +38,16 @@ class UtfSafeString
 		//1110xxxx 10xxxxxx 10xxxxxx
 		//11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 
-		$last4bytes = \CUtil::binsubstr($string, -3);
+		$last4bytes = substr($string, -3);
 		$reversed = array_reverse(unpack("C*", $last4bytes));
 		if (($reversed[0] & 0x80) === 0x00) //ASCII
 			return $string;
 		elseif (($reversed[0] & 0xC0) === 0xC0) //Start of utf seq (cut it!)
-			return \CUtil::binsubstr($string, 0, -1);
+			return substr($string, 0, -1);
 		elseif (($reversed[1] & 0xE0) === 0xE0) //Start of utf seq (longer than 2 bytes)
-			return \CUtil::binsubstr($string, 0, -2);
+			return substr($string, 0, -2);
 		elseif (($reversed[2] & 0xE0) === 0xF0) //Start of utf seq (longer than 3 bytes)
-			return \CUtil::binsubstr($string, 0, -3);
+			return substr($string, 0, -3);
 		return $string;
 	}
 
@@ -84,8 +84,8 @@ class UtfSafeString
 	 */
 	public static function pad($string, $padLen, $padStr = ' ', $padType = STR_PAD_RIGHT)
 	{
-		$strLength = strlen($string);
-		$padStrLength = strlen($padStr);
+		$strLength = mb_strlen($string);
+		$padStrLength = mb_strlen($padStr);
 		if (!$strLength && ($padType == STR_PAD_RIGHT || $padType == STR_PAD_LEFT))
 		{
 			$strLength = 1; // @debug
@@ -100,20 +100,20 @@ class UtfSafeString
 		if ($padType == STR_PAD_RIGHT)
 		{
 			$result = $string . str_repeat($padStr, $repeat);
-			$result = substr($result, 0, $padLen);
+			$result = mb_substr($result, 0, $padLen);
 		}
 		else if ($padType == STR_PAD_LEFT)
 		{
 			$result = str_repeat($padStr, $repeat) . $string;
-			$result = substr($result, -$padLen);
+			$result = mb_substr($result, -$padLen);
 		}
 		else if ($padType == STR_PAD_BOTH)
 		{
 			$length = ($padLen - $strLength) / 2;
 			$repeat = ceil($length / $padStrLength);
-			$result = substr(str_repeat($padStr, $repeat), 0, floor($length))
-				. $string
-				. substr(str_repeat($padStr, $repeat), 0, ceil($length));
+			$result = mb_substr(str_repeat($padStr, $repeat), 0, floor($length))
+				.$string
+				.mb_substr(str_repeat($padStr, $repeat), 0, ceil($length));
 		}
 
 		return $result;

@@ -25,7 +25,7 @@ class Helper
 	 *
 	 * @param string $phrase
 	 * @param string $wildcard '*' or '' actually
-	 * @param int    $minTokenSize
+	 * @param int|null    $minTokenSize
 	 *
 	 * @return string
 	 */
@@ -44,7 +44,7 @@ class Helper
 				$andValues,
 				function($val) use ($ftMinTokenSize)
 				{
-					return (strlen($val) >= $ftMinTokenSize);
+					return (mb_strlen($val) >= $ftMinTokenSize);
 				}
 			);
 

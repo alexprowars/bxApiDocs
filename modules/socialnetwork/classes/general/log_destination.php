@@ -374,7 +374,7 @@ class CSocNetLogDestination
 
 		if (
 			isset($arParams['ONLY_WITH_EMAIL'])
-			|| $arParams['ONLY_WITH_EMAIL'] !== 'Y'
+			&& $arParams['ONLY_WITH_EMAIL'] === 'Y'
 		)
 		{
 			$filter['!=EMAIL'] = false;
@@ -555,7 +555,7 @@ class CSocNetLogDestination
 				CSocNetTools::InitGlobalExtranetArrays();
 
 				if (
-					!isset($arFilter['UF_DEPARTMENT'])
+					!isset($filter['UF_DEPARTMENT'])
 					&& $bExtranetInstalled
 				)
 				{
@@ -593,7 +593,7 @@ class CSocNetLogDestination
 					}
 
 					if (
-						!isset($arFilter['UF_DEPARTMENT']) // all users
+						!isset($filter['UF_DEPARTMENT']) // all users
 						&& $bExtranetInstalled
 					)
 					{
@@ -666,9 +666,9 @@ class CSocNetLogDestination
 			if (defined("BX_COMP_MANAGED_CACHE"))
 			{
 				$CACHE_MANAGER->RegisterTag("USER_NAME");
-				if (!empty($arFilter['UF_DEPARTMENT']))
+				if (!empty($filter['UF_DEPARTMENT']))
 				{
-					$CACHE_MANAGER->RegisterTag('intranet_department_'.$arFilter['UF_DEPARTMENT']);
+					$CACHE_MANAGER->RegisterTag('intranet_department_'.$filter['UF_DEPARTMENT']);
 				}
 				$CACHE_MANAGER->EndTagCache();
 			}
@@ -2239,11 +2239,8 @@ class CSocNetLogDestination
 		}
 
 		$arExternalAuthId = self::getExternalAuthIdBlackList();
-
-		if (!empty($arExternalAuthId))
-		{
-			$arFilter['!EXTERNAL_AUTH_ID'] = $arExternalAuthId;
-		}
+		$arExternalAuthId[] = 'email';
+		$arFilter['!EXTERNAL_AUTH_ID'] = $arExternalAuthId;
 
 		$arGroupBy = false;
 		$arSelectFields = array("ID", "NAME", "LAST_NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "WORK_POSITION", "PERSONAL_PROFESSION", "EXTERNAL_AUTH_ID", "EMAIL", "IS_ONLINE");
@@ -2300,7 +2297,11 @@ class CSocNetLogDestination
 
 		$strSql =
 			"SELECT
-				".$arSqls["SELECT"].", CASE WHEN UM.VALUE_INT > 0 THEN 'employee' WHEN EXTERNAL_AUTH_ID = 'email' THEN 'email' ELSE 'extranet' END USER_TYPE 
+				".(
+					$bExtranetEnabled
+						? $arSqls["SELECT"].", CASE WHEN UM.VALUE_INT > 0 THEN 'employee' WHEN EXTERNAL_AUTH_ID = 'email' THEN 'email' ELSE 'extranet' END USER_TYPE"
+						: $arSqls["SELECT"].", CASE WHEN EXTERNAL_AUTH_ID = 'email' THEN 'email' ELSE 'employee' END USER_TYPE"
+				)." 
 			FROM b_user U
 				".$arSqls["FROM"]." ";
 

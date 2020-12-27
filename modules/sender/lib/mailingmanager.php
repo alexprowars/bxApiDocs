@@ -107,7 +107,7 @@ class MailingManager
 			}
 		}
 
-		if($postingSendStatus === PostingManager::SEND_RESULT_CONTINUE)
+		if(!empty(static::$error) || $postingSendStatus === PostingManager::SEND_RESULT_CONTINUE)
 		{
 			return Runtime\SenderJob::getAgentName($letterId);
 		}

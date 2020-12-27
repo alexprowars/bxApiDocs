@@ -73,6 +73,7 @@ final class WebpackClear extends Stepper
 			'select' => ['ID'],
 			'filter' => [
 				'%ORIGINAL_NAME' => self::WEBPACK_NAME_MASK,
+				'=MODULE_ID' => self::MODULE_ID,
 			],
 		]);
 		while ($row = $dbFiles->fetch())
@@ -110,6 +111,6 @@ final class WebpackClear extends Stepper
 	 */
 	public static function clearNotBindedFiles(): void
 	{
-		Stepper::bindClass('Bitrix\Landing\Update\Assets\WebpackClear', 'landing', 300);
+		Stepper::bindClass('Bitrix\Landing\Update\Assets\WebpackClear', 'landing', 600);
 	}
 }

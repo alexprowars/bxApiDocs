@@ -1,4 +1,4 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterWebnode
@@ -6,7 +6,7 @@ class CClusterWebnode
 	public static $errno = 0;
 	public static $errstr = '';
 
-	public function Add($arFields)
+	function Add($arFields)
 	{
 		global $DB;
 
@@ -28,7 +28,7 @@ class CClusterWebnode
 		return $res;
 	}
 
-	public function Update($ID, $arFields)
+	function Update($ID, $arFields)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -40,7 +40,7 @@ class CClusterWebnode
 			return false;
 
 		$strUpdate = $DB->PrepareUpdate("b_cluster_webnode", $arFields);
-		if(strlen($strUpdate) > 0)
+		if($strUpdate <> '')
 		{
 			$strSql = "
 				UPDATE b_cluster_webnode SET
@@ -54,7 +54,7 @@ class CClusterWebnode
 		return true;
 	}
 
-	public function CheckFields(&$arFields, $ID)
+	function CheckFields(&$arFields, $ID)
 	{
 		global $APPLICATION;
 		$aMsg = array();
@@ -72,7 +72,7 @@ class CClusterWebnode
 		$bStatus = true;
 		if($bHost && isset($arFields["PORT"]))
 		{
-			if(strlen($arFields["STATUS_URL"]))
+			if($arFields["STATUS_URL"] <> '')
 			{
 				$arStatus = $this->GetStatus($arFields["HOST"], $arFields["PORT"], $arFields["STATUS_URL"]);
 				$bStatus = is_array($arStatus);
@@ -115,8 +115,8 @@ class CClusterWebnode
 		$arQueryOrder = array();
 		foreach($arOrder as $strColumn => $strDirection)
 		{
-			$strColumn = strtoupper($strColumn);
-			$strDirection = strtoupper($strDirection)=="ASC"? "ASC": "DESC";
+			$strColumn = mb_strtoupper($strColumn);
+			$strDirection = mb_strtoupper($strDirection) == "ASC"? "ASC": "DESC";
 			switch($strColumn)
 			{
 				case "ID":
@@ -130,7 +130,7 @@ class CClusterWebnode
 		$arQuerySelect = array();
 		foreach($arSelect as $strColumn)
 		{
-			$strColumn = strtoupper($strColumn);
+			$strColumn = mb_strtoupper($strColumn);
 			switch($strColumn)
 			{
 				case "ID":
@@ -271,7 +271,7 @@ class CClusterWebnode
 		return false;
 	}
 
-	static public function getServerList()
+	public static function getServerList()
 	{
 		global $DB;
 		$result = array();
@@ -295,7 +295,7 @@ class CClusterWebnode
 		return $result;
 	}
 
-	function ParseDateTime($str)
+	public static function ParseDateTime($str)
 	{
 		static $search = false;
 		static $replace = false;
@@ -319,4 +319,3 @@ class CClusterWebnode
 			return false;
 	}
 }
-?>

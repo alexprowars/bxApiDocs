@@ -225,6 +225,36 @@ class Base
 	}
 
 	/**
+	 * @param FieldType $fieldType Document field type.
+	 * @param array $baseValue Base value.
+	 * @param mixed $appendValue Value to append.
+	 * @return mixed Merge result.
+	 */
+	public static function mergeValue(FieldType $fieldType, array $baseValue, $appendValue): array
+	{
+		if (\CBPHelper::isEmptyValue($baseValue))
+		{
+			return (array) $appendValue;
+		}
+
+		if (!is_array($appendValue))
+		{
+			$baseValue[] = $appendValue;
+			return $baseValue;
+		}
+
+		$isSimple = !\CBPHelper::isAssociativeArray($baseValue) && !\CBPHelper::isAssociativeArray($appendValue);
+		$result = $isSimple ? array_merge($baseValue, $appendValue) : $baseValue + $appendValue;
+
+		if ($isSimple)
+		{
+			$result = array_values(array_unique($result));
+		}
+
+		return $result;
+	}
+
+	/**
 	 * @var array
 	 */
 	protected static $errors = array();
@@ -344,7 +374,7 @@ class Base
 	{
 		$messageAdd = Loc::getMessage('BPDT_BASE_ADD');
 
-		$name = Main\Text\HtmlFilter::encode(\CUtil::JSEscape(static::generateControlName($field)));
+		$name = Main\Text\HtmlFilter::encode(\CUtil::jsEscape(static::generateControlName($field)));
 		$property = Main\Text\HtmlFilter::encode(Main\Web\Json::encode($fieldType->getProperty()));
 
 		$renderResult = implode('', $controls) . <<<HTML
@@ -499,14 +529,34 @@ HTML;
 	{
 		$html = '';
 		$controlId = static::generateControlId($field);
+		$name = static::generateControlName($field);
+
 		if ($showInput)
 		{
-			$controlId = $controlId.'_text';
-			$name = static::generateControlName($field).'_text';
-			$html = '<input type="text" id="'.htmlspecialcharsbx($controlId).'" name="'
-					.htmlspecialcharsbx($name).'" value="'.htmlspecialcharsbx((string)$value).'">';
+			if ($showInput !== 'combine')
+			{
+				$controlId = $controlId.'_text';
+				$name = static::generateControlName($field).'_text';
+			}
+
+			$cols = 70;
+			$rows = max((static::getType() === FieldType::TEXT ? 5 : 1), min(5, ceil(mb_strlen((string)$value)) / $cols));
+			$html = '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 2px 0"><tr><td valign="top"><textarea ';
+			$html .= 'rows="'.$rows.'" ';
+			$html .= 'cols="'.$cols.'" ';
+			$html .= 'name="'.htmlspecialcharsbx($name).'" ';
+			$html .= 'id="'.htmlspecialcharsbx($controlId).'" ';
+			$html .= 'style="width: 100%"';
+			$html .= '>'.htmlspecialcharsbx((string)$value);
+			$html .= '</textarea></td>';
+			$html .= '<td valign="top" style="padding-left:4px" width="30">';
 		}
 		$html .= static::renderControlSelectorButton($controlId, $fieldType, $selectorMode);
+
+		if ($showInput)
+		{
+			$html .= '</td></tr></table>';
+		}
 
 		return $html;
 	}
@@ -650,39 +700,39 @@ HTML;
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function internalizeValue(FieldType $fieldType, $objectName, $value)
+	public static function internalizeValue(FieldType $fieldType, $context, $value)
 	{
 		return $value;
 	}
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function internalizeValueSingle(FieldType $fieldType, $objectName, $value)
+	public static function internalizeValueSingle(FieldType $fieldType, $context, $value)
 	{
-		return static::internalizeValue($fieldType, $objectName, $value);
+		return static::internalizeValue($fieldType, $context, $value);
 	}
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function internalizeValueMultiple(FieldType $fieldType, $objectName, $value)
+	public static function internalizeValueMultiple(FieldType $fieldType, $context, $value)
 	{
 		if (is_array($value))
 		{
 			foreach ($value as $k => $v)
 			{
-				$value[$k] = static::internalizeValue($fieldType, $objectName, $v);
+				$value[$k] = static::internalizeValue($fieldType, $context, $v);
 			}
 		}
 
@@ -691,11 +741,11 @@ HTML;
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function externalizeValue(FieldType $fieldType, $objectName, $value)
+	public static function externalizeValue(FieldType $fieldType, $context, $value)
 	{
 		if (is_object($value) && method_exists($value, '__toString'))
 		{
@@ -706,22 +756,22 @@ HTML;
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function externalizeValueSingle(FieldType $fieldType, $objectName, $value)
+	public static function externalizeValueSingle(FieldType $fieldType, $context, $value)
 	{
-		return static::externalizeValue($fieldType, $objectName, $value);
+		return static::externalizeValue($fieldType, $context, $value);
 	}
 
 	/**
 	 * @param FieldType $fieldType Document field type.
-	 * @param string $objectName Value owner name (Document, Variable etc.)
+	 * @param string $context Context identification (Document, Variable etc.)
 	 * @param mixed $value Field value.
 	 * @return mixed
 	 */
-	public static function externalizeValueMultiple(FieldType $fieldType, $objectName, $value)
+	public static function externalizeValueMultiple(FieldType $fieldType, $context, $value)
 	{
 		if (!is_array($value) || \CBPHelper::isAssociativeArray($value))
 		{
@@ -730,7 +780,7 @@ HTML;
 
 		foreach ($value as $k => $v)
 		{
-			$value[$k] = static::externalizeValue($fieldType, $objectName, $v);
+			$value[$k] = static::externalizeValue($fieldType, $context, $v);
 		}
 		return $value;
 	}

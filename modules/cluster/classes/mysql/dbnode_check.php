@@ -1,4 +1,4 @@
-<?
+<?php
 IncludeModuleLangFile(__FILE__);
 
 class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
@@ -7,7 +7,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 	const WARNING = 0;
 	const ERROR = -1;
 
-	public function MainNodeCommon($arMasterNode)
+	function MainNodeCommon($arMasterNode)
 	{
 		if($arMasterNode["ID"] == 1)
 			global $DB;
@@ -27,6 +27,13 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		$result["after_connect"] = array(
 			"IS_OK" => $is_ok? CClusterDBNodeCheck::OK: CClusterDBNodeCheck::ERROR,
 			"MESSAGE" => GetMessage("CLU_AFTER_CONNECT_MSG"),
+			"WIZ_REC" => GetMessage("CLU_AFTER_CONNECT_WIZREC"),
+		);
+
+		$is_ok = !file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/after_connect_d7.php");
+		$result["after_connect_d7"] = array(
+			"IS_OK" => $is_ok? CClusterDBNodeCheck::OK: CClusterDBNodeCheck::ERROR,
+			"MESSAGE" => GetMessage("CLU_AFTER_CONNECT_D7_MSG"),
 			"WIZ_REC" => GetMessage("CLU_AFTER_CONNECT_WIZREC"),
 		);
 
@@ -74,7 +81,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $result;
 	}
 
-	public function MainNodeForReplication($arMasterNode)
+	function MainNodeForReplication($arMasterNode)
 	{
 		if($arMasterNode["ID"] == 1)
 			global $DB;
@@ -157,7 +164,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $result;
 	}
 
-	public function MainNodeForSlave()
+	function MainNodeForSlave()
 	{
 		global $DB;
 
@@ -240,7 +247,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		foreach($arMasters as $node_id => $arNode)
 		{
 			$relay_log = $this->GetServerVariable($arNode["DB"], "relay_log");
-			if(strlen($relay_log) <= 0)
+			if($relay_log == '')
 			{
 				$bRelayIsOK = false;
 				$result[$node_id."_relay_log"] = array(
@@ -285,7 +292,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $result;
 	}
 
-	public static function SlaveNodeIsReplicationRunning($db_host, $db_name, $db_login, $db_password, $master_host=false, $master_port=false)
+	function SlaveNodeIsReplicationRunning($db_host, $db_name, $db_login, $db_password, $master_host=false, $master_port=false)
 	{
 		global $DB;
 
@@ -310,7 +317,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 			$rs = $nodeDB->Query("show slave status");
 			$ar = $rs->Fetch();
 
-			if($ar && strlen($ar["Slave_IO_State"]) > 0)
+			if($ar && $ar["Slave_IO_State"] <> '')
 			{
 				if($ar["Master_Host"] == $master_host && $ar["Master_Port"] == $master_port)
 					return $nodeDB;
@@ -328,7 +335,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		}
 	}
 
-	public static function SlaveNodeConnection($db_host, $db_name, $db_login, $db_password, $master_host=false, $master_port=false, $master_id = 1)
+	function SlaveNodeConnection($db_host, $db_name, $db_login, $db_password, $master_host=false, $master_port=false, $master_id = 1)
 	{
 		global $DB;
 
@@ -350,18 +357,21 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		if(is_object($nodeDB))
 		{
 			//Test if this connection is not the same as master
+			$bSkipSecondTest = false;
 			//1. Make sure that no replication is runnung
 			$rs = $nodeDB->Query("show slave status");
 			if($ar = $rs->Fetch())
 			{
-				if(strlen($ar["Slave_IO_State"]) > 0)
+				if($ar["Slave_IO_State"] <> '')
 				{
 					if($ar["Master_Host"] != $master_host || $ar["Master_Port"] != $master_port)
 						return GetMessage("CLU_RUNNING_SLAVE");
+					else
+						$bSkipSecondTest = true; //The replication is OK
 				}
 			}
 			//2. Check if b_cluster_dbnode exists on node
-			if($nodeDB->TableExists("b_cluster_dbnode"))
+			if($nodeDB->TableExists("b_cluster_dbnode") && !$bSkipSecondTest)
 			{
 				//2.1 Generate uniq id
 				$uniqid = md5(mt_rand());
@@ -434,7 +444,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		}
 	}
 
-	public function SlaveNodeCommon($nodeDB)
+	function SlaveNodeCommon($nodeDB)
 	{
 		$result = array();
 
@@ -540,7 +550,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $result;
 	}
 
-	public function SlaveNodeForReplication($nodeDB)
+	function SlaveNodeForReplication($nodeDB)
 	{
 		global $DB;
 
@@ -593,7 +603,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		);
 
 		$relay_log = $this->GetServerVariable($nodeDB, "relay_log");
-		$is_ok = strlen($relay_log) > 0;
+		$is_ok = $relay_log <> '';
 		$result["relay_log"] = array(
 			"IS_OK" => $is_ok? CClusterDBNodeCheck::OK: CClusterDBNodeCheck::WARNING,
 			"MESSAGE" => GetMessage("CLU_SLAVE_RELAY_LOG_MSG"),
@@ -603,7 +613,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $result;
 	}
 
-	public function SlaveNodeForMaster($nodeDB)
+	function SlaveNodeForMaster($nodeDB)
 	{
 		global $DB;
 		$result = array();
@@ -705,7 +715,7 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		foreach($arMasters as $node_id => $arNode)
 		{
 			$relay_log = $this->GetServerVariable($arNode["DB"], "relay_log");
-			if(strlen($relay_log) <= 0)
+			if($relay_log == '')
 			{
 				$bIncIsOK = false;
 				$result[$node_id."_relay_log"] = array(
@@ -810,11 +820,10 @@ class CClusterDBNodeCheck extends CAllClusterDBNodeCheck
 		return $arVariables;
 	}
 
-	public static function GetServerVariable($DB, $var_name)
+	function GetServerVariable($DB, $var_name)
 	{
 		$arResult = CClusterDBNodeCheck::GetServerVariables($DB, array($var_name => ""), $var_name);
 		return $arResult[$var_name];
 	}
 
 }
-?>

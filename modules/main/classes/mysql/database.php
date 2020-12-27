@@ -6,7 +6,9 @@
  * @copyright 2001-2014 Bitrix
  */
 
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/database.php");
+use Bitrix\Main\DB\SqlExpression;
+
+require_once __DIR__."/../general/database.php";
 
 /********************************************************************
 *	MySQL database classes
@@ -178,28 +180,38 @@ abstract class CDatabaseMysql extends CAllDatabase
 			$this->db_ErrorSQL = $strSql;
 			if(!$bIgnoreErrors)
 			{
-				$ex = new \Bitrix\Main\DB\SqlQueryException('Mysql query error', $this->db_Error, $strSql);
-				\Bitrix\Main\Application::getInstance()->getExceptionHandler()->writeToLog($ex);
+				$application = \Bitrix\Main\Application::getInstance();
 
-				if ($this->DebugToFile)
+				$ex = new \Bitrix\Main\DB\SqlQueryException('Mysql query error', $this->db_Error, $strSql);
+				$application->getExceptionHandler()->writeToLog($ex);
+
+				$application->getContext()->getResponse()
+					->setStatus('500 Internal Server Error')
+					->writeHeaders();
+
+        		if ($this->DebugToFile)
 				{
 					$this->startSqlTracker()->writeFileLog("ERROR: ".$this->db_Error, 0, "CONN: ".$this->getThreadId());
 				}
 
-				if($this->debug || (isset($_SESSION["SESS_AUTH"]["ADMIN"]) && $_SESSION["SESS_AUTH"]["ADMIN"]))
+				if($this->debug)
+				{
 					echo $error_position."<br><font color=#ff0000>MySQL Query Error: ".htmlspecialcharsbx($strSql)."</font>[".htmlspecialcharsbx($this->db_Error)."]<br>";
+				}
 
-				$error_position = preg_replace("#<br[^>]*>#i","\n",$error_position);
+				$error_position = preg_replace("#<br[^>]*>#i","\n", $error_position);
 				SendError($error_position."\nMySQL Query Error:\n".$strSql." \n [".$this->db_Error."]\n---------------\n\n");
 
 				if(file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/dbquery_error.php"))
+				{
 					include($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/dbquery_error.php");
-				elseif(file_exists($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/dbquery_error.php"))
-					include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/dbquery_error.php");
+					die();
+				}
 				else
+				{
 					die("MySQL Query Error!");
+				}
 
-				die();
 			}
 			return false;
 		}
@@ -289,18 +301,18 @@ abstract class CDatabaseMysql extends CAllDatabase
 
 		$format = str_replace($search, $replace, $format);
 
-		if (strpos($format, '%H') === false)
+		if (mb_strpos($format, '%H') === false)
 		{
 			$format = str_replace("H", "%h", $format);
 		}
 
-		if (strpos($format, '%M') === false)
+		if (mb_strpos($format, '%M') === false)
 		{
 			$format = str_replace("M", "%b", $format);
 		}
 
 		$lowerAmPm = false;
-		if(strpos($format, 'T') !== false)
+		if(mb_strpos($format, 'T') !== false)
 		{
 			//lowercase am/pm
 			$lowerAmPm = true;
@@ -450,13 +462,13 @@ abstract class CDatabaseMysql extends CAllDatabase
 					{
 						case "datetime":
 						case "timestamp":
-							if(strlen($value)<=0)
+							if($value == '')
 								$strInsert2 .= ", NULL ";
 							else
 								$strInsert2 .= ", ".CDatabase::CharToDateFunction($value, "FULL", $lang);
 							break;
 						case "date":
-							if(strlen($value)<=0)
+							if($value == '')
 								$strInsert2 .= ", NULL ";
 							else
 								$strInsert2 .= ", ".CDatabase::CharToDateFunction($value, "SHORT", $lang);
@@ -486,8 +498,8 @@ abstract class CDatabaseMysql extends CAllDatabase
 
 		if($strInsert1!="")
 		{
-			$strInsert1 = substr($strInsert1, 2);
-			$strInsert2 = substr($strInsert2, 2);
+			$strInsert1 = mb_substr($strInsert1, 2);
+			$strInsert2 = mb_substr($strInsert2, 2);
 		}
 		return array($strInsert1, $strInsert2);
 	}
@@ -515,6 +527,10 @@ abstract class CDatabaseMysql extends CAllDatabase
 				{
 					$strUpdate .= ", $strTableAlias`".$strColumnName."` = NULL";
 				}
+				elseif ($value instanceof SqlExpression)
+				{
+					$strUpdate .= ", $strTableAlias`".$strColumnName."` = ".$value->compile();
+				}
 				else
 				{
 					switch ($type)
@@ -531,13 +547,13 @@ abstract class CDatabaseMysql extends CAllDatabase
 							break;
 						case "datetime":
 						case "timestamp":
-							if(strlen($value)<=0)
+							if($value == '')
 								$value = "NULL";
 							else
 								$value = CDatabase::CharToDateFunction($value, "FULL", $lang);
 							break;
 						case "date":
-							if(strlen($value)<=0)
+							if($value == '')
 								$value = "NULL";
 							else
 								$value = CDatabase::CharToDateFunction($value, "SHORT", $lang);
@@ -555,7 +571,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 		}
 
 		if($strUpdate!="")
-			$strUpdate = substr($strUpdate, 2);
+			$strUpdate = mb_substr($strUpdate, 2);
 
 		return $strUpdate;
 	}
@@ -570,13 +586,13 @@ abstract class CDatabaseMysql extends CAllDatabase
 		foreach ($arFields as $field => $value)
 		{
 			$str1 .= ($str1 <> ""? ", ":"")."`".$field."`";
-			if (strlen($value) <= 0)
+			if ((string)$value == '')
 				$str2 .= ($str2 <> ""? ", ":"")."''";
 			else
 				$str2 .= ($str2 <> ""? ", ":"").$value;
 		}
 
-		if (strlen($EXIST_ID)>0)
+		if ($EXIST_ID <> '')
 		{
 			$strSql = "INSERT INTO ".$table."(ID,".$str1.") VALUES ('".$this->ForSql($EXIST_ID)."',".$str2.")";
 		}
@@ -593,7 +609,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 		if ($res === false)
 			return false;
 
-		if (strlen($EXIST_ID) > 0)
+		if ($EXIST_ID <> '')
 			return $EXIST_ID;
 		else
 			return $this->LastID();
@@ -607,7 +623,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 			$ar = array();
 			foreach($arFields as $field => $value)
 			{
-				if (strlen($value)<=0)
+				if ((string)$value == '')
 					$ar[] = "`".$field."` = ''";
 				else
 					$ar[] = "`".$field."` = ".$value."";
@@ -717,7 +733,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 		$str = "";
 		$ar = func_get_args();
 		if (is_array($ar)) $str .= implode(" , ", $ar);
-		if (strlen($str)>0) $str = "concat(".$str.")";
+		if ($str <> '') $str = "concat(".$str.")";
 		return $str;
 	}
 
@@ -741,7 +757,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 		$tableName = preg_replace("/[^A-Za-z0-9%_]+/i", "", $tableName);
 		$tableName = Trim($tableName);
 
-		if (strlen($tableName) <= 0)
+		if ($tableName == '')
 			return False;
 
 		$dbResult = $this->Query("SHOW TABLES LIKE '".$this->ForSql($tableName)."'", false, '', array("fixed_connection"=>true));
@@ -776,7 +792,7 @@ abstract class CDatabaseMysql extends CAllDatabase
 			}
 			else
 			{
-				if(substr($strKeyColumns, 0, strlen($strColumns)) === $strColumns)
+				if(mb_substr($strKeyColumns, 0, mb_strlen($strColumns)) === $strColumns)
 					return $Key_name;
 			}
 		}
@@ -904,11 +920,11 @@ abstract class CDBResultMysql extends CAllDBResult
 			(
 				$this->PAGEN < 1 || $this->PAGEN > $this->NavPageCount
 				?
-					($_SESSION[$this->SESS_PAGEN] < 1 || $_SESSION[$this->SESS_PAGEN] > $this->NavPageCount
+					(\Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN] < 1 || \Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN] > $this->NavPageCount
 					?
 						$this->NavPageCount
 					:
-						$_SESSION[$this->SESS_PAGEN]
+						\Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN]
 					)
 				:
 					$this->PAGEN
@@ -930,8 +946,8 @@ abstract class CDBResultMysql extends CAllDBResult
 			//calculate total pages depend on rows count. start with 1
 			if($this->PAGEN >= 1 && $this->PAGEN <= $this->NavPageCount)
 				$this->NavPageNomer = $this->PAGEN;
-			elseif($_SESSION[$this->SESS_PAGEN] >= 1 && $_SESSION[$this->SESS_PAGEN] <= $this->NavPageCount)
-				$this->NavPageNomer = $_SESSION[$this->SESS_PAGEN];
+			elseif(\Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN] >= 1 && \Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN] <= $this->NavPageCount)
+				$this->NavPageNomer = \Bitrix\Main\Application::getInstance()->getSession()[$this->SESS_PAGEN];
 			elseif($arNavStartParams["checkOutOfRange"] !== true)
 				$this->NavPageNomer = 1;
 			else
@@ -997,9 +1013,9 @@ abstract class CDBResultMysql extends CAllDBResult
 
 if(defined("BX_USE_MYSQLI") && BX_USE_MYSQLI === true)
 {
-	require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/mysql/database_mysqli.php");
+	require_once __DIR__."/database_mysqli.php";
 }
 else
 {
-	require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/mysql/database_mysql.php");
+	require_once __DIR__."/database_mysql.php";
 }

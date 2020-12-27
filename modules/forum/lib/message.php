@@ -126,8 +126,13 @@ class MessageTable extends Main\Entity\DataManager
 
 			(new TextField("HTML")),
 			(new TextField("MAIL_HEADER")),
+			(new IntegerField("SERVICE_TYPE")),
+			(new TextField("SERVICE_DATA")),
 
-			(new Reference("TOPIC", TopicTable::class, Join::on("this.TOPIC_ID", "ref.ID")))
+			(new Reference("TOPIC", TopicTable::class, Join::on("this.TOPIC_ID", "ref.ID"))),
+			(new Reference("FORUM_USER", UserTable::class, Join::on("this.AUTHOR_ID", "ref.USER_ID"))),
+			(new Reference("FORUM_USER_TOPIC", UserTopicTable::class, Join::on("this.TOPIC_ID", "ref.TOPIC_ID"))),
+			(new Reference("USER", \Bitrix\Main\UserTable::class, Join::on("this.AUTHOR_ID", "ref.ID")))
 		);
 	}
 
@@ -259,7 +264,7 @@ class MessageTable extends Main\Entity\DataManager
 				if (!empty($res[$key]))
 				{
 					$res[$key] = \CFilterUnquotableWords::Filter($res[$key]);
-					if (strlen($res[$key]) <= 0)
+					if ($res[$key] == '')
 					{
 						$res[$key] = "*";
 					}
@@ -397,7 +402,7 @@ class MessageTable extends Main\Entity\DataManager
 				if (!empty($res[$key]))
 				{
 					$res[$key] = \CFilterUnquotableWords::Filter($res[$key]);
-					if (strlen($res[$key]) <= 0 )
+					if ($res[$key] == '' )
 					{
 						$res[$key] = "*";
 					}
@@ -715,6 +720,15 @@ class Message extends Internals\Entity
 			"AUTHOR_REAL_IP" => "<no address>",
 			"GUEST_ID" => $_SESSION["SESS_GUEST_ID"]
 		];
+
+		if (isset($fields['SERVICE_TYPE']))
+		{
+			$data['SERVICE_TYPE'] = $fields['SERVICE_TYPE'];
+		}
+		if (isset($fields['SERVICE_DATA']))
+		{
+			$data['SERVICE_DATA'] = $fields['SERVICE_DATA'];
+		}
 
 		if ($realIp = \Bitrix\Main\Service\GeoIp\Manager::getRealIp())
 		{

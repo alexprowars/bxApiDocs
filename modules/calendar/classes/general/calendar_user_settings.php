@@ -1,8 +1,6 @@
 <?
 /**
- * Class COAuthCode
- *
- * @deprecated
+ * Class CCalendarUserSettings
  */
 class CCalendarUserSettings
 {
@@ -127,9 +125,9 @@ class CCalendarUserSettings
 			{
 				foreach($ids as $id)
 				{
-					if (intVal($id) > 0)
+					if (intval($id) > 0)
 					{
-						$res[] = intVal($id);
+						$res[] = intval($id);
 					}
 				}
 			}
@@ -184,9 +182,9 @@ class CCalendarUserSettings
 			{
 				foreach($ids as $id)
 				{
-					if (intVal($id) > 0)
+					if (intval($id) > 0)
 					{
-						$res[] = intVal($id);
+						$res[] = intval($id);
 					}
 				}
 			}

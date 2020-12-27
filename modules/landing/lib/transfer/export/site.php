@@ -89,8 +89,8 @@ class Site
 			$siteId ? ['SITE_ID' => $siteId] : []
 		);
 		$usedApp = array_merge(
-			array_keys($usedApp['blocks']),
-			array_keys($usedApp['pages'])
+			array_keys($usedApp[PublicAction::REST_USAGE_TYPE_BLOCK]),
+			array_keys($usedApp[PublicAction::REST_USAGE_TYPE_PAGE])
 		);
 		$usedApp = array_unique($usedApp);
 		if ($usedApp)
@@ -104,6 +104,7 @@ class Site
 			return [
 				'SETTING' => [
 					'SITE_ID' => $siteId,
+					'SITE_TYPE' => $siteType,
 					'APP_USES_REQUIRED' => $usedApp
 				],
 				'NEXT' => false
@@ -298,7 +299,7 @@ class Site
 
 	/**
 	 * Final step.
-	 * @param Event $event
+	 * @param Event $event Event instance.
 	 * @return array
 	 */
 	public static function onFinish(Event $event): array

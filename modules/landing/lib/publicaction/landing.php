@@ -1,13 +1,13 @@
 <?php
 namespace Bitrix\Landing\PublicAction;
 
+use \Bitrix\Landing\Hook;
 use \Bitrix\Landing\Manager;
 use \Bitrix\Landing\File;
 use \Bitrix\Landing\Site;
 use \Bitrix\Landing\Block as BlockCore;
 use \Bitrix\Landing\TemplateRef;
 use \Bitrix\Landing\Landing as LandingCore;
-use \Bitrix\Landing\PublicAction;
 use \Bitrix\Landing\PublicActionResult;
 use \Bitrix\Landing\Internals\HookDataTable;
 use \Bitrix\Main\Localization\Loc;
@@ -173,6 +173,7 @@ class Landing
 	public static function addBlock($lid, array $fields)
 	{
 		LandingCore::setEditMode();
+		Hook::setEditMode(true);
 
 		$result = new PublicActionResult();
 		$landing = LandingCore::createInstance($lid);
@@ -552,6 +553,10 @@ class Landing
 				$landing = LandingCore::createInstance($row['ID'], [
 					'skip_blocks' => true
 				]);
+				if ($landing->getDomainId() == 0)
+				{
+					\Bitrix\Landing\Hook::setEditMode(true);
+				}
 				$row['PREVIEW'] = $landing->getPreview(
 					null,
 					$landing->getDomainId() == 0
@@ -588,9 +593,10 @@ class Landing
 	/**
 	 * Checks that page also adding in some menu.
 	 * @param array $fields Landing data array.
+	 * @param bool $willAdded Flag that menu item will be added.
 	 * @return array
 	 */
-	protected static function checkAddingInMenu(array $fields)
+	protected static function checkAddingInMenu(array $fields, ?bool &$willAdded = null): array
 	{
 		$blockId = null;
 		$menuCode = null;
@@ -610,6 +616,8 @@ class Landing
 		{
 			return $fields;
 		}
+
+		$willAdded = true;
 
 		LandingCore::callback('OnAfterAdd',
 			function(\Bitrix\Main\Event $event) use ($blockId, $menuCode)
@@ -687,14 +695,27 @@ class Landing
 		$result = new PublicActionResult();
 		$error = new \Bitrix\Landing\Error;
 
+		$willAdded = false;
 		$siteId = intval($siteId);
-		$fields = self::checkAddingInMenu($fields);
+		$fields = self::checkAddingInMenu($fields, $willAdded);
 
 		$res = LandingCore::addByTemplate($siteId, $code, $fields);
 
 		if ($res->isSuccess())
 		{
 			$result->setResult($res->getId());
+			if (
+				!$willAdded &&
+				isset($fields['ADD_IN_MENU']) &&
+				isset($fields['TITLE']) &&
+				$fields['ADD_IN_MENU'] == 'Y'
+			)
+			{
+				Site::addLandingToMenu($siteId, [
+					'ID' => $res->getId(),
+					'TITLE' => $fields['TITLE']
+				]);
+			}
 		}
 		else
 		{

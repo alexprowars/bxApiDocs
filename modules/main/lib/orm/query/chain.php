@@ -295,7 +295,7 @@ class Chain
 
 				if (
 					Entity::isExists($ref_entity_name)
-					&& Entity::getInstance($ref_entity_name)->hasField($ref_field_name = substr($def_element, $pos_wh+1))
+					&& Entity::getInstance($ref_entity_name)->hasField($ref_field_name = substr($def_element, $pos_wh + 1))
 					&& Entity::getInstance($ref_entity_name)->getField($ref_field_name) instanceof Reference
 				)
 				{
@@ -380,6 +380,16 @@ class Chain
 		return $def;
 	}
 
+	public static function appendDefinition($currentDefinition, $newDefinitionPart)
+	{
+		if ($currentDefinition !== '')
+		{
+			$currentDefinition .= '.';
+		}
+
+		return $currentDefinition.$newDefinitionPart;
+	}
+
 	public static function getAliasByChain(Chain $chain)
 	{
 		$alias = array();
@@ -400,7 +410,7 @@ class Chain
 		{
 			$fragment = $element->getAliasFragment();
 
-			if (strlen($fragment))
+			if($fragment <> '')
 			{
 				$alias[] = $fragment;
 			}

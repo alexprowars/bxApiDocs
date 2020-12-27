@@ -1,7 +1,7 @@
 <?
 class CFormEventHandlers
 {
-	public static function sendOnAfterResultStatusChange($WEB_FORM_ID, $RESULT_ID, $NEW_STATUS_ID = false, $CHECK_RIGHTS = 'Y')
+	function sendOnAfterResultStatusChange($WEB_FORM_ID, $RESULT_ID, $NEW_STATUS_ID = false, $CHECK_RIGHTS = 'Y')
 	{
 		$NEW_STATUS_ID = intval($NEW_STATUS_ID);
 	
@@ -24,7 +24,7 @@ class CFormEventHandlers
 			$NEW_STATUS_ID = CFormStatus::GetDefault($WEB_FORM_ID);
 		
 		$dbRes = CFormStatus::GetByID($NEW_STATUS_ID);
-		if (!($arStatus = $dbRes->Fetch()) || strlen($arStatus['MAIL_EVENT_TYPE']) <= 0)
+		if (!($arStatus = $dbRes->Fetch()) || $arStatus['MAIL_EVENT_TYPE'] == '')
 			return;
 
 		$arTemplates = CFormStatus::GetMailTemplateArray($NEW_STATUS_ID);
@@ -47,7 +47,7 @@ class CFormEventHandlers
 		);
 		
 		$dbRes = CEventMessage::GetList($by="id", $order="asc", array(
-			'ID' => implode('|', $arTemplates),
+			'ID' => $arTemplates,
 			"ACTIVE"		=> "Y",
 			"EVENT_NAME"	=> $arStatus["MAIL_EVENT_TYPE"]
 		));

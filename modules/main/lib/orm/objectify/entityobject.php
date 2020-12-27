@@ -144,14 +144,14 @@ abstract class EntityObject implements ArrayAccess
 	/**
 	 * Returns all objects values as an array
 	 *
-	 * @param int $valuesType
-	 * @param int $fieldsMask
+	 * @param int  $valuesType
+	 * @param int  $fieldsMask
+	 * @param bool $recursive
 	 *
 	 * @return array
 	 * @throws ArgumentException
-	 * @throws SystemException
 	 */
-	final public function collectValues($valuesType = Values::ALL, $fieldsMask = FieldTypeMask::ALL)
+	final public function collectValues($valuesType = Values::ALL, $fieldsMask = FieldTypeMask::ALL, $recursive = false)
 	{
 		switch ($valuesType)
 		{
@@ -174,6 +174,27 @@ abstract class EntityObject implements ArrayAccess
 				if (!($fieldsMask & $fieldMask))
 				{
 					unset($objectValues[$fieldName]);
+				}
+			}
+		}
+
+		// recursive convert object to array
+		if ($recursive)
+		{
+			foreach ($objectValues as $fieldName => $value)
+			{
+				if ($value instanceof EntityObject)
+				{
+					$objectValues[$fieldName] = $value->collectValues($valuesType, $fieldsMask, $recursive);
+				}
+				elseif ($value instanceof Collection)
+				{
+					$arrayCollection = [];
+					foreach ($value as $relationObject)
+					{
+						$arrayCollection[] = $relationObject->collectValues($valuesType, $fieldsMask, $recursive);
+					}
+					$objectValues[$fieldName] = $arrayCollection;
 				}
 			}
 		}
@@ -814,7 +835,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 3));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -849,7 +870,7 @@ abstract class EntityObject implements ArrayAccess
 			$fieldName = self::sysMethodToFieldCase(substr($name, 3));
 			$value = $arguments[0];
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 				$value = $arguments[1];
@@ -893,7 +914,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 3));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -939,7 +960,7 @@ abstract class EntityObject implements ArrayAccess
 			$fieldName = self::sysMethodToFieldCase(substr($name, 5));
 			$value = $arguments[0];
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 				$value = $arguments[1];
@@ -967,7 +988,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 5));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -994,7 +1015,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 5));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -1032,7 +1053,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 9));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -1062,7 +1083,7 @@ abstract class EntityObject implements ArrayAccess
 			$fieldName = self::sysMethodToFieldCase(substr($name, 10));
 			$value = $arguments[0];
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 				$value = $arguments[1];
@@ -1092,7 +1113,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 12));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -1122,7 +1143,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 7));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -1153,7 +1174,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 2, -6));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -1191,7 +1212,7 @@ abstract class EntityObject implements ArrayAccess
 		{
 			$fieldName = self::sysMethodToFieldCase(substr($name, 2, -7));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 

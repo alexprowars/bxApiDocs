@@ -87,6 +87,21 @@ class EventHandler
 	}
 
 	/**
+	 * Handler of event sender/OnAfterPostingSendRecipientMultiple.
+	 *
+	 * @param array $eventDataArray Event[].
+	 * @param Entity\Letter $letter Letter.
+	 * @return void
+	 */
+	public static function onAfterPostingSendRecipientMultiple(array $eventDataArray, Entity\Letter $letter)
+	{
+		if (ModuleManager::isModuleInstalled('crm'))
+		{
+			Crm\EventHandler::onAfterPostingSendRecipientMultiple($eventDataArray, $letter);
+		}
+	}
+
+	/**
 	 * Handler of event sender/onAfterPostingRecipientUnsubscribe.
 	 *
 	 * @param array $eventData Event.

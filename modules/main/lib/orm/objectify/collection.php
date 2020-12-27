@@ -237,6 +237,12 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 	public function sysRemove($srPrimary)
 	{
 		$object = $this->_objects[$srPrimary];
+
+		if (empty($object))
+		{
+			$object = $this->entity->wakeUpObject($srPrimary);
+		}
+
 		unset($this->_objects[$srPrimary]);
 
 		if (!isset($this->_objectsChanges[$srPrimary]) || $this->_objectsChanges[$srPrimary] != static::OBJECT_ADDED)
@@ -532,7 +538,7 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		{
 			$fieldName = EntityObject::sysMethodToFieldCase(substr($name, 3, -4));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 
@@ -561,7 +567,7 @@ abstract class Collection implements \ArrayAccess, \Iterator, \Countable
 		{
 			$fieldName = EntityObject::sysMethodToFieldCase(substr($name, 3, -10));
 
-			if (!strlen($fieldName))
+			if ($fieldName == '')
 			{
 				$fieldName = StringHelper::strtoupper($arguments[0]);
 

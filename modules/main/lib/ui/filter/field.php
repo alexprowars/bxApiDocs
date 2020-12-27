@@ -585,7 +585,7 @@ class Field
 		global $APPLICATION;
 
 		$field = array(
-			"ID" => "field_".$name.(strlen($filterName) > 0 ? '_'.$filterName : ''),
+			"ID" => "field_".$name.($filterName <> '' ? '_'.$filterName : ''),
 			"TYPE" => Type::DEST_SELECTOR,
 			"NAME" => $name,
 			"LABEL" => $label,
@@ -656,7 +656,8 @@ class Field
 						'unSelect' => '',
 						'openDialog' => 'BX.Filter.DestinationSelectorManager.onDialogOpen',
 						'closeDialog' => 'BX.Filter.DestinationSelectorManager.onDialogClose',
-						'openSearch' => ''
+						'openSearch' => '',
+						'closeSearch' => 'BX.Filter.DestinationSelectorManager.onDialogClose',
 					),
 					'OPTIONS' => $optionsList,
 					'LOAD_JS' => true

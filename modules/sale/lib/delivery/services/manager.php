@@ -20,6 +20,7 @@ use Bitrix\Sale\Delivery\ExtraServices;
 use Bitrix\Sale\Internals\ShipmentTable;
 use Bitrix\Sale\Delivery\CalculationResult;
 use Bitrix\Sale\Internals\ServiceRestrictionTable;
+use Bitrix\Sale\Delivery\Services\Base;
 
 Loc::loadMessages(__FILE__);
 
@@ -365,46 +366,58 @@ class Manager
 	public static function createObject(array $srvParams)
 	{
 		self::initHandlers();
-		$errorMsg = "";
+		$errorMsg = '';
 		$service = null;
 
-		if(!isset($srvParams["PARENT_ID"]))
-			$srvParams["PARENT_ID"] = 0;
+		if(!isset($srvParams['PARENT_ID']))
+		{
+			$srvParams['PARENT_ID'] = 0;
+		}
 
 		if(class_exists($srvParams['CLASS_NAME']))
 		{
-			try
+			if(is_subclass_of($srvParams['CLASS_NAME'], Base::class))
 			{
-				$service = new $srvParams['CLASS_NAME']($srvParams);
+				try
+				{
+					$service = new $srvParams['CLASS_NAME']($srvParams);
+				}
+				catch (SystemException $err)
+				{
+					$errorMsg = $err->getMessage();
+				}
 			}
-			catch(SystemException $e)
+			else
 			{
-				$errorMsg = $e->getMessage();
+				$errorMsg = 'Class "' . $srvParams['CLASS_NAME'] . '" is not subclass of of Bitrix\Sale\Delivery\Services\Base';
 			}
-
-			if($service && !($service instanceof Base))
-				$errorMsg = "Can't create delivery object. Class ".$srvParams['CLASS_NAME'].' is not the instance of Bitrix\Sale\DeliveryService';
 		}
 		else
 		{
-			$errorMsg = "Can't create delivery object. Class \"".$srvParams['CLASS_NAME']."\" does not exist.";
+			$errorMsg = 'Can\'t create delivery object. Class "'.$srvParams['CLASS_NAME']. '" does not exist.';
 		}
 
-		if($errorMsg <> '')
+		if($errorMsg !== '')
 		{
-			$eventLog = new \CEventLog;
-			$eventLog->Add(array(
-				"SEVERITY" => $eventLog::SEVERITY_ERROR,
-				"AUDIT_TYPE_ID" => "SALE_DELIVERY_CREATE_OBJECT_ERROR",
-				"MODULE_ID" => "sale",
-				"ITEM_ID" => 'createObject()',
-				"DESCRIPTION" => $errorMsg." Fields: ".serialize($srvParams),
-			));
+			static::log(
+				[
+				'SEVERITY' => \CEventLog::SEVERITY_ERROR,
+				'AUDIT_TYPE_ID' => 'SALE_DELIVERY_CREATE_OBJECT_ERROR',
+				'MODULE_ID' => 'sale',
+				'ITEM_ID' => 'createObject()',
+				'DESCRIPTION' => $errorMsg.' Fields: '.serialize($srvParams),
+				]
+			);
 
 			return null;
 		}
 
 		return $service;
+	}
+
+	protected static function log(array $params): void
+	{
+		\CEventLog::Add($params);
 	}
 
 	public static function getPooledObject(array $fields)
@@ -495,7 +508,6 @@ class Manager
 			'\Bitrix\Sale\Delivery\Services\Configurable' => 'lib/delivery/services/configurable.php',
 			'\Bitrix\Sale\Delivery\Services\AutomaticProfile' => 'lib/delivery/services/automatic_profile.php',
 			'\Bitrix\Sale\Delivery\Services\EmptyDeliveryService' => 'lib/delivery/services/emptydeliveryservice.php',
-			'\Sale\Handlers\Delivery\Taxi\Yandex\YandexTaxi' => 'handlers/delivery/taxi/yandex/yandextaxi.php',
 		);
 
 		\Bitrix\Main\Loader::registerAutoLoadClasses('sale', $result);
@@ -1138,7 +1150,12 @@ class Manager
 		$con = \Bitrix\Main\Application::getConnection();
 		$deliveryId = (int)$deliveryId;
 
-		$con->queryExecute("DELETE FROM b_sale_service_rstr WHERE SERVICE_ID=".$deliveryId);
+		$con->queryExecute("
+			DELETE FROM b_sale_service_rstr
+			WHERE
+			    SERVICE_ID = " . $deliveryId . "
+			    AND SERVICE_TYPE = " . (int)Restrictions\Manager::SERVICE_TYPE_SHIPMENT . "
+		");
 		$con->queryExecute("DELETE FROM b_sale_delivery2location WHERE DELIVERY_ID=".$deliveryId);
 		$con->queryExecute("DELETE FROM b_sale_delivery2paysystem WHERE DELIVERY_ID=".$deliveryId);
 		$con->queryExecute("DELETE FROM b_sale_delivery_es WHERE DELIVERY_ID=".$deliveryId);

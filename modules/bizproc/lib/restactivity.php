@@ -2,6 +2,9 @@
 namespace Bitrix\Bizproc;
 
 use Bitrix\Main\Entity;
+use Bitrix\Main\ORM\Fields\Field;
+use Bitrix\Main\ORM\Fields\Validators\Validator;
+use Bitrix\Main\Text\BinaryString;
 
 /**
  * Class RestActivityTable
@@ -112,10 +115,12 @@ class RestActivityTable extends Entity\DataManager
 			'PROPERTIES' => array(
 				'data_type' => 'text',
 				'serialized' => true,
+				'validation' => array(__CLASS__, 'validateProperties'),
 			),
 			'RETURN_PROPERTIES' => array(
 				'data_type' => 'text',
 				'serialized' => true,
+				'validation' => array(__CLASS__, 'validateProperties'),
 			),
 			'DOCUMENT_TYPE' => array(
 				'data_type' => 'text',
@@ -174,6 +179,21 @@ class RestActivityTable extends Entity\DataManager
 	public static function getLocalizationSaveModifiers()
 	{
 		return array(array(__CLASS__, 'prepareLocalization'));
+	}
+
+	/**
+	 * Returns validators for PROPERTIES and RETURN_PROPERTIES fields
+	 *
+	 * @return array
+	 */
+	public static function validateProperties()
+	{
+		return array(
+			function($value, $primary, $row, Field $field) {
+				$errorMsg = GetMessage("BPRAT_PROPERTIES_LENGTH_ERROR", array("#FIELD_TITLE#" => $field->getTitle()));
+				return BinaryString::getLength(serialize($value)) < 65535 ? true : $errorMsg;
+			}
+		);
 	}
 
 	/**

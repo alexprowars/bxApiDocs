@@ -342,10 +342,10 @@ class CCloudStorageService_S3 extends CCloudStorageService
 			$stime = microtime(1);
 			$request_id = md5((string)mt_rand());
 			AddMessage2Log('{'
-				.'"request_id": "'.$request_id.'";'
-				.'"portal":"'.(CModule::IncludeModule('replica')? getNameByDomain(): $_SERVER["HOST_NAME"]).'";'
-				.'"verb":"'.$verb.'";'
-				.'"host":"'.$host.'";'
+				.'"request_id": "'.$request_id.'",'
+				.'"portal":"'.(CModule::IncludeModule('replica')? getNameByDomain(): $_SERVER["HOST_NAME"]).'",'
+				.'"verb":"'.$verb.'",'
+				.'"host":"'.$host.'",'
 				.'"uri":"'.$file_name.$params.'"'
 			.'}', '', 0);
 		}
@@ -355,14 +355,14 @@ class CCloudStorageService_S3 extends CCloudStorageService
 		if ($request_id != '')
 		{
 			AddMessage2Log('{'
-				.'"request_id": "'.$request_id.'";'
-				.'"portal":"'.(CModule::IncludeModule('replica')? getNameByDomain(): $_SERVER["HOST_NAME"]).'";'
-				.'"verb":"'.$verb.'";'
-				.'"host":"'.$host.'";'
-				.'"uri":"'.$file_name.$params.'";'
-				.'"status":"'.$obRequest->status.'";'
+				.'"request_id": "'.$request_id.'",'
+				.'"portal":"'.(CModule::IncludeModule('replica')? getNameByDomain(): $_SERVER["HOST_NAME"]).'",'
+				.'"verb":"'.$verb.'",'
+				.'"host":"'.$host.'",'
+				.'"uri":"'.$file_name.$params.'",'
+				.'"status":"'.$obRequest->status.'",'
 				.'"time": "'.(round(microtime(1)-$stime,6)).'"'
-			.'}', '', 0);
+			.'}', 'clouds', 20);
 		}
 
 		$this->status = $obRequest->status;
@@ -525,6 +525,17 @@ class CCloudStorageService_S3 extends CCloudStorageService
 		$arFiles = $this->ListFiles($arBucket, '/', false, 1);
 		if(is_array($arFiles))
 			return true;
+
+		// The bucket already exists and user has specified wrong location
+		if (
+			$this->status == 301
+			&& $arBucket["LOCATION"] != ""
+			&& $this->GetLastRequestHeader('x-amz-bucket-region') != ''
+			&& $this->GetLastRequestHeader('x-amz-bucket-region') != $arBucket["LOCATION"]
+		)
+		{
+			return false;
+		}
 
 		if($arBucket["LOCATION"] != "")
 			$content =
@@ -1061,6 +1072,7 @@ class CCloudStorageService_S3 extends CCloudStorageService
 			"file" => array(),
 			"file_size" => array(),
 			"file_mtime" => array(),
+			"file_hash" => array(),
 		);
 
 		$filePath = trim($filePath, '/');
@@ -1124,6 +1136,7 @@ class CCloudStorageService_S3 extends CCloudStorageService
 							$result["file"][] = $APPLICATION->ConvertCharset($file_name, "UTF-8", LANG_CHARSET);
 							$result["file_size"][] = $a["#"]["Size"][0]["#"];
 							$result["file_mtime"][] = mb_substr($a["#"]["LastModified"][0]["#"], 0, 19);
+							$result["file_hash"][] = trim($a["#"]["ETag"][0]["#"], '"');
 							$lastKey = $a["#"]["Key"][0]["#"];
 							if ($pageSize > 0 && count($result["file"]) >= $pageSize)
 							{
